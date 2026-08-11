@@ -653,7 +653,7 @@ class BookingController extends Controller
 
         $proofPath = null;
         if ($request->input('price_diff', 0) > 0) {
-            $request->validate(['proof' => 'required|image|max:2048']);
+            $request->validate(['proof' => 'required|image|max:10240']);
             if ($request->hasFile('proof')) {
                 $proofPath = $request->file('proof')->store('proofs', 'public');
             }

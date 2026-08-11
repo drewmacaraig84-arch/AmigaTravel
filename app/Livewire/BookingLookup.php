@@ -69,7 +69,7 @@ class BookingLookup extends Component
     public array $availableRebookingReturnDates = [];
 
     protected $rules = [
-        'rebookingProof' => 'nullable|image|max:2048',
+        'rebookingProof' => 'nullable|image|max:10240',
         'rebooking_departure_date' => 'required|date',
         'rebooking_is_round_trip' => 'boolean',
         'rebooking_return_date' => 'nullable|date|after_or_equal:rebooking_departure_date|required_if:rebooking_is_round_trip,1',
@@ -743,7 +743,7 @@ class BookingLookup extends Component
     public function submitRebookingProof(): void
     {
         $this->validate([
-            'rebookingProof' => 'required|image|max:2048',
+            'rebookingProof' => 'required|image|max:10240',
         ]);
 
         $this->isUploadingRebooking = true;

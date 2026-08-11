@@ -383,7 +383,7 @@ class BookingReschedule extends Component
 
         if ($this->priceDiff > 0) {
             $this->validate([
-                'paymentProof' => 'required|image|max:2048'
+                'paymentProof' => 'required|image|max:10240'
             ]);
         }
 

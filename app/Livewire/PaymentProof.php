@@ -29,7 +29,7 @@ class PaymentProof extends Component
 
     protected $rules = [
         'reference_number' => 'required|string',
-        'proof' => 'required|image|max:2048',
+        'proof' => 'required|image|max:10240',
     ];
 
     public function mount(): void
