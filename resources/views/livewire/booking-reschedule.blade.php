@@ -208,12 +208,15 @@
                         @foreach($this->departureAccommodations as $acc)
                             @php
                                 $priceDiffBadge = $acc->price - ($originalDepAccPrice ?? 0);
+                                $isDisabled = $this->isReplacement && $priceDiffBadge != 0;
                             @endphp
-                            <div wire:click="selectDepartureAccommodation('{{ $acc->id }}', {{ $acc->price }})" class="group cursor-pointer rounded-2xl border border-slate-200 p-5 hover:border-emerald-500 hover:shadow-md transition text-center">
-                                <h4 class="font-bold text-slate-900">{{ $acc->name }}</h4>
+                            <div @if(!$isDisabled) wire:click="selectDepartureAccommodation('{{ $acc->id }}', {{ $acc->price }})" @endif class="group rounded-2xl border p-5 text-center transition {{ $isDisabled ? 'border-slate-200 bg-slate-50 opacity-60 cursor-not-allowed pointer-events-none' : 'border-slate-200 cursor-pointer hover:border-emerald-500 hover:shadow-md' }}">
+                                <h4 class="font-bold {{ $isDisabled ? 'text-slate-400' : 'text-slate-900' }}">{{ $acc->name }}</h4>
                                 <p class="text-xs text-slate-500 mt-1">{{ $acc->description }}</p>
-                                <p class="mt-3 font-black text-emerald-700">₱{{ number_format($acc->price, 2) }}</p>
-                                @if($priceDiffBadge > 0)
+                                <p class="mt-3 font-black {{ $isDisabled ? 'text-slate-400' : 'text-emerald-700' }}">₱{{ number_format($acc->price, 2) }}</p>
+                                @if($isDisabled)
+                                    <p class="mt-1 text-[10px] font-bold text-red-500 uppercase tracking-wide">Not eligible for free replacement</p>
+                                @elseif($priceDiffBadge > 0)
                                     <p class="mt-1 text-xs font-bold text-amber-600">+₱{{ number_format($priceDiffBadge, 2) }} extra vs original</p>
                                 @elseif($priceDiffBadge < 0)
                                     <p class="mt-1 text-xs font-bold text-emerald-600">₱{{ number_format(abs($priceDiffBadge), 2) }} cheaper than original</p>
@@ -285,12 +288,15 @@
                         @foreach($this->returnAccommodations as $acc)
                             @php
                                 $retDiffBadge = $acc->price - ($originalRetAccPrice ?? 0);
+                                $isDisabled = $this->isReplacement && $retDiffBadge != 0;
                             @endphp
-                            <div wire:click="selectReturnAccommodation('{{ $acc->id }}', {{ $acc->price }})" class="group cursor-pointer rounded-2xl border border-slate-200 p-5 hover:border-emerald-500 hover:shadow-md transition text-center">
-                                <h4 class="font-bold text-slate-900">{{ $acc->name }}</h4>
+                            <div @if(!$isDisabled) wire:click="selectReturnAccommodation('{{ $acc->id }}', {{ $acc->price }})" @endif class="group rounded-2xl border p-5 text-center transition {{ $isDisabled ? 'border-slate-200 bg-slate-50 opacity-60 cursor-not-allowed pointer-events-none' : 'border-slate-200 cursor-pointer hover:border-emerald-500 hover:shadow-md' }}">
+                                <h4 class="font-bold {{ $isDisabled ? 'text-slate-400' : 'text-slate-900' }}">{{ $acc->name }}</h4>
                                 <p class="text-xs text-slate-500 mt-1">{{ $acc->description }}</p>
-                                <p class="mt-3 font-black text-emerald-700">₱{{ number_format($acc->price, 2) }}</p>
-                                @if($retDiffBadge > 0)
+                                <p class="mt-3 font-black {{ $isDisabled ? 'text-slate-400' : 'text-emerald-700' }}">₱{{ number_format($acc->price, 2) }}</p>
+                                @if($isDisabled)
+                                    <p class="mt-1 text-[10px] font-bold text-red-500 uppercase tracking-wide">Not eligible for free replacement</p>
+                                @elseif($retDiffBadge > 0)
                                     <p class="mt-1 text-xs font-bold text-amber-600">+₱{{ number_format($retDiffBadge, 2) }} extra vs original</p>
                                 @elseif($retDiffBadge < 0)
                                     <p class="mt-1 text-xs font-bold text-emerald-600">₱{{ number_format(abs($retDiffBadge), 2) }} cheaper than original</p>

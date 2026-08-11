@@ -27,6 +27,11 @@ void main() async {
     await NotificationService.initialize(
         onNotificationTap: handleNotificationTap);
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
   } catch (e) {
     debugPrint('Failed to initialize notifications: $e');
   }
@@ -86,7 +91,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.60+67';
+  static const String appVersion = '1.0.61+68';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -5704,7 +5709,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
           ]),
         if (_booking['status'] != 'cancelled' &&
             _booking['status'] != 'operator_cancelled') ...[
-          if (_booking['ticket_url'] != null)
+          if (_booking['ticket_url'] != null && _paymentStatus == 'paid')
             OutlinedButton.icon(
               onPressed: () =>
                   launchUrl(Uri.parse(_booking['ticket_url'].toString())),
@@ -6110,6 +6115,185 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 48,
+            child: OutlinedButton(
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (ctx) {
+                    bool modalLoading = false;
+                    bool isOtpSent = false;
+                    String otp = '';
+                    String newPassword = '';
+                    String confirmPassword = '';
+
+                    return StatefulBuilder(builder: (ctx, setModalState) {
+                      if (!isOtpSent) {
+                        return AlertDialog(
+                          title: const Text('Reset Password'),
+                          content: const Text(
+                              'Are you sure you want to reset your password? We will send an OTP to your email.'),
+                          actions: [
+                            TextButton(
+                                onPressed: modalLoading ? null : () => Navigator.pop(ctx),
+                                child: const Text('Cancel')),
+                            ElevatedButton(
+                              onPressed: modalLoading
+                                  ? null
+                                  : () async {
+                                      setModalState(() => modalLoading = true);
+                                      try {
+                                        final res = await http.post(
+                                          Uri.parse(
+                                              '${UserSession.getBaseUrl()}/api/forgot-password/request-otp'),
+                                          headers: {'Accept': 'application/json'},
+                                          body: {'email': UserSession.email},
+                                        );
+                                        final data = jsonDecode(res.body);
+                                        if (res.statusCode == 200 && data['status'] == 'success') {
+                                          setModalState(() {
+                                            isOtpSent = true;
+                                            modalLoading = false;
+                                          });
+                                          if (!mounted) return;
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                                content: Text(data['message'] ?? 'OTP sent! Check your email.'),
+                                                backgroundColor: kGreen),
+                                          );
+                                        } else {
+                                          final msg = data['message'] ?? 'Failed to send OTP.';
+                                          if (!mounted) return;
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text(msg), backgroundColor: Colors.red));
+                                          Navigator.pop(ctx);
+                                        }
+                                      } catch (e) {
+                                        setModalState(() => modalLoading = false);
+                                        if (!mounted) return;
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('Network error'), backgroundColor: Colors.red));
+                                      }
+                                    },
+                              child: modalLoading
+                                  ? const SizedBox(
+                                      width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                                  : const Text('Send OTP'),
+                            ),
+                          ],
+                        );
+                      } else {
+                        return AlertDialog(
+                          title: const Text('Create New Password'),
+                          content: SingleChildScrollView(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text('Enter the verification code sent to your email and your new password.',
+                                    style: TextStyle(fontSize: 14)),
+                                const SizedBox(height: 16),
+                                TextField(
+                                  decoration: const InputDecoration(labelText: 'Verification Code (OTP)'),
+                                  onChanged: (val) => otp = val,
+                                ),
+                                const SizedBox(height: 12),
+                                TextField(
+                                  obscureText: true,
+                                  decoration: const InputDecoration(labelText: 'New Password'),
+                                  onChanged: (val) => newPassword = val,
+                                ),
+                                const SizedBox(height: 12),
+                                TextField(
+                                  obscureText: true,
+                                  decoration: const InputDecoration(labelText: 'Confirm Password'),
+                                  onChanged: (val) => confirmPassword = val,
+                                ),
+                              ],
+                            ),
+                          ),
+                          actions: [
+                            TextButton(
+                                onPressed: modalLoading ? null : () => Navigator.pop(ctx),
+                                child: const Text('Cancel')),
+                            ElevatedButton(
+                              onPressed: modalLoading
+                                  ? null
+                                  : () async {
+                                      if (otp.isEmpty || newPassword.isEmpty || confirmPassword.isEmpty) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('All fields are required.'), backgroundColor: Colors.red));
+                                        return;
+                                      }
+                                      if (newPassword != confirmPassword) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('Passwords do not match.'), backgroundColor: Colors.red));
+                                        return;
+                                      }
+                                      if (newPassword.length < 6) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('Password must be at least 6 characters.'), backgroundColor: Colors.red));
+                                        return;
+                                      }
+
+                                      setModalState(() => modalLoading = true);
+                                      try {
+                                        final res = await http.post(
+                                          Uri.parse('${UserSession.getBaseUrl()}/api/forgot-password/reset'),
+                                          headers: {'Accept': 'application/json'},
+                                          body: {
+                                            'email': UserSession.email,
+                                            'otp': otp.trim(),
+                                            'password': newPassword,
+                                            'password_confirmation': confirmPassword,
+                                          },
+                                        );
+                                        final data = jsonDecode(res.body);
+                                        if (res.statusCode == 200 && data['status'] == 'success') {
+                                          if (!mounted) return;
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                                content: Text(data['message'] ?? 'Password reset successfully.'),
+                                                backgroundColor: kGreen),
+                                          );
+                                          Navigator.pop(ctx);
+                                        } else {
+                                          final msg = data['message'] ?? 'Failed to reset password.';
+                                          if (!mounted) return;
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text(msg), backgroundColor: Colors.red));
+                                          setModalState(() => modalLoading = false);
+                                        }
+                                      } catch (e) {
+                                        setModalState(() => modalLoading = false);
+                                        if (!mounted) return;
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('Network error'), backgroundColor: Colors.red));
+                                      }
+                                    },
+                              child: modalLoading
+                                  ? const SizedBox(
+                                      width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                                  : const Text('Reset Password'),
+                            ),
+                          ],
+                        );
+                      }
+                    });
+                  },
+                );
+              },
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red,
+                side: const BorderSide(color: Colors.red),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Reset Password',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ),
         ],
       ),
     );
@@ -6194,7 +6378,7 @@ class AppDrawer extends StatelessWidget {
             title: const Text('Visit Website'),
             onTap: () async {
               Navigator.pop(context);
-              final url = Uri.parse('https://amiga-travel.up.railway.app');
+              final url = Uri.parse('https://www.amigagracia.com');
               if (await canLaunchUrl(url)) {
                 await launchUrl(url, mode: LaunchMode.externalApplication);
               }
@@ -13500,9 +13684,9 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
       setState(() => _feedback = 'Please select a return accommodation.');
       return;
     }
-    if (_priceDiff > 0 && _priceProofFile == null) {
+    if (_newTotalPrice != _oldTotalPrice) {
       setState(() => _feedback =
-          'Please upload proof of payment for the price difference.');
+          'For service cancellations, you can only select a replacement of the exact same price as your original ticket.');
       return;
     }
 
