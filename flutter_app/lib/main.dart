@@ -86,7 +86,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.59+66';
+  static const String appVersion = '1.0.60+67';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -188,7 +188,7 @@ class UserSession {
   static String getBaseUrl() {
     const configuredUrl = String.fromEnvironment(
       'API_BASE_URL',
-      defaultValue: 'https://amiga-travel.up.railway.app',
+      defaultValue: 'https://www.amigagracia.com',
     );
 
     if (kIsWeb && configuredUrl.isEmpty) return '';
