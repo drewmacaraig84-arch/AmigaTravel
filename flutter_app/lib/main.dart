@@ -598,6 +598,10 @@ class _GlobalUpdateWrapperState extends State<GlobalUpdateWrapper>
         UserSession.unreadNotificationsCount++;
       }
     });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkVersionAndPrompt();
+    });
   }
 
   @override
