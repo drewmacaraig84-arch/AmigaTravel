@@ -193,6 +193,7 @@ return Application::configure(basePath: dirname(__DIR__))
             ]);
         });
 
+        /*
         $exceptions->render(function (QueryException $e, Request $request) {
             $status = 500;
 
@@ -240,4 +241,5 @@ return Application::configure(basePath: dirname(__DIR__))
                 'message' => 'We could not complete your request right now. Please try again shortly.',
             ], $status);
         });
+        */
     })->create();

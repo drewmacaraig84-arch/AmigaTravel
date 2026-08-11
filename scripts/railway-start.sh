@@ -104,53 +104,20 @@ fi
 # Create .env file in container from Railway environment variables
 # This overrides any local .env that was copied into the image.
 # IMPORTANT: APP_KEY must be set as a Railway Variable to persist across deploys.
-cat > /var/www/html/.env <<EOF
-APP_NAME="Amiga Travel"
-APP_ENV=$APP_ENV
-APP_DEBUG=$APP_DEBUG
-APP_KEY=$APP_KEY
-APP_URL=$APP_URL
-APP_LOCALE=en
-APP_FALLBACK_LOCALE=en
-APP_FAKER_LOCALE=en_US
-APP_MAINTENANCE_DRIVER=file
+#
+# The writer lives in a standalone PHP file (scripts/write_env.php) so we NEVER
+# have to embed PHP inside a shell heredoc. Heredocs with embedded PHP that
+# contain escaped single/double quotes, regex backslashes, or inline comments
+# with quote characters are prone to POSIX sh parse errors ("unterminated quoted
+# string") depending on the shell flavour / SSH layer. Keeping the writer in a
+# real .php file eliminates the entire quoting class of bugs.
+#
+# The writer also aggressively sanitizes fields that Railway users commonly
+# paste with markdown backticks or stray whitespace: APP_URL, APP_NAME, hosts,
+# credentials.
+php /var/www/html/scripts/write_env.php
 
-BCRYPT_ROUNDS=12
-LOG_CHANNEL=stack
-LOG_LEVEL=debug
-
-DB_CONNECTION=$DB_CONNECTION
-DB_HOST=$DB_HOST
-DB_PORT=$DB_PORT
-DB_DATABASE=$DB_DATABASE
-DB_USERNAME=$DB_USERNAME
-DB_PASSWORD=$DB_PASSWORD
-
-SESSION_DRIVER=$SESSION_DRIVER
-CACHE_STORE=$CACHE_STORE
-QUEUE_CONNECTION=$QUEUE_CONNECTION
-
-MAIL_MAILER=$MAIL_MAILER
-MAIL_HOST=$MAIL_HOST
-MAIL_PORT=$MAIL_PORT
-MAIL_USERNAME=$MAIL_USERNAME
-MAIL_PASSWORD=$MAIL_PASSWORD
-MAIL_ENCRYPTION=$MAIL_ENCRYPTION
-MAIL_FROM_ADDRESS=$MAIL_FROM_ADDRESS
-RESEND_API_KEY=$RESEND_API_KEY
-
-NOCAPTCHA_SITEKEY=$NOCAPTCHA_SITEKEY
-NOCAPTCHA_SECRET=$NOCAPTCHA_SECRET
-FIREBASE_CREDENTIALS=$FIREBASE_CREDENTIALS_PATH
-MAIL_FROM_NAME=$MAIL_FROM_NAME
-MAIL_SCHEME=$MAIL_SCHEME
-SENDGRID_API_KEY=$SENDGRID_API_KEY
-
-FILESYSTEM_DISK=local
-BROADCAST_CONNECTION=log
-EOF
-
-echo "=== .env written. APP_KEY length: $(echo -n "$APP_KEY" | wc -c) chars ==="
+echo "=== .env regeneration complete ==="
 
 # Dynamically configure Nginx to listen on Railway's assigned $PORT
 PORT="${PORT:-10000}"
@@ -169,6 +136,17 @@ php artisan route:clear || true
 php artisan view:cache || true
 php artisan event:clear || true
 php artisan package:discover --ansi || true
+
+# Reload PHP-FPM workers so the running processes pick up the freshly
+# regenerated .env, config cache, and service manifests. Without this
+# reload, long-running FPM children in production can serve with stale
+# cached state for minutes/hours even after the files on disk are fixed.
+if command -v supervisorctl >/dev/null 2>&1; then
+  echo "=== Reloading PHP-FPM via supervisorctl ==="
+  supervisorctl reread 2>/dev/null || true
+  supervisorctl update 2>/dev/null || true
+  supervisorctl restart php-fpm 2>/dev/null || supervisorctl restart all 2>/dev/null || echo "(supervisorctl restart skipped or failed)"
+fi
 
 echo "=== Starting Supervisor (Nginx + PHP-FPM + Queue Worker) ==="
 exec supervisord -c /var/www/html/supervisord.conf

@@ -24,7 +24,8 @@ void main() async {
   final isFirstLaunch = prefs.getBool('first_launch') ?? true;
   await UserSession.init();
   try {
-    await NotificationService.initialize(onNotificationTap: handleNotificationTap);
+    await NotificationService.initialize(
+        onNotificationTap: handleNotificationTap);
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   } catch (e) {
     debugPrint('Failed to initialize notifications: $e');
@@ -68,7 +69,8 @@ class UserSession {
   static String lookupToken = '';
   static String? referralCode;
   static int graciaPoints = 0;
-  static final ValueNotifier<int> unreadNotificationsNotifier = ValueNotifier<int>(0);
+  static final ValueNotifier<int> unreadNotificationsNotifier =
+      ValueNotifier<int>(0);
   static int get unreadNotificationsCount => unreadNotificationsNotifier.value;
   static set unreadNotificationsCount(int count) {
     unreadNotificationsNotifier.value = count;
@@ -78,6 +80,7 @@ class UserSession {
       FlutterAppBadger.removeBadge();
     }
   }
+
   static int pointsAwarded = 0;
   static int spendThreshold = 0;
   static String? autoApplyVoucherCode;
@@ -509,32 +512,34 @@ Map<String, dynamic>? pendingNotificationData;
 Future<void> handleNotificationTap(Map<String, dynamic> data) async {
   if (data['transaction_number'] != null) {
     final transactionNumber = data['transaction_number'];
-    
+
     // Check if we have a context
     final context = navigatorKey.currentContext;
     if (context == null) {
       pendingNotificationData = data;
       return;
     }
-    
+
     // We have context, proceed to load and navigate
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator(color: kGreen)),
+      builder: (context) =>
+          const Center(child: CircularProgressIndicator(color: kGreen)),
     );
 
     try {
       final response = await http.get(
-        Uri.parse('${UserSession.getBaseUrl()}/api/bookings/$transactionNumber'),
+        Uri.parse(
+            '${UserSession.getBaseUrl()}/api/bookings/$transactionNumber'),
         headers: {
           'Authorization': 'Bearer ${UserSession.token}',
           'Accept': 'application/json',
         },
       );
-      
+
       Navigator.pop(context); // hide loading
-      
+
       if (response.statusCode == 200) {
         final resData = jsonDecode(response.body);
         if (resData['status'] == 'success' && resData['booking'] != null) {
@@ -545,14 +550,17 @@ Future<void> handleNotificationTap(Map<String, dynamic> data) async {
             ),
           );
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Booking details not found.')));
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Booking details not found.')));
         }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to load booking details.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to load booking details.')));
       }
     } catch (e) {
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 }
@@ -1045,7 +1053,7 @@ class _MainScreenState extends State<MainScreen> {
     super.initState();
     _fetchGlobalData();
     NotificationService.requestPermission();
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (pendingNotificationData != null) {
         final data = pendingNotificationData!;
@@ -1200,8 +1208,8 @@ class _MainScreenState extends State<MainScreen> {
                               padding: const EdgeInsets.all(2),
                               decoration: const BoxDecoration(
                                   color: Colors.red, shape: BoxShape.circle),
-                              constraints:
-                                  const BoxConstraints(minWidth: 14, minHeight: 14),
+                              constraints: const BoxConstraints(
+                                  minWidth: 14, minHeight: 14),
                               child: Text(
                                 '$count',
                                 style: const TextStyle(
@@ -1554,7 +1562,7 @@ class _HomeScreenState extends State<HomeScreen>
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                            color: kGreen.withOpacity(0.4),
+                            color: kGreen.withValues(alpha: 0.4),
                             blurRadius: 16,
                             offset: const Offset(0, 6))
                       ],
@@ -1709,7 +1717,7 @@ class _HomeScreenState extends State<HomeScreen>
                         border: Border.all(color: kSlate200),
                         boxShadow: [
                           BoxShadow(
-                              color: Colors.black.withOpacity(0.04),
+                              color: Colors.black.withValues(alpha: 0.04),
                               blurRadius: 6,
                               offset: const Offset(0, 2))
                         ],
@@ -1746,7 +1754,7 @@ class _HomeScreenState extends State<HomeScreen>
                         border: Border.all(color: kSlate200),
                         boxShadow: [
                           BoxShadow(
-                              color: Colors.black.withOpacity(0.04),
+                              color: Colors.black.withValues(alpha: 0.04),
                               blurRadius: 6,
                               offset: const Offset(0, 2))
                         ],
@@ -1790,7 +1798,7 @@ class _HomeScreenState extends State<HomeScreen>
                         label: 'Book Ferry',
                         subtitle: 'Starlite, 2GO',
                         icon: Icons.directions_boat,
-                        iconBg: kGreen.withOpacity(0.1),
+                        iconBg: kGreen.withValues(alpha: 0.1),
                         iconColor: kGreen,
                         onTap: widget.onBookFerry,
                       ),
@@ -1801,7 +1809,7 @@ class _HomeScreenState extends State<HomeScreen>
                         label: 'Book Airline',
                         subtitle: 'PAL, CebuPac, AirAsia',
                         icon: Icons.flight,
-                        iconBg: kPink.withOpacity(0.1),
+                        iconBg: kPink.withValues(alpha: 0.1),
                         iconColor: kPink,
                         onTap: widget.onBookAirline,
                       ),
@@ -1833,7 +1841,7 @@ class _HomeScreenState extends State<HomeScreen>
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                        color: kGreen.withOpacity(0.35),
+                        color: kGreen.withValues(alpha: 0.35),
                         blurRadius: 12,
                         offset: const Offset(0, 4))
                   ],
@@ -1926,8 +1934,8 @@ class _HomeScreenState extends State<HomeScreen>
                                       border: Border.all(color: kSlate200),
                                       boxShadow: [
                                         BoxShadow(
-                                            color:
-                                                Colors.black.withOpacity(0.04),
+                                            color: Colors.black
+                                                .withValues(alpha: 0.04),
                                             blurRadius: 6,
                                             offset: const Offset(0, 2))
                                       ],
@@ -1942,7 +1950,7 @@ class _HomeScreenState extends State<HomeScreen>
                                           padding: const EdgeInsets.all(8),
                                           decoration: BoxDecoration(
                                             color: (s['color'] as Color)
-                                                .withOpacity(0.1),
+                                                .withValues(alpha: 0.1),
                                             borderRadius:
                                                 BorderRadius.circular(10),
                                           ),
@@ -2072,31 +2080,36 @@ class _HomeScreenState extends State<HomeScreen>
     final features = [
       {
         'title': 'Simplify Your Booking',
-        'desc': 'Feel the flexibility and simplicity with instant online e-ticketing.',
+        'desc':
+            'Feel the flexibility and simplicity with instant online e-ticketing.',
         'icon': Icons.touch_app,
         'color': Colors.red,
       },
       {
         'title': 'Wide Selection',
-        'desc': 'Enjoy memorable journeys with our ferry, airline, and tour partners.',
+        'desc':
+            'Enjoy memorable journeys with our ferry, airline, and tour partners.',
         'icon': Icons.explore,
         'color': Colors.pink,
       },
       {
         'title': 'Exclusive Deals',
-        'desc': 'Access daily promotions, special group packages, and competitive fares.',
+        'desc':
+            'Access daily promotions, special group packages, and competitive fares.',
         'icon': Icons.local_offer,
         'color': Colors.redAccent,
       },
       {
         'title': 'Trusted Expert',
-        'desc': 'Fulfilling countless travelers\' needs since 2017 with credible partners.',
+        'desc':
+            'Fulfilling countless travelers\' needs since 2017 with credible partners.',
         'icon': Icons.verified,
         'color': Colors.green,
       },
       {
         'title': 'Affectionate Support',
-        'desc': 'Our dedicated customer support is ready to help you with every journey.',
+        'desc':
+            'Our dedicated customer support is ready to help you with every journey.',
         'icon': Icons.support_agent,
         'color': Colors.blue,
       },
@@ -2115,9 +2128,7 @@ class _HomeScreenState extends State<HomeScreen>
         children: [
           const Text('Why travel with Amiga Gracia?',
               style: TextStyle(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 18,
-                  color: kSlate800)),
+                  fontWeight: FontWeight.w900, fontSize: 18, color: kSlate800)),
           const SizedBox(height: 16),
           SizedBox(
             height: 180,
@@ -2137,12 +2148,12 @@ class _HomeScreenState extends State<HomeScreen>
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
+                        color: Colors.black.withValues(alpha: 0.04),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       )
                     ],
-                    border: Border.all(color: color.withOpacity(0.1)),
+                    border: Border.all(color: color.withValues(alpha: 0.1)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
@@ -2151,11 +2162,11 @@ class _HomeScreenState extends State<HomeScreen>
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: color.withOpacity(0.1),
+                          color: color.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(f['icon'] as IconData,
-                            color: color, size: 28),
+                        child:
+                            Icon(f['icon'] as IconData, color: color, size: 28),
                       ),
                       const SizedBox(height: 12),
                       Text(f['title'] as String,
@@ -2211,7 +2222,7 @@ class _PackageHorizontalList extends StatelessWidget {
                   end: Alignment.bottomRight),
               boxShadow: [
                 BoxShadow(
-                    color: gradient.first.withOpacity(0.4),
+                    color: gradient.first.withValues(alpha: 0.4),
                     blurRadius: 10,
                     offset: const Offset(0, 4))
               ],
@@ -2225,7 +2236,7 @@ class _PackageHorizontalList extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(10)),
                     child: Text(p['tag'] as String,
                         style: const TextStyle(
@@ -2290,7 +2301,7 @@ class _ServiceCard extends StatelessWidget {
           border: Border.all(color: kSlate200),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 8,
                 offset: const Offset(0, 2))
           ],
@@ -2726,7 +2737,8 @@ class _TravelScreenState extends State<TravelScreen>
           _driverBirthdayCtrl.text.trim().isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Please fill out all required vehicle booking fields.'),
+            content:
+                Text('Please fill out all required vehicle booking fields.'),
             backgroundColor: Colors.red,
           ),
         );
@@ -2846,7 +2858,7 @@ class _TravelScreenState extends State<TravelScreen>
                           _label('Operator'),
                           const SizedBox(height: 6),
                           DropdownButtonFormField<String>(
-                            value: _operators.contains(_operator)
+                            initialValue: _operators.contains(_operator)
                                 ? _operator
                                 : null,
                             hint: const Text('Choose an operator'),
@@ -2876,7 +2888,8 @@ class _TravelScreenState extends State<TravelScreen>
                           _label('Origin'),
                           const SizedBox(height: 6),
                           DropdownButtonFormField<String>(
-                            value: _origins.contains(_origin) ? _origin : null,
+                            initialValue:
+                                _origins.contains(_origin) ? _origin : null,
                             hint: const Text('Select Origin'),
                             items: _origins
                                 .toSet()
@@ -2913,9 +2926,10 @@ class _TravelScreenState extends State<TravelScreen>
                                       child: CircularProgressIndicator(
                                           color: kGreen)))
                               : DropdownButtonFormField<String>(
-                                  value: _destinations.contains(_destination)
-                                      ? _destination
-                                      : null,
+                                  initialValue:
+                                      _destinations.contains(_destination)
+                                          ? _destination
+                                          : null,
                                   hint: const Text('Select Destination'),
                                   items: _destinations
                                       .toSet()
@@ -3007,7 +3021,8 @@ class _TravelScreenState extends State<TravelScreen>
                                 border: Border.all(color: kSlate200),
                                 boxShadow: [
                                   BoxShadow(
-                                      color: Colors.black.withOpacity(0.06),
+                                      color:
+                                          Colors.black.withValues(alpha: 0.06),
                                       blurRadius: 10,
                                       offset: const Offset(0, 4))
                                 ],
@@ -3162,7 +3177,7 @@ class _TravelScreenState extends State<TravelScreen>
                                       ),
                                       Switch(
                                         value: _isVehicleBookingEnabled,
-                                        activeColor: kGreen,
+                                        activeThumbColor: kGreen,
                                         onChanged: (val) {
                                           setState(() {
                                             _isVehicleBookingEnabled = val;
@@ -3240,7 +3255,8 @@ class _TravelScreenState extends State<TravelScreen>
                                                       vertical: 12),
                                               decoration: BoxDecoration(
                                                 color: selected
-                                                    ? kGreen.withOpacity(0.05)
+                                                    ? kGreen.withValues(
+                                                        alpha: 0.05)
                                                     : kSlate50,
                                                 border: Border.all(
                                                     color: selected
@@ -3408,17 +3424,26 @@ class _TravelScreenState extends State<TravelScreen>
                             child: ElevatedButton(
                               onPressed: () {
                                 final bool isStarlite = _mode == 'ferry' &&
-                                    (_operator?.toLowerCase().contains('starlite') ?? false);
+                                    (_operator
+                                            ?.toLowerCase()
+                                            .contains('starlite') ??
+                                        false);
                                 bool isVehicleValid = true;
-                                if (_mode == 'ferry' && _isVehicleBookingEnabled && isStarlite) {
+                                if (_mode == 'ferry' &&
+                                    _isVehicleBookingEnabled &&
+                                    isStarlite) {
                                   if (_plateCtrl.text.trim().isEmpty ||
-                                      _driverFirstNameCtrl.text.trim().isEmpty ||
+                                      _driverFirstNameCtrl.text
+                                          .trim()
+                                          .isEmpty ||
                                       _driverLastNameCtrl.text.trim().isEmpty ||
                                       _driverBirthdayCtrl.text.trim().isEmpty) {
                                     isVehicleValid = false;
                                   }
                                 }
-                                if (_origin == null || _destination == null || !isVehicleValid) {
+                                if (_origin == null ||
+                                    _destination == null ||
+                                    !isVehicleValid) {
                                   return null;
                                 }
                                 return _goToSchedule;
@@ -3513,7 +3538,7 @@ class _ModeTab extends StatelessWidget {
           boxShadow: selected
               ? [
                   BoxShadow(
-                      color: kGreen.withOpacity(0.3),
+                      color: kGreen.withValues(alpha: 0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 3))
                 ]
@@ -4847,7 +4872,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: statusColor.withOpacity(0.1),
+                              color: statusColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
@@ -5557,24 +5582,33 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         _detailSection('Trip', <String>[
           '${_booking['origin']} → ${_booking['destination']}',
           () {
-            final rawDep = (_booking['rebooking_departure_date'] ?? _booking['preferred_replacement_date'] ?? _booking['departure_date'] ?? '').toString();
+            final rawDep = (_booking['rebooking_departure_date'] ??
+                    _booking['preferred_replacement_date'] ??
+                    _booking['departure_date'] ??
+                    '')
+                .toString();
             final depTime = _booking['departure_time']?.toString();
             if (rawDep.isEmpty) return 'Departure: -';
             final dt = DateTime.tryParse(rawDep)?.toLocal();
             if (dt == null) return 'Departure: $rawDep';
-            final dateStr = '${dt.year}/${dt.month.toString().padLeft(2,'0')}/${dt.day.toString().padLeft(2,'0')}';
+            final dateStr =
+                '${dt.year}/${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')}';
             if (depTime != null && depTime.isNotEmpty) {
               return 'Departure: $dateStr $depTime';
             }
             return 'Departure: $dateStr';
           }(),
-          if ((_booking['rebooking_return_date'] ?? _booking['return_date']) != null)
+          if ((_booking['rebooking_return_date'] ?? _booking['return_date']) !=
+              null)
             () {
-              final rawRet = (_booking['rebooking_return_date'] ?? _booking['return_date']).toString();
+              final rawRet =
+                  (_booking['rebooking_return_date'] ?? _booking['return_date'])
+                      .toString();
               final retTime = _booking['return_time']?.toString();
               final dt = DateTime.tryParse(rawRet)?.toLocal();
               if (dt == null) return 'Return: $rawRet';
-              final dateStr = '${dt.year}/${dt.month.toString().padLeft(2,'0')}/${dt.day.toString().padLeft(2,'0')}';
+              final dateStr =
+                  '${dt.year}/${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')}';
               if (retTime != null && retTime.isNotEmpty) {
                 return 'Return: $dateStr $retTime';
               }
@@ -5668,7 +5702,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             'Request pending verification',
             'New dates will appear after approval.'
           ]),
-        if (_booking['status'] != 'cancelled' && _booking['status'] != 'operator_cancelled') ...[
+        if (_booking['status'] != 'cancelled' &&
+            _booking['status'] != 'operator_cancelled') ...[
           if (_booking['ticket_url'] != null)
             OutlinedButton.icon(
               onPressed: () =>
@@ -5676,10 +5711,14 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               icon: const Icon(Icons.receipt_long),
               label: const Text('Payment Acknowledgement'),
             ),
-          if (transaction['confirmation_url'] != null || _booking['confirmation_url'] != null || _booking['confirmation_pdf_url'] != null)
+          if (transaction['confirmation_url'] != null ||
+              _booking['confirmation_url'] != null ||
+              _booking['confirmation_pdf_url'] != null)
             FilledButton.icon(
               onPressed: () {
-                final url = transaction['confirmation_url'] ?? _booking['confirmation_url'] ?? _booking['confirmation_pdf_url'];
+                final url = transaction['confirmation_url'] ??
+                    _booking['confirmation_url'] ??
+                    _booking['confirmation_pdf_url'];
                 launchUrl(Uri.parse(url.toString()));
               },
               icon: const Icon(Icons.download),
@@ -5693,7 +5732,9 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
           // Show rebook/refund/cancel when payment is uploaded (pending) OR verified (paid).
           // Pre-84ab183 behavior: not restricted to admin-verified bookings only.
           if (_booking['can_rebook'] == true ||
-              (_paymentStatus == 'pending' && _booking['status'] != 'cancelled' && _booking['status'] != 'operator_cancelled'))
+              (_paymentStatus == 'pending' &&
+                  _booking['status'] != 'cancelled' &&
+                  _booking['status'] != 'operator_cancelled'))
             OutlinedButton.icon(
                 onPressed: _busy
                     ? null
@@ -5707,8 +5748,11 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                       },
                 icon: const Icon(Icons.calendar_month),
                 label: const Text('Request rebooking')),
-          if (_booking['can_cancel'] == true || _booking['can_rebook'] == true ||
-              (_paymentStatus == 'pending' && _booking['status'] != 'cancelled' && _booking['status'] != 'operator_cancelled'))
+          if (_booking['can_cancel'] == true ||
+              _booking['can_rebook'] == true ||
+              (_paymentStatus == 'pending' &&
+                  _booking['status'] != 'cancelled' &&
+                  _booking['status'] != 'operator_cancelled'))
             OutlinedButton.icon(
               onPressed: _busy
                   ? null
@@ -5768,7 +5812,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             ),
           ),
           DropdownButtonFormField<String>(
-              value: _refundMethod,
+              initialValue: _refundMethod,
               decoration: const InputDecoration(labelText: 'Refund method'),
               items: const [
                 DropdownMenuItem(value: 'GCash', child: Text('GCash')),
@@ -6406,7 +6450,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
             margin: const EdgeInsets.all(16),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
-                color: kGreen.withOpacity(0.07),
+                color: kGreen.withValues(alpha: 0.07),
                 borderRadius: BorderRadius.circular(12)),
             child: Row(
               children: [
@@ -6674,7 +6718,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFdb2777).withOpacity(0.06),
+        color: const Color(0xFFdb2777).withValues(alpha: 0.06),
         border: Border.all(color: const Color(0xFFdb2777), width: 2),
         borderRadius: BorderRadius.circular(16),
       ),
@@ -6697,7 +6741,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
               ),
               Switch(
                 value: widget.booking.usePromoTicket,
-                activeColor: const Color(0xFFdb2777),
+                activeThumbColor: const Color(0xFFdb2777),
                 onChanged: (val) {
                   setState(() {
                     widget.booking.usePromoTicket = val;
@@ -6751,8 +6795,11 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
     final val = isReturn
         ? widget.booking.selectedReturnAirlineClassId
         : widget.booking.selectedAirlineClassId;
-    final schedule = isReturn ? widget.booking.selectedReturnSchedule : widget.booking.selectedSchedule;
-    final schedulePrice = schedule != null ? _parseDouble(schedule['price']) : 0.0;
+    final schedule = isReturn
+        ? widget.booking.selectedReturnSchedule
+        : widget.booking.selectedSchedule;
+    final schedulePrice =
+        schedule != null ? _parseDouble(schedule['price']) : 0.0;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -6797,7 +6844,9 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: isSelected ? kPink.withOpacity(0.05) : Colors.white,
+                    color: isSelected
+                        ? kPink.withValues(alpha: 0.05)
+                        : Colors.white,
                     border: Border.all(
                         color: isSelected ? kPink : Colors.grey.shade300,
                         width: isSelected ? 2 : 1),
@@ -6823,7 +6872,8 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF10b981).withOpacity(0.2),
+                              color: const Color(0xFF10b981)
+                                  .withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
@@ -6860,8 +6910,11 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
     final val = isReturn
         ? widget.booking.selectedReturnFerryAccommodationId
         : widget.booking.selectedFerryAccommodationId;
-    final schedule = isReturn ? widget.booking.selectedReturnSchedule : widget.booking.selectedSchedule;
-    final schedulePrice = schedule != null ? _parseDouble(schedule['price']) : 0.0;
+    final schedule = isReturn
+        ? widget.booking.selectedReturnSchedule
+        : widget.booking.selectedSchedule;
+    final schedulePrice =
+        schedule != null ? _parseDouble(schedule['price']) : 0.0;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -6908,7 +6961,9 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: isSelected ? kPink.withOpacity(0.05) : Colors.white,
+                    color: isSelected
+                        ? kPink.withValues(alpha: 0.05)
+                        : Colors.white,
                     border: Border.all(
                         color: isSelected ? kPink : Colors.grey.shade300,
                         width: isSelected ? 2 : 1),
@@ -6934,7 +6989,8 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF10b981).withOpacity(0.2),
+                              color: const Color(0xFF10b981)
+                                  .withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
@@ -7031,7 +7087,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                 style: TextStyle(fontSize: 12, color: kSlate500)),
             const SizedBox(height: 12),
             DropdownButtonFormField<int?>(
-              value: widget.booking.hasExtraBaggage
+              initialValue: widget.booking.hasExtraBaggage
                   ? widget.booking.extraBaggageKg
                   : null,
               decoration: const InputDecoration(
@@ -7190,7 +7246,12 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                             'discount_id': null
                           },
                         for (int i = 0; i < widget.booking.children; i++)
-                          {'type': 'child', 'name': '', 'birthdate': '', 'discount_id': null},
+                          {
+                            'type': 'child',
+                            'name': '',
+                            'birthdate': '',
+                            'discount_id': null
+                          },
                       ];
 
                       if (widget.booking.mode != 'airline') {
@@ -7280,7 +7341,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                                       decoration: BoxDecoration(
                                           color: isSelected
                                               ? Colors.white24
-                                              : kGreen.withOpacity(0.08),
+                                              : kGreen.withValues(alpha: 0.08),
                                           borderRadius:
                                               BorderRadius.circular(8)),
                                       child: Text(
@@ -7442,7 +7503,7 @@ class _DiscountScreenState extends State<DiscountScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         decoration: BoxDecoration(
-          color: hasImg ? kGreen.withOpacity(0.08) : Colors.grey.shade50,
+          color: hasImg ? kGreen.withValues(alpha: 0.08) : Colors.grey.shade50,
           border: Border.all(
               color: hasImg ? kGreen : Colors.grey.shade300,
               width: hasImg ? 1.5 : 1),
@@ -7479,7 +7540,7 @@ class _DiscountScreenState extends State<DiscountScreen> {
                         : 'Tap to upload picture',
                     style: TextStyle(
                       fontSize: 11,
-                      color: hasImg ? kGreen.withOpacity(0.8) : kSlate400,
+                      color: hasImg ? kGreen.withValues(alpha: 0.8) : kSlate400,
                     ),
                   ),
                 ],
@@ -7585,7 +7646,7 @@ class _DiscountScreenState extends State<DiscountScreen> {
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                        color: kGreen.withOpacity(0.06),
+                        color: kGreen.withValues(alpha: 0.06),
                         borderRadius: BorderRadius.circular(12)),
                     child: Text(
                       '${widget.booking.origin} → ${widget.booking.destination}  ·  ${s['service']}  ·  ₱${(_parseDouble(s['price']) + (widget.booking.mode == 'ferry' ? (widget.booking.selectedFerryAccommodationPrice ?? 0) : (widget.booking.selectedAirlineClassPrice ?? 0))).toStringAsFixed(2)} / person',
@@ -7619,7 +7680,7 @@ class _DiscountScreenState extends State<DiscountScreen> {
                                           (type == 'adult' || type == 'driver'
                                                   ? kGreen
                                                   : kPink)
-                                              .withOpacity(0.1),
+                                              .withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(20)),
                                   child: Text(
                                     type == 'driver'
@@ -7645,7 +7706,9 @@ class _DiscountScreenState extends State<DiscountScreen> {
                               decoration: InputDecoration(
                                 labelText: 'Full Name',
                                 filled: type == 'driver',
-                                fillColor: type == 'driver' ? Colors.grey.shade100 : null,
+                                fillColor: type == 'driver'
+                                    ? Colors.grey.shade100
+                                    : null,
                                 border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10)),
                               ),
@@ -7663,49 +7726,54 @@ class _DiscountScreenState extends State<DiscountScreen> {
                               onTap: type == 'driver'
                                   ? null
                                   : () async {
-                                final d = await showDatePicker(
-                                  context: context,
-                                  initialDate: DateTime.now()
-                                      .subtract(const Duration(days: 365 * 10)),
-                                  firstDate: DateTime(1900),
-                                  lastDate: DateTime.now(),
-                                );
-                                if (d != null) {
-                                  final selectedDate =
-                                      "${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}";
-                                  setState(() => _birthdateControllers[i].text =
-                                      selectedDate);
-
-                                  // Infant check
-                                  final age =
-                                      DateTime.now().difference(d).inDays /
-                                          365.25;
-                                  if (age < 2 && type == 'child') {
-                                    if (mounted) {
-                                      showDialog(
+                                      final d = await showDatePicker(
                                         context: context,
-                                        builder: (c) => AlertDialog(
-                                          title: const Text(
-                                              'Minor / Infant Notice'),
-                                          content: const Text(
-                                              'Please note: If the passenger is an infant (under 2 years old), additional requirements and fees may apply depending on the operator.'),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () => Navigator.pop(c),
-                                              child: const Text('Acknowledge'),
-                                            ),
-                                          ],
-                                        ),
+                                        initialDate: DateTime.now().subtract(
+                                            const Duration(days: 365 * 10)),
+                                        firstDate: DateTime(1900),
+                                        lastDate: DateTime.now(),
                                       );
-                                    }
-                                  }
-                                }
-                              },
+                                      if (d != null) {
+                                        final selectedDate =
+                                            "${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}";
+                                        setState(() => _birthdateControllers[i]
+                                            .text = selectedDate);
+
+                                        // Infant check
+                                        final age = DateTime.now()
+                                                .difference(d)
+                                                .inDays /
+                                            365.25;
+                                        if (age < 2 && type == 'child') {
+                                          if (mounted) {
+                                            showDialog(
+                                              context: context,
+                                              builder: (c) => AlertDialog(
+                                                title: const Text(
+                                                    'Minor / Infant Notice'),
+                                                content: const Text(
+                                                    'Please note: If the passenger is an infant (under 2 years old), additional requirements and fees may apply depending on the operator.'),
+                                                actions: [
+                                                  TextButton(
+                                                    onPressed: () =>
+                                                        Navigator.pop(c),
+                                                    child: const Text(
+                                                        'Acknowledge'),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          }
+                                        }
+                                      }
+                                    },
                               decoration: InputDecoration(
                                 labelText: 'Birthdate *',
                                 hintText: 'YYYY-MM-DD',
                                 filled: type == 'driver',
-                                fillColor: type == 'driver' ? Colors.grey.shade100 : null,
+                                fillColor: type == 'driver'
+                                    ? Colors.grey.shade100
+                                    : null,
                                 suffixIcon:
                                     const Icon(Icons.calendar_today, size: 20),
                                 border: OutlineInputBorder(
@@ -7743,7 +7811,7 @@ class _DiscountScreenState extends State<DiscountScreen> {
                             ] else if (_discounts.isNotEmpty) ...[
                               const SizedBox(height: 10),
                               DropdownButtonFormField<int?>(
-                                value: pax[i]['discount_id'],
+                                initialValue: pax[i]['discount_id'],
                                 hint: const Text('No Discount'),
                                 items: [
                                   const DropdownMenuItem<int?>(
@@ -7959,7 +8027,7 @@ class _StayScreenState extends State<StayScreen> {
                               .contains(id);
                           return Card(
                             color: selected
-                                ? kGreen.withOpacity(0.05)
+                                ? kGreen.withValues(alpha: 0.05)
                                 : Colors.white,
                             margin: const EdgeInsets.only(bottom: 12),
                             shape: RoundedRectangleBorder(
@@ -8260,7 +8328,8 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
           final activeRule = data['active_rule'];
           if (activeRule != null) {
             UserSession.pointsAwarded = activeRule['points_awarded'] ?? 0;
-            UserSession.spendThreshold = activeRule['spend_threshold_centavos'] ?? 0;
+            UserSession.spendThreshold =
+                activeRule['spend_threshold_centavos'] ?? 0;
           }
         });
         UserSession.save();
@@ -8355,8 +8424,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
             'driver_last_name': widget.booking.vehicleDriverLastName,
             'driver_birthday': widget.booking.vehicleDriverBirthday,
           },
-          'selected_transport_class_id':
-              widget.booking.selectedAirlineClassId,
+          'selected_transport_class_id': widget.booking.selectedAirlineClassId,
           'selected_schedule_accommodation_id':
               widget.booking.selectedFerryAccommodationId,
           if (widget.booking.tripType == 'round_trip' &&
@@ -8461,11 +8529,16 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                             : 'Round Trip'),
                     _SummaryRow('Schedule',
                         '${s['service']}  ${s['departure']} – ${s['arrival']}'),
-                    _SummaryRow('Ticket Price', '₱${_parseDouble(s['price']).toStringAsFixed(2)}'),
-                    if (widget.booking.mode == 'ferry' && widget.booking.selectedFerryAccommodationName != null)
-                      _SummaryRow('Travel Class', '${widget.booking.selectedFerryAccommodationName!} (₱${(widget.booking.selectedFerryAccommodationPrice ?? 0).toStringAsFixed(2)})'),
-                    if (widget.booking.mode == 'airline' && widget.booking.selectedAirlineClassName != null)
-                      _SummaryRow('Travel Class', '${widget.booking.selectedAirlineClassName!} (₱${(widget.booking.selectedAirlineClassPrice ?? 0).toStringAsFixed(2)})'),
+                    _SummaryRow('Ticket Price',
+                        '₱${_parseDouble(s['price']).toStringAsFixed(2)}'),
+                    if (widget.booking.mode == 'ferry' &&
+                        widget.booking.selectedFerryAccommodationName != null)
+                      _SummaryRow('Travel Class',
+                          '${widget.booking.selectedFerryAccommodationName!} (₱${(widget.booking.selectedFerryAccommodationPrice ?? 0).toStringAsFixed(2)})'),
+                    if (widget.booking.mode == 'airline' &&
+                        widget.booking.selectedAirlineClassName != null)
+                      _SummaryRow('Travel Class',
+                          '${widget.booking.selectedAirlineClassName!} (₱${(widget.booking.selectedAirlineClassPrice ?? 0).toStringAsFixed(2)})'),
                     if (widget.booking.hasExtraBaggage &&
                         widget.booking.mode == 'airline')
                       _SummaryRow('Extra Baggage',
@@ -8660,7 +8733,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                           onChanged: _availablePoints > 0
                               ? (val) => setState(() => _usePoints = val)
                               : null,
-                          activeColor: kGreen,
+                          activeThumbColor: kGreen,
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -8803,14 +8876,20 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
 
                       double transportClassCost = 0.0;
                       if (widget.booking.mode == 'ferry') {
-                        transportClassCost += widget.booking.selectedFerryAccommodationPrice ?? 0;
+                        transportClassCost +=
+                            widget.booking.selectedFerryAccommodationPrice ?? 0;
                         if (widget.booking.tripType == 'round_trip') {
-                          transportClassCost += widget.booking.selectedReturnFerryAccommodationPrice ?? 0;
+                          transportClassCost += widget.booking
+                                  .selectedReturnFerryAccommodationPrice ??
+                              0;
                         }
                       } else {
-                        transportClassCost += widget.booking.selectedAirlineClassPrice ?? 0;
+                        transportClassCost +=
+                            widget.booking.selectedAirlineClassPrice ?? 0;
                         if (widget.booking.tripType == 'round_trip') {
-                          transportClassCost += widget.booking.selectedReturnAirlineClassPrice ?? 0;
+                          transportClassCost +=
+                              widget.booking.selectedReturnAirlineClassPrice ??
+                                  0;
                         }
                       }
                       transportClassCost = transportClassCost * payingPax;
@@ -8851,16 +8930,16 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                               ? (totalBeforePoints - pointsDiscount)
                               : 0.0;
                       final webAdminFee = multiplier * _feePerPerson;
-                      final eligiblePointsTotal = (finalTotal -
-                              webAdminFee -
-                              transactionFeeTotal)
-                          .clamp(0.0, double.infinity);
+                      final eligiblePointsTotal =
+                          (finalTotal - webAdminFee - transactionFeeTotal)
+                              .clamp(0.0, double.infinity);
 
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           _SummarySection(title: 'Payment Summary', children: [
-                            _SummaryRow('Departure Tickets & Class (${payingPax}x)',
+                            _SummaryRow(
+                                'Departure Tickets & Class (${payingPax}x)',
                                 '₱${(ticketPrice + transportClassCost).toStringAsFixed(2)}'),
                             if (scheduleAccommodationCost > 0)
                               _SummaryRow('Accommodation',
@@ -8926,10 +9005,10 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                                 child: Container(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: kPink.withOpacity(0.08),
+                                    color: kPink.withValues(alpha: 0.08),
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(
-                                        color: kPink.withOpacity(0.3)),
+                                        color: kPink.withValues(alpha: 0.3)),
                                   ),
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
@@ -9251,9 +9330,9 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-                color: kGreen.withOpacity(0.08),
+                color: kGreen.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: kGreen.withOpacity(0.3))),
+                border: Border.all(color: kGreen.withValues(alpha: 0.3))),
             child: Column(
               children: [
                 const Icon(Icons.check_circle, color: kGreen, size: 48),
@@ -9419,7 +9498,7 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.08),
+                          color: Colors.green.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(10)),
                       child: const Row(
                         children: [
@@ -9437,7 +9516,7 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.08),
+                          color: Colors.red.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(10)),
                       child: const Row(
                         children: [
@@ -9498,7 +9577,8 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
                       controller: _refController,
                       decoration: InputDecoration(
                         hintText: 'e.g. 000123456789',
-                        hintStyle: const TextStyle(color: kSlate400, fontSize: 13),
+                        hintStyle:
+                            const TextStyle(color: kSlate400, fontSize: 13),
                         filled: true,
                         fillColor: kSlate50,
                         border: OutlineInputBorder(
@@ -10018,9 +10098,10 @@ class _VoucherPickerScreenState extends State<VoucherPickerScreen> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                        color: kGreen.withOpacity(0.08),
+                        color: kGreen.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: kGreen.withOpacity(0.3))),
+                        border:
+                            Border.all(color: kGreen.withValues(alpha: 0.3))),
                     child: Row(
                       children: [
                         const Icon(Icons.check_circle, color: kGreen, size: 18),
@@ -10245,7 +10326,7 @@ class AboutScreen extends StatelessWidget {
                                 padding:
                                     const EdgeInsets.symmetric(vertical: 10),
                                 decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.15),
+                                    color: Colors.white.withValues(alpha: 0.15),
                                     borderRadius: BorderRadius.circular(12)),
                                 child: Text(name,
                                     textAlign: TextAlign.center,
@@ -10290,7 +10371,7 @@ class _AboutFact extends StatelessWidget {
           width: 38,
           height: 38,
           decoration: BoxDecoration(
-              color: kGreen.withOpacity(0.1),
+              color: kGreen.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10)),
           child: Center(
               child: Text(number,
@@ -10390,9 +10471,9 @@ class _ContactScreenState extends State<ContactScreen> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                    color: kGreen.withOpacity(0.08),
+                    color: kGreen.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: kGreen.withOpacity(0.2))),
+                    border: Border.all(color: kGreen.withValues(alpha: 0.2))),
                 child: Column(
                   children: [
                     const Icon(Icons.check_circle, color: kGreen, size: 48),
@@ -10521,7 +10602,7 @@ class _ContactInfoCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12)),
             child: Icon(icon, color: color, size: 22),
           ),
@@ -10666,7 +10747,7 @@ class ServicesScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                            color: (s['color'] as Color).withOpacity(0.1),
+                            color: (s['color'] as Color).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(14)),
                         child: Icon(s['icon'] as IconData,
                             color: s['color'] as Color, size: 26),
@@ -10894,7 +10975,7 @@ class _PackageList extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(20)),
                         child: Text(p['tag'] as String,
                             style: const TextStyle(
@@ -11158,7 +11239,7 @@ class _RequestBookingScreenState extends State<RequestBookingScreen> {
                         Padding(
                           padding: const EdgeInsets.only(bottom: 14),
                           child: DropdownButtonFormField<String>(
-                            value: _serviceType,
+                            initialValue: _serviceType,
                             items: _services
                                 .map((s) =>
                                     DropdownMenuItem(value: s, child: Text(s)))
@@ -11177,7 +11258,7 @@ class _RequestBookingScreenState extends State<RequestBookingScreen> {
                           Padding(
                             padding: const EdgeInsets.only(bottom: 14),
                             child: DropdownButtonFormField<String>(
-                              value: _tripType,
+                              initialValue: _tripType,
                               items: _tripTypes
                                   .map((s) => DropdownMenuItem(
                                       value: s, child: Text(s)))
@@ -11225,7 +11306,7 @@ class _RequestBookingScreenState extends State<RequestBookingScreen> {
                         Container(
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                              color: kGreen.withOpacity(0.05),
+                              color: kGreen.withValues(alpha: 0.05),
                               borderRadius: BorderRadius.circular(12)),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -11454,9 +11535,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           final bool isRead =
                               notif['is_read'] == 1 || notif['is_read'] == true;
                           return ListTile(
-                            tileColor: isRead ? null : kGreen.withOpacity(0.05),
+                            tileColor:
+                                isRead ? null : kGreen.withValues(alpha: 0.05),
                             leading: CircleAvatar(
-                              backgroundColor: kGreen.withOpacity(0.2),
+                              backgroundColor: kGreen.withValues(alpha: 0.2),
                               child: const Icon(Icons.notifications_active,
                                   color: kGreen),
                             ),
@@ -11470,47 +11552,63 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               if (!isRead) _markAsRead(notif['id']);
 
                               // Navigate to booking details if transaction_number is present
-                              if (notif['data'] != null && notif['data'] is Map && notif['data']['transaction_number'] != null) {
-                                final transactionNumber = notif['data']['transaction_number'];
-                                
+                              if (notif['data'] != null &&
+                                  notif['data'] is Map &&
+                                  notif['data']['transaction_number'] != null) {
+                                final transactionNumber =
+                                    notif['data']['transaction_number'];
+
                                 // Show loading dialog
                                 showDialog(
                                   context: context,
                                   barrierDismissible: false,
-                                  builder: (context) => const Center(child: CircularProgressIndicator(color: kGreen)),
+                                  builder: (context) => const Center(
+                                      child: CircularProgressIndicator(
+                                          color: kGreen)),
                                 );
 
                                 try {
                                   final response = await http.get(
-                                    Uri.parse('${UserSession.getBaseUrl()}/api/bookings/$transactionNumber'),
+                                    Uri.parse(
+                                        '${UserSession.getBaseUrl()}/api/bookings/$transactionNumber'),
                                     headers: {
-                                      'Authorization': 'Bearer ${UserSession.token}',
+                                      'Authorization':
+                                          'Bearer ${UserSession.token}',
                                       'Accept': 'application/json',
                                     },
                                   );
-                                  
+
                                   if (!mounted) return;
                                   Navigator.pop(context); // hide loading
-                                  
+
                                   if (response.statusCode == 200) {
                                     final data = jsonDecode(response.body);
-                                    if (data['status'] == 'success' && data['booking'] != null) {
+                                    if (data['status'] == 'success' &&
+                                        data['booking'] != null) {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (_) => BookingDetailsScreen(booking: data['booking']),
+                                          builder: (_) => BookingDetailsScreen(
+                                              booking: data['booking']),
                                         ),
                                       );
                                     } else {
-                                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Booking details not found.')));
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(const SnackBar(
+                                              content: Text(
+                                                  'Booking details not found.')));
                                     }
                                   } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to load booking details.')));
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                            content: Text(
+                                                'Failed to load booking details.')));
                                   }
                                 } catch (e) {
                                   if (!mounted) return;
                                   Navigator.pop(context);
-                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Error: $e')));
                                 }
                               }
                             },
@@ -11978,7 +12076,7 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Row(
@@ -12029,7 +12127,7 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: allOrigins.contains(_originFilter)
+                      initialValue: allOrigins.contains(_originFilter)
                           ? _originFilter
                           : null,
                       hint:
@@ -12056,7 +12154,7 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: allDestinations.contains(_destinationFilter)
+                      initialValue: allDestinations.contains(_destinationFilter)
                           ? _destinationFilter
                           : null,
                       hint: const Text('Destination',
@@ -12151,8 +12249,9 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
                                       errorBuilder: (ctx, err, stack) =>
                                           CircleAvatar(
                                         backgroundColor: isFerry
-                                            ? Colors.blue.withOpacity(0.1)
-                                            : Colors.amber.withOpacity(0.1),
+                                            ? Colors.blue.withValues(alpha: 0.1)
+                                            : Colors.amber
+                                                .withValues(alpha: 0.1),
                                         child: Icon(
                                             isFerry
                                                 ? Icons.directions_boat
@@ -12166,8 +12265,8 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
                                 else
                                   CircleAvatar(
                                     backgroundColor: isFerry
-                                        ? Colors.blue.withOpacity(0.1)
-                                        : Colors.amber.withOpacity(0.1),
+                                        ? Colors.blue.withValues(alpha: 0.1)
+                                        : Colors.amber.withValues(alpha: 0.1),
                                     child: Icon(
                                         isFerry
                                             ? Icons.directions_boat
@@ -12575,7 +12674,7 @@ class _VouchersScreenState extends State<VouchersScreen> {
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: kPink.withOpacity(0.1),
+                        color: kPink.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(Icons.card_giftcard,
@@ -12941,7 +13040,7 @@ class _DiscountCouponCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.12),
+              color: Colors.black.withValues(alpha: 0.12),
               blurRadius: 12,
               offset: const Offset(0, 5),
             ),
@@ -13045,7 +13144,7 @@ class _DiscountCouponCard extends StatelessWidget {
                             width: 52,
                             height: 52,
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.16),
+                              color: Colors.white.withValues(alpha: 0.16),
                               borderRadius: BorderRadius.circular(16),
                             ),
                             child: const Icon(
@@ -13597,7 +13696,7 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white.withValues(alpha: 0.8),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(color: Colors.amber.shade200)),
                     child: Text.rich(
@@ -13685,12 +13784,13 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color:
-                    _submitted ? kGreen.withOpacity(0.08) : Colors.red.shade50,
+                color: _submitted
+                    ? kGreen.withValues(alpha: 0.08)
+                    : Colors.red.shade50,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                     color: _submitted
-                        ? kGreen.withOpacity(0.3)
+                        ? kGreen.withValues(alpha: 0.3)
                         : Colors.red.shade200),
               ),
               child: Text(_feedback,
@@ -13779,7 +13879,7 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
                               color: kSlate500)),
                       const SizedBox(height: 6),
                       DropdownButtonFormField<String>(
-                        value: _refundMethod,
+                        initialValue: _refundMethod,
                         decoration: InputDecoration(
                             border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10)),
@@ -14075,7 +14175,7 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
                               padding: const EdgeInsets.all(14),
                               decoration: BoxDecoration(
                                 color: isSelected
-                                    ? kGreen.withOpacity(0.06)
+                                    ? kGreen.withValues(alpha: 0.06)
                                     : Colors.white,
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
@@ -14156,7 +14256,7 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? kGreen.withOpacity(0.06)
+                                  ? kGreen.withValues(alpha: 0.06)
                                   : Colors.white,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
@@ -14250,7 +14350,7 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
                               padding: const EdgeInsets.all(14),
                               decoration: BoxDecoration(
                                 color: isSelected
-                                    ? kGreen.withOpacity(0.06)
+                                    ? kGreen.withValues(alpha: 0.06)
                                     : Colors.white,
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
@@ -14332,7 +14432,7 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? kGreen.withOpacity(0.06)
+                                  ? kGreen.withValues(alpha: 0.06)
                                   : Colors.white,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
@@ -14725,7 +14825,7 @@ class _RefundScreenState extends State<RefundScreen> {
                                   color: Colors.blueGrey)),
                           const SizedBox(height: 8),
                           DropdownButtonFormField<String>(
-                            value: _refundMethod,
+                            initialValue: _refundMethod,
                             decoration: const InputDecoration(
                                 border: OutlineInputBorder()),
                             items: const [
@@ -15236,7 +15336,7 @@ class _RebookScreenState extends State<RebookScreen> {
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: isAccSel
-                        ? const Color(0xFFdb2777).withOpacity(0.05)
+                        ? const Color(0xFFdb2777).withValues(alpha: 0.05)
                         : Colors.white,
                     border: Border.all(
                         color: isAccSel

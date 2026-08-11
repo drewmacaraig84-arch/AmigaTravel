@@ -890,8 +890,8 @@
     "semantic_hash": ""
   },
   "app/Providers/AppServiceProvider.php": {
-    "mtime": 1786273080.885095,
-    "ast_hash": "028d8de9497e162574814ddb727c217d",
+    "mtime": 1786450128.2460792,
+    "ast_hash": "5cb63772c4e417b8334d9c0d95de3091",
     "semantic_hash": ""
   },
   "app/Providers/Filament/AdminPanelProvider.php": {
@@ -945,8 +945,8 @@
     "semantic_hash": ""
   },
   "bootstrap/app.php": {
-    "mtime": 1786342657.0055969,
-    "ast_hash": "a7f075159162532ffeffe426532adbed",
+    "mtime": 1786450127.2405536,
+    "ast_hash": "c75b0f36d7dcb3a4a9a9abb5fda9463c",
     "semantic_hash": ""
   },
   "bootstrap/providers.php": {
@@ -1000,8 +1000,8 @@
     "semantic_hash": ""
   },
   "config/firebase.php": {
-    "mtime": 1785379807.8223293,
-    "ast_hash": "c202c6979aeb0b87426327c5cf6a7480",
+    "mtime": 1786447838.2759497,
+    "ast_hash": "f676b2400a3b7ca2eb262b6a2bd59af1",
     "semantic_hash": ""
   },
   "config/livewire.php": {
@@ -1855,8 +1855,8 @@
     "semantic_hash": ""
   },
   "public/index.php": {
-    "mtime": 1784467577.412856,
-    "ast_hash": "d8eda274115af5fd2aaa8230af329ef7",
+    "mtime": 1786449043.2463121,
+    "ast_hash": "2df3287d7d8170af474f4233239b9a0f",
     "semantic_hash": ""
   },
   "public/js/filament/filament/app.js": {
@@ -2305,8 +2305,8 @@
     "semantic_hash": ""
   },
   "routes/web.php": {
-    "mtime": 1786376092.4893413,
-    "ast_hash": "adbbab0aecdba674a6b2dd8c1044d472",
+    "mtime": 1786447470.1633513,
+    "ast_hash": "68bda1033bbb3b4ecdd0cddcdc2501c1",
     "semantic_hash": ""
   },
   "scratch/add_should_queue.php": {
@@ -2445,8 +2445,8 @@
     "semantic_hash": ""
   },
   "scripts/railway-start.sh": {
-    "mtime": 1785379810.88066,
-    "ast_hash": "7b785b3d0e119904286219de400949d1",
+    "mtime": 1786451407.160904,
+    "ast_hash": "6b7f28f0165de5e191b2d1740141d202",
     "semantic_hash": ""
   },
   "scripts/test-mail.php": {
@@ -3657,6 +3657,16 @@
   "test_pdf.php": {
     "mtime": 1786374967.4180508,
     "ast_hash": "0b44b20f243778c036dd7faa2ea09763",
+    "semantic_hash": ""
+  },
+  "public/ping.php": {
+    "mtime": 1786448567.4710598,
+    "ast_hash": "a8a3523a86ea597a5da88ed363b8d48a",
+    "semantic_hash": ""
+  },
+  "public/ping.html": {
+    "mtime": 1786448149.8373332,
+    "ast_hash": "179e6b61096e96cf6278ad2e0a916f68",
     "semantic_hash": ""
   }
 }

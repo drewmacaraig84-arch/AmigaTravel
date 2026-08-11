@@ -32,6 +32,7 @@
              the logo thumbnail beside the website search listing.
         ═══════════════════════════════════════════════════════ --}}
         <script type="application/ld+json">
+        @verbatim
         {
           "@context": "https://schema.org",
           "@graph": [
@@ -107,6 +108,7 @@
             }
           ]
         }
+        @endverbatim
         </script>
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
