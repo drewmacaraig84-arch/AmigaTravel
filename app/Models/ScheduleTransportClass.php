@@ -21,6 +21,8 @@ class ScheduleTransportClass extends Pivot
         'is_active',
         'is_promo',
         'rate_code',
+        'promo_duration_start',
+        'promo_duration_end',
     ];
 
     protected $casts = [
@@ -28,6 +30,8 @@ class ScheduleTransportClass extends Pivot
         'has_bed' => 'boolean',
         'is_active' => 'boolean',
         'is_promo' => 'boolean',
+        'promo_duration_start' => 'datetime',
+        'promo_duration_end' => 'datetime',
     ];
 
     public function schedule(): BelongsTo
