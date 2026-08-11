@@ -85,7 +85,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.64+71';
+  static const String appVersion = '1.0.65+72';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -7032,7 +7032,32 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
               final isPromo = c['is_promo'] == true || c['is_promo'] == 1;
 
               return GestureDetector(
-                onTap: () {
+                onTap: () async {
+                  if (isPromo) {
+                    final bool? proceed = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('www.amigagracia.com says'),
+                        content: const Text('This is a promotional ticket and is STRICTLY non-refundable. It cannot be cancelled or rebooked. Do you wish to proceed?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx, false),
+                            child: const Text('Cancel'),
+                          ),
+                          ElevatedButton(
+                            onPressed: () => Navigator.pop(ctx, true),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF1565C0), // Dark blue like standard alert OK
+                              foregroundColor: Colors.white,
+                            ),
+                            child: const Text('OK'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (proceed != true) return;
+                  }
+
                   setState(() {
                     if (isReturn) {
                       widget.booking.selectedReturnAirlineClassId = c['id'];
@@ -7050,34 +7075,34 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    gradient: isPromo ? const LinearGradient(
-                        colors: [Color(0xFFfdf2f8), Color(0xFFfce7f3)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                    ) : null,
-                    color: !isPromo ? (isSelected
+                    color: isPromo ? const Color(0xFFFFF7E6) : (isSelected
                         ? kPink.withValues(alpha: 0.05)
-                        : Colors.white) : null,
+                        : Colors.white),
                     border: Border.all(
-                        color: isPromo ? Colors.pinkAccent : (isSelected ? kPink : Colors.grey.shade300),
-                        width: isSelected || isPromo ? 2 : 1),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: isPromo && !isSelected ? [BoxShadow(color: Colors.pinkAccent.withValues(alpha: 0.2), blurRadius: 4, spreadRadius: 1)] : null,
+                        color: isPromo ? const Color(0xFFF59E0B) : (isSelected ? kPink : Colors.grey.shade300),
+                        width: isPromo || isSelected ? 2 : 1),
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: isPromo && !isSelected ? [BoxShadow(color: const Color(0xFFF59E0B).withValues(alpha: 0.1), blurRadius: 4, spreadRadius: 1)] : null,
                   ),
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: [
                       if (isPromo)
                         Positioned(
-                          top: -20,
+                          top: -24,
                           right: -10,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.pinkAccent,
-                              borderRadius: BorderRadius.circular(8),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFF59E0B),
+                              borderRadius: BorderRadius.only(
+                                topLeft: Radius.circular(8),
+                                topRight: Radius.circular(8),
+                                bottomLeft: Radius.circular(8),
+                                bottomRight: Radius.circular(0),
+                              ),
                             ),
-                            child: const Text('PROMO', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
+                            child: const Text('PROMO', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
                           ),
                         ),
                       Column(
@@ -7085,43 +7110,78 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Expanded(
                                 child: Text(
                                   c['name'] ?? '',
                                   style: TextStyle(
                                       fontWeight: FontWeight.bold, fontSize: 13,
-                                      color: isPromo ? Colors.pink.shade900 : Colors.black87),
+                                      color: isPromo ? const Color(0xFF92400E) : Colors.black87),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF10b981)
-                                      .withValues(alpha: 0.2),
+                                  color: const Color(0xFFD1FAE5), // emerald-100
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
-                                  '$seats left',
+                                  '$seats seats left',
                                   style: const TextStyle(
-                                      color: Color(0xFF047857),
+                                      color: Color(0xFF047857), // emerald-700
                                       fontSize: 9,
                                       fontWeight: FontWeight.bold),
                                 ),
-                              )
+                              ),
+                              if (isPromo)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFFE4E6), // rose-100
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Text(
+                                    'NON-REFUNDABLE',
+                                    style: TextStyle(
+                                        color: Color(0xFFE11D48), // rose-600
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                ),
                             ],
                           ),
+                          if (isPromo && c['promo_duration_end'] != null) ...[
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                const Icon(Icons.access_time, size: 10, color: Color(0xFFB45309)),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Until ${DateFormat('MMM dd, yyyy hh:mm a').format(DateTime.parse(c['promo_duration_end']).toLocal())}',
+                                  style: const TextStyle(fontSize: 9, color: Color(0xFFB45309)),
+                                ),
+                              ],
+                            ),
+                          ],
                           const SizedBox(height: 8),
                           Row(
                             children: [
                               Text(
                                 '₱${(_parseDouble(c['price']) + schedulePrice).toStringAsFixed(2)}',
                                 style: TextStyle(
-                                    color: isPromo ? Colors.pinkAccent : kPink,
+                                    color: isPromo ? const Color(0xFFEA580C) : kPink, // orange-600 vs pink
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16),
                               ),
