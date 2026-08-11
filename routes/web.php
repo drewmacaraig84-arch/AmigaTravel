@@ -273,7 +273,7 @@ Route::get('/payment/{transaction}', function (Transaction $transaction) {
 
 Route::get('/ticket/download/{transaction_number}', function ($transaction_number) {
     $booking = \App\Models\Booking::where('transaction_number', $transaction_number)
-        ->with(['passengers.discount', 'schedule.route', 'returnSchedule', 'transaction', 'accommodations', 'transportClasses'])
+        ->with(['passengers.discount', 'schedule.ferryRoute', 'returnSchedule', 'transaction', 'accommodations', 'transportClasses'])
         ->firstOrFail();
 
     if ($booking->transaction && !empty($booking->transaction->confirmation_pdf)) {

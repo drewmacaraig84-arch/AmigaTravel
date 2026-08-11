@@ -86,7 +86,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.58+65';
+  static const String appVersion = '1.0.59+66';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -5731,10 +5731,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         if (_canManage && !_cancellationStarted) ...[
           // Show rebook/refund/cancel when payment is uploaded (pending) OR verified (paid).
           // Pre-84ab183 behavior: not restricted to admin-verified bookings only.
-          if (_booking['can_rebook'] == true ||
-              (_paymentStatus == 'pending' &&
-                  _booking['status'] != 'cancelled' &&
-                  _booking['status'] != 'operator_cancelled'))
+          if (_paymentStatus == 'paid' && _booking['can_rebook'] == true)
             OutlinedButton.icon(
                 onPressed: _busy
                     ? null
@@ -5749,10 +5746,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 icon: const Icon(Icons.calendar_month),
                 label: const Text('Request rebooking')),
           if (_booking['can_cancel'] == true ||
-              _booking['can_rebook'] == true ||
-              (_paymentStatus == 'pending' &&
-                  _booking['status'] != 'cancelled' &&
-                  _booking['status'] != 'operator_cancelled'))
+              ['unpaid', 'pending', 'paid'].contains(_paymentStatus))
             OutlinedButton.icon(
               onPressed: _busy
                   ? null
@@ -11548,70 +11542,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                         ? FontWeight.normal
                                         : FontWeight.bold)),
                             subtitle: Text(notif['body'] ?? ''),
-                            onTap: () async {
-                              if (!isRead) _markAsRead(notif['id']);
-
-                              // Navigate to booking details if transaction_number is present
-                              if (notif['data'] != null &&
-                                  notif['data'] is Map &&
-                                  notif['data']['transaction_number'] != null) {
-                                final transactionNumber =
-                                    notif['data']['transaction_number'];
-
-                                // Show loading dialog
-                                showDialog(
-                                  context: context,
-                                  barrierDismissible: false,
-                                  builder: (context) => const Center(
-                                      child: CircularProgressIndicator(
-                                          color: kGreen)),
-                                );
-
-                                try {
-                                  final response = await http.get(
-                                    Uri.parse(
-                                        '${UserSession.getBaseUrl()}/api/bookings/$transactionNumber'),
-                                    headers: {
-                                      'Authorization':
-                                          'Bearer ${UserSession.token}',
-                                      'Accept': 'application/json',
-                                    },
-                                  );
-
-                                  if (!mounted) return;
-                                  Navigator.pop(context); // hide loading
-
-                                  if (response.statusCode == 200) {
-                                    final data = jsonDecode(response.body);
-                                    if (data['status'] == 'success' &&
-                                        data['booking'] != null) {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) => BookingDetailsScreen(
-                                              booking: data['booking']),
-                                        ),
-                                      );
-                                    } else {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(const SnackBar(
-                                              content: Text(
-                                                  'Booking details not found.')));
-                                    }
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                            content: Text(
-                                                'Failed to load booking details.')));
-                                  }
-                                } catch (e) {
-                                  if (!mounted) return;
-                                  Navigator.pop(context);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Error: $e')));
-                                }
-                              }
-                            },
+                            // Removed onTap to make it non-clickable
                           );
                         },
                       ),
@@ -15321,8 +15252,13 @@ class _RebookScreenState extends State<RebookScreen> {
               final tc = subList[index];
               final isAccSel = selAccId == tc['id'];
 
+              final ticketPrice = _parseDouble(selectedSch['price']);
+              final combinedPrice = ticketPrice + _parseDouble(tc['price']);
+              final originalTotal = _parseDouble(widget.booking['total_price']);
+              final isTooLow = combinedPrice < originalTotal;
+
               return GestureDetector(
-                onTap: () {
+                onTap: isTooLow ? null : () {
                   setState(() {
                     if (isReturn) {
                       _selRetAccId = tc['id'];
@@ -15335,9 +15271,9 @@ class _RebookScreenState extends State<RebookScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: isAccSel
+                    color: isTooLow ? Colors.grey.shade100 : (isAccSel
                         ? const Color(0xFFdb2777).withValues(alpha: 0.05)
-                        : Colors.white,
+                        : Colors.white),
                     border: Border.all(
                         color: isAccSel
                             ? const Color(0xFFdb2777)
@@ -15351,21 +15287,24 @@ class _RebookScreenState extends State<RebookScreen> {
                     children: [
                       Text(
                         tc['name'] ?? '',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 13),
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 13, color: isTooLow ? Colors.grey : Colors.black),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '₱${_parseDouble(tc['price']).toStringAsFixed(2)}',
-                        style: const TextStyle(
-                            color: Color(0xFFdb2777),
+                        '₱${combinedPrice.toStringAsFixed(2)}',
+                        style: TextStyle(
+                            color: isTooLow ? Colors.grey : const Color(0xFFdb2777),
                             fontWeight: FontWeight.bold,
-                            fontSize: 16),
+                            fontSize: 16,
+                            decoration: isTooLow ? TextDecoration.lineThrough : null),
                         textAlign: TextAlign.center,
                       ),
+                      if (isTooLow)
+                        const Text('Price lower than original', style: TextStyle(color: Colors.red, fontSize: 10)),
                     ],
                   ),
                 ),
