@@ -370,9 +370,15 @@
                                                     @endif
                                                 @endif
                                                 @if(!$booking->is_rebooked)
-                                                    <button wire:click.prevent="requestRebooking" type="button" class="inline-flex items-center justify-center rounded-3xl border border-blue-500 px-6 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-50">
-                                                        Rebook
-                                                    </button>
+                                                    @if($booking->transaction && $booking->transaction->payment_status === 'paid')
+                                                        <button wire:click.prevent="requestRebooking" type="button" class="inline-flex items-center justify-center rounded-3xl border border-blue-500 px-6 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-50">
+                                                            Rebook
+                                                        </button>
+                                                    @else
+                                                        <button type="button" disabled class="inline-flex items-center justify-center rounded-3xl border border-slate-300 bg-slate-100 px-6 py-3 text-sm font-semibold text-slate-400" title="Booking must be verified and paid to rebook.">
+                                                            Rebook
+                                                        </button>
+                                                    @endif
                                                 @endif
                                             @endif
                                         @else
