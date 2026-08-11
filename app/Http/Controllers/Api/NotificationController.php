@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\UserNotification;
 use App\Models\ReadVirtualNotification;
+use App\Models\DeletedVirtualNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -19,6 +20,11 @@ class NotificationController extends Controller
 
         // Get read virtual IDs
         $readVirtualIds = ReadVirtualNotification::where('user_id', $user->id)
+            ->pluck('virtual_id')
+            ->toArray();
+
+        // Get deleted virtual IDs
+        $deletedVirtualIds = DeletedVirtualNotification::where('user_id', $user->id)
             ->pluck('virtual_id')
             ->toArray();
 
@@ -41,8 +47,11 @@ class NotificationController extends Controller
 
         // Append App Notifications (Global)
         $appNotifs = \App\Models\AppNotification::orderByDesc('created_at')
-            ->limit(10)
+            ->limit(20)
             ->get()
+            ->filter(function ($n) use ($deletedVirtualIds) {
+                return !in_array('app_' . $n->id, $deletedVirtualIds);
+            })
             ->map(function ($n) use ($readVirtualIds) {
                 $vid = 'app_' . $n->id;
                 return [
@@ -66,12 +75,16 @@ class NotificationController extends Controller
             ->where('promo_duration_start', '<=', now())
             ->where('promo_duration_end', '>=', now())
             ->join('transport_classes', 'schedule_transport_class.transport_class_id', '=', 'transport_classes.id')
-            ->select('transport_classes.name', 'schedule_transport_class.promo_duration_end')
-            ->distinct()
+            ->select('schedule_transport_class.id', 'transport_classes.name', 'schedule_transport_class.promo_duration_end')
             ->get();
             
-        foreach ($activePromos as $i => $promo) {
-            $vid = 'promo_' . $i;
+        foreach ($activePromos as $promo) {
+            $vid = 'promo_' . $promo->id;
+            
+            if (in_array($vid, $deletedVirtualIds)) {
+                continue;
+            }
+
             $notifications[] = [
                 'id' => $vid,
                 'title' => 'Promotional Ticket Available!',
@@ -92,11 +105,16 @@ class NotificationController extends Controller
         foreach ($cancellations as $booking) {
             if ($booking->serviceCancellation) {
                 $vid = 'cancel_' . $booking->id;
+
+                if (in_array($vid, $deletedVirtualIds)) {
+                    continue;
+                }
+
                 $notifications[] = [
                     'id' => $vid,
                     'title' => 'Service Cancellation Notice',
                     'body' => 'Your booking ' . $booking->transaction_number . ' has been affected by a service cancellation: ' . $booking->serviceCancellation->customer_message,
-                    'type' => 'booking',
+                    'type' => 'service_cancellation',
                     'target_id' => $booking->transaction_number,
                     'is_read' => in_array($vid, $readVirtualIds),
                     'created_at' => $booking->serviceCancellation->created_at->toDateTimeString(),
@@ -151,9 +169,15 @@ class NotificationController extends Controller
         $user = $request->user();
         UserNotification::where('user_id', $user->id)->update(['is_read' => true]);
 
-        // Note: For "mark all read" to work on virtual notifications, it is complex because we generate them on the fly.
-        // Usually, a user taps "mark all read" and expects the badge to clear. We would need to insert ALL current virtual IDs into the table.
-        // For now, this just clears numeric ones, but we can fetch them all and insert them.
+        // To mark all virtuals as read, we just pull the current list and insert them all.
+        $virtualIds = $this->getCurrentVirtualIds($user);
+        
+        foreach ($virtualIds as $vid) {
+            ReadVirtualNotification::firstOrCreate([
+                'user_id' => $user->id,
+                'virtual_id' => $vid,
+            ]);
+        }
         
         return response()->json(['status' => 'success']);
     }
@@ -167,14 +191,61 @@ class NotificationController extends Controller
         if (is_numeric($id)) {
             UserNotification::where('user_id', $user->id)->where('id', $id)->delete();
         } else {
-            // Delete virtual notification by ensuring it's marked as read and possibly tracking it as deleted.
-            // Since we don't have a deleted table, we'll just mark it read so it stops notifying.
-            ReadVirtualNotification::firstOrCreate([
+            DeletedVirtualNotification::firstOrCreate([
                 'user_id' => $user->id,
                 'virtual_id' => $id,
             ]);
         }
 
         return response()->json(['status' => 'success']);
+    }
+
+    /**
+     * Delete all notifications.
+     */
+    public function destroyAll(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        UserNotification::where('user_id', $user->id)->delete();
+
+        $virtualIds = $this->getCurrentVirtualIds($user);
+        foreach ($virtualIds as $vid) {
+            DeletedVirtualNotification::firstOrCreate([
+                'user_id' => $user->id,
+                'virtual_id' => $vid,
+            ]);
+        }
+
+        return response()->json(['status' => 'success']);
+    }
+
+    private function getCurrentVirtualIds($user): array
+    {
+        $ids = [];
+
+        $appNotifs = \App\Models\AppNotification::orderByDesc('created_at')->limit(20)->get();
+        foreach ($appNotifs as $n) {
+            $ids[] = 'app_' . $n->id;
+        }
+
+        $activePromos = \Illuminate\Support\Facades\DB::table('schedule_transport_class')
+            ->where('is_promo', true)
+            ->whereNotNull('promo_duration_start')
+            ->whereNotNull('promo_duration_end')
+            ->where('promo_duration_start', '<=', now())
+            ->where('promo_duration_end', '>=', now())
+            ->get();
+        foreach ($activePromos as $promo) {
+            $ids[] = 'promo_' . $promo->id;
+        }
+
+        $cancellations = \App\Models\Booking::where('user_id', $user->id)
+            ->whereNotNull('service_cancellation_id')
+            ->get();
+        foreach ($cancellations as $booking) {
+            $ids[] = 'cancel_' . $booking->id;
+        }
+
+        return $ids;
     }
 }

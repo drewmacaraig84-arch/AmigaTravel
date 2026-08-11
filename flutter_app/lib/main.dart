@@ -16,7 +16,6 @@ import 'package:intl/intl.dart';
 
 import 'package:flutter_app_badger/flutter_app_badger.dart';
 import 'notification_service.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'forgot_password_screen.dart';
 
 void main() async {
@@ -27,12 +26,6 @@ void main() async {
   try {
     await NotificationService.initialize(
         onNotificationTap: handleNotificationTap);
-    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-    await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
   } catch (e) {
     debugPrint('Failed to initialize notifications: $e');
   }
@@ -92,7 +85,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.63+70';
+  static const String appVersion = '1.0.64+71';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -593,11 +586,6 @@ class _GlobalUpdateWrapperState extends State<GlobalUpdateWrapper>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      if (mounted) {
-        UserSession.unreadNotificationsCount++;
-      }
-    });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkVersionAndPrompt();
@@ -6998,9 +6986,9 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
     final classes = schedule['transport_classes'] as List<dynamic>? ?? [];
     final accommodations = schedule['accommodations'] as List<dynamic>? ?? [];
 
-    if (isAirline && classes.isNotEmpty) {
+    if (classes.isNotEmpty) {
       return _buildClassesSelection(classes, isReturn: isReturn);
-    } else if (!isAirline && accommodations.isNotEmpty) {
+    } else if (accommodations.isNotEmpty) {
       return _buildAccommodationsSelection(accommodations, isReturn: isReturn);
     }
     return const SizedBox.shrink();
@@ -7041,6 +7029,8 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
               final isSelected = c['id'] == val;
               final seats = c['tickets_available'] ?? 50;
 
+              final isPromo = c['is_promo'] == true || c['is_promo'] == 1;
+
               return GestureDetector(
                 onTap: () {
                   setState(() {
@@ -7060,55 +7050,94 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: isSelected
+                    gradient: isPromo ? const LinearGradient(
+                        colors: [Color(0xFFfdf2f8), Color(0xFFfce7f3)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                    ) : null,
+                    color: !isPromo ? (isSelected
                         ? kPink.withValues(alpha: 0.05)
-                        : Colors.white,
+                        : Colors.white) : null,
                     border: Border.all(
-                        color: isSelected ? kPink : Colors.grey.shade300,
-                        width: isSelected ? 2 : 1),
+                        color: isPromo ? Colors.pinkAccent : (isSelected ? kPink : Colors.grey.shade300),
+                        width: isSelected || isPromo ? 2 : 1),
                     borderRadius: BorderRadius.circular(12),
+                    boxShadow: isPromo && !isSelected ? [BoxShadow(color: Colors.pinkAccent.withValues(alpha: 0.2), blurRadius: 4, spreadRadius: 1)] : null,
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  child: Stack(
+                    clipBehavior: Clip.none,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              c['name'] ?? '',
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 13),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
+                      if (isPromo)
+                        Positioned(
+                          top: -20,
+                          right: -10,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF10b981)
-                                  .withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(12),
+                              color: Colors.pinkAccent,
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Text(
-                              '$seats seats left',
-                              style: const TextStyle(
-                                  color: Color(0xFF047857),
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold),
-                            ),
-                          )
+                            child: const Text('PROMO', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  c['name'] ?? '',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold, fontSize: 13,
+                                      color: isPromo ? Colors.pink.shade900 : Colors.black87),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF10b981)
+                                      .withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  '$seats left',
+                                  style: const TextStyle(
+                                      color: Color(0xFF047857),
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              )
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Text(
+                                '₱${(_parseDouble(c['price']) + schedulePrice).toStringAsFixed(2)}',
+                                style: TextStyle(
+                                    color: isPromo ? Colors.pinkAccent : kPink,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16),
+                              ),
+                              if (isPromo && c['sale_price'] != null) ...[
+                                const SizedBox(width: 4),
+                                Text(
+                                  '₱${(_parseDouble(c['price']) + _parseDouble(c['sale_price']) + schedulePrice).toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                      color: Colors.grey,
+                                      decoration: TextDecoration.lineThrough,
+                                      fontSize: 10),
+                                ),
+                              ]
+                            ],
+                          ),
                         ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '₱${(_parseDouble(c['price']) + schedulePrice).toStringAsFixed(2)}',
-                        style: const TextStyle(
-                            color: kPink,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16),
                       ),
                     ],
                   ),
@@ -11688,7 +11717,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
-  Future<void> _markAsRead(int id) async {
+  Future<void> _markAsRead(dynamic id) async {
     try {
       await http.post(
         Uri.parse('${UserSession.getBaseUrl()}/api/notifications/$id/read'),
@@ -11706,6 +11735,32 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       await http.post(
         Uri.parse(
             '${UserSession.getBaseUrl()}/api/notifications/mark-all-read'),
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer ${UserSession.token}'
+        },
+      );
+      _fetchNotifications();
+    } catch (_) {}
+  }
+
+  Future<void> _deleteNotification(dynamic id) async {
+    try {
+      await http.delete(
+        Uri.parse('${UserSession.getBaseUrl()}/api/notifications/$id'),
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer ${UserSession.token}'
+        },
+      );
+      _fetchNotifications();
+    } catch (_) {}
+  }
+
+  Future<void> _deleteAllNotifications() async {
+    try {
+      await http.delete(
+        Uri.parse('${UserSession.getBaseUrl()}/api/notifications'),
         headers: {
           'Accept': 'application/json',
           'Authorization': 'Bearer ${UserSession.token}'
@@ -11814,10 +11869,51 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         foregroundColor: Colors.white,
         actions: [
           if (_notifications.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.done_all),
-              tooltip: 'Mark all as read',
-              onPressed: _markAllAsRead,
+            PopupMenuButton<String>(
+              onSelected: (value) {
+                if (value == 'read_all') {
+                  _markAllAsRead();
+                } else if (value == 'delete_all') {
+                  showDialog(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Delete All'),
+                      content: const Text('Are you sure you want to delete all notifications?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            _deleteAllNotifications();
+                          },
+                          child: const Text('Delete All', style: TextStyle(color: Colors.red)),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+              },
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                const PopupMenuItem<String>(
+                  value: 'read_all',
+                  child: ListTile(
+                    leading: Icon(Icons.done_all, color: kGreen),
+                    title: Text('Mark all as read'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                const PopupMenuItem<String>(
+                  value: 'delete_all',
+                  child: ListTile(
+                    leading: Icon(Icons.delete_sweep, color: Colors.red),
+                    title: Text('Delete all', style: TextStyle(color: Colors.red)),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+              ],
             ),
         ],
       ),
@@ -11864,6 +11960,27 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                     _formatDate(notif['created_at']),
                                     style: const TextStyle(fontSize: 12, color: Colors.grey),
                                   ),
+                              ],
+                            ),
+                            trailing: PopupMenuButton<String>(
+                              icon: const Icon(Icons.more_vert),
+                              onSelected: (value) {
+                                if (value == 'read') {
+                                  _markAsRead(notif['id']);
+                                } else if (value == 'delete') {
+                                  _deleteNotification(notif['id']);
+                                }
+                              },
+                              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                                if (!isRead)
+                                  const PopupMenuItem<String>(
+                                    value: 'read',
+                                    child: Text('Mark as read'),
+                                  ),
+                                const PopupMenuItem<String>(
+                                  value: 'delete',
+                                  child: Text('Delete', style: TextStyle(color: Colors.red)),
+                                ),
                               ],
                             ),
                             onTap: () => _handleNotificationTap(notif),

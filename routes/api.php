@@ -115,6 +115,7 @@ Route::middleware(['auth:api', 'throttle:60,1'])->group(function () {
     Route::post('/notifications/{id}/read',     [\App\Http\Controllers\Api\NotificationController::class, 'markRead']);
     Route::post('/notifications/mark-all-read', [\App\Http\Controllers\Api\NotificationController::class, 'markAllRead']);
     Route::delete('/notifications/{id}',        [\App\Http\Controllers\Api\NotificationController::class, 'destroy']);
+    Route::delete('/notifications',             [\App\Http\Controllers\Api\NotificationController::class, 'destroyAll']);
 
     // Referral program
     Route::get('/referral/my-code',  [\App\Http\Controllers\Api\ReferralController::class, 'myCode']);
