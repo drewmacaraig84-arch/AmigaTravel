@@ -27,9 +27,16 @@ class AppNotification extends Model
                     $notification = $notification->withImageUrl(url('storage/' . $model->image_path));
                 }
 
+                $androidConfig = \Kreait\Firebase\Messaging\AndroidConfig::fromArray([
+                    'notification' => [
+                        'channel_id' => 'high_importance_channel',
+                    ],
+                ]);
+
                 $message = \Kreait\Firebase\Messaging\CloudMessage::new()
                     ->withTopic('all_users')
-                    ->withNotification($notification);
+                    ->withNotification($notification)
+                    ->withAndroidConfig($androidConfig);
 
                 $messaging->send($message);
             } catch (\Exception $e) {

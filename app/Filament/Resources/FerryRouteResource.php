@@ -408,7 +408,19 @@ class FerryRouteResource extends Resource
 
                     Toggle::make('is_promo')
                         ->label('Promotional Ticket (Non-refundable)')
-                        ->helperText('Tickets in this class will not be eligible for refunds.'),
+                        ->helperText('Tickets in this class will not be eligible for refunds.')
+                        ->live(),
+
+                    \Filament\Forms\Components\DateTimePicker::make('promo_duration_start')
+                        ->label('Promo Start Date & Time')
+                        ->visible(fn (callable $get) => $get('is_promo') === true)
+                        ->required(fn (callable $get) => $get('is_promo') === true),
+
+                    \Filament\Forms\Components\DateTimePicker::make('promo_duration_end')
+                        ->label('Promo End Date & Time')
+                        ->visible(fn (callable $get) => $get('is_promo') === true)
+                        ->required(fn (callable $get) => $get('is_promo') === true)
+                        ->after('promo_duration_start'),
 
                     Toggle::make('has_bed')
                         ->label('Includes bed / berth')

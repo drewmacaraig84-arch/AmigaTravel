@@ -217,12 +217,19 @@
                                     <p class="text-sm text-slate-500">Transaction Number</p>
                                     <p class="text-lg font-semibold text-slate-900">{{ $booking->transaction_number }}</p>
                                 </div>
-                                <span class="rounded-full px-4 py-1.5 text-sm font-semibold" @style(['background' => $statusStyle['bg'], 'color' => $statusStyle['text']])>
-                                    {{ $booking->status === 'operator_cancelled' ? 'Cancelled by Operator' : ucfirst($booking->status) }}
-                                    @if($booking->rebooking_status === 'pending')
-                                        (Rebooking Pending)
+                                <div class="flex gap-2 items-center flex-wrap justify-end">
+                                    @if($booking->hasPromoTicket())
+                                        <span class="rounded-full bg-amber-400 text-white px-3 py-1.5 text-[10px] font-extrabold shadow-sm uppercase tracking-wider">
+                                            PROMO TICKET
+                                        </span>
                                     @endif
-                                </span>
+                                    <span class="rounded-full px-4 py-1.5 text-sm font-semibold" @style(['background' => $statusStyle['bg'], 'color' => $statusStyle['text']])>
+                                        {{ $booking->status === 'operator_cancelled' ? 'Cancelled by Operator' : ucfirst($booking->status) }}
+                                        @if($booking->rebooking_status === 'pending')
+                                            (Rebooking Pending)
+                                        @endif
+                                    </span>
+                                </div>
                             </div>
 
                             @if($booking->service_cancellation_id || $booking->status === 'operator_cancelled')

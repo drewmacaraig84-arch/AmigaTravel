@@ -17,6 +17,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter_app_badger/flutter_app_badger.dart';
 import 'notification_service.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'forgot_password_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -91,7 +92,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.61+68';
+  static const String appVersion = '1.0.62+69';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -4683,7 +4684,9 @@ class _ActivityScreenState extends State<ActivityScreen> {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: _showForgotPasswordSheet,
+                  onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()));
+                  },
                   style: TextButton.styleFrom(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
@@ -5716,9 +5719,9 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               icon: const Icon(Icons.receipt_long),
               label: const Text('Payment Acknowledgement'),
             ),
-          if (transaction['confirmation_url'] != null ||
+          if ((transaction['confirmation_url'] != null ||
               _booking['confirmation_url'] != null ||
-              _booking['confirmation_pdf_url'] != null)
+              _booking['confirmation_pdf_url'] != null) && _paymentStatus == 'paid')
             FilledButton.icon(
               onPressed: () {
                 final url = transaction['confirmation_url'] ??
@@ -6120,6 +6123,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
             height: 48,
             child: OutlinedButton(
               onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+                );
+              },
+              style: OutlinedButton.styleFrom(
+                foregroundColor: kGreen,
+                side: const BorderSide(color: kGreen),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Reset Password',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 48,
+            child: OutlinedButton(
+              onPressed: () {
                 showDialog(
                   context: context,
                   builder: (ctx) {
@@ -6380,7 +6403,7 @@ class AppDrawer extends StatelessWidget {
               Navigator.pop(context);
               final url = Uri.parse('https://www.amigagracia.com');
               if (await canLaunchUrl(url)) {
-                await launchUrl(url, mode: LaunchMode.externalApplication);
+                await launchUrl(url, mode: LaunchMode.inAppWebView);
               }
             },
           ),

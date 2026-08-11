@@ -270,8 +270,17 @@ class Booking extends Model
      *  - Ferry: up to departure time (Starlite also allows AFTER departure + 10 min grace)
      *  - Airline: only before departure (no after-departure refund)
      */
+    public function hasPromoTicket(): bool
+    {
+        return $this->transportClasses()->wherePivot('is_promo', true)->exists();
+    }
+
     public function canCancel(): bool
     {
+        if ($this->hasPromoTicket()) {
+            return false;
+        }
+
         if (! $this->transaction || ! in_array($this->transaction->payment_status, ['paid', 'pending', 'unpaid'])) {
             return false;
         }
@@ -287,6 +296,10 @@ class Booking extends Model
 
     public function canRebook(): bool
     {
+        if ($this->hasPromoTicket()) {
+            return false;
+        }
+
         if (! $this->transaction || ! in_array($this->transaction->payment_status, ['paid', 'pending', 'unpaid'])) {
             return false;
         }

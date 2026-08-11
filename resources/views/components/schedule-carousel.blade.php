@@ -196,17 +196,27 @@
                             $totalPrice = $schedulePrice + $classPrice;
                             $uniqueId = $class['pivot_id'] ?? $class['id'];
                         @endphp
-                        <button type="button" wire:click.prevent="{{ $selectClassMethod }}({{ $uniqueId }})" class="rounded-xl border-2 p-3 sm:p-4 text-left transition duration-200 overflow-hidden {{ (int)$selectedClassId === (int)$uniqueId ? 'border-[#db2777] bg-[#db2777]/5 shadow-sm' : 'border-slate-200 bg-white hover:border-[#db2777]/50 hover:shadow-sm' }}">
+                        <button type="button" 
+                            @if(!empty($class['is_promo'])) wire:confirm="This is a promotional ticket and is STRICTLY non-refundable. It cannot be cancelled or rebooked. Do you wish to proceed?" @endif
+                            wire:click.prevent="{{ $selectClassMethod }}({{ $uniqueId }})" 
+                            class="relative rounded-xl border-2 p-3 sm:p-4 text-left transition duration-200 overflow-hidden {{ (int)$selectedClassId === (int)$uniqueId ? (!empty($class['is_promo']) ? 'border-amber-400 bg-amber-50 shadow-sm' : 'border-[#db2777] bg-[#db2777]/5 shadow-sm') : (!empty($class['is_promo']) ? 'border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 hover:border-amber-400 hover:shadow-sm' : 'border-slate-200 bg-white hover:border-[#db2777]/50 hover:shadow-sm') }}">
+                            
+                            @if(!empty($class['is_promo']))
+                                <div class="absolute top-0 right-0 bg-amber-400 text-white text-[9px] font-extrabold px-2 py-0.5 rounded-bl-lg uppercase tracking-wider shadow-sm">
+                                    PROMO
+                                </div>
+                            @endif
+
                             <div class="flex flex-wrap items-center justify-between gap-2">
-                                <h4 class="font-bold text-slate-900 text-xs sm:text-sm">
+                                <h4 class="font-bold {{ !empty($class['is_promo']) ? 'text-amber-900' : 'text-slate-900' }} text-xs sm:text-sm pr-10">
                                     {{ $class['name'] }}
                                     @if(!empty($class['rate_code']))
-                                        <span class="text-xs font-semibold text-slate-500 ml-1">({{ $class['rate_code'] }})</span>
+                                        <span class="text-xs font-semibold {{ !empty($class['is_promo']) ? 'text-amber-700' : 'text-slate-500' }} ml-1">({{ $class['rate_code'] }})</span>
                                     @endif
                                 </h4>
-                                <div class="flex items-center gap-1.5 flex-wrap justify-end">
+                                <div class="flex items-center gap-1.5 flex-wrap justify-start w-full mt-1">
                                     @if(isset($class['tickets_available']))
-                                        <span class="text-[10px] font-extrabold {{ (int)$selectedClassId === (int)$uniqueId ? 'bg-[#db2777] text-white' : 'bg-emerald-100 text-emerald-800 border border-emerald-200' }} px-2.5 py-0.5 rounded-full">
+                                        <span class="text-[10px] font-extrabold {{ (int)$selectedClassId === (int)$uniqueId ? (!empty($class['is_promo']) ? 'bg-amber-500 text-white' : 'bg-[#db2777] text-white') : 'bg-emerald-100 text-emerald-800 border border-emerald-200' }} px-2.5 py-0.5 rounded-full">
                                             {{ $class['tickets_available'] }} {{ \Illuminate\Support\Str::plural('seat', $class['tickets_available']) }} left
                                         </span>
                                     @endif
@@ -215,7 +225,15 @@
                                     @endif
                                 </div>
                             </div>
-                            <p class="mt-2 text-lg font-extrabold text-[#db2777]">&#8369;{{ number_format($totalPrice, 2) }}</p>
+                            
+                            @if(!empty($class['is_promo']) && !empty($class['promo_duration_start']) && !empty($class['promo_duration_end']))
+                                <p class="mt-1.5 text-[10px] text-amber-800 font-semibold flex items-center gap-1">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    Until {{ \Carbon\Carbon::parse($class['promo_duration_end'])->format('M d, Y h:i A') }}
+                                </p>
+                            @endif
+                            
+                            <p class="mt-2 text-lg font-extrabold {{ !empty($class['is_promo']) ? 'text-amber-600' : 'text-[#db2777]' }}">&#8369;{{ number_format($totalPrice, 2) }}</p>
                         </button>
                     @endforeach
                 </div>
