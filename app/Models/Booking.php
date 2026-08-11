@@ -272,7 +272,7 @@ class Booking extends Model
      */
     public function canCancel(): bool
     {
-        if (! $this->transaction || $this->transaction->payment_status !== 'paid') {
+        if (! $this->transaction || ! in_array($this->transaction->payment_status, ['paid', 'pending', 'unpaid'])) {
             return false;
         }
 
@@ -287,7 +287,7 @@ class Booking extends Model
 
     public function canRebook(): bool
     {
-        if (! $this->transaction || $this->transaction->payment_status !== 'paid') {
+        if (! $this->transaction || ! in_array($this->transaction->payment_status, ['paid', 'pending', 'unpaid'])) {
             return false;
         }
 
