@@ -516,58 +516,63 @@ List<dynamic> parseAndFilterSchedules(dynamic raw, [String? selectedDate]) {
 Map<String, dynamic>? pendingNotificationData;
 
 Future<void> handleNotificationTap(Map<String, dynamic> data) async {
-  if (data['transaction_number'] != null) {
-    final transactionNumber = data['transaction_number'];
+  final String type = data['type'] ?? 'general';
+  final String targetId = data['target_id']?.toString() ?? data['transaction_number']?.toString() ?? '';
 
-    // Check if we have a context
-    final context = navigatorKey.currentContext;
-    if (context == null) {
-      pendingNotificationData = data;
-      return;
-    }
+  // Check if we have a context
+  final context = navigatorKey.currentContext;
+  if (context == null) {
+    pendingNotificationData = data;
+    return;
+  }
 
-    // We have context, proceed to load and navigate
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) =>
-          const Center(child: CircularProgressIndicator(color: kGreen)),
-    );
-
-    try {
-      final response = await http.get(
-        Uri.parse(
-            '${UserSession.getBaseUrl()}/api/bookings/$transactionNumber'),
-        headers: {
-          'Authorization': 'Bearer ${UserSession.token}',
-          'Accept': 'application/json',
-        },
+  if (type == 'booking' || type == 'payment') {
+    if (targetId.isNotEmpty) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator(color: kGreen)),
       );
 
-      Navigator.pop(context); // hide loading
+      try {
+        final response = await http.get(
+          Uri.parse('${UserSession.getBaseUrl()}/api/bookings/$targetId'),
+          headers: {
+            'Authorization': 'Bearer ${UserSession.token}',
+            'Accept': 'application/json',
+          },
+        );
 
-      if (response.statusCode == 200) {
-        final resData = jsonDecode(response.body);
-        if (resData['status'] == 'success' && resData['booking'] != null) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => BookingDetailsScreen(booking: resData['booking']),
-            ),
-          );
+        Navigator.pop(context); // hide loading
+
+        if (response.statusCode == 200) {
+          final resData = jsonDecode(response.body);
+          if (resData['status'] == 'success' && resData['booking'] != null) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => BookingDetailsScreen(booking: resData['booking']),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Booking details not found.')));
+          }
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Booking details not found.')));
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to load booking details.')));
         }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to load booking details.')));
+      } catch (e) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
-    } catch (e) {
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error: $e')));
     }
+  } else if (type == 'promo') {
+    Navigator.popUntil(context, (route) => route.isFirst);
+    final mainState = context.findAncestorStateOfType<_MainScreenState>();
+    mainState?.switchTab(1);
+  } else if (type == 'voucher') {
+    Navigator.popUntil(context, (route) => route.isFirst);
+    final mainState = context.findAncestorStateOfType<_MainScreenState>();
+    mainState?.switchTab(3);
   }
 }
 
@@ -1117,6 +1122,12 @@ class _MainScreenState extends State<MainScreen> {
     setState(() {
       _travelMode = mode;
       _selectedIndex = 2;
+    });
+  }
+
+  void switchTab(int index) {
+    setState(() {
+      _selectedIndex = index;
     });
   }
 
@@ -11700,6 +11711,96 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     } catch (_) {}
   }
 
+  String _formatDate(String isoString) {
+    try {
+      final DateTime dt = DateTime.parse(isoString).toLocal();
+      return DateFormat('MMM dd, yyyy hh:mm a').format(dt);
+    } catch (_) {
+      return isoString;
+    }
+  }
+
+  void _handleNotificationTap(Map<String, dynamic> notif) async {
+    final String type = notif['type'] ?? 'general';
+    final String targetId = notif['target_id']?.toString() ?? '';
+
+    // Mark as read immediately when tapped
+    if (notif['is_read'] != true && notif['is_read'] != 1) {
+      _markAsRead(notif['id']);
+    }
+
+    if (type == 'booking' || type == 'payment') {
+      if (targetId.isNotEmpty) {
+        _fetchBookingAndNavigate(targetId);
+      }
+    } else if (type == 'promo') {
+      // Navigate to Schedules tab (Tab 1)
+      Navigator.popUntil(context, (route) => route.isFirst);
+      final mainState = context.findAncestorStateOfType<_MainScreenState>();
+      mainState?.switchTab(1);
+    } else if (type == 'voucher') {
+      // Navigate to Vouchers tab (Tab 3)
+      Navigator.popUntil(context, (route) => route.isFirst);
+      final mainState = context.findAncestorStateOfType<_MainScreenState>();
+      mainState?.switchTab(3);
+    } else if (type == 'announcement') {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(notif['title'] ?? 'Announcement'),
+          content: Text(notif['body'] ?? ''),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Close', style: TextStyle(color: kGreen)),
+            )
+          ],
+        ),
+      );
+    }
+  }
+
+  Future<void> _fetchBookingAndNavigate(String transactionNumber) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator(color: kGreen)),
+    );
+
+    try {
+      final response = await http.get(
+        Uri.parse('${UserSession.getBaseUrl()}/api/bookings/$transactionNumber'),
+        headers: {
+          'Authorization': 'Bearer ${UserSession.token}',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (!mounted) return;
+      Navigator.pop(context); // hide loading
+
+      if (response.statusCode == 200) {
+        final resData = jsonDecode(response.body);
+        if (resData['status'] == 'success' && resData['booking'] != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BookingDetailsScreen(booking: resData['booking']),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Booking details not found.')));
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to load booking details.')));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -11748,8 +11849,20 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                     fontWeight: isRead
                                         ? FontWeight.normal
                                         : FontWeight.bold)),
-                            subtitle: Text(notif['body'] ?? ''),
-                            // Removed onTap to make it non-clickable
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 4),
+                                Text(notif['body'] ?? ''),
+                                const SizedBox(height: 8),
+                                if (notif['created_at'] != null)
+                                  Text(
+                                    _formatDate(notif['created_at']),
+                                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                  ),
+                              ],
+                            ),
+                            onTap: () => _handleNotificationTap(notif),
                           );
                         },
                       ),

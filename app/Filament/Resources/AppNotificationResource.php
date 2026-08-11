@@ -53,19 +53,23 @@ class AppNotificationResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('title')
-                    ->required()
-                    ->maxLength(255),
-                Forms\Components\Textarea::make('body')
-                    ->required()
-                    ->columnSpanFull(),
-                Forms\Components\FileUpload::make('image_path')
-                    ->image()
-                    ->disk('public')
-                    ->visibility('public')
-                    ->directory('notifications')
-                    ->label('Banner Image (Optional)')
-                    ->columnSpanFull(),
+                Forms\Components\Section::make('Broadcast Announcement')
+                    ->description('Notifications created here will be broadcast to ALL app users. To notify specific users about booking changes, use the automated system instead.')
+                    ->schema([
+                        Forms\Components\TextInput::make('title')
+                            ->required()
+                            ->maxLength(255),
+                        Forms\Components\Textarea::make('body')
+                            ->required()
+                            ->columnSpanFull(),
+                        Forms\Components\FileUpload::make('image_path')
+                            ->image()
+                            ->disk('public')
+                            ->visibility('public')
+                            ->directory('notifications')
+                            ->label('Banner Image (Optional)')
+                            ->columnSpanFull(),
+                    ])
             ]);
     }
 

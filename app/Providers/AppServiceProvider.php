@@ -39,6 +39,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Register model observers
         Booking::observe(BookingObserver::class);
+        \App\Models\UserNotification::observe(\App\Observers\UserNotificationObserver::class);
         
         if (config('app.env') === 'production' || request()->server('HTTP_X_FORWARDED_PROTO') === 'https') {
             \Illuminate\Support\Facades\URL::forceScheme('https');

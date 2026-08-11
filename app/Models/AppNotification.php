@@ -36,6 +36,7 @@ class AppNotification extends Model
                 $message = \Kreait\Firebase\Messaging\CloudMessage::new()
                     ->withTopic('all_users')
                     ->withNotification($notification)
+                    ->withData(['type' => 'announcement'])
                     ->withAndroidConfig($androidConfig);
 
                 $messaging->send($message);
