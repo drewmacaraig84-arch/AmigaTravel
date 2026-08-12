@@ -46,6 +46,9 @@ class BookingObserver
             if ($user) {
                 if ($newStatus === Booking::STATUS_CONFIRMED && $oldStatus !== Booking::STATUS_CONFIRMED) {
                     UserNotification::notify($user->id, "Booking Confirmed", "Your booking {$booking->transaction_number} is confirmed! You can now view and download your tickets.", 'booking', 'check_circle', ['transaction_number' => $booking->transaction_number]);
+                    
+                    // Award Gracia Points on confirmation
+                    app(\App\Services\GraciaPointsService::class)->awardPointsForBooking($booking);
                 } elseif ($newStatus === Booking::STATUS_CANCELLED && $oldStatus !== Booking::STATUS_CANCELLED) {
                     UserNotification::notify($user->id, "Booking Cancelled", "Your booking {$booking->transaction_number} was automatically cancelled.", 'booking', 'cancel', ['transaction_number' => $booking->transaction_number]);
                 } elseif ($newStatus === Booking::STATUS_OPERATOR_CANCELLED && $oldStatus !== Booking::STATUS_OPERATOR_CANCELLED) {

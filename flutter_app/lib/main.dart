@@ -7037,20 +7037,35 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                     final bool? proceed = await showDialog<bool>(
                       context: context,
                       builder: (ctx) => AlertDialog(
-                        title: const Text('www.amigagracia.com says'),
-                        content: const Text('This is a promotional ticket and is STRICTLY non-refundable. It cannot be cancelled or rebooked. Do you wish to proceed?'),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        icon: const Icon(Icons.info_outline, color: Color(0xFFF59E0B), size: 48),
+                        title: const Text('Promotional Ticket', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                        content: const Text(
+                          'This is a promotional ticket and is STRICTLY non-refundable. It cannot be cancelled or rebooked.\n\nDo you wish to proceed?',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 14),
+                        ),
+                        actionsAlignment: MainAxisAlignment.center,
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(ctx, false),
-                            child: const Text('Cancel'),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            child: const Text('Cancel', style: TextStyle(color: Colors.black54)),
                           ),
                           ElevatedButton(
                             onPressed: () => Navigator.pop(ctx, true),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF1565C0), // Dark blue like standard alert OK
+                              backgroundColor: const Color(0xFFF59E0B),
                               foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             ),
-                            child: const Text('OK'),
+                            child: const Text('Proceed', style: TextStyle(fontWeight: FontWeight.bold)),
                           ),
                         ],
                       ),
@@ -7144,22 +7159,6 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                                       fontWeight: FontWeight.bold),
                                 ),
                               ),
-                              if (isPromo)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFFFE4E6), // rose-100
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Text(
-                                    'NON-REFUNDABLE',
-                                    style: TextStyle(
-                                        color: Color(0xFFE11D48), // rose-600
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                ),
                             ],
                           ),
                           if (isPromo && c['promo_duration_end'] != null) ...[
