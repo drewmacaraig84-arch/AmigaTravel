@@ -619,7 +619,7 @@ class BookingController extends Controller
         
         $eligibleSchedules = \App\Models\Schedule::whereIn('id', function ($query) use ($cancellationId) {
             $query->select('schedule_id')
-                  ->from('service_cancellation_replacement_schedules')
+                  ->from('cancellation_replacements')
                   ->where('service_cancellation_id', $cancellationId);
         })->with(['ferryRoute', 'vehicle', 'scheduleAccommodations', 'transportClasses'])->get();
 

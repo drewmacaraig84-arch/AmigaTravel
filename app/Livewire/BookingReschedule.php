@@ -191,7 +191,7 @@ class BookingReschedule extends Component
         return Schedule::forRouteAndDate($this->booking->origin, $this->booking->destination, $this->dep_date)
             ->whereIn('id', function ($query) use ($cancellationId, $depDate) {
                 $query->select('schedule_id')
-                      ->from('service_cancellation_replacement_schedules')
+                      ->from('cancellation_replacements')
                       ->where('service_cancellation_id', $cancellationId)
                       ->whereDate('replacement_date', $depDate);
             })
@@ -210,7 +210,7 @@ class BookingReschedule extends Component
         return Schedule::forRouteAndDate($this->booking->destination, $this->booking->origin, $this->ret_date)
             ->whereIn('id', function ($query) use ($cancellationId, $retDate) {
                 $query->select('schedule_id')
-                      ->from('service_cancellation_replacement_schedules')
+                      ->from('cancellation_replacements')
                       ->where('service_cancellation_id', $cancellationId)
                       ->whereDate('replacement_date', $retDate);
             })
