@@ -599,6 +599,75 @@ class BookingController extends Controller
             'qr_code_url' => $settings->qr_code_path ? asset('storage/' . $settings->qr_code_path) : null,
         ]);
     }
+    public function eligibleReplacements(Request $request, $id)
+    {
+        $booking = Booking::with('serviceCancellation')->findOrFail($id);
+        
+        // Ensure email matches to authorize
+        if ($request->has('email') && $booking->client_email !== $request->input('email')) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
+        }
+
+        if (!$booking->serviceCancellation) {
+             return response()->json([
+                 'status' => 'error',
+                 'message' => 'This booking does not have an active disruption.'
+             ], 400);
+        }
+
+        $cancellationId = $booking->serviceCancellation->id;
+        
+        $eligibleSchedules = \App\Models\Schedule::whereIn('id', function ($query) use ($cancellationId) {
+            $query->select('schedule_id')
+                  ->from('service_cancellation_replacement_schedules')
+                  ->where('service_cancellation_id', $cancellationId);
+        })->with(['ferryRoute', 'vehicle', 'scheduleAccommodations', 'transportClasses'])->get();
+
+        $isAirline = $booking->getMode() === 'airline';
+        
+        $results = [];
+        foreach ($eligibleSchedules as $schedule) {
+            $accommodations = [];
+            $schedulePrice = $isAirline ? ($schedule->price ?? 0) : 0;
+            
+            foreach ($schedule->scheduleAccommodations->where('is_active', true) as $acc) {
+                $price = $acc->price;
+                if ($isAirline) $price = ($schedulePrice + $price) * 1.5;
+                $accommodations[] = [
+                    'id' => 'acc_' . $acc->id,
+                    'name' => $acc->name,
+                    'price' => (float)$price
+                ];
+            }
+            
+            foreach ($schedule->transportClasses->where('pivot.is_active', true) as $tc) {
+                $price = $tc->pivot->additional_price;
+                if ($isAirline) $price = ($schedulePrice + $price) * 1.5;
+                $accommodations[] = [
+                    'id' => 'tc_' . $tc->id,
+                    'name' => $tc->name,
+                    'price' => (float)$price
+                ];
+            }
+            
+            $results[] = [
+                'id' => $schedule->id,
+                'service_name' => $schedule->service_name,
+                'departure_time' => $schedule->departure_time,
+                'formatted_departure' => $schedule->formatted_departure,
+                'formatted_arrival' => $schedule->formatted_arrival,
+                'price' => (float)$schedule->price,
+                'accommodations' => $accommodations
+            ];
+        }
+        
+        return response()->json([
+            'status' => 'success',
+            'original_fare' => (float)$booking->getTicketBase(),
+            'passengers_count' => max(1, $booking->passengers()->count()),
+            'schedules' => $results
+        ]);
+    }
 
     public function submitReplacement(Request $request, $id)
     {

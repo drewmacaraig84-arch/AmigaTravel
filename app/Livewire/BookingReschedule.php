@@ -141,11 +141,6 @@ class BookingReschedule extends Component
             // We need to divide by 1.5 to get the raw base price.
             $unmarkedPrice = $price / 1.5;
             $newBasePricePerPax = ($this->dep_schedule_price ?? 0) + $this->getSelectedAccommodationCost($accId, $unmarkedPrice, 1);
-            
-            if ($newBasePricePerPax > $originalBasePricePerPax) {
-                $this->feedback = "Airlines do not allow selecting a ticket with a higher base price than your original ticket.";
-                return;
-            }
         }
 
         $this->dep_accommodation_id = $accId;
@@ -177,11 +172,6 @@ class BookingReschedule extends Component
             // We need to divide by 1.5 to get the raw base price.
             $unmarkedPrice = $price / 1.5;
             $newBasePricePerPax = ($this->ret_schedule_price ?? 0) + $this->getSelectedAccommodationCost($accId, $unmarkedPrice, 1);
-            
-            if ($newBasePricePerPax > $originalBasePricePerPax) {
-                $this->feedback = "Airlines do not allow selecting a ticket with a higher base price than your original ticket.";
-                return;
-            }
         }
 
         $this->ret_accommodation_id = $accId;
@@ -193,8 +183,17 @@ class BookingReschedule extends Component
 
     public function getAvailableDepartureSchedulesProperty()
     {
-        if (!$this->booking || !$this->dep_date) return collect();
+        if (!$this->booking || !$this->dep_date || !$this->booking->serviceCancellation) return collect();
+
+        $cancellationId = $this->booking->serviceCancellation->id;
+
         return Schedule::forRouteAndDate($this->booking->origin, $this->booking->destination, $this->dep_date)
+            ->whereIn('id', function ($query) use ($cancellationId, $this) {
+                $query->select('schedule_id')
+                      ->from('service_cancellation_replacement_schedules')
+                      ->where('service_cancellation_id', $cancellationId)
+                      ->whereDate('replacement_date', $this->dep_date);
+            })
             ->with(['ferryRoute', 'vehicle'])
             ->where('departure_time', '>', now())
             ->get();
@@ -202,8 +201,17 @@ class BookingReschedule extends Component
 
     public function getAvailableReturnSchedulesProperty()
     {
-        if (!$this->booking || !$this->ret_date) return collect();
+        if (!$this->booking || !$this->ret_date || !$this->booking->serviceCancellation) return collect();
+
+        $cancellationId = $this->booking->serviceCancellation->id;
+
         return Schedule::forRouteAndDate($this->booking->destination, $this->booking->origin, $this->ret_date)
+            ->whereIn('id', function ($query) use ($cancellationId, $this) {
+                $query->select('schedule_id')
+                      ->from('service_cancellation_replacement_schedules')
+                      ->where('service_cancellation_id', $cancellationId)
+                      ->whereDate('replacement_date', $this->ret_date);
+            })
             ->with(['ferryRoute', 'vehicle'])
             ->where('departure_time', '>', now())
             ->get();
