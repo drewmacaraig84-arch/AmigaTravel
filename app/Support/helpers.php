@@ -32,7 +32,7 @@ if (! function_exists('storage_asset_path')) {
         // Serve via the server-side /storage-file/ route so files are read from
         // the persistent volume and not from Railway's ephemeral storage URL
         // (which returns 404 after any redeploy).
-        return rtrim(config('app.url'), '/') . '/storage-file/' . $normalizedPath;
+        return url('/storage-file/' . ltrim($normalizedPath, '/'));
     }
 }
 
