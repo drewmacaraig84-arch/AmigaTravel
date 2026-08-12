@@ -186,13 +186,14 @@ class BookingReschedule extends Component
         if (!$this->booking || !$this->dep_date || !$this->booking->serviceCancellation) return collect();
 
         $cancellationId = $this->booking->serviceCancellation->id;
+        $depDate = $this->dep_date;
 
         return Schedule::forRouteAndDate($this->booking->origin, $this->booking->destination, $this->dep_date)
-            ->whereIn('id', function ($query) use ($cancellationId, $this) {
+            ->whereIn('id', function ($query) use ($cancellationId, $depDate) {
                 $query->select('schedule_id')
                       ->from('service_cancellation_replacement_schedules')
                       ->where('service_cancellation_id', $cancellationId)
-                      ->whereDate('replacement_date', $this->dep_date);
+                      ->whereDate('replacement_date', $depDate);
             })
             ->with(['ferryRoute', 'vehicle'])
             ->where('departure_time', '>', now())
@@ -204,13 +205,14 @@ class BookingReschedule extends Component
         if (!$this->booking || !$this->ret_date || !$this->booking->serviceCancellation) return collect();
 
         $cancellationId = $this->booking->serviceCancellation->id;
+        $retDate = $this->ret_date;
 
         return Schedule::forRouteAndDate($this->booking->destination, $this->booking->origin, $this->ret_date)
-            ->whereIn('id', function ($query) use ($cancellationId, $this) {
+            ->whereIn('id', function ($query) use ($cancellationId, $retDate) {
                 $query->select('schedule_id')
                       ->from('service_cancellation_replacement_schedules')
                       ->where('service_cancellation_id', $cancellationId)
-                      ->whereDate('replacement_date', $this->ret_date);
+                      ->whereDate('replacement_date', $retDate);
             })
             ->with(['ferryRoute', 'vehicle'])
             ->where('departure_time', '>', now())
