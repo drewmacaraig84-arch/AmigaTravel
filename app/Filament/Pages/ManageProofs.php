@@ -48,6 +48,10 @@ class ManageProofs extends Page implements HasActions, HasForms
 
     public bool $selectAll = false;
 
+    public ?string $dateFilter = 'all';
+    public ?string $customDateStart = null;
+    public ?string $customDateEnd = null;
+
     public function mount(): void
     {
         $settings = PaymentSetting::current();
@@ -77,11 +81,27 @@ class ManageProofs extends Page implements HasActions, HasForms
     #[Computed]
     public function proofs(): Collection
     {
-        return Transaction::query()
+        $query = Transaction::query()
             ->with('booking')
             ->whereNotNull('proof_of_payment')
-            ->latest('updated_at')
-            ->get();
+            ->latest('updated_at');
+
+        if ($this->dateFilter === 'today') {
+            $query->whereDate('updated_at', today());
+        } elseif ($this->dateFilter === 'week') {
+            $query->whereBetween('updated_at', [now()->startOfWeek(), now()->endOfWeek()]);
+        } elseif ($this->dateFilter === 'month') {
+            $query->whereBetween('updated_at', [now()->startOfMonth(), now()->endOfMonth()]);
+        } elseif ($this->dateFilter === 'year') {
+            $query->whereBetween('updated_at', [now()->startOfYear(), now()->endOfYear()]);
+        } elseif ($this->dateFilter === 'custom' && $this->customDateStart && $this->customDateEnd) {
+            $query->whereBetween('updated_at', [
+                \Carbon\Carbon::parse($this->customDateStart)->startOfDay(),
+                \Carbon\Carbon::parse($this->customDateEnd)->endOfDay(),
+            ]);
+        }
+
+        return $query->get();
     }
 
     public function saveSettings(): void
@@ -109,6 +129,24 @@ class ManageProofs extends Page implements HasActions, HasForms
         } else {
             $this->selectedTransactions = [];
         }
+    }
+
+    public function updatedDateFilter(): void
+    {
+        $this->selectedTransactions = [];
+        $this->selectAll = false;
+    }
+
+    public function updatedCustomDateStart(): void
+    {
+        $this->selectedTransactions = [];
+        $this->selectAll = false;
+    }
+
+    public function updatedCustomDateEnd(): void
+    {
+        $this->selectedTransactions = [];
+        $this->selectAll = false;
     }
 
     public function updatedSelectedTransactions(): void
@@ -174,12 +212,27 @@ class ManageProofs extends Page implements HasActions, HasForms
         return TransactionResource::getUrl('view', ['record' => $transaction]);
     }
 
-    public function downloadZip(): ?\Symfony\Component\HttpFoundation\BinaryFileResponse
+    public function downloadZip(bool $onlySelected = false): ?\Symfony\Component\HttpFoundation\BinaryFileResponse
     {
         $query = Transaction::query()->whereNotNull('proof_of_payment');
 
-        if (! empty($this->selectedTransactions)) {
+        if ($onlySelected && ! empty($this->selectedTransactions)) {
             $query->whereKey($this->selectedTransactions);
+        } else {
+            if ($this->dateFilter === 'today') {
+                $query->whereDate('updated_at', today());
+            } elseif ($this->dateFilter === 'week') {
+                $query->whereBetween('updated_at', [now()->startOfWeek(), now()->endOfWeek()]);
+            } elseif ($this->dateFilter === 'month') {
+                $query->whereBetween('updated_at', [now()->startOfMonth(), now()->endOfMonth()]);
+            } elseif ($this->dateFilter === 'year') {
+                $query->whereBetween('updated_at', [now()->startOfYear(), now()->endOfYear()]);
+            } elseif ($this->dateFilter === 'custom' && $this->customDateStart && $this->customDateEnd) {
+                $query->whereBetween('updated_at', [
+                    \Carbon\Carbon::parse($this->customDateStart)->startOfDay(),
+                    \Carbon\Carbon::parse($this->customDateEnd)->endOfDay(),
+                ]);
+            }
         }
 
         $transactions = $query->get();
@@ -207,19 +260,22 @@ class ManageProofs extends Page implements HasActions, HasForms
         }
 
         $filesAdded = 0;
+        $disk = \Illuminate\Support\Facades\Storage::disk('public');
+        
         foreach ($transactions as $tx) {
             $proofPath = $tx->proof_of_payment;
             if (! $proofPath) {
                 continue;
             }
 
-            $fullPath = \Illuminate\Support\Facades\Storage::disk('public')->path($proofPath);
-            if (! file_exists($fullPath)) {
-                $fullPath = storage_path('app/public/' . $proofPath);
+            try {
+                $fileContents = $disk->get($proofPath);
+            } catch (\Exception $e) {
+                $fileContents = null;
             }
 
-            if (file_exists($fullPath)) {
-                $extension = pathinfo($fullPath, PATHINFO_EXTENSION) ?: 'jpg';
+            if ($fileContents !== null) {
+                $extension = pathinfo($proofPath, PATHINFO_EXTENSION) ?: 'jpg';
                 $ref = $tx->booking?->transaction_number ?? ('TX-' . $tx->id);
                 $zipEntryName = "{$ref}_proof.{$extension}";
 
@@ -231,7 +287,7 @@ class ManageProofs extends Page implements HasActions, HasForms
                     $counter++;
                 }
 
-                $zip->addFile($fullPath, $zipEntryName);
+                $zip->addFromString($zipEntryName, $fileContents);
                 $filesAdded++;
             }
         }
@@ -254,17 +310,24 @@ class ManageProofs extends Page implements HasActions, HasForms
         return response()->download($zipFilePath, $zipFileName)->deleteFileAfterSend(true);
     }
 
-    public function downloadZipAction(): Action
+    public function downloadAllZipAction(): Action
     {
-        return Action::make('downloadZip')
-            ->label(fn (): string => ! empty($this->selectedTransactions)
-                ? 'Download ZIP (' . count($this->selectedTransactions) . ')'
-                : 'Download all ZIP'
-            )
+        return Action::make('downloadAllZip')
+            ->label('Download all ZIP')
             ->icon('heroicon-o-arrow-down-tray')
             ->color('warning')
-            ->action(fn () => $this->downloadZip())
+            ->action(fn () => $this->downloadZip(false))
             ->disabled(fn (): bool => $this->proofs->isEmpty());
+    }
+
+    public function downloadSelectedZipAction(): Action
+    {
+        return Action::make('downloadSelectedZip')
+            ->label(fn (): string => 'Download ZIP (' . count($this->selectedTransactions) . ')')
+            ->icon('heroicon-o-arrow-down-tray')
+            ->color('warning')
+            ->action(fn () => $this->downloadZip(true))
+            ->disabled(fn (): bool => empty($this->selectedTransactions));
     }
 
     public function deleteSelectedAction(): Action

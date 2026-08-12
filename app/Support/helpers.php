@@ -29,7 +29,7 @@ if (! function_exists('storage_asset_path')) {
             return Storage::disk('public')->url($normalizedPath);
         }
 
-        return asset('storage/' . $normalizedPath);
+        return Storage::disk('public')->url($normalizedPath);
     }
 }
 

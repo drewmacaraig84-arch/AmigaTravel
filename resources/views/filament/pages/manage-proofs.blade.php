@@ -26,10 +26,30 @@
                     <span class="text-sm text-gray-500 dark:text-gray-400">
                         {{ count($selectedTransactions) }} selected
                     </span>
+
+                    <div class="ml-4 flex items-center gap-2 border-l border-gray-200 pl-4 dark:border-gray-700">
+                        <select wire:model.live="dateFilter" class="rounded-md border-gray-300 py-1.5 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white">
+                            <option value="all">All time</option>
+                            <option value="today">This day</option>
+                            <option value="week">This week</option>
+                            <option value="month">This month</option>
+                            <option value="year">This year</option>
+                            <option value="custom">Custom range</option>
+                        </select>
+                        
+                        @if($dateFilter === 'custom')
+                            <div class="flex items-center gap-1">
+                                <input type="date" wire:model.live="customDateStart" class="w-32 rounded-md border-gray-300 py-1.5 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white" />
+                                <span class="text-gray-500">-</span>
+                                <input type="date" wire:model.live="customDateEnd" class="w-32 rounded-md border-gray-300 py-1.5 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white" />
+                            </div>
+                        @endif
+                    </div>
                 </div>
 
                 <div class="flex items-center gap-2">
-                    {{ $this->downloadZipAction }}
+                    {{ $this->downloadAllZipAction }}
+                    {{ $this->downloadSelectedZipAction }}
                     {{ $this->deleteSelectedAction }}
                 </div>
             </div>
