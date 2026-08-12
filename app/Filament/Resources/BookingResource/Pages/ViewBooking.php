@@ -35,22 +35,13 @@ class ViewBooking extends ViewRecord
 
         $trimmed = trim($path);
 
+        // Already a full URL
         if (filter_var($trimmed, FILTER_VALIDATE_URL)) {
             return $trimmed;
         }
 
-        $trimmed = preg_replace('#^/+#', '', $trimmed) ?? $trimmed;
-        $trimmed = preg_replace('#^storage/#', '', $trimmed) ?? $trimmed;
-
-        if (blank($trimmed)) {
-            return null;
-        }
-
-        try {
-            return Storage::disk('public')->url($trimmed);
-        } catch (Throwable $e) {
-            return storage_asset_path($trimmed);
-        }
+        // Delegate to storage_asset_path which routes via /storage-file/ server endpoint
+        return storage_asset_path($trimmed);
     }
 
     private function renderProofImageContent(?string $path = null): HtmlString

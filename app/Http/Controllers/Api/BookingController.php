@@ -139,7 +139,9 @@ class BookingController extends Controller
             $data = $booking->toArray();
             $transaction = $booking->transaction;
             if ($transaction?->confirmation_pdf) {
-                $data['confirmation_pdf_url'] = storage_asset_path($transaction->confirmation_pdf);
+                // Route through server-side route so the file is served directly
+                // from the persistent volume, not via an ephemeral storage URL
+                $data['confirmation_pdf_url'] = route('ticket.admin-pdf', ['transaction_number' => $booking->transaction_number]);
             }
             $data['confirmation_url'] = $transaction?->confirmation_url;
             // Always allow download for confirmed/paid bookings — PDF is generated on-demand
@@ -204,7 +206,9 @@ class BookingController extends Controller
         $data = $booking->toArray();
         $transaction = $booking->transaction;
         if ($transaction?->confirmation_pdf) {
-            $data['confirmation_pdf_url'] = storage_asset_path($transaction->confirmation_pdf);
+            // Route through server-side route so the file is served directly
+            // from the persistent volume, not via an ephemeral storage URL
+            $data['confirmation_pdf_url'] = route('ticket.admin-pdf', ['transaction_number' => $booking->transaction_number]);
         }
         $data['confirmation_url'] = $transaction?->confirmation_url;
         $data['ticket_url'] = in_array($booking->status, ['confirmed', 'pending'])

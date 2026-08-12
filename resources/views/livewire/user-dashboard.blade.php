@@ -41,13 +41,22 @@
 
                                 @if ($booking->transaction->payment_status === 'paid')
                                     @php
-                                        $downloadUrl = \Illuminate\Support\Facades\URL::temporarySignedRoute(
+                                        $itineraryUrl = \Illuminate\Support\Facades\URL::route(
                                             'ticket.download',
-                                            now()->addMinutes(30),
-                                            ['booking' => $booking->id]
+                                            ['transaction_number' => $booking->transaction_number]
                                         );
+                                        $adminPdfUrl = $booking->transaction->confirmation_pdf ? \Illuminate\Support\Facades\URL::route(
+                                            'ticket.admin-pdf',
+                                            ['transaction_number' => $booking->transaction_number]
+                                        ) : null;
+                                        $confirmationUrl = $booking->transaction->confirmation_url;
                                     @endphp
-                                    <a href="{{ $downloadUrl }}" class="inline-flex items-center justify-center rounded-3xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100">Download ticket</a>
+                                    
+                                    <a href="{{ $itineraryUrl }}" target="_blank" class="inline-flex items-center justify-center rounded-3xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100">Payment Acknowledgement</a>
+                                    
+                                    @if($adminPdfUrl || $confirmationUrl)
+                                        <a href="{{ $adminPdfUrl ?? $confirmationUrl }}" target="_blank" class="inline-flex items-center justify-center rounded-3xl bg-green-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700">Download Ticket</a>
+                                    @endif
                                 @endif
                             </div>
                         </div>

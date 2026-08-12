@@ -39,9 +39,8 @@ class BookingConfirmation extends Mailable implements ShouldQueue
             mkdir($receiptDir, 0755, true);
         }
 
-        \Spatie\LaravelPdf\Facades\Pdf::driver('dompdf')
-            ->format('a4')
-            ->view('pdf.receipt', ['booking' => $this->booking])
+        \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.receipt', ['booking' => $this->booking])
+            ->setPaper('a4')
             ->save($autoReceiptPath);
 
         $mail->attach($autoReceiptPath, [

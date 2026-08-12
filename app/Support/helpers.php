@@ -11,27 +11,31 @@ if (! function_exists('storage_asset_path')) {
 
         $path = (string) $path;
 
+        // Already a full URL — return as-is (e.g. Cloudinary / S3 URLs)
         if (preg_match('#^https?://#i', $path) === 1) {
             return $path;
         }
 
         $normalizedPath = ltrim($path, '/');
 
+        // Strip leading storage/ or public/ prefix to get the disk-relative path
+        if (str_starts_with($normalizedPath, 'storage/')) {
+            $normalizedPath = substr($normalizedPath, strlen('storage/'));
+        } elseif (str_starts_with($normalizedPath, 'public/')) {
+            $normalizedPath = substr($normalizedPath, strlen('public/'));
+        }
+
         if ($normalizedPath === '') {
             return null;
         }
 
-        if (str_starts_with($normalizedPath, 'storage/')) {
-            return asset($normalizedPath);
-        }
-
-        if (str_starts_with($normalizedPath, 'public/')) {
-            return Storage::disk('public')->url($normalizedPath);
-        }
-
-        return Storage::disk('public')->url($normalizedPath);
+        // Serve via the server-side /storage-file/ route so files are read from
+        // the persistent volume and not from Railway's ephemeral storage URL
+        // (which returns 404 after any redeploy).
+        return rtrim(config('app.url'), '/') . '/storage-file/' . $normalizedPath;
     }
 }
+
 
 if (! function_exists('normalize_operator_name')) {
     function normalize_operator_name(?string $operator, ?string $mode = null): ?string

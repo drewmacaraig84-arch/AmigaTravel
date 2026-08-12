@@ -10,7 +10,6 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
-use Spatie\LaravelPdf\Facades\Pdf;
 
 /**
  * Queued job: generates the booking receipt PDF and emails it to the client.

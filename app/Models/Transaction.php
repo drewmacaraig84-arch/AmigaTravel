@@ -112,7 +112,7 @@ class Transaction extends Model
             return null;
         }
 
-        return \Illuminate\Support\Facades\Storage::disk('public')->url($this->proof_of_payment);
+        return storage_asset_path($this->proof_of_payment);
     }
 
     public function deleteProof(): void

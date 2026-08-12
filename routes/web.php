@@ -276,21 +276,8 @@ Route::get('/ticket/download/{transaction_number}', function ($transaction_numbe
         ->with(['passengers.discount', 'schedule.ferryRoute', 'returnSchedule', 'transaction', 'accommodations', 'transportClasses'])
         ->firstOrFail();
 
-    if ($booking->transaction && !empty($booking->transaction->confirmation_pdf)) {
-        $pdfPath = is_string($booking->transaction->confirmation_pdf) 
-            ? $booking->transaction->confirmation_pdf 
-            : null;
-        
-        if ($pdfPath) {
-            if (\Illuminate\Support\Facades\Storage::disk('public')->exists($pdfPath)) {
-                return response()->file(\Illuminate\Support\Facades\Storage::disk('public')->path($pdfPath), [
-                    'Content-Type' => 'application/pdf',
-                    'Content-Disposition' => 'inline; filename="Payment_Acknowledgement.pdf"',
-                ]);
-            }
-        }
-    }
-
+    // Always generate the Travel Itinerary & Acknowledgement PDF on-demand.
+    // The admin-uploaded confirmation PDF is served separately via /ticket/admin-pdf/{transaction_number}
     $receiptDir = storage_path('app/receipts');
     $path = $receiptDir . '/receipt-' . $booking->transaction_number . '.pdf';
 
@@ -313,6 +300,43 @@ Route::get('/ticket/download/{transaction_number}', function ($transaction_numbe
         'Content-Disposition' => 'inline; filename="Payment_Acknowledgement.pdf"',
     ]);
 })->name('ticket.download');
+
+// Serves the admin-uploaded confirmation PDF (used for the "Download Ticket" button in-app)
+Route::get('/ticket/admin-pdf/{transaction_number}', function ($transaction_number) {
+    $booking = \App\Models\Booking::where('transaction_number', $transaction_number)
+        ->with('transaction')
+        ->firstOrFail();
+
+    $pdfPath = $booking->transaction?->confirmation_pdf;
+
+    if ($pdfPath && \Illuminate\Support\Facades\Storage::disk('public')->exists($pdfPath)) {
+        return response()->file(
+            \Illuminate\Support\Facades\Storage::disk('public')->path($pdfPath),
+            [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="Ticket_Confirmation.pdf"',
+            ]
+        );
+    }
+
+    // Fallback: redirect to the itinerary acknowledgement if no admin PDF exists
+    return redirect()->route('ticket.download', ['transaction_number' => $transaction_number]);
+})->name('ticket.admin-pdf');
+
+// Serves any public storage file through the server (avoids Railway storage URL 404s)
+// Usage: /storage-file/{path} where path is the relative storage path, e.g. proofs/AGT-xxx.jpg
+Route::get('/storage-file/{path}', function (string $path) {
+    $disk = \Illuminate\Support\Facades\Storage::disk('public');
+
+    if (! $disk->exists($path)) {
+        abort(404, 'File not found.');
+    }
+
+    $fullPath = $disk->path($path);
+    $mimeType = mime_content_type($fullPath) ?: 'application/octet-stream';
+
+    return response()->file($fullPath, ['Content-Type' => $mimeType]);
+})->where('path', '.*')->name('storage.file');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
