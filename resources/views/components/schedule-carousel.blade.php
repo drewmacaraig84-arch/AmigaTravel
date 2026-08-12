@@ -197,8 +197,12 @@
                             $uniqueId = $class['pivot_id'] ?? $class['id'];
                         @endphp
                         <button type="button" 
-                            @if(!empty($class['is_promo'])) wire:confirm="This is a promotional ticket and is STRICTLY non-refundable. It cannot be cancelled or rebooked. Do you wish to proceed?" @endif
-                            wire:click.prevent="{{ $selectClassMethod }}({{ $uniqueId }})" 
+                            @if(!empty($class['is_promo'])) 
+                                x-data=""
+                                x-on:click.prevent="$dispatch('open-promo-modal', { method: '{{ $selectClassMethod }}', id: {{ $uniqueId }} })"
+                            @else
+                                wire:click.prevent="{{ $selectClassMethod }}({{ $uniqueId }})" 
+                            @endif
                             class="relative rounded-xl border-2 p-3 sm:p-4 text-left transition duration-200 overflow-hidden {{ (int)$selectedClassId === (int)$uniqueId ? (!empty($class['is_promo']) ? 'border-amber-400 bg-amber-50 shadow-sm' : 'border-[#db2777] bg-[#db2777]/5 shadow-sm') : (!empty($class['is_promo']) ? 'border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 hover:border-amber-400 hover:shadow-sm' : 'border-slate-200 bg-white hover:border-[#db2777]/50 hover:shadow-sm') }}">
                             
                             @if(!empty($class['is_promo']))
@@ -240,4 +244,39 @@
             </div>
         @endif
     @endif
+    <!-- Promotional Ticket Modal -->
+    <div 
+        x-data="{ show: false, method: '', id: null }"
+        @open-promo-modal.window="show = true; method = $event.detail.method; id = $event.detail.id"
+        x-show="show"
+        style="display: none;"
+        class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden bg-slate-900/60 backdrop-blur-sm"
+    >
+        <div 
+            x-show="show" 
+            @click.outside="show = false"
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0 scale-95 translate-y-4"
+            x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+            x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+            x-transition:leave-end="opacity-0 scale-95 translate-y-4"
+            class="relative w-full max-w-sm p-6 bg-white shadow-2xl rounded-2xl mx-4 border border-slate-100"
+        >
+            <div class="flex items-center justify-center w-14 h-14 mx-auto mb-4 bg-amber-100 rounded-full">
+                <svg class="w-7 h-7 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            </div>
+            
+            <h3 class="text-xl font-bold text-center text-slate-900 mb-2">Promotional Ticket</h3>
+            
+            <p class="text-sm text-center text-slate-600 mb-6">
+                This is a promotional ticket and is <strong class="text-slate-800">STRICTLY non-refundable</strong>. It cannot be cancelled or rebooked. Do you wish to proceed?
+            </p>
+
+            <div class="flex gap-3 justify-center w-full">
+                <button type="button" @click="show = false" class="flex-1 px-5 py-2.5 text-sm font-semibold text-slate-700 bg-slate-100 rounded-xl hover:bg-slate-200 transition">Cancel</button>
+                <button type="button" @click="$wire.call(method, id); show = false" class="flex-1 px-5 py-2.5 text-sm font-semibold text-white bg-amber-500 rounded-xl hover:bg-amber-600 shadow-sm transition">Proceed</button>
+            </div>
+        </div>
+    </div>
 </div>
