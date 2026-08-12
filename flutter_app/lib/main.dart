@@ -8957,7 +8957,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
     // Auto-populate missing class prices (if loaded from older SharedPreferences session)
     if (widget.booking.mode == 'ferry') {
       if ((widget.booking.selectedFerryAccommodationPrice ?? 0) == 0 && widget.booking.selectedFerryAccommodationId != null) {
-        final classes = s['accommodations'] as List<dynamic>? ?? [];
+        final classes = (s['schedule_accommodations'] ?? s['transport_classes'] ?? s['accommodations'] ?? []) as List<dynamic>;
         for (var c in classes) {
           if (c['id'] == widget.booking.selectedFerryAccommodationId) {
             widget.booking.selectedFerryAccommodationPrice = _parseDouble(c['price']);
@@ -8967,7 +8967,8 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
       }
       if (widget.booking.tripType == 'round_trip' && widget.booking.selectedReturnSchedule != null) {
         if ((widget.booking.selectedReturnFerryAccommodationPrice ?? 0) == 0 && widget.booking.selectedReturnFerryAccommodationId != null) {
-          final classes = widget.booking.selectedReturnSchedule!['accommodations'] as List<dynamic>? ?? [];
+          final retS = widget.booking.selectedReturnSchedule!;
+          final classes = (retS['schedule_accommodations'] ?? retS['transport_classes'] ?? retS['accommodations'] ?? []) as List<dynamic>;
           for (var c in classes) {
             if (c['id'] == widget.booking.selectedReturnFerryAccommodationId) {
               widget.booking.selectedReturnFerryAccommodationPrice = _parseDouble(c['price']);
@@ -8978,7 +8979,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
       }
     } else {
       if ((widget.booking.selectedAirlineClassPrice ?? 0) == 0 && widget.booking.selectedAirlineClassId != null) {
-        final classes = s['airline_classes'] as List<dynamic>? ?? [];
+        final classes = (s['airline_classes'] ?? s['transport_classes'] ?? []) as List<dynamic>;
         for (var c in classes) {
           if (c['id'] == widget.booking.selectedAirlineClassId) {
             widget.booking.selectedAirlineClassPrice = _parseDouble(c['price']);
@@ -8988,7 +8989,8 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
       }
       if (widget.booking.tripType == 'round_trip' && widget.booking.selectedReturnSchedule != null) {
         if ((widget.booking.selectedReturnAirlineClassPrice ?? 0) == 0 && widget.booking.selectedReturnAirlineClassId != null) {
-          final classes = widget.booking.selectedReturnSchedule!['airline_classes'] as List<dynamic>? ?? [];
+          final retS = widget.booking.selectedReturnSchedule!;
+          final classes = (retS['airline_classes'] ?? retS['transport_classes'] ?? []) as List<dynamic>;
           for (var c in classes) {
             if (c['id'] == widget.booking.selectedReturnAirlineClassId) {
               widget.booking.selectedReturnAirlineClassPrice = _parseDouble(c['price']);
