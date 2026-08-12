@@ -170,7 +170,8 @@ class PaymentProof extends Component
                 };
                 
                     // Generate new filename and store compressed image
-                    $filename = $this->transaction->booking->transaction_number . '.' . $extension;
+                    $safeReference = preg_replace('/[^A-Za-z0-9_-]/', '', $this->reference_number);
+                    $filename = $this->transaction->booking->transaction_number . '_' . $safeReference . '.' . $extension;
                     $path = \Illuminate\Support\Facades\Storage::disk('public')->putFileAs('proofs', new \Illuminate\Http\File($tempFile), $filename);
 
                     // Delete temp file
@@ -181,12 +182,14 @@ class PaymentProof extends Component
                         'transaction_id' => $this->transaction->id ?? null,
                         'file' => $this->proof->getClientOriginalName(),
                     ]);
-                    $fallbackFilename = $this->transaction->booking->transaction_number . '.' . $this->proof->extension();
+                    $safeReference = preg_replace('/[^A-Za-z0-9_-]/', '', $this->reference_number);
+                    $fallbackFilename = $this->transaction->booking->transaction_number . '_' . $safeReference . '.' . $this->proof->extension();
                     $path = $this->proof->storeAs('proofs', $fallbackFilename, 'public');
                 }
             } else {
                 // Fall back to original if not an image
-                $fallbackFilename = $this->transaction->booking->transaction_number . '.' . $this->proof->extension();
+                $safeReference = preg_replace('/[^A-Za-z0-9_-]/', '', $this->reference_number);
+                $fallbackFilename = $this->transaction->booking->transaction_number . '_' . $safeReference . '.' . $this->proof->extension();
                 $path = $this->proof->storeAs('proofs', $fallbackFilename, 'public');
             }
         }

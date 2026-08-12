@@ -253,7 +253,8 @@ class BookingController extends Controller
         }
 
         $extension = $request->file('proof')->extension();
-        $filename = 'proof_' . $transaction->transaction_number . '_' . uniqid() . '.' . $extension;
+        $safeReference = preg_replace('/[^A-Za-z0-9_-]/', '', $request->input('reference_number', uniqid()));
+        $filename = $booking->transaction_number . '_' . $safeReference . '.' . $extension;
         $path = $request->file('proof')->storeAs('proofs', $filename, 'public');
 
         $transaction->update([
@@ -435,7 +436,8 @@ class BookingController extends Controller
         $proofPath = null;
         if ($request->hasFile('proof')) {
             $extension = $request->file('proof')->extension();
-            $filename = 'rebook_proof_' . $transaction->transaction_number . '_' . uniqid() . '.' . $extension;
+            $safeReference = preg_replace('/[^A-Za-z0-9_-]/', '', $request->input('reference_number', uniqid()));
+            $filename = 'rebook_proof_' . $booking->transaction_number . '_' . $safeReference . '.' . $extension;
             $proofPath = $request->file('proof')->storeAs('rebooking_proofs', $filename, 'public');
         }
         $rebookingFee = $request->input('total_paid');
