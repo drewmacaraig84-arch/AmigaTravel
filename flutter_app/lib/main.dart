@@ -86,7 +86,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.69+79';
+  static const String appVersion = '1.0.69+80';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -9006,20 +9006,53 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
             'driver_last_name': widget.booking.vehicleDriverLastName,
             'driver_birthday': widget.booking.vehicleDriverBirthday,
           },
-          'selected_transport_class_id': widget.booking.selectedAirlineClassId,
-          'selected_schedule_accommodation_id':
-              widget.booking.selectedFerryAccommodationId,
+          // Determine which API field to use for the ferry class:
+          // - schedules that have transport_classes → send as selected_transport_class_id
+          // - schedules that have accommodations    → send as selected_schedule_accommodation_id
+          if (widget.booking.mode == 'ferry' &&
+              widget.booking.selectedFerryAccommodationId != null) ...((){
+            final depClasses = (widget.booking.selectedSchedule?['transport_classes'] as List<dynamic>? ?? []);
+            if (depClasses.isNotEmpty) {
+              // Ferry using transport_classes (e.g. Starlite, 2GO that have TransportClass rows)
+              return {
+                'selected_transport_class_id': widget.booking.selectedFerryAccommodationId,
+                'selected_schedule_accommodation_id': null,
+              };
+            } else {
+              // Ferry using schedule_accommodations
+              return {
+                'selected_transport_class_id': null,
+                'selected_schedule_accommodation_id': widget.booking.selectedFerryAccommodationId,
+              };
+            }
+          }())
+          else if (widget.booking.mode != 'ferry') ...{
+            'selected_transport_class_id': widget.booking.selectedAirlineClassId,
+            'selected_schedule_accommodation_id': null,
+          },
           if (widget.booking.tripType == 'round_trip' &&
               widget.booking.selectedReturnSchedule != null)
             'return_schedule_id': widget.booking.selectedReturnSchedule!['id'],
+          // Return leg: same routing logic
           if (widget.booking.tripType == 'round_trip' &&
-              widget.booking.selectedReturnFerryAccommodationId != null)
-            'selected_return_schedule_accommodation_id':
-                widget.booking.selectedReturnFerryAccommodationId,
-          if (widget.booking.tripType == 'round_trip' &&
-              widget.booking.selectedReturnAirlineClassId != null)
-            'return_selected_transport_class_id':
-                widget.booking.selectedReturnAirlineClassId,
+              widget.booking.selectedReturnFerryAccommodationId != null) ...((){
+            final retClasses = (widget.booking.selectedReturnSchedule?['transport_classes'] as List<dynamic>? ?? []);
+            if (retClasses.isNotEmpty) {
+              return {
+                'return_selected_transport_class_id': widget.booking.selectedReturnFerryAccommodationId,
+                'selected_return_schedule_accommodation_id': null,
+              };
+            } else {
+              return {
+                'return_selected_transport_class_id': null,
+                'selected_return_schedule_accommodation_id': widget.booking.selectedReturnFerryAccommodationId,
+              };
+            }
+          }())
+          else if (widget.booking.tripType == 'round_trip' &&
+              widget.booking.selectedReturnAirlineClassId != null) ...{
+            'return_selected_transport_class_id': widget.booking.selectedReturnAirlineClassId,
+          },
           if (widget.booking.voucherCode != null &&
               !(widget.booking.usePromoTicket &&
                   widget.booking.promotionalTicketId != null))
