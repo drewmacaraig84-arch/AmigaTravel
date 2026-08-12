@@ -29,8 +29,7 @@ class RetroactiveGraciaPoints extends Command
     {
         $this->info('Starting retroactive Gracia Points check...');
         
-        $bookings = Booking::whereNotNull('user_id')
-            ->where('status', 'confirmed')
+        $bookings = Booking::where('status', 'confirmed')
             ->get();
             
         $awardedCount = 0;
