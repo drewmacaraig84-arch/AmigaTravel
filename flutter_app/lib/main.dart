@@ -86,7 +86,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.69+78';
+  static const String appVersion = '1.0.69+79';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -7253,9 +7253,14 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
 
   Widget _buildClassesSelection(List<dynamic> classes,
       {required bool isReturn}) {
-    final val = isReturn
-        ? widget.booking.selectedReturnAirlineClassId
-        : widget.booking.selectedAirlineClassId;
+    final isFerry = widget.booking.mode == 'ferry';
+    final val = isFerry
+        ? (isReturn
+            ? widget.booking.selectedReturnFerryAccommodationId
+            : widget.booking.selectedFerryAccommodationId)
+        : (isReturn
+            ? widget.booking.selectedReturnAirlineClassId
+            : widget.booking.selectedAirlineClassId);
     final schedule = isReturn
         ? widget.booking.selectedReturnSchedule
         : widget.booking.selectedSchedule;
@@ -7331,16 +7336,32 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                   }
 
                   setState(() {
-                    if (isReturn) {
-                      widget.booking.selectedReturnAirlineClassId = c['id'];
-                      widget.booking.selectedReturnAirlineClassName = c['name'];
-                      widget.booking.selectedReturnAirlineClassPrice =
-                          _parseDouble(c['price']);
+                    if (widget.booking.mode == 'ferry') {
+                      // Ferry uses transport_classes but must store in ferry fields
+                      if (isReturn) {
+                        widget.booking.selectedReturnFerryAccommodationId = c['id'];
+                        widget.booking.selectedReturnFerryAccommodationName = c['name'];
+                        widget.booking.selectedReturnFerryAccommodationPrice =
+                            _parseDouble(c['price']);
+                      } else {
+                        widget.booking.selectedFerryAccommodationId = c['id'];
+                        widget.booking.selectedFerryAccommodationName = c['name'];
+                        widget.booking.selectedFerryAccommodationPrice =
+                            _parseDouble(c['price']);
+                      }
                     } else {
-                      widget.booking.selectedAirlineClassId = c['id'];
-                      widget.booking.selectedAirlineClassName = c['name'];
-                      widget.booking.selectedAirlineClassPrice =
-                          _parseDouble(c['price']);
+                      // Airline
+                      if (isReturn) {
+                        widget.booking.selectedReturnAirlineClassId = c['id'];
+                        widget.booking.selectedReturnAirlineClassName = c['name'];
+                        widget.booking.selectedReturnAirlineClassPrice =
+                            _parseDouble(c['price']);
+                      } else {
+                        widget.booking.selectedAirlineClassId = c['id'];
+                        widget.booking.selectedAirlineClassName = c['name'];
+                        widget.booking.selectedAirlineClassPrice =
+                            _parseDouble(c['price']);
+                      }
                     }
                   });
                 },
