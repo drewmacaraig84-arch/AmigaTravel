@@ -86,7 +86,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.69+77';
+  static const String appVersion = '1.0.69+78';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -1620,10 +1620,10 @@ class _HomeScreenState extends State<HomeScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Carousel Banner (Hero + Promotions)
-          const SizedBox(height: 16),
+          // ── 1. Immersive Carousel (edge-to-edge, taller) ──────────────────
+          const SizedBox(height: 8),
           SizedBox(
-            height: 190,
+            height: 220,
             child: PageView.builder(
               controller: _promoPageController,
               onPageChanged: (i) => setState(() => _currentPromoPage = i),
@@ -1634,105 +1634,150 @@ class _HomeScreenState extends State<HomeScreen>
                 } else if (i == 1) {
                   return const _HeroVideoBanner();
                 } else {
-                  // Promotional Image from backend
                   final promo = _promotions[i - 2];
                   final imgUrl = promo['image_url'] as String?;
                   return Container(
                     margin: const EdgeInsets.symmetric(horizontal: 16),
                     decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        color: kSlate100),
+                      borderRadius: BorderRadius.circular(24),
+                      color: kSlate100,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.10),
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
+                        )
+                      ],
+                    ),
                     clipBehavior: Clip.antiAlias,
                     child: imgUrl != null
                         ? Image.network(imgUrl,
                             fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) => const Center(
-                                child: Icon(Icons.image,
+                                child: Icon(Icons.broken_image,
                                     color: kSlate400, size: 40)))
                         : const Center(
-                            child:
-                                Icon(Icons.image, color: kSlate400, size: 40)),
+                            child: Icon(Icons.image, color: kSlate400, size: 40)),
                   );
                 }
               },
             ),
           ),
           const SizedBox(height: 12),
-          // Carousel Indicators
-          if (_promotions.isNotEmpty || true)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                2 + _promotions.length,
-                (index) => AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  height: 8,
-                  width: _currentPromoPage == index ? 24 : 8,
-                  decoration: BoxDecoration(
-                    color: _currentPromoPage == index ? kPink : kSlate300,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
+          // Dot indicators (green accent)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(
+              2 + _promotions.length,
+              (index) => AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                height: 6,
+                width: _currentPromoPage == index ? 22 : 6,
+                decoration: BoxDecoration(
+                  color: _currentPromoPage == index ? kGreen : kSlate300,
+                  borderRadius: BorderRadius.circular(3),
                 ),
               ),
             ),
-          const SizedBox(height: 8),
+          ),
 
-          // Track Booking
+          const SizedBox(height: 24),
+
+          // ── 2. Quick-Book Grid ────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                const Text(
-                  'Track Booking',
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                      color: kSlate800),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(100),
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4))
-                    ],
-                  ),
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Enter your booking or tracking number',
-                      hintStyle: const TextStyle(color: kSlate400, fontSize: 13),
-                      filled: true,
-                      fillColor: Colors.white,
-                      suffixIcon: Container(
-                        margin: const EdgeInsets.all(6),
-                        decoration: const BoxDecoration(
-                          color: kGreen,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.search, color: Colors.white, size: 20),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 16),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(100),
-                        borderSide: BorderSide.none,
-                      ),
+                Expanded(
+                  child: _ModernBookCard(
+                    label: 'Book Ferry',
+                    subtitle: 'Starlite · 2GO · FastCat',
+                    icon: Icons.directions_boat_rounded,
+                    gradient: const LinearGradient(
+                      colors: [kGreen, Color(0xFF1B5E20)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
+                    onTap: widget.onBookFerry,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _ModernBookCard(
+                    label: 'Book Airline',
+                    subtitle: 'PAL · CebuPac · AirAsia',
+                    icon: Icons.flight_takeoff_rounded,
+                    gradient: const LinearGradient(
+                      colors: [kPink, Color(0xFF880E4F)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    onTap: widget.onBookAirline,
                   ),
                 ),
               ],
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
 
-          // Points and Vouchers
+          // ── 3. Track Booking ──────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 14,
+                    offset: const Offset(0, 5),
+                  )
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: kGreen.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.my_location_rounded,
+                        color: kGreen, size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: TextField(
+                      decoration: InputDecoration(
+                        hintText: 'Enter booking / tracking number',
+                        hintStyle: TextStyle(color: kSlate400, fontSize: 13),
+                        border: InputBorder.none,
+                        isDense: true,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    margin: const EdgeInsets.only(left: 8),
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: kGreen,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.arrow_forward_rounded,
+                        color: Colors.white, size: 18),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // ── 4. Points & Vouchers (gradient cards) ─────────────────────────
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
@@ -1744,21 +1789,37 @@ class _HomeScreenState extends State<HomeScreen>
                         MaterialPageRoute(
                             builder: (_) => const GraciaPointsScreen())),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 20, horizontal: 16),
                       decoration: BoxDecoration(
-                        color: kPink.withValues(alpha: 0.05),
+                        gradient: const LinearGradient(
+                          colors: [kPink, Color(0xFFC2185B)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: kPink.withValues(alpha: 0.15)),
+                        boxShadow: [
+                          BoxShadow(
+                              color: kPink.withValues(alpha: 0.30),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4))
+                        ],
                       ),
                       child: const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(Icons.star_rounded, color: kPink, size: 32),
-                          SizedBox(height: 8),
+                          Icon(Icons.stars_rounded,
+                              color: Colors.white, size: 30),
+                          SizedBox(height: 10),
                           Text('My Points',
                               style: TextStyle(
+                                  color: Colors.white,
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                  color: kSlate800)),
+                                  fontSize: 15)),
+                          SizedBox(height: 2),
+                          Text('View rewards',
+                              style: TextStyle(
+                                  color: Colors.white70, fontSize: 12)),
                         ],
                       ),
                     ),
@@ -1770,26 +1831,43 @@ class _HomeScreenState extends State<HomeScreen>
                     onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (_) => VouchersScreen(onUseVoucher: () {
+                            builder: (_) =>
+                                VouchersScreen(onUseVoucher: () {
                                   Navigator.pop(context);
                                   widget.onBookFerry();
                                 }))),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 20, horizontal: 16),
                       decoration: BoxDecoration(
-                        color: kGreen.withValues(alpha: 0.05),
+                        gradient: const LinearGradient(
+                          colors: [kGreen, Color(0xFF1B5E20)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: kGreen.withValues(alpha: 0.15)),
+                        boxShadow: [
+                          BoxShadow(
+                              color: kGreen.withValues(alpha: 0.30),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4))
+                        ],
                       ),
                       child: const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(Icons.local_activity, color: kGreen, size: 32),
-                          SizedBox(height: 8),
+                          Icon(Icons.local_activity_rounded,
+                              color: Colors.white, size: 30),
+                          SizedBox(height: 10),
                           Text('Vouchers',
                               style: TextStyle(
+                                  color: Colors.white,
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                  color: kSlate800)),
+                                  fontSize: 15)),
+                          SizedBox(height: 2),
+                          Text('Claim promos',
+                              style: TextStyle(
+                                  color: Colors.white70, fontSize: 12)),
                         ],
                       ),
                     ),
@@ -1799,48 +1877,9 @@ class _HomeScreenState extends State<HomeScreen>
             ),
           ),
 
-          const SizedBox(height: 24),
-
-          // Quick Services
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Quick Services',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                        color: kSlate800)),
-                const SizedBox(height: 12),
-                Column(
-                  children: [
-                    _ServiceCard(
-                      label: 'Book Ferry',
-                      subtitle: 'Starlite, 2GO, FastCat',
-                      icon: Icons.directions_boat,
-                      iconBg: kGreen.withValues(alpha: 0.1),
-                      iconColor: kGreen,
-                      onTap: widget.onBookFerry,
-                    ),
-                    const SizedBox(height: 12),
-                    _ServiceCard(
-                      label: 'Book Airline',
-                      subtitle: 'PAL, CebuPac, AirAsia',
-                      icon: Icons.flight,
-                      iconBg: kPink.withValues(alpha: 0.1),
-                      iconColor: kPink,
-                      onTap: widget.onBookAirline,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
           const SizedBox(height: 20),
 
-          // Request Travel Booking
+          // ── 5. Request Travel Booking (dark banner) ───────────────────────
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: GestureDetector(
@@ -1852,38 +1891,45 @@ class _HomeScreenState extends State<HomeScreen>
                 width: double.infinity,
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                      colors: [kGreen, Color(0xFF14400e)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight),
+                  color: const Color(0xFF0D1B2A),
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                        color: kGreen.withValues(alpha: 0.35),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4))
+                        color: Colors.black.withValues(alpha: 0.25),
+                        blurRadius: 14,
+                        offset: const Offset(0, 6))
                   ],
                 ),
-                child: const Row(
+                child: Row(
                   children: [
-                    Icon(Icons.send_and_archive, color: Colors.white, size: 32),
-                    SizedBox(width: 14),
-                    Expanded(
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(Icons.map_rounded,
+                          color: Colors.white, size: 28),
+                    ),
+                    const SizedBox(width: 14),
+                    const Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Request Travel Booking',
+                          Text('Custom Travel Package',
                               style: TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w900,
                                   fontSize: 15)),
-                          Text('Fill out our booking request form',
+                          SizedBox(height: 4),
+                          Text('Request a tailor-made booking',
                               style: TextStyle(
-                                  color: Colors.white70, fontSize: 12)),
+                                  color: Colors.white60, fontSize: 12)),
                         ],
                       ),
                     ),
-                    Icon(Icons.chevron_right, color: Colors.white70),
+                    const Icon(Icons.chevron_right_rounded,
+                        color: Colors.white38),
                   ],
                 ),
               ),
@@ -1892,7 +1938,7 @@ class _HomeScreenState extends State<HomeScreen>
 
           const SizedBox(height: 24),
 
-          // Our Services
+          // ── 6. Our Services ───────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
@@ -1998,7 +2044,7 @@ class _HomeScreenState extends State<HomeScreen>
 
           const SizedBox(height: 24),
 
-          // Tour Packages
+          // ── 7. Tour Packages ──────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
@@ -2290,7 +2336,71 @@ class _PackageHorizontalList extends StatelessWidget {
   }
 }
 
+// ── Modern gradient book card used in HomeScreen quick-book grid ──────────
+class _ModernBookCard extends StatelessWidget {
+  final String label;
+  final String subtitle;
+  final IconData icon;
+  final LinearGradient gradient;
+  final VoidCallback onTap;
+
+  const _ModernBookCard({
+    required this.label,
+    required this.subtitle,
+    required this.icon,
+    required this.gradient,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: gradient.colors.first.withValues(alpha: 0.30),
+              blurRadius: 12,
+              offset: const Offset(0, 5),
+            )
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: Colors.white, size: 24),
+            ),
+            const SizedBox(height: 14),
+            Text(label,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15)),
+            const SizedBox(height: 4),
+            Text(subtitle,
+                style: const TextStyle(
+                    color: Colors.white70, fontSize: 11),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _ServiceCard extends StatelessWidget {
+
   final String label;
   final String subtitle;
   final IconData icon;
