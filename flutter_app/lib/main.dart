@@ -86,7 +86,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.69+76';
+  static const String appVersion = '1.0.69+77';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -1406,6 +1406,7 @@ class _HomeScreenState extends State<HomeScreen>
   bool _toursLoading = true;
   bool _servicesLoading = true;
   BookingData? _savedSession;
+  Timer? _carouselTimer;
 
   @override
   void initState() {
@@ -1415,6 +1416,15 @@ class _HomeScreenState extends State<HomeScreen>
     _fetchPromotions();
     _fetchTours();
     _fetchServices();
+
+    _carouselTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
+      if (_promoPageController.hasClients) {
+        final nextPage = (_currentPromoPage + 1) % (2 + _promotions.length);
+        _promoPageController.animateToPage(nextPage,
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeInOut);
+      }
+    });
   }
 
   void _checkSavedSession() async {
@@ -1582,6 +1592,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   void dispose() {
+    _carouselTimer?.cancel();
     _tourTabController.dispose();
     _promoPageController.dispose();
     super.dispose();
@@ -1616,13 +1627,15 @@ class _HomeScreenState extends State<HomeScreen>
             child: PageView.builder(
               controller: _promoPageController,
               onPageChanged: (i) => setState(() => _currentPromoPage = i),
-              itemCount: 1 + _promotions.length,
+              itemCount: 2 + _promotions.length,
               itemBuilder: (context, i) {
                 if (i == 0) {
+                  return const _WelcomeBanner();
+                } else if (i == 1) {
                   return const _HeroVideoBanner();
                 } else {
                   // Promotional Image from backend
-                  final promo = _promotions[i - 1];
+                  final promo = _promotions[i - 2];
                   final imgUrl = promo['image_url'] as String?;
                   return Container(
                     margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -1646,20 +1659,22 @@ class _HomeScreenState extends State<HomeScreen>
           ),
           const SizedBox(height: 12),
           // Carousel Indicators
-          if (_promotions.isNotEmpty)
+          if (_promotions.isNotEmpty || true)
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(1 + _promotions.length, (i) {
-                return AnimatedContainer(
+              children: List.generate(
+                2 + _promotions.length,
+                (index) => AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  height: 6,
-                  width: _currentPromoPage == i ? 18 : 6,
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  height: 8,
+                  width: _currentPromoPage == index ? 24 : 8,
                   decoration: BoxDecoration(
-                      color: _currentPromoPage == i ? kGreen : kSlate200,
-                      borderRadius: BorderRadius.circular(3)),
-                );
-              }),
+                    color: _currentPromoPage == index ? kPink : kSlate300,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
             ),
           const SizedBox(height: 8),
 
@@ -2345,6 +2360,59 @@ class _ServiceCard extends StatelessWidget {
   }
 }
 
+class _WelcomeBanner extends StatelessWidget {
+  const _WelcomeBanner({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+            colors: [kGreen, Color(0xFF0e2709)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+              color: kGreen.withValues(alpha: 0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 8))
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('Welcome to Amiga Gracia\nTravel Services',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    height: 1.2)),
+            const SizedBox(height: 14),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                  color: kPink, borderRadius: BorderRadius.circular(20)),
+              child: const Text(
+                  'Your journey deserves more than a destination - it deserves an exceptional experience',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _HeroVideoBanner extends StatefulWidget {
   const _HeroVideoBanner({Key? key}) : super(key: key);
 
@@ -2409,42 +2477,9 @@ class __HeroVideoBannerState extends State<_HeroVideoBanner> {
           else
             Container(
               decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                    colors: [kGreen, Color(0xFF0e2709)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight),
+                color: kSlate100,
               ),
             ),
-          // Dark overlay to make text readable over the video
-          Container(color: Colors.black.withValues(alpha: 0.2)),
-          Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text('Welcome to Amiga Gracia\nTravel Services',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        height: 1.2)),
-                const SizedBox(height: 14),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                      color: kPink, borderRadius: BorderRadius.circular(20)),
-                  child: const Text(
-                      'Your journey deserves more than a destination - it deserves an exceptional experience',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold)),
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );
@@ -8918,6 +8953,51 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
     // ── STEP A: Review form before submitting ──
     final s = widget.booking.selectedSchedule!;
     final pax = widget.booking.passengers;
+
+    // Auto-populate missing class prices (if loaded from older SharedPreferences session)
+    if (widget.booking.mode == 'ferry') {
+      if ((widget.booking.selectedFerryAccommodationPrice ?? 0) == 0 && widget.booking.selectedFerryAccommodationId != null) {
+        final classes = s['accommodations'] as List<dynamic>? ?? [];
+        for (var c in classes) {
+          if (c['id'] == widget.booking.selectedFerryAccommodationId) {
+            widget.booking.selectedFerryAccommodationPrice = _parseDouble(c['price']);
+            break;
+          }
+        }
+      }
+      if (widget.booking.tripType == 'round_trip' && widget.booking.selectedReturnSchedule != null) {
+        if ((widget.booking.selectedReturnFerryAccommodationPrice ?? 0) == 0 && widget.booking.selectedReturnFerryAccommodationId != null) {
+          final classes = widget.booking.selectedReturnSchedule!['accommodations'] as List<dynamic>? ?? [];
+          for (var c in classes) {
+            if (c['id'] == widget.booking.selectedReturnFerryAccommodationId) {
+              widget.booking.selectedReturnFerryAccommodationPrice = _parseDouble(c['price']);
+              break;
+            }
+          }
+        }
+      }
+    } else {
+      if ((widget.booking.selectedAirlineClassPrice ?? 0) == 0 && widget.booking.selectedAirlineClassId != null) {
+        final classes = s['airline_classes'] as List<dynamic>? ?? [];
+        for (var c in classes) {
+          if (c['id'] == widget.booking.selectedAirlineClassId) {
+            widget.booking.selectedAirlineClassPrice = _parseDouble(c['price']);
+            break;
+          }
+        }
+      }
+      if (widget.booking.tripType == 'round_trip' && widget.booking.selectedReturnSchedule != null) {
+        if ((widget.booking.selectedReturnAirlineClassPrice ?? 0) == 0 && widget.booking.selectedReturnAirlineClassId != null) {
+          final classes = widget.booking.selectedReturnSchedule!['airline_classes'] as List<dynamic>? ?? [];
+          for (var c in classes) {
+            if (c['id'] == widget.booking.selectedReturnAirlineClassId) {
+              widget.booking.selectedReturnAirlineClassPrice = _parseDouble(c['price']);
+              break;
+            }
+          }
+        }
+      }
+    }
 
     return Scaffold(
       appBar: AppBar(title: const Text('Review & Submit')),
