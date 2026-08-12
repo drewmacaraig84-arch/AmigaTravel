@@ -13,6 +13,7 @@ import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:async';
 import 'package:intl/intl.dart';
+import 'package:video_player/video_player.dart';
 
 import 'package:flutter_app_badger/flutter_app_badger.dart';
 import 'notification_service.dart';
@@ -85,7 +86,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.68+75';
+  static const String appVersion = '1.0.69+76';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -343,10 +344,17 @@ class BookingData {
       'selectedScheduleAccommodationId': selectedScheduleAccommodationId,
       'selectedScheduleAccommodation': selectedScheduleAccommodation,
       'selectedReturnSchedule': selectedReturnSchedule,
-      'selectedReturnScheduleAccommodationId':
-          selectedReturnScheduleAccommodationId,
-      'selectedReturnScheduleAccommodation':
-          selectedReturnScheduleAccommodation,
+      'selectedReturnScheduleAccommodationId': selectedReturnScheduleAccommodationId,
+      'selectedReturnScheduleAccommodation': selectedReturnScheduleAccommodation,
+      'selectedFerryAccommodationId': selectedFerryAccommodationId,
+      'selectedFerryAccommodationName': selectedFerryAccommodationName,
+      'selectedFerryAccommodationPrice': selectedFerryAccommodationPrice,
+      'selectedReturnFerryAccommodationId': selectedReturnFerryAccommodationId,
+      'selectedReturnFerryAccommodationName': selectedReturnFerryAccommodationName,
+      'selectedReturnFerryAccommodationPrice': selectedReturnFerryAccommodationPrice,
+      'selectedAirlineClassId': selectedAirlineClassId,
+      'selectedAirlineClassName': selectedAirlineClassName,
+      'selectedAirlineClassPrice': selectedAirlineClassPrice,
       'hasVehicle': hasVehicle,
       'selectedVehicleRateId': selectedVehicleRateId,
       'vehicleType': vehicleType,
@@ -411,6 +419,18 @@ class BookingData {
             ? Map<String, dynamic>.from(
                 json['selectedReturnScheduleAccommodation'])
             : null;
+
+    b.selectedFerryAccommodationId = json['selectedFerryAccommodationId'];
+    b.selectedFerryAccommodationName = json['selectedFerryAccommodationName'];
+    b.selectedFerryAccommodationPrice = json['selectedFerryAccommodationPrice'] != null ? (json['selectedFerryAccommodationPrice'] as num).toDouble() : null;
+    
+    b.selectedReturnFerryAccommodationId = json['selectedReturnFerryAccommodationId'];
+    b.selectedReturnFerryAccommodationName = json['selectedReturnFerryAccommodationName'];
+    b.selectedReturnFerryAccommodationPrice = json['selectedReturnFerryAccommodationPrice'] != null ? (json['selectedReturnFerryAccommodationPrice'] as num).toDouble() : null;
+
+    b.selectedAirlineClassId = json['selectedAirlineClassId'];
+    b.selectedAirlineClassName = json['selectedAirlineClassName'];
+    b.selectedAirlineClassPrice = json['selectedAirlineClassPrice'] != null ? (json['selectedAirlineClassPrice'] as num).toDouble() : null;
 
     b.hasVehicle = json['hasVehicle'] ?? false;
     b.selectedVehicleRateId = json['selectedVehicleRateId'];
@@ -1051,11 +1071,20 @@ class _MainScreenState extends State<MainScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   Key _activityKey = UniqueKey();
 
+  Timer? _notificationPollTimer;
+
   @override
   void initState() {
     super.initState();
     _fetchGlobalData();
     NotificationService.requestPermission();
+    NotificationService.initialize();
+
+    _notificationPollTimer = Timer.periodic(const Duration(seconds: 15), (timer) {
+      if (UserSession.isLoggedIn) {
+        _fetchGlobalData(isBackground: true);
+      }
+    });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (pendingNotificationData != null) {
@@ -1066,7 +1095,13 @@ class _MainScreenState extends State<MainScreen> {
     });
   }
 
-  Future<void> _fetchGlobalData() async {
+  @override
+  void dispose() {
+    _notificationPollTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _fetchGlobalData({bool isBackground = false}) async {
     if (UserSession.isLoggedIn && UserSession.token.isNotEmpty) {
       try {
         final res = await http.get(
@@ -1099,10 +1134,34 @@ class _MainScreenState extends State<MainScreen> {
         );
         final notifData = jsonDecode(notifRes.body);
         if (notifRes.statusCode == 200 && notifData['status'] == 'success') {
-          setState(() {
-            UserSession.unreadNotificationsCount =
-                notifData['unread_count'] ?? 0;
-          });
+          int newUnread = notifData['unread_count'] ?? 0;
+          
+          if (newUnread > UserSession.unreadNotificationsCount) {
+             final notifs = notifData['notifications'] as List?;
+             if (notifs != null && notifs.isNotEmpty) {
+                 final latest = notifs.first;
+                 NotificationService.showNotification(
+                    id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+                    title: latest['title'] ?? 'New Notification',
+                    body: latest['body'] ?? '',
+                 );
+             }
+          }
+
+          if (UserSession.unreadNotificationsCount != newUnread) {
+            if (isBackground) {
+              UserSession.unreadNotificationsCount = newUnread;
+            } else {
+              setState(() {
+                UserSession.unreadNotificationsCount = newUnread;
+              });
+            }
+            if (newUnread > 0) {
+              FlutterAppBadger.updateBadgeCount(newUnread);
+            } else {
+              FlutterAppBadger.removeBadge();
+            }
+          }
         }
       } catch (e) {
         debugPrint('Failed to fetch global data: $e');
@@ -1560,65 +1619,7 @@ class _HomeScreenState extends State<HomeScreen>
               itemCount: 1 + _promotions.length,
               itemBuilder: (context, i) {
                 if (i == 0) {
-                  // Default Green Hero Banner
-                  return Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                          colors: [kGreen, Color(0xFF0e2709)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                            color: kGreen.withValues(alpha: 0.4),
-                            blurRadius: 16,
-                            offset: const Offset(0, 6))
-                      ],
-                    ),
-                    child: Stack(
-                      children: [
-                        const Positioned(
-                          right: -10,
-                          bottom: -10,
-                          child: Opacity(
-                              opacity: 0.08,
-                              child: Icon(Icons.travel_explore,
-                                  size: 180, color: Colors.white)),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(22.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                    color: kPink,
-                                    borderRadius: BorderRadius.circular(20)),
-                                child: const Text(
-                                    'Your journey deserves more than a destination - it deserves an exceptional experience',
-                                    style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold)),
-                              ),
-                              const SizedBox(height: 10),
-                              const Text(
-                                  'Welcome to Amiga Gracia\nTravel Services',
-                                  style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w900,
-                                      height: 1.2)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
+                  return const _HeroVideoBanner();
                 } else {
                   // Promotional Image from backend
                   final promo = _promotions[i - 1];
@@ -1665,43 +1666,52 @@ class _HomeScreenState extends State<HomeScreen>
           // Track Booking
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Card(
-              color: Colors.white,
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Track Booking',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: kSlate800),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      decoration: InputDecoration(
-                        hintText: 'Enter your booking or tracking number',
-                        hintStyle:
-                            const TextStyle(color: kSlate400, fontSize: 13),
-                        filled: true,
-                        fillColor: kSlate50,
-                        suffixIcon: const Icon(Icons.search, color: kGreen),
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Track Booking',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: kSlate800),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(100),
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4))
+                    ],
+                  ),
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Enter your booking or tracking number',
+                      hintStyle: const TextStyle(color: kSlate400, fontSize: 13),
+                      filled: true,
+                      fillColor: Colors.white,
+                      suffixIcon: Container(
+                        margin: const EdgeInsets.all(6),
+                        decoration: const BoxDecoration(
+                          color: kGreen,
+                          shape: BoxShape.circle,
                         ),
+                        child: const Icon(Icons.search, color: Colors.white, size: 20),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 16),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(100),
+                        borderSide: BorderSide.none,
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
 
@@ -1719,26 +1729,20 @@ class _HomeScreenState extends State<HomeScreen>
                         MaterialPageRoute(
                             builder: (_) => const GraciaPointsScreen())),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      padding: const EdgeInsets.symmetric(vertical: 18),
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: kSlate200),
-                        boxShadow: [
-                          BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.04),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2))
-                        ],
+                        color: kPink.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: kPink.withValues(alpha: 0.15)),
                       ),
                       child: const Column(
                         children: [
-                          Icon(Icons.star_rounded, color: kPink, size: 28),
+                          Icon(Icons.star_rounded, color: kPink, size: 32),
                           SizedBox(height: 8),
                           Text('My Points',
                               style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 13,
+                                  fontSize: 14,
                                   color: kSlate800)),
                         ],
                       ),
@@ -1756,26 +1760,20 @@ class _HomeScreenState extends State<HomeScreen>
                                   widget.onBookFerry();
                                 }))),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      padding: const EdgeInsets.symmetric(vertical: 18),
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: kSlate200),
-                        boxShadow: [
-                          BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.04),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2))
-                        ],
+                        color: kGreen.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: kGreen.withValues(alpha: 0.15)),
                       ),
                       child: const Column(
                         children: [
-                          Icon(Icons.local_activity, color: kGreen, size: 28),
+                          Icon(Icons.local_activity, color: kGreen, size: 32),
                           SizedBox(height: 8),
                           Text('Vouchers',
                               style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 13,
+                                  fontSize: 14,
                                   color: kSlate800)),
                         ],
                       ),
@@ -1800,28 +1798,24 @@ class _HomeScreenState extends State<HomeScreen>
                         fontSize: 15,
                         color: kSlate800)),
                 const SizedBox(height: 12),
-                Row(
+                Column(
                   children: [
-                    Expanded(
-                      child: _ServiceCard(
-                        label: 'Book Ferry',
-                        subtitle: 'Starlite, 2GO',
-                        icon: Icons.directions_boat,
-                        iconBg: kGreen.withValues(alpha: 0.1),
-                        iconColor: kGreen,
-                        onTap: widget.onBookFerry,
-                      ),
+                    _ServiceCard(
+                      label: 'Book Ferry',
+                      subtitle: 'Starlite, 2GO, FastCat',
+                      icon: Icons.directions_boat,
+                      iconBg: kGreen.withValues(alpha: 0.1),
+                      iconColor: kGreen,
+                      onTap: widget.onBookFerry,
                     ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: _ServiceCard(
-                        label: 'Book Airline',
-                        subtitle: 'PAL, CebuPac, AirAsia',
-                        icon: Icons.flight,
-                        iconBg: kPink.withValues(alpha: 0.1),
-                        iconColor: kPink,
-                        onTap: widget.onBookAirline,
-                      ),
+                    const SizedBox(height: 12),
+                    _ServiceCard(
+                      label: 'Book Airline',
+                      subtitle: 'PAL, CebuPac, AirAsia',
+                      icon: Icons.flight,
+                      iconBg: kPink.withValues(alpha: 0.1),
+                      iconColor: kPink,
+                      onTap: widget.onBookAirline,
                     ),
                   ],
                 ),
@@ -1847,7 +1841,7 @@ class _HomeScreenState extends State<HomeScreen>
                       colors: [kGreen, Color(0xFF14400e)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
                         color: kGreen.withValues(alpha: 0.35),
@@ -2290,6 +2284,7 @@ class _ServiceCard extends StatelessWidget {
   final VoidCallback onTap;
 
   const _ServiceCard({
+    super.key,
     required this.label,
     required this.subtitle,
     required this.icon,
@@ -2303,37 +2298,154 @@ class _ServiceCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 18),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: kSlate200),
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
                 color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2))
+                blurRadius: 12,
+                offset: const Offset(0, 4))
           ],
         ),
-        child: Column(
+        child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
-              child: Icon(icon, color: iconColor, size: 26),
+              decoration: BoxDecoration(
+                  color: iconBg, borderRadius: BorderRadius.circular(16)),
+              child: Icon(icon, color: iconColor, size: 28),
             ),
-            const SizedBox(height: 10),
-            Text(label,
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                    color: kSlate800)),
-            const SizedBox(height: 3),
-            Text(subtitle,
-                style: const TextStyle(color: kSlate500, fontSize: 10),
-                textAlign: TextAlign.center),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(label,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: kSlate800)),
+                  const SizedBox(height: 4),
+                  Text(subtitle,
+                      style: const TextStyle(
+                          color: kSlate500, fontSize: 12, height: 1.2),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios, color: kSlate300, size: 16),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _HeroVideoBanner extends StatefulWidget {
+  const _HeroVideoBanner({Key? key}) : super(key: key);
+
+  @override
+  __HeroVideoBannerState createState() => __HeroVideoBannerState();
+}
+
+class __HeroVideoBannerState extends State<_HeroVideoBanner> {
+  VideoPlayerController? _controller;
+  bool _initialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = VideoPlayerController.networkUrl(Uri.parse(
+        '${UserSession.getBaseUrl()}/video/Concept_A_smooth_motion_graph.mp4'))
+      ..initialize().then((_) {
+        if (mounted) {
+          setState(() {
+            _initialized = true;
+          });
+          _controller?.setLooping(true);
+          _controller?.setVolume(0.0);
+          _controller?.play();
+        }
+      }).catchError((_) {});
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: kGreen,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+              color: kGreen.withValues(alpha: 0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 8))
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (_initialized && _controller != null)
+            FittedBox(
+              fit: BoxFit.cover,
+              child: SizedBox(
+                width: _controller!.value.size.width,
+                height: _controller!.value.size.height,
+                child: VideoPlayer(_controller!),
+              ),
+            )
+          else
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                    colors: [kGreen, Color(0xFF0e2709)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight),
+              ),
+            ),
+          // Dark overlay to make text readable over the video
+          Container(color: Colors.black.withValues(alpha: 0.2)),
+          Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text('Welcome to Amiga Gracia\nTravel Services',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        height: 1.2)),
+                const SizedBox(height: 14),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                      color: kPink, borderRadius: BorderRadius.circular(20)),
+                  child: const Text(
+                      'Your journey deserves more than a destination - it deserves an exceptional experience',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -8833,16 +8945,8 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                             : 'Round Trip'),
                     _SummaryRow('Schedule',
                         '${s['service']}  ${s['departure']} – ${s['arrival']}'),
-                    _SummaryRow('Ticket Price',
-                        '₱${_parseDouble(s['price']).toStringAsFixed(2)}'),
-                    if (widget.booking.mode == 'ferry' &&
-                        widget.booking.selectedFerryAccommodationName != null)
-                      _SummaryRow('Travel Class',
-                          '${widget.booking.selectedFerryAccommodationName!} (₱${(widget.booking.selectedFerryAccommodationPrice ?? 0).toStringAsFixed(2)})'),
-                    if (widget.booking.mode == 'airline' &&
-                        widget.booking.selectedAirlineClassName != null)
-                      _SummaryRow('Travel Class',
-                          '${widget.booking.selectedAirlineClassName!} (₱${(widget.booking.selectedAirlineClassPrice ?? 0).toStringAsFixed(2)})'),
+                    _SummaryRow('Departure Tickets & Class',
+                        '₱${(_parseDouble(s['price']) + (widget.booking.mode == 'ferry' ? (widget.booking.selectedFerryAccommodationPrice ?? 0) : (widget.booking.selectedAirlineClassPrice ?? 0))).toStringAsFixed(2)}'),
                     if (widget.booking.hasExtraBaggage &&
                         widget.booking.mode == 'airline')
                       _SummaryRow('Extra Baggage',

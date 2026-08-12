@@ -42,10 +42,8 @@ class NotifyAffectedBookerJob implements ShouldQueue
                 ? "Tap to choose a new travel date starting {$this->cancellation->resume_date->format('M d, Y')}."
                 : "Service operations are temporarily suspended. We will notify you when travel resumes.";
 
-            AppNotification::create([
-                'title' => "{$this->cancellation->carrier} Disruptions: Schedule Cancelled",
-                'body'  => "Booking #{$this->booking->transaction_number} was cancelled due to {$this->cancellation->reason_category}. {$resumeText}",
-            ]);
+            // AppNotification was removed here to prevent global broadcast to unaffected users
+            // NotificationController dynamically creates virtual notifications for affected users
 
             // Send user-specific FCM push to only the affected user's device
             if (filled($this->booking->client_email)) {
