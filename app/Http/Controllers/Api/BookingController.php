@@ -628,11 +628,13 @@ class BookingController extends Controller
         $results = [];
         foreach ($eligibleSchedules as $schedule) {
             $accommodations = [];
-            $schedulePrice = $isAirline ? ($schedule->price ?? 0) : 0;
+            $schedulePrice = (float)($schedule->price ?? 0);
             
             foreach ($schedule->scheduleAccommodations->where('is_active', true) as $acc) {
-                $price = $acc->price;
-                if ($isAirline) $price = ($schedulePrice + $price) * 1.5;
+                $price = $schedulePrice + (float)$acc->price;
+                if ($isAirline) {
+                    $price = $price * 1.5;
+                }
                 $accommodations[] = [
                     'id' => 'acc_' . $acc->id,
                     'name' => $acc->name,
@@ -641,8 +643,10 @@ class BookingController extends Controller
             }
             
             foreach ($schedule->transportClasses->where('pivot.is_active', true) as $tc) {
-                $price = $tc->pivot->additional_price;
-                if ($isAirline) $price = ($schedulePrice + $price) * 1.5;
+                $price = $schedulePrice + (float)$tc->pivot->additional_price;
+                if ($isAirline) {
+                    $price = $price * 1.5;
+                }
                 $accommodations[] = [
                     'id' => 'tc_' . $tc->id,
                     'name' => $tc->name,

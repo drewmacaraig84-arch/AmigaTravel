@@ -226,13 +226,13 @@ class BookingReschedule extends Component
         if (!$schedule) return collect();
 
         $isAirline = $this->booking && $this->booking->getMode() === 'airline';
-        $schedulePrice = $isAirline ? ($schedule->price ?? 0) : 0;
+        $schedulePrice = (float)($schedule->price ?? 0);
 
         $items = collect();
         foreach ($schedule->scheduleAccommodations->where('is_active', true)->sortBy('sort_order') as $acc) {
-            $price = $acc->price;
+            $price = $schedulePrice + (float)$acc->price;
             if ($isAirline) {
-                $price = ($schedulePrice + $price) * 1.5;
+                $price = $price * 1.5;
             }
             $items->push((object)[
                 'id' => 'acc_' . $acc->id,
@@ -242,9 +242,9 @@ class BookingReschedule extends Component
             ]);
         }
         foreach ($schedule->transportClasses->where('pivot.is_active', true)->sortBy('pivot.sort_order') as $tc) {
-            $price = $tc->pivot->additional_price;
+            $price = $schedulePrice + (float)$tc->pivot->additional_price;
             if ($isAirline) {
-                $price = ($schedulePrice + $price) * 1.5;
+                $price = $price * 1.5;
             }
             $items->push((object)[
                 'id' => 'tc_' . $tc->id,
@@ -263,13 +263,13 @@ class BookingReschedule extends Component
         if (!$schedule) return collect();
 
         $isAirline = $this->booking && $this->booking->getMode() === 'airline';
-        $schedulePrice = $isAirline ? ($schedule->price ?? 0) : 0;
+        $schedulePrice = (float)($schedule->price ?? 0);
 
         $items = collect();
         foreach ($schedule->scheduleAccommodations->where('is_active', true)->sortBy('sort_order') as $acc) {
-            $price = $acc->price;
+            $price = $schedulePrice + (float)$acc->price;
             if ($isAirline) {
-                $price = ($schedulePrice + $price) * 1.5;
+                $price = $price * 1.5;
             }
             $items->push((object)[
                 'id' => 'acc_' . $acc->id,
@@ -279,9 +279,9 @@ class BookingReschedule extends Component
             ]);
         }
         foreach ($schedule->transportClasses->where('pivot.is_active', true)->sortBy('pivot.sort_order') as $tc) {
-            $price = $tc->pivot->additional_price;
+            $price = $schedulePrice + (float)$tc->pivot->additional_price;
             if ($isAirline) {
-                $price = ($schedulePrice + $price) * 1.5;
+                $price = $price * 1.5;
             }
             $items->push((object)[
                 'id' => 'tc_' . $tc->id,
