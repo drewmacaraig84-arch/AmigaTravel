@@ -12,7 +12,6 @@ use Filament\Resources\Pages\ViewRecord;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 class ViewTransaction extends ViewRecord
@@ -50,7 +49,7 @@ class ViewTransaction extends ViewRecord
                             ? $data['confirmation_pdf']
                             : $data['confirmation_pdf']->storeAs('receipts', 'receipt-' . $record->booking->transaction_number . '.pdf', 'public');
                         $ticketUrl = null;
-                        $receiptPath = Storage::disk('public')->path($pdfPath);
+                        $receiptPath = $pdfPath; // relative path — BookingConfirmation uses attachFromStorageDisk
                         $receiptDisk = 'public';
                     } else {
                         $pdfPath = null;

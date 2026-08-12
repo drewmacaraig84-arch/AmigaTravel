@@ -516,8 +516,11 @@ class ViewBooking extends ViewRecord
                             : $data['confirmation_pdf']->storeAs('receipts', 'receipt-' . $booking->transaction_number . '.pdf', 'public');
 
                         $receiptDisk = 'public';
-                        $receiptPath = Storage::disk('public')->path($confirmationPdfPath);
+                        // Pass the relative path (not absolute) so BookingConfirmation
+                        // uses attachFromStorageDisk() which works on any filesystem driver
+                        $receiptPath = $confirmationPdfPath;
                     }
+
 
                     $booking->update([
                         'status' => 'confirmed',

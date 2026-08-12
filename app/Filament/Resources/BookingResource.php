@@ -277,7 +277,8 @@ class BookingResource extends Resource
                             $confirmationPdfPath = $pdfPath;
 
                             $receiptDisk = 'public';
-                            $receiptPath = Storage::disk('public')->path($pdfPath);
+                            // Use relative path; BookingConfirmation uses attachFromStorageDisk
+                            $receiptPath = $pdfPath;
 
                             $record->transaction?->update(['confirmation_pdf' => $pdfPath]);
                         }
@@ -314,7 +315,7 @@ class BookingResource extends Resource
                     ->action(function (Booking $record): void {
                         $record->verifyRebooking(
                             $record->transaction?->confirmation_url,
-                            $record->transaction?->confirmation_pdf ? Storage::disk('public')->path($record->transaction->confirmation_pdf) : null,
+                            $record->transaction?->confirmation_pdf ?? null,
                             $record->transaction?->confirmation_pdf ? 'public' : null,
                         );
                     })

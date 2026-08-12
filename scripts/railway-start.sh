@@ -126,6 +126,22 @@ sed -i "s/listen [0-9]*;/listen ${PORT};/g" /etc/nginx/http.d/default.conf 2>/de
 
 # Run migrations and setup
 timeout 60 php artisan migrate --force --no-interaction || echo "Migrations skipped or timed out"
+
+# Ensure all required storage subdirectories exist (important when using Railway Persistent Volume)
+# These are wiped if the volume is freshly mounted, so we recreate them every startup
+mkdir -p /var/www/html/storage/app/public/proofs
+mkdir -p /var/www/html/storage/app/public/receipts
+mkdir -p /var/www/html/storage/app/public/rebooking_proofs
+mkdir -p /var/www/html/storage/app/private
+mkdir -p /var/www/html/storage/framework/cache
+mkdir -p /var/www/html/storage/framework/sessions
+mkdir -p /var/www/html/storage/framework/views
+mkdir -p /var/www/html/storage/logs
+chown -R www-data:www-data /var/www/html/storage || true
+chmod -R 775 /var/www/html/storage || true
+
+# Remove stale symlink and recreate (critical when volume is mounted fresh)
+rm -f /var/www/html/public/storage
 php artisan storage:link || true
 
 echo "=== Reached config cache step ==="
