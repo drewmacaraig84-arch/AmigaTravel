@@ -540,13 +540,26 @@ class BookingReschedule extends Component
     public function getOriginalDepAccommodationPrice(): ?float
     {
         if (! $this->booking) return null;
-        return (float) ($this->booking->schedule_accommodation_price ?? 0);
+        
+        $base = (float) ($this->booking->schedule_price ?? 0);
+        $acc = (float) ($this->booking->schedule_accommodation_price ?? 0);
+        
+        if ($acc == 0 && $this->booking->transportClasses->count() > 0) {
+            // Assume first transport class is for departure if no accommodation is set
+            $acc = (float) ($this->booking->transportClasses->first()->pivot->price ?? 0);
+        }
+        
+        return $base + $acc;
     }
 
     public function getOriginalRetAccommodationPrice(): ?float
     {
         if (! $this->booking) return null;
-        return (float) ($this->booking->return_schedule_accommodation_price ?? 0);
+        
+        $base = (float) ($this->booking->return_schedule_price ?? 0);
+        $acc = (float) ($this->booking->return_schedule_accommodation_price ?? 0);
+        
+        return $base + $acc;
     }
 
     public function render()

@@ -208,7 +208,7 @@
                         @foreach($this->departureAccommodations as $acc)
                             @php
                                 $priceDiffBadge = $acc->price - ($originalDepAccPrice ?? 0);
-                                $isDisabled = $priceDiffBadge != 0;
+                                $isDisabled = $priceDiffBadge < 0;
                             @endphp
                             <div @if(!$isDisabled) wire:click="selectDepartureAccommodation('{{ $acc->id }}', {{ $acc->price }})" @endif class="group rounded-2xl border p-5 text-center transition {{ $isDisabled ? 'border-slate-200 bg-slate-50 opacity-60 cursor-not-allowed pointer-events-none' : 'border-slate-200 cursor-pointer hover:border-emerald-500 hover:shadow-md' }}">
                                 <h4 class="font-bold {{ $isDisabled ? 'text-slate-400' : 'text-slate-900' }}">{{ $acc->name }}</h4>
