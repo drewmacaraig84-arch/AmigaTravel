@@ -185,7 +185,7 @@ class AdminNotificationFeed
                     'title' => 'Rebooking request',
                     'message' => $booking->client_name . ' submitted a rebooking request for #' . $booking->transaction_number,
                     'created_at' => $booking->updated_at ?? $booking->created_at,
-                    'url' => '/admin/bookings/' . $booking->id,
+                    'url' => '/admin/manage-rebookings',
                 ]);
             }
         }

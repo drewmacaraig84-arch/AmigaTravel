@@ -443,33 +443,6 @@ class ViewBooking extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
-            Actions\Action::make('approveReschedule')
-                ->label('Approve Reschedule Request')
-                ->icon('heroicon-o-check-circle')
-                ->color('success')
-                ->visible(fn (): bool => in_array($this->record->disruption_status, ['reschedule_requested', 'cancelled_by_operator_rescheduling_required']) && filled($this->record->preferred_replacement_schedule_id))
-                ->form([
-                    Textarea::make('staff_note')
-                        ->label('Internal / Customer Staff Note')
-                        ->placeholder('e.g., Approved replacement schedule per customer selection.')
-                        ->rows(2),
-                ])
-                ->action(function (array $data) {
-                    app(\App\Services\ServiceCancellationManager::class)->processStaffApproval(
-                        $this->record,
-                        true,
-                        $data['staff_note'] ?? null,
-                        auth()->user()
-                    );
-
-                    \Filament\Notifications\Notification::make()
-                        ->title('Reschedule Approved')
-                        ->body("Booking #{$this->record->transaction_number} date updated to " . $this->record->departure_date->format('M d, Y') . " and customer notified.")
-                        ->success()
-                        ->send();
-
-                    $this->redirect(BookingResource::getUrl('view', ['record' => $this->record]));
-                }),
 
             Actions\Action::make('confirm')
                 ->label('Verify Payment & Confirm Booking')
@@ -575,34 +548,7 @@ class ViewBooking extends ViewRecord
                 ->color('success')
                 ->visible(fn (): bool => $this->record->status === 'pending'),
 
-            Actions\Action::make('verifyRebookingPayment')
-                ->label('Verify Rebooking Payment & Approve')
-                ->icon('heroicon-o-check-badge')
-                ->color('success')
-                ->requiresConfirmation()
-                ->action(function () {
-                    try {
-                        app(\App\Services\ServiceCancellationManager::class)->processAutomaticRebookingApproval(
-                            $this->record,
-                            auth()->user()
-                        );
-                        
-                        \Filament\Notifications\Notification::make()
-                            ->title('Rebooking Verified & Approved')
-                            ->body("Rebooking schedule automatically assigned and confirmed.")
-                            ->success()
-                            ->send();
-                            
-                        $this->redirect(BookingResource::getUrl('view', ['record' => $this->record]));
-                    } catch (\Exception $e) {
-                        \Filament\Notifications\Notification::make()
-                            ->title('Rebooking Verification Failed')
-                            ->body($e->getMessage())
-                            ->danger()
-                            ->send();
-                    }
-                })
-                ->visible(fn (): bool => $this->record->status === 'confirmed' && $this->record->rebooking_status === 'pending'),
+
         ];
     }
 

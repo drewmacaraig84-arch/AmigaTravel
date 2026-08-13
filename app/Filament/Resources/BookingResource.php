@@ -6,7 +6,6 @@ use App\Filament\Resources\BookingResource\Pages;
 use App\Filament\Resources\BookingResource\RelationManagers\TransportClassesRelationManager;
 use App\Filament\Resources\BookingResource\RelationManagers\AccommodationsRelationManager;
 use App\Filament\Resources\BookingResource\RelationManagers\PassengersRelationManager;
-use App\Mail\RebookingVerification;
 use App\Models\Booking;
 use App\Models\User;
 use Filament\Forms;
@@ -109,18 +108,7 @@ class BookingResource extends Resource
                     ->label('Created Date')
                     ->dateTime()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('rebooking_departure_date')
-                    ->label('Rebook Departure')
-                    ->date()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true)
-                    ->placeholder('—'),
-                Tables\Columns\TextColumn::make('rebooking_return_date')
-                    ->label('Rebook Return')
-                    ->date()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true)
-                    ->placeholder('—'),
+
                 Tables\Columns\IconColumn::make('has_vehicle')
                     ->label('Vehicle')
                     ->boolean()
@@ -167,24 +155,7 @@ class BookingResource extends Resource
                         default => 'gray',
                     })
                     ->placeholder('—'),
-                Tables\Columns\TextColumn::make('rebooking_status')
-                    ->label('Rebooking')
-                    ->badge()
-                    ->formatStateUsing(fn ($state) => match ($state) {
-                        'rebooking_required' => 'Rebooking Required',
-                        'reschedule_requested' => 'Reschedule Requested',
-                        'verified' => 'Rebooked',
-                        'pending' => 'Pending',
-                        default => $state ? ucfirst(str_replace('_', ' ', $state)) : null,
-                    })
-                    ->color(fn (?string $state): string => match ($state) {
-                        'rebooking_required' => 'warning',
-                        'reschedule_requested' => 'info',
-                        'verified' => 'success',
-                        'pending' => 'warning',
-                        default => 'gray',
-                    })
-                    ->placeholder('—'),
+
                 Tables\Columns\TextColumn::make('total_price')
                     ->money('PHP')
                     ->sortable(),
@@ -306,47 +277,7 @@ class BookingResource extends Resource
                      })
                      ->color('success'),
 
-                Tables\Actions\Action::make('verifyRebooking')
-                    ->label('Verify rebooking')
-                    ->icon('heroicon-m-arrow-path')
-                    ->button()
-                    ->visible(fn (Booking $record): bool => $record->is_rebooked && $record->rebooking_status === 'pending')
-                    ->requiresConfirmation()
-                    ->action(function (Booking $record): void {
-                        $record->verifyRebooking(
-                            $record->transaction?->confirmation_url,
-                            $record->transaction?->confirmation_pdf ?? null,
-                            $record->transaction?->confirmation_pdf ? 'public' : null,
-                        );
-                    })
-                    ->color('secondary'),
 
-                Tables\Actions\Action::make('approveDisruptionReschedule')
-                    ->label('Approve Reschedule')
-                    ->icon('heroicon-m-check-circle')
-                    ->button()
-                    ->color('success')
-                    ->visible(fn (Booking $record): bool => in_array($record->disruption_status, ['reschedule_requested', 'cancelled_by_operator_rescheduling_required']) && filled($record->preferred_replacement_schedule_id))
-                    ->form([
-                        Forms\Components\Textarea::make('staff_note')
-                            ->label('Internal / Customer Staff Note')
-                            ->placeholder('e.g., Approved replacement schedule per customer selection.')
-                            ->rows(2),
-                    ])
-                    ->action(function (Booking $record, array $data): void {
-                        app(ServiceCancellationManager::class)->processStaffApproval(
-                            $record,
-                            true,
-                            $data['staff_note'] ?? null,
-                            Auth::user()
-                        );
-
-                        Notification::make()
-                            ->title('Reschedule Approved')
-                            ->body("Booking #{$record->transaction_number} date updated and customer notified.")
-                            ->success()
-                            ->send();
-                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
