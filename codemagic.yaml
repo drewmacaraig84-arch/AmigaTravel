@@ -8,6 +8,10 @@ workflows:
     # we need to specify the working directory.
     working_directory: flutter_app
     
+    # Required for the "auth: integration" publishing setting below
+    integrations:
+      app_store_connect: "YOUR_API_KEY_NAME" # Replace with the exact name of the key in Codemagic Team Settings > Integrations
+    
     environment:
       flutter: default
       xcode: latest
