@@ -526,8 +526,8 @@
                                             </div>
                                         @endif
 
-                                        <div class="mt-4 flex flex-wrap gap-3">
-                                            <button @click="alert('Your refund will be processed within 48 hours'); $wire.confirmCancellation()" type="button" class="inline-flex items-center justify-center rounded-3xl px-6 py-3 text-sm font-semibold text-white shadow-sm transition" style="background:#ee018d;" onmouseover="this.style.background='#c30172'" onmouseout="this.style.background='#ee018d'">
+                                        <div class="mt-4 flex flex-wrap gap-3" x-data="{ showRefundModal: false }">
+                                            <button @click="showRefundModal = true" type="button" class="inline-flex items-center justify-center rounded-3xl px-6 py-3 text-sm font-semibold text-white shadow-sm transition" style="background:#ee018d;" onmouseover="this.style.background='#c30172'" onmouseout="this.style.background='#ee018d'">
                                                 @if(! $cancellationExpired)
                                                     Confirm Cancellation (100% Refund)
                                                 @else
@@ -544,6 +544,22 @@
                                                     </button>
                                                 @endif
                                             @endif
+
+                                            <!-- Alpine.js Refund Modal -->
+                                            <div x-cloak x-show="showRefundModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm px-4" x-transition.opacity>
+                                                <div @click.away="showRefundModal = false" class="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl transform" x-transition.scale.origin.bottom>
+                                                    <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+                                                        <svg class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                                    </div>
+                                                    <h3 class="text-center text-lg font-bold text-slate-900">Refund Processing</h3>
+                                                    <p class="mt-2 text-center text-sm text-slate-500">Your refund will be processed within 48 hours.</p>
+                                                    <div class="mt-6 flex justify-center">
+                                                        <button @click="showRefundModal = false; $wire.confirmCancellation()" type="button" class="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2">
+                                                            OK
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 @endif
