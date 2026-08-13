@@ -129,8 +129,20 @@ class BookingController extends Controller
             }
         }
 
-        $bookings = \App\Models\Booking::where('client_email', '=', $request->input('email'), 'and')
-            ->with(['passengers.discount', 'accommodations', 'transaction', 'schedule', 'returnSchedule', 'transportClasses'])
+        $bookingsQuery = \App\Models\Booking::query();
+
+        $bookingsQuery->where(function ($query) use ($request, $isAuthenticated) {
+            $query->where('client_email', $request->input('email'));
+            if ($isAuthenticated) {
+                if (auth('sanctum')->check()) {
+                    $query->orWhere('user_id', auth('sanctum')->id());
+                } elseif (auth('api')->check()) {
+                    $query->orWhere('user_id', auth('api')->id());
+                }
+            }
+        });
+
+        $bookings = $bookingsQuery->with(['passengers.discount', 'accommodations', 'transaction', 'schedule', 'returnSchedule', 'transportClasses'])
             ->orderBy('created_at', 'desc')
             ->limit(50)
             ->get();
