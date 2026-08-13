@@ -827,6 +827,7 @@ class BookingLookup extends Component
         ]);
 
         $this->booking->update([
+            'is_rebooked' => true,
             'rebooking_status' => 'pending',
             'preferred_replacement_schedule_id' => $this->rebooking_dep_schedule_id,
             'preferred_replacement_date' => $this->rebooking_departure_date,
