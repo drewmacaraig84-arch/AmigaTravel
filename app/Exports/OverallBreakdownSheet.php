@@ -42,7 +42,7 @@ class OverallBreakdownSheet implements FromArray, WithTitle, WithHeadings, WithS
                 continue;
             }
 
-            $txId = $booking->transaction->reference_number ?? ('AGT-' . $booking->id);
+            $txId = $booking->transaction_number ?? ('AGT-' . $booking->id);
 
             // 1. Add the positive Verified line
             $rows[] = [
