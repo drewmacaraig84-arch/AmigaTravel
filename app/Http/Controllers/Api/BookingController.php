@@ -317,12 +317,10 @@ class BookingController extends Controller
 
         if ($request->input('action', 'confirm') === 'start') {
             if (! $isWithinFiveMinutes && ! $booking->isRefundEligible()) {
-                if (! $booking->hasPromoTicket()) {
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'You cannot request a refund as it is less than 3 hours before the departure time.',
-                    ], 400);
-                }
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'You cannot request a refund as it is less than 3 hours before the departure time.',
+                ], 400);
             }
 
             $breakdown = $booking->getRefundBreakdown($isWithinFiveMinutes);
@@ -342,12 +340,10 @@ class BookingController extends Controller
         }
 
         if (! $isWithinFiveMinutes && ! $booking->isRefundEligible()) {
-            if (! $booking->hasPromoTicket()) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'You cannot request a refund as it is less than 3 hours before the departure time.',
-                ], 400);
-            }
+            return response()->json([
+                'status' => 'error',
+                'message' => 'You cannot request a refund as it is less than 3 hours before the departure time.',
+            ], 400);
         }
 
         $request->validate(['refund_destination' => 'required|string|max:255']);
