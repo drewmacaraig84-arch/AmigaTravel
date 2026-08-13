@@ -354,15 +354,16 @@ class ManageWebsiteSettings extends Page implements HasForms
                                                 ->default('Explore these suggested trips.')
                                                 ->rows(2)
                                                 ->maxLength(500),
-                                            Repeater::make('content.suggested_trips')
+                                             Repeater::make('content.suggested_trips')
                                                 ->label('Suggested Trips Cards')
                                                 ->schema([
                                                     TextInput::make('title')->required()->maxLength(120),
-                                                    TextInput::make('subtitle')->maxLength(120),
-                                                    Textarea::make('description')->rows(3),
-                                                    TextInput::make('price')->maxLength(50),
+                                                    TextInput::make('subtitle')->maxLength(120)->helperText('Short tagline shown under the title'),
+                                                    Textarea::make('description')->rows(2)->helperText('Short summary shown on the card'),
+                                                    Textarea::make('detail')->rows(3)->helperText('Longer detail shown inside the popup modal'),
+                                                    TextInput::make('price')->maxLength(50)->helperText('E.g., ₱1,088 / pax'),
                                                     TextInput::make('button_text')->maxLength(50),
-                                                    TextInput::make('button_link')->url(),
+                                                    TextInput::make('button_link')->url()->helperText('Optional: link to navigate when button is clicked'),
                                                     FileUpload::make('image')->image()->directory('website-settings/tours'),
                                                 ])->columns(1),
                                         ])

@@ -84,6 +84,11 @@ class Booking extends Model
         'preferred_replacement_schedule_id',
         'preferred_replacement_date',
         'disruption_notes',
+        'points_used',
+        'points_discount',
+        'has_extra_baggage',
+        'extra_baggage_weight',
+        'extra_baggage_price',
     ];
 
     public function isUserCancelled(): bool
@@ -115,8 +120,6 @@ class Booking extends Model
         'has_vehicle' => 'boolean',
         'vehicle_price' => 'decimal:2',
         'driver_birthday' => 'date',
-        'departure_date' => 'date',
-        'return_date' => 'date',
         'tour_inclusions' => 'array',
         'cancellation_fee' => 'decimal:2',
         'refund_amount' => 'decimal:2',
@@ -127,6 +130,10 @@ class Booking extends Model
         'subtotal_before_voucher' => 'decimal:2',
         'terms_accepted_at' => 'datetime',
         'verified_at' => 'datetime',
+        'points_used' => 'integer',
+        'points_discount' => 'decimal:2',
+        'has_extra_baggage' => 'boolean',
+        'extra_baggage_price' => 'decimal:2',
     ];
 
     public function serviceCancellation(): BelongsTo

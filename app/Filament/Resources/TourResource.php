@@ -71,6 +71,8 @@ class TourResource extends Resource
                                 Forms\Components\TextInput::make('destinations')
                                     ->label('Destinations (semicolon-separated)')
                                     ->maxLength(500)
+                                    ->nullable()
+                                    ->default('')
                                     ->helperText('E.g., Singapore; Kuala Lumpur'),
                                 Forms\Components\FileUpload::make('image')
                                     ->label('Image')
