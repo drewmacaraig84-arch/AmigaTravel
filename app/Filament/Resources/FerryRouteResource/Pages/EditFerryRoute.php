@@ -20,8 +20,8 @@ class EditFerryRoute extends EditRecord
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        if (! empty($data['vehicle_id'])) {
-            $data['operator'] = optional(Vehicle::find($data['vehicle_id']))->operator;
+        if (isset($data['vehicle_id'])) {
+            $data['operator_id'] = optional(Vehicle::find($data['vehicle_id']))->operator_id;
         }
 
         return $data;

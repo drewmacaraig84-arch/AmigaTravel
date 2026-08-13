@@ -15524,6 +15524,8 @@ class _RefundScreenState extends State<RefundScreen> {
   double? _webAdminFee;
   double? _surchargeAmount;
   int? _surchargePct;
+  double? _rebookingSurcharge;
+  double? _rebookingRevalidationFee;
 
   String _refundMethod = 'GCash';
   final _institutionCtrl = TextEditingController();
@@ -15567,6 +15569,8 @@ class _RefundScreenState extends State<RefundScreen> {
           _surchargePct = data['surcharge_pct'] != null
               ? int.tryParse(data['surcharge_pct'].toString())
               : 0;
+          _rebookingSurcharge = _parseDouble(data['rebooking_surcharge']);
+          _rebookingRevalidationFee = _parseDouble(data['rebooking_revalidation_fee']);
           _isLoading = false;
         });
       } else {
@@ -15660,7 +15664,7 @@ class _RefundScreenState extends State<RefundScreen> {
   @override
   Widget build(BuildContext context) {
     final baseTicketPrice = (_refundAmount ?? 0) + (_cancellationFee ?? 0);
-    final nonRefundableFees = (_transactionFee ?? 0) + (_webAdminFee ?? 0);
+    final nonRefundableFees = (_transactionFee ?? 0) + (_webAdminFee ?? 0) + (_rebookingSurcharge ?? 0) + (_rebookingRevalidationFee ?? 0);
 
     return Scaffold(
         appBar: AppBar(title: const Text('Request Refund')),
@@ -15737,6 +15741,14 @@ class _RefundScreenState extends State<RefundScreen> {
                                     if ((_transactionFee ?? 0) > 0)
                                       _buildBreakdownRow('Transaction Fee',
                                           _transactionFee!.toStringAsFixed(2),
+                                          isSub: true),
+                                    if ((_rebookingSurcharge ?? 0) > 0)
+                                      _buildBreakdownRow('Rebooking Surcharge',
+                                          _rebookingSurcharge!.toStringAsFixed(2),
+                                          isSub: true),
+                                    if ((_rebookingRevalidationFee ?? 0) > 0)
+                                      _buildBreakdownRow('Revalidation Fee',
+                                          _rebookingRevalidationFee!.toStringAsFixed(2),
                                           isSub: true),
                                   ],
                                   const Padding(
@@ -16257,8 +16269,26 @@ class _RebookScreenState extends State<RebookScreen> {
 
               final ticketPrice = _parseDouble(selectedSch['price']);
               final combinedPrice = ticketPrice + _parseDouble(tc['price']);
-              final originalTotal = _parseDouble(widget.booking['total_price']);
-              final isTooLow = combinedPrice < originalTotal;
+              
+              final isAirline = widget.booking['mode'] == 'airline';
+              
+              final tcs = widget.booking['transport_classes'] as List? ?? [];
+              final origTcPrice = (tcs.isNotEmpty && isReturn && tcs.length > 1) 
+                  ? _parseDouble(tcs[1]['pivot']['price']) 
+                  : (tcs.isNotEmpty ? _parseDouble(tcs[0]['pivot']['price']) : 0.0);
+              
+              final originalSchPrice = isReturn 
+                  ? _parseDouble(widget.booking['return_schedule_price']) 
+                  : _parseDouble(widget.booking['schedule_price']);
+              final originalAccPrice = isReturn 
+                  ? _parseDouble(widget.booking['return_schedule_accommodation_price']) 
+                  : _parseDouble(widget.booking['schedule_accommodation_price']);
+                  
+              final originalPerPax = originalSchPrice + origTcPrice + originalAccPrice;
+              
+              final newPerPax = isAirline ? _parseDouble(tc['price']) : combinedPrice;
+              
+              final isTooLow = newPerPax < originalPerPax;
 
               return GestureDetector(
                 onTap: isTooLow

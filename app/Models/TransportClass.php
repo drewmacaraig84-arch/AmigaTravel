@@ -9,6 +9,7 @@ class TransportClass extends Model
 {
     protected $fillable = [
         'operator',
+        'operator_id',
         'code',
         'name',
         'mode',
@@ -55,5 +56,10 @@ class TransportClass extends Model
     public function getCoverImageAttribute(): ?string
     {
         return storage_asset_path($this->images[0] ?? null);
+    }
+
+    public function operatorRecord()
+    {
+        return $this->belongsTo(Operator::class, 'operator_id');
     }
 }

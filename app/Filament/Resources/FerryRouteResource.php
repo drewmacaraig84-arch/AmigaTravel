@@ -100,7 +100,7 @@ class FerryRouteResource extends Resource
                     ->required()
                     ->afterStateUpdated(function (?string $state, callable $set) {
                         $set('vehicle_id', null);
-                        $set('operator', null);
+                        $set('operator_id', null);
                     }),
 
                 Select::make('trip_type')
@@ -117,19 +117,20 @@ class FerryRouteResource extends Resource
                 Select::make('vehicle_id')
                     ->label('Vehicle')
                     ->options(fn (callable $get) => Vehicle::query()
+                        ->with('operatorRecord')
                         ->when($get('mode'), fn ($query, $mode) => $query->where('type', $mode))
-                        ->when($get('operator'), fn ($query, $operator) => $query->where('operator', $operator))
+                        ->when($get('operator_id'), fn ($query, $operatorId) => $query->where('operator_id', $operatorId))
                         ->where('is_active', true)
                         ->orderBy('name')
                         ->get()
-                        ->mapWithKeys(fn (Vehicle $vehicle) => [$vehicle->id => "{$vehicle->name} ({$vehicle->vehicle_id}) - {$vehicle->operator}"])
+                        ->mapWithKeys(fn (Vehicle $vehicle) => [$vehicle->id => "{$vehicle->name} ({$vehicle->vehicle_id}) - " . optional($vehicle->operatorRecord)->name])
                         ->toArray())
                     ->nullable()
                     ->reactive()
                     ->searchable()
                     ->afterStateHydrated(function ($state, callable $set, callable $get) {
                         if ($state) {
-                            $set('operator', optional(Vehicle::find($state))->operator);
+                            $set('operator_id', optional(Vehicle::find($state))->operator_id);
 
                             $schedules = $get('schedules') ?? [];
                             $vehicleName = optional(Vehicle::find($state))->name;
@@ -141,7 +142,7 @@ class FerryRouteResource extends Resource
                     })
                     ->afterStateUpdated(function ($state, callable $set, callable $get) {
                         if ($state) {
-                            $set('operator', optional(Vehicle::find($state))->operator);
+                            $set('operator_id', optional(Vehicle::find($state))->operator_id);
 
                             $schedules = $get('schedules') ?? [];
                             $vehicleName = optional(Vehicle::find($state))->name;
@@ -160,17 +161,11 @@ class FerryRouteResource extends Resource
                     })
                     ->hint('Select a vehicle from the ferry/airline list'),
 
-                Select::make('operator')
+                Select::make('operator_id')
+                    ->relationship('operatorRecord', 'name')
                     ->label('Operator')
-                    ->options(fn (callable $get) => Vehicle::query()
-                        ->when($get('mode'), fn ($query, $mode) => $query->where('type', $mode))
-                        ->whereNotNull('operator')
-                        ->orderBy('operator')
-                        ->pluck('operator', 'operator')
-                        ->unique()
-                        ->toArray()
-                    )
                     ->searchable()
+                    ->preload()
                     ->reactive()
                     ->nullable()
                     ->afterStateUpdated(function (?string $state, callable $set) {
@@ -358,12 +353,12 @@ class FerryRouteResource extends Resource
                     Select::make('transport_class_id')
                         ->label('Transport Class')
                         ->options(fn (callable $get) => \App\Models\TransportClass::query()
-                            ->when($get('../../../../operator'), fn ($query, $operator) => $query->where('operator', $operator))
+                            ->when($get('../../../../operator_id'), fn ($query, $operatorId) => $query->where('operator_id', $operatorId))
                             // Intentionally skipping mode filter because the DB has ferry classes seeded as 'airline'
                             ->where('is_active', true)
                             ->orderBy('name')
                             ->get()
-                            ->mapWithKeys(fn ($item) => [$item->id => $item->operator ? "{$item->operator} - {$item->name}" : $item->name])
+                            ->mapWithKeys(fn ($item) => [$item->id => $item->operator_record ? "{$item->operator_record->name} - {$item->name}" : $item->name])
                             ->toArray())
                         ->required()
                         ->reactive()
@@ -451,9 +446,9 @@ class FerryRouteResource extends Resource
                 TextColumn::make('vehicle.full_name')
                     ->label('Vehicle')
                     ->sortable(['name', 'vehicle_id']),
-                TextColumn::make('operator')
+                TextColumn::make('operatorRecord.name')
                     ->label('Operator')
-                    ->getStateUsing(fn (FerryRoute $record): ?string => $record->vehicle?->operator ?: $record->operator)
+                    ->searchable()
                     ->sortable(),
                 TextColumn::make('mode')
                     ->label('Mode')
@@ -497,7 +492,7 @@ class FerryRouteResource extends Resource
                                 return $query->where(function ($q) use ($search) {
                                     $q->where('origin', 'like', "%{$search}%")
                                       ->orWhere('destination', 'like', "%{$search}%")
-                                      ->orWhere('operator', 'like', "%{$search}%")
+                                      ->orWhereHas('operatorRecord', fn($qop) => $qop->where('name', 'like', "%{$search}%"))
                                       ->orWhereHas('vehicle', fn($qv) => $qv->where('name', 'like', "%{$search}%")->orWhere('vehicle_id', 'like', "%{$search}%"));
                                 });
                             }

@@ -11,6 +11,7 @@ class AirlineBaggageRule extends Model
 
     protected $fillable = [
         'operator',
+        'operator_id',
         'operator_name',
         'code',
         'logo',
@@ -151,5 +152,10 @@ class AirlineBaggageRule extends Model
                 ],
             ],
         ];
+    }
+
+    public function operatorRecord()
+    {
+        return $this->belongsTo(Operator::class, 'operator_id');
     }
 }

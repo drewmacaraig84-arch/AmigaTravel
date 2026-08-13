@@ -75,11 +75,11 @@ class AccommodationResource extends Resource
                     ->placeholder('e.g. Boracay, Manila')
                     ->maxLength(255),
 
-                TextInput::make('operator')
-                    ->label('Ferry Operator')
-                    ->placeholder('e.g. 2GO, Starlite, CebuPacific')
-                    ->maxLength(255)
-                    ->helperText('Leave empty for hotel accommodations'),
+                Select::make('operator_id')
+                    ->relationship('operatorRecord', 'name')
+                    ->label('Operator')
+                    ->searchable()
+                    ->preload(),
 
                 Textarea::make('description')
                     ->placeholder('Room details, features, etc.')
@@ -132,7 +132,8 @@ class AccommodationResource extends Resource
                 TextColumn::make('destination')
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('operator')
+                TextColumn::make('operatorRecord.name')
+                    ->label('Operator')
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('amenities')

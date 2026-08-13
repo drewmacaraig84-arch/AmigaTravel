@@ -78,7 +78,7 @@ class ServiceCancellationResource extends Resource
                                     $schedule = Schedule::with('ferryRoute')->find($state);
                                     if ($schedule && $schedule->ferryRoute) {
                                         $set('service_type', $schedule->ferryRoute->mode);
-                                        $set('carrier', $schedule->ferryRoute->operator);
+                                        $set('carrier', $schedule->ferryRoute->operatorRecord?->name);
                                         $set('ferry_route_id', $schedule->ferryRoute->id);
                                         $set('vehicle_id', $schedule->ferryRoute->vehicle_id);
                                         if ($get('scope') === 'specific_schedule') {
@@ -105,13 +105,11 @@ class ServiceCancellationResource extends Resource
                                 ->label('Carrier / Operator')
                                 ->options(function (Get $get) {
                                     $mode = $get('service_type');
-                                    $operators = FerryRoute::activeOperatorsFor($mode);
-                                    
-                                    if (empty($operators)) {
-                                        $operators = ['2GO', 'Starlite', 'Cebu Pacific', 'Philippine Airline', 'AirAsia'];
-                                    }
-
-                                    return array_combine($operators, $operators);
+                                    return \App\Models\Operator::query()
+                                        ->when($mode, fn($q) => $q->where('mode', $mode))
+                                        ->where('is_active', true)
+                                        ->pluck('name', 'name')
+                                        ->toArray();
                                 })
                                 ->searchable()
                                 ->required(fn (Get $get) => empty($get('ferry_route_id')) && empty($get('vehicle_id')))
@@ -138,7 +136,7 @@ class ServiceCancellationResource extends Resource
                                     return FerryRoute::query()
                                         ->active()
                                         ->when($mode, fn($q) => $q->where('mode', $mode))
-                                        ->when($carrier, fn($q) => $q->where('operator', $carrier))
+                                        ->when($carrier, fn($q) => $q->whereHas('operatorRecord', fn($qop) => $qop->where('name', $carrier)))
                                         ->get()
                                         ->mapWithKeys(fn (FerryRoute $r) => [$r->id => $r->label]);
                                 })
@@ -153,7 +151,7 @@ class ServiceCancellationResource extends Resource
                                     return \App\Models\Vehicle::query()
                                         ->active()
                                         ->when($mode, fn($q) => $q->where('type', $mode))
-                                        ->when($carrier, fn($q) => $q->where('operator', $carrier))
+                                        ->when($carrier, fn($q) => $q->whereHas('operatorRecord', fn($qop) => $qop->where('name', $carrier)))
                                         ->get()
                                         ->mapWithKeys(fn (\App\Models\Vehicle $v) => [$v->id => $v->full_name]);
                                 })
@@ -171,7 +169,7 @@ class ServiceCancellationResource extends Resource
                                     return Schedule::query()
                                         ->active()
                                         ->whereHas('ferryRoute', function (Builder $q) use ($carrier, $mode) {
-                                            if ($carrier) $q->where('operator', $carrier);
+                                            if ($carrier) $q->whereHas('operatorRecord', fn($qop) => $qop->where('name', $carrier));
                                             if ($mode) $q->where('mode', $mode);
                                         })
                                         ->get()

@@ -334,6 +334,8 @@ class BookingController extends Controller
                 'web_admin_fee'    => $breakdown['web_admin_fee'],
                 'surcharge_amount' => $breakdown['surcharge_amount'],
                 'surcharge_pct'    => $breakdown['surcharge_pct'],
+                'rebooking_surcharge' => $breakdown['rebooking_surcharge'] ?? 0,
+                'rebooking_revalidation_fee' => $breakdown['rebooking_revalidation_fee'] ?? 0,
             ]);
         }
 
@@ -638,9 +640,6 @@ class BookingController extends Controller
             
             foreach ($schedule->scheduleAccommodations->where('is_active', true) as $acc) {
                 $price = $schedulePrice + (float)$acc->price;
-                if ($isAirline) {
-                    $price = $price * 1.5;
-                }
                 $accommodations[] = [
                     'id' => 'acc_' . $acc->id,
                     'name' => $acc->name,
@@ -650,9 +649,6 @@ class BookingController extends Controller
             
             foreach ($schedule->transportClasses->where('pivot.is_active', true) as $tc) {
                 $price = $schedulePrice + (float)$tc->pivot->additional_price;
-                if ($isAirline) {
-                    $price = $price * 1.5;
-                }
                 $accommodations[] = [
                     'id' => 'tc_' . $tc->id,
                     'name' => $tc->name,

@@ -11,6 +11,7 @@ class Accommodation extends Model
         'name',
         'destination',
         'operator',
+        'operator_id',
         'description',
         'amenities',
         'price',
@@ -37,5 +38,10 @@ class Accommodation extends Model
     public function getCoverImageAttribute(): ?string
     {
         return storage_asset_path($this->images[0] ?? null);
+    }
+
+    public function operatorRecord()
+    {
+        return $this->belongsTo(Operator::class, 'operator_id');
     }
 }

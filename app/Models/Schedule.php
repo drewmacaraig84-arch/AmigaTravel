@@ -384,7 +384,7 @@ class Schedule extends Model
 
     protected function buildCabinLayouts(array $aircraftConfig): array
     {
-        $resolvedOperator = $this->resolveOperatorConfigKey($this->ferryRoute?->operator);
+        $resolvedOperator = $this->resolveOperatorConfigKey($this->ferryRoute?->operator_name);
         $operatorConfig = config('airline_seating.operators.' . $resolvedOperator . '.classes', []);
         $currentRow = 1;
         $layouts = [];
@@ -493,7 +493,7 @@ class Schedule extends Model
             'tickets_available' => (int) ($this->tickets_available ?? 0),
             'mode' => $mode,
             'trip_type' => $this->ferryRoute?->trip_type ?: 'local',
-            'operator' => $this->ferryRoute?->operator,
+            'operator' => $this->ferryRoute?->operator_name,
             // ISO 8601 timestamp for real-time client-side filtering (JS Date comparison)
             'departure_time_iso' => $this->departure_time->toIso8601String(),
             // True when the departure has already passed (race-condition guard for UI)

@@ -66,29 +66,17 @@ class AirlineBaggageRuleResource extends Resource
     {
         return $form
             ->schema([
-                Select::make('operator')
+                Select::make('operator_id')
+                    ->relationship('operatorRecord', 'name')
                     ->label('Airline Operator')
-                    ->options([
-                        'pal' => 'Philippine Airline',
-                        'ceb_pac' => 'Cebu Pacific',
-                        'airasia' => 'AirAsia',
-                    ])
-                    ->default(fn () => request()->query('operator'))
                     ->required()
                     ->live()
                     ->afterStateUpdated(function ($state, Forms\Set $set) {
-                        if ($state === 'pal') {
-                            $set('operator_name', 'Philippine Airline');
-                            $set('code', 'PAL');
-                            $set('logo', 'Pal-Logo.jfif');
-                        } elseif ($state === 'ceb_pac') {
-                            $set('operator_name', 'Cebu Pacific');
-                            $set('code', 'Cebu Pacific');
-                            $set('logo', 'CebuPecific-Logo.png');
-                        } elseif ($state === 'airasia') {
-                            $set('operator_name', 'AirAsia');
-                            $set('code', 'AirAsia');
-                            $set('logo', 'AirAsia-Logo.png');
+                        $operator = \App\Models\Operator::find($state);
+                        if ($operator) {
+                            $set('operator_name', $operator->name);
+                            $set('code', strtoupper($operator->name));
+                            $set('logo', $operator->logo_path);
                         }
                     })
                     ->columnSpan(1),
@@ -105,37 +93,19 @@ class AirlineBaggageRuleResource extends Resource
 
                 TextInput::make('operator_name')
                     ->label('Operator Display Name')
-                    ->default(fn () => match(request()->query('operator')) {
-                        'pal' => 'Philippine Airline',
-                        'ceb_pac' => 'Cebu Pacific',
-                        'airasia' => 'AirAsia',
-                        default => null,
-                    })
                     ->required()
                     ->maxLength(255)
                     ->columnSpan(1),
 
                 TextInput::make('code')
                     ->label('Airline Code')
-                    ->default(fn () => match(request()->query('operator')) {
-                        'pal' => 'PAL',
-                        'ceb_pac' => 'Cebu Pacific',
-                        'airasia' => 'AirAsia',
-                        default => null,
-                    })
                     ->required()
                     ->maxLength(255)
                     ->columnSpan(1),
 
                 TextInput::make('logo')
                     ->label('Logo Filename')
-                    ->default(fn () => match(request()->query('operator')) {
-                        'pal' => 'Pal-Logo.jfif',
-                        'ceb_pac' => 'CebuPecific-Logo.png',
-                        'airasia' => 'AirAsia-Logo.png',
-                        default => null,
-                    })
-                    ->placeholder('e.g. Pal-Logo.jfif')
+                    ->placeholder('e.g. operators/Pal-Logo.jfif')
                     ->maxLength(255)
                     ->columnSpanFull(),
 
@@ -233,13 +203,9 @@ class AirlineBaggageRuleResource extends Resource
                     ])
                     ->placeholder('All Scopes (Domestic & International)'),
 
-                SelectFilter::make('operator')
+                SelectFilter::make('operator_id')
+                    ->relationship('operatorRecord', 'name')
                     ->label('Filter by Airline Operator')
-                    ->options([
-                        'pal' => 'Philippine Airline',
-                        'ceb_pac' => 'Cebu Pacific',
-                        'airasia' => 'AirAsia',
-                    ])
                     ->placeholder('All Operators'),
             ], layout: \Filament\Tables\Enums\FiltersLayout::AboveContent)
             ->filtersFormColumns(2)

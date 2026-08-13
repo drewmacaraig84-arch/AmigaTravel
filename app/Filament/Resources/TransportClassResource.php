@@ -77,25 +77,12 @@ class TransportClassResource extends Resource
                     ->reactive()
                     ->required(),
 
-                Select::make('operator')
+                Select::make('operator_id')
+                    ->relationship('operatorRecord', 'name')
                     ->label('Operator')
-                    ->options(fn (callable $get) => match ($get('mode')) {
-                        'airline' => [
-                            'AirAsia' => 'AirAsia',
-                            'Cebu Pacific' => 'Cebu Pacific',
-                            'Philippine Airline' => 'Philippine Airline',
-                        ],
-                        'ferry' => [
-                            '2GO' => '2GO',
-                            'Starlite' => 'Starlite',
-                        ],
-                        default => [],
-                    })
-                    ->placeholder('Select operator')
                     ->searchable()
-                    ->required()
-                    ->reactive()
-                    ->columnSpanFull(),
+                    ->preload()
+                    ->required(),
 
                 TextInput::make('code')
                     ->label('Class Code')
@@ -126,7 +113,8 @@ class TransportClassResource extends Resource
                     ->label('Mode')
                     ->formatStateUsing(fn (?string $state, TransportClass $record): string => operator_is_ferry($record->operator) ? 'Ferry' : ($state === 'ferry' ? 'Ferry' : 'Airline'))
                     ->sortable(),
-                TextColumn::make('operator')
+                TextColumn::make('operatorRecord.name')
+                    ->label('Operator')
                     ->searchable()
                     ->sortable(),
                 ToggleColumn::make('is_active')

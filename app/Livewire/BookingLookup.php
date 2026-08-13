@@ -531,7 +531,7 @@ class BookingLookup extends Component
                          + (float)($this->booking->return_schedule_accommodation_price ?? 0);
 
         if ($mode === 'airline') {
-            $newPerPax = $price / 1.5;
+            $newPerPax = (float)$price;
             if ($newPerPax < $originalPerPax) {
                 $this->feedback = "You cannot select a lower class than your original return booking. Please select an equal or higher class.";
                 return;
@@ -583,11 +583,8 @@ class BookingLookup extends Component
 
         $items = collect();
         foreach ($schedule->scheduleAccommodations->where('is_active', true)->sortBy('sort_order') as $acc) {
-            $price = $acc->price;
-            if ($isAirline) {
-                $price = ($schedulePrice + $price) * 1.5;
-            }
-            $newPerPax = $isAirline ? ($price / 1.5) : (($this->rebooking_dep_schedule_price ?? 0) + $price);
+            $price = (float)$acc->price;
+            $newPerPax = $isAirline ? $price : (($this->rebooking_dep_schedule_price ?? 0) + $price);
             $items->push((object)[
                 'id'       => 'acc_' . $acc->id,
                 'name'     => $acc->name,
@@ -597,11 +594,8 @@ class BookingLookup extends Component
             ]);
         }
         foreach ($schedule->transportClasses->where('pivot.is_active', true)->sortBy('pivot.sort_order') as $tc) {
-            $price = $tc->pivot->additional_price;
-            if ($isAirline) {
-                $price = ($schedulePrice + $price) * 1.5;
-            }
-            $newPerPax = $isAirline ? ($price / 1.5) : (($this->rebooking_dep_schedule_price ?? 0) + $price);
+            $price = (float)$tc->pivot->additional_price;
+            $newPerPax = $isAirline ? $price : (($this->rebooking_dep_schedule_price ?? 0) + $price);
             $items->push((object)[
                 'id'       => 'tc_' . $tc->id,
                 'name'     => $tc->name,
@@ -631,11 +625,8 @@ class BookingLookup extends Component
 
         $items = collect();
         foreach ($schedule->scheduleAccommodations->where('is_active', true)->sortBy('sort_order') as $acc) {
-            $price = $acc->price;
-            if ($isAirline) {
-                $price = ($schedulePrice + $price) * 1.5;
-            }
-            $newPerPax = $isAirline ? ($price / 1.5) : (($this->rebooking_ret_schedule_price ?? 0) + $price);
+            $price = (float)$acc->price;
+            $newPerPax = $isAirline ? $price : (($this->rebooking_ret_schedule_price ?? 0) + $price);
             $items->push((object)[
                 'id'       => 'acc_' . $acc->id,
                 'name'     => $acc->name,
@@ -645,11 +636,8 @@ class BookingLookup extends Component
             ]);
         }
         foreach ($schedule->transportClasses->where('pivot.is_active', true)->sortBy('pivot.sort_order') as $tc) {
-            $price = $tc->pivot->additional_price;
-            if ($isAirline) {
-                $price = ($schedulePrice + $price) * 1.5;
-            }
-            $newPerPax = $isAirline ? ($price / 1.5) : (($this->rebooking_ret_schedule_price ?? 0) + $price);
+            $price = (float)$tc->pivot->additional_price;
+            $newPerPax = $isAirline ? $price : (($this->rebooking_ret_schedule_price ?? 0) + $price);
             $items->push((object)[
                 'id'       => 'tc_' . $tc->id,
                 'name'     => $tc->name,

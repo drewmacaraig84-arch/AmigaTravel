@@ -87,22 +87,12 @@ class VehicleResource extends Resource
                     ->unique(ignoreRecord: true)
                     ->maxLength(255),
 
-                Select::make('operator')
-                    ->label('Operating Company')
-                    ->options(fn (Get $get) => match ($get('type')) {
-                        'airline' => [
-                            'AirAsia' => 'AirAsia',
-                            'Cebu Pacific' => 'Cebu Pacific',
-                            'Philippine Airline' => 'Philippine Airline',
-                        ],
-                        'ferry' => [
-                            '2GO' => '2GO',
-                            'Starlite' => 'Starlite',
-                        ],
-                        default => [],
-                    })
-                    ->required()
-                    ->native(false),
+                Select::make('operator_id')
+                    ->relationship('operatorRecord', 'name')
+                    ->label('Operator')
+                    ->searchable()
+                    ->preload()
+                    ->required(),
 
                 TextInput::make('capacity')
                     ->label('Passenger Capacity')
@@ -148,7 +138,7 @@ class VehicleResource extends Resource
                     ->label(fn ($livewire) => $livewire->vehicleType === 'airline' ? 'Tail No.' : 'IMO No.')
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('operator')
+                TextColumn::make('operatorRecord.name')
                     ->label('Operator')
                     ->searchable()
                     ->sortable(),

@@ -13,6 +13,7 @@ class Vehicle extends Model
         'name',
         'vehicle_id',
         'operator',
+        'operator_id',
         'description',
         'capacity',
         'is_active',
@@ -69,5 +70,10 @@ class Vehicle extends Model
     public static function airlines()
     {
         return static::where('type', 'airline')->active();
+    }
+
+    public function operatorRecord()
+    {
+        return $this->belongsTo(Operator::class, 'operator_id');
     }
 }
