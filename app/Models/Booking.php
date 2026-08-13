@@ -286,10 +286,6 @@ class Booking extends Model
     {
         $isWithin5Mins = $this->created_at && $this->created_at->addMinutes(5)->isFuture();
 
-        if ($this->hasPromoTicket() && !$isWithin5Mins) {
-            return false;
-        }
-
         if (! $this->transaction || ! in_array($this->transaction->payment_status, ['paid', 'pending', 'unpaid'])) {
             return false;
         }

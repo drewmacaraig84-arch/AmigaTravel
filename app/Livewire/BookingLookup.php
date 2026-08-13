@@ -237,14 +237,21 @@ class BookingLookup extends Component
             $this->cancellationExpired = true;
             $this->cancelCountdown = 0;
             if (! $this->booking->isRefundEligible()) {
-                $this->feedback = 'You cannot request a refund as it is less than 3 hours before the departure time.';
-                $this->cancellationRequested = false;
-                $this->cancellationWindowActive = false;
-                return;
+                if ($this->booking->hasPromoTicket()) {
+                    $refund = 0;
+                    $fee = 0;
+                    $this->feedback = 'This is a promotional ticket and is strictly non-refundable. You may cancel it, but no refund will be issued. Please select a placeholder below to confirm cancellation.';
+                } else {
+                    $this->feedback = 'You cannot request a refund as it is less than 3 hours before the departure time.';
+                    $this->cancellationRequested = false;
+                    $this->cancellationWindowActive = false;
+                    return;
+                }
+            } else {
+                $refund = $this->booking->getRefundAmount(false);
+                $fee    = $this->booking->getCancellationFeeAmount(false);
+                $this->feedback = 'Enter where you would like the refund sent. Estimated refund: ₱' . number_format($refund, 2) . ' (cancellation deductions: ₱' . number_format($fee, 2) . ').';
             }
-            $refund = $this->booking->getRefundAmount(false);
-            $fee    = $this->booking->getCancellationFeeAmount(false);
-            $this->feedback = 'Enter where you would like the refund sent. Estimated refund: ₱' . number_format($refund, 2) . ' (cancellation deductions: ₱' . number_format($fee, 2) . ').';
         } else {
             $this->cancellationExpired = false;
             $this->cancelCountdown = $remaining;
@@ -326,8 +333,10 @@ class BookingLookup extends Component
         $refundAmount    = $this->booking->getRefundAmount($isWithinFiveMinutes);
 
         if (! $isWithinFiveMinutes && ! $this->booking->isRefundEligible()) {
-            $this->feedback = 'You cannot request a refund as it is less than 3 hours before the departure time.';
-            return;
+            if (! $this->booking->hasPromoTicket()) {
+                $this->feedback = 'You cannot request a refund as it is less than 3 hours before the departure time.';
+                return;
+            }
         }
 
         $this->booking->update([
