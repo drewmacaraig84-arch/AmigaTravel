@@ -307,9 +307,14 @@ class BookingController extends Controller
             ->firstOrFail();
 
         if (! $booking->canCancel() || ! in_array($booking->status, ['pending', 'confirmed'], true)) {
+            $message = 'This booking can no longer be cancelled.';
+            if ($booking->hasPromoTicket() && !($booking->created_at && $booking->created_at->addMinutes(5)->isFuture())) {
+                $message = 'Promotional tickets cannot be cancelled after the 5-minute grace period.';
+            }
+
             return response()->json([
                 'status' => 'error',
-                'message' => 'This booking can no longer be cancelled.'
+                'message' => $message
             ], 400);
         }
 

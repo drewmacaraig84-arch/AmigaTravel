@@ -187,7 +187,11 @@ class BookingLookup extends Component
         }
 
         if (! $this->booking->canCancel()) {
-            $this->feedback = 'You cannot cancel this booking as the departure date has passed or the payment is not fully verified.';
+            if ($this->booking->hasPromoTicket() && !($this->booking->created_at && $this->booking->created_at->addMinutes(5)->isFuture())) {
+                $this->feedback = 'Promotional tickets cannot be cancelled after the 5-minute grace period.';
+            } else {
+                $this->feedback = 'You cannot cancel this booking as the departure date has passed or the payment is not fully verified.';
+            }
             return;
         }
 
@@ -214,7 +218,11 @@ class BookingLookup extends Component
         }
 
         if (! $this->booking->canCancel()) {
-            $this->feedback = 'You cannot cancel this booking as the departure date has passed.';
+            if ($this->booking->hasPromoTicket() && !($this->booking->created_at && $this->booking->created_at->addMinutes(5)->isFuture())) {
+                $this->feedback = 'Promotional tickets cannot be cancelled after the 5-minute grace period.';
+            } else {
+                $this->feedback = 'You cannot cancel this booking as the departure date has passed or the payment is not fully verified.';
+            }
             return;
         }
 
@@ -311,7 +319,11 @@ class BookingLookup extends Component
         }
 
         if (! $this->booking->canCancel()) {
-            $this->feedback = 'You cannot cancel this booking as the departure date has passed.';
+            if ($this->booking->hasPromoTicket() && !($this->booking->created_at && $this->booking->created_at->addMinutes(5)->isFuture())) {
+                $this->feedback = 'Promotional tickets cannot be cancelled after the 5-minute grace period.';
+            } else {
+                $this->feedback = 'You cannot cancel this booking as the departure date has passed or the payment is not fully verified.';
+            }
             return;
         }
 
