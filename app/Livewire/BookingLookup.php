@@ -434,7 +434,7 @@ class BookingLookup extends Component
         $this->rebooking_departure_date = $this->booking->departure_date?->format('Y-m-d');
         $this->rebooking_return_date = $this->booking->return_date?->format('Y-m-d');
         $this->rebooking_step = 'departure_date';
-        $this->feedback = "Please select your new travel date, schedule, and preferred accommodation below.";
+        $this->feedback = "Please select your new travel dates, preferred schedule, and accommodation below.";
     }
 
     public function setRebookingStep(string $step): void
@@ -488,14 +488,14 @@ class BookingLookup extends Component
         if ($mode === 'airline') {
             $newPerPax = $price;
             if ($newPerPax < $originalPerPax) {
-                $this->feedback = "You cannot select a lower class than your original booking. Please select an equal or higher class.";
+                $this->feedback = "Reminder: To proceed with rebooking, please select an accommodation or transport class that is equal to or higher than your original booking. Downgrades are not permitted.";
                 return;
             }
         } else {
             // For ferries, price = accommodation_price per pax (already combined in UI with schedule)
             $newPerPax = ($this->rebooking_dep_schedule_price ?? 0) + $price;
             if ($newPerPax < $originalPerPax) {
-                $this->feedback = "You cannot rebook to a lower class than your original booking. Please select an equal or higher class.";
+                $this->feedback = "Reminder: To proceed with rebooking, please select an accommodation or transport class that is equal to or higher than your original booking. Downgrades are not permitted.";
                 return;
             }
         }
@@ -535,13 +535,13 @@ class BookingLookup extends Component
         if ($mode === 'airline') {
             $newPerPax = $price;
             if ($newPerPax < $originalPerPax) {
-                $this->feedback = "You cannot select a lower class than your original return booking. Please select an equal or higher class.";
+                $this->feedback = "Reminder: To proceed with rebooking, please select an accommodation or transport class that is equal to or higher than your original booking. Downgrades are not permitted.";
                 return;
             }
         } else {
             $newPerPax = ($this->rebooking_ret_schedule_price ?? 0) + $price;
             if ($newPerPax < $originalPerPax) {
-                $this->feedback = "You cannot rebook to a lower class than your original return booking. Please select an equal or higher class.";
+                $this->feedback = "Reminder: To proceed with rebooking, please select an accommodation or transport class that is equal to or higher than your original booking. Downgrades are not permitted.";
                 return;
             }
         }

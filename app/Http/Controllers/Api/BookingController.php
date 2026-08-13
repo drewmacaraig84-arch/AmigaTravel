@@ -572,7 +572,7 @@ class BookingController extends Controller
         if ($newTotal < $originalFare) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'You cannot rebook to a ticket that is cheaper than your original booking.',
+                'message' => 'Reminder: To proceed with rebooking, please select an accommodation or transport class that is equal to or higher than your original booking. Downgrades are not permitted.',
             ], 400);
         }
 
