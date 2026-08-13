@@ -247,16 +247,28 @@ class CreateBookingAction
             if (! empty($data['selected_transport_class_id'])) {
                 $transportClass = TransportClass::find($data['selected_transport_class_id']);
                 if ($transportClass) {
+                    $overridePrice = \Illuminate\Support\Facades\DB::table('schedule_transport_class')
+                        ->where('schedule_id', $schedule->id)
+                        ->where('transport_class_id', $transportClass->id)
+                        ->value('additional_price');
+                    $price = $overridePrice !== null ? (float) $overridePrice : $transportClass->effective_price;
+                    
                     $booking->transportClasses()->attach($transportClass->id, [
-                        'price' => $transportClass->effective_price,
+                        'price' => $price,
                     ]);
                 }
             }
-            if (! empty($data['selected_return_transport_class_id'])) {
+            if (! empty($data['selected_return_transport_class_id']) && $returnSchedule) {
                 $returnTransportClass = TransportClass::find($data['selected_return_transport_class_id']);
                 if ($returnTransportClass) {
+                    $overridePrice = \Illuminate\Support\Facades\DB::table('schedule_transport_class')
+                        ->where('schedule_id', $returnSchedule->id)
+                        ->where('transport_class_id', $returnTransportClass->id)
+                        ->value('additional_price');
+                    $price = $overridePrice !== null ? (float) $overridePrice : $returnTransportClass->effective_price;
+
                     $booking->transportClasses()->attach($returnTransportClass->id, [
-                        'price' => $returnTransportClass->effective_price,
+                        'price' => $price,
                     ]);
                 }
             }
@@ -393,15 +405,23 @@ class CreateBookingAction
         if ($selectedTransportClassId) {
             $transportClass = TransportClass::find($selectedTransportClassId);
             if ($transportClass) {
-                $departureTransportClassTotal = (float) $transportClass->effective_price;
+                $overridePrice = \Illuminate\Support\Facades\DB::table('schedule_transport_class')
+                    ->where('schedule_id', $schedule->id)
+                    ->where('transport_class_id', $transportClass->id)
+                    ->value('additional_price');
+                $departureTransportClassTotal = $overridePrice !== null ? (float) $overridePrice : (float) $transportClass->effective_price;
             }
         }
 
         $returnTransportClassTotal = 0;
-        if ($tripType === 'round_trip' && $returnSelectedTransportClassId) {
+        if ($tripType === 'round_trip' && $returnSelectedTransportClassId && $returnSchedule) {
             $returnTransportClass = TransportClass::find($returnSelectedTransportClassId);
             if ($returnTransportClass) {
-                $returnTransportClassTotal = (float) $returnTransportClass->effective_price;
+                $overridePrice = \Illuminate\Support\Facades\DB::table('schedule_transport_class')
+                    ->where('schedule_id', $returnSchedule->id)
+                    ->where('transport_class_id', $returnTransportClass->id)
+                    ->value('additional_price');
+                $returnTransportClassTotal = $overridePrice !== null ? (float) $overridePrice : (float) $returnTransportClass->effective_price;
             }
         }
 
