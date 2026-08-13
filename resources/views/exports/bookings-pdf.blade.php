@@ -88,6 +88,7 @@
             @php
                 $sectionTotal          = $section['items']->sum('total_price');
                 $sectionVoucherTotal   = $section['items']->sum('voucher_discount_amount');
+                $sectionPointsTotal    = $section['items']->sum('points_discount');
             @endphp
             <table>
                 <thead>
@@ -104,15 +105,22 @@
                         <th>Booking Status</th>
                         <th>Amount (₱)</th>
                         <th>Ref # (Payment)</th>
+                        <th>Pass. Discount Type</th>
                         <th>Voucher Code</th>
                         <th>Voucher Discount (₱)</th>
                         <th>Gracia Points Used</th>
+                        <th>Points Discount (₱)</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($section['items'] as $booking)
                         @php
                             $ferryRoute = $booking->schedule?->ferryRoute;
+                            $discountTypes = $booking->passengers->filter(function($p) {
+                                return $p->discount_id !== null && $p->discount;
+                            })->map(function($p) {
+                                return $p->discount->name;
+                            })->unique()->implode(', ');
                         @endphp
                         <tr>
                             <td>{{ $booking->transaction_number }}</td>
@@ -137,9 +145,11 @@
                             </td>
                             <td>{{ number_format($booking->total_price, 2) }}</td>
                             <td>{{ $booking->transaction?->payment_reference ?? '-' }}</td>
+                            <td>{{ filled($discountTypes) ? $discountTypes : '-' }}</td>
                             <td>{{ filled($booking->voucher_code) ? $booking->voucher_code : '-' }}</td>
                             <td>{{ $booking->voucher_discount_amount > 0 ? number_format($booking->voucher_discount_amount, 2) : '-' }}</td>
                             <td>{{ $booking->points_used > 0 ? number_format($booking->points_used) . ' pts' : '-' }}</td>
+                            <td>{{ $booking->points_discount > 0 ? number_format($booking->points_discount, 2) : '-' }}</td>
                         </tr>
                     @endforeach
 
@@ -149,7 +159,8 @@
                         <td>{{ number_format($sectionTotal, 2) }}</td>
                         <td colspan="2" style="text-align:right;">TOTAL VOUCHER DISCOUNT</td>
                         <td>{{ number_format($sectionVoucherTotal, 2) }}</td>
-                        <td></td>
+                        <td colspan="2" style="text-align:right;">TOTAL POINTS DISCOUNT</td>
+                        <td>{{ number_format($sectionPointsTotal, 2) }}</td>
                     </tr>
                 </tbody>
             </table>

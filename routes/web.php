@@ -224,6 +224,7 @@ Route::get('/schedules', function (\Illuminate\Http\Request $request) {
 
     $routes = \Illuminate\Support\Facades\Cache::remember('web:schedules:' . $startDate . ':' . $endDate, now()->addMinutes(5), function () use ($startDate, $endDate) {
         $routesData = App\Models\FerryRoute::with([
+            'vehicle',
             'schedules' => function ($query) use ($startDate, $endDate) {
             $query->active()
                   ->where('departure_time', '>=',

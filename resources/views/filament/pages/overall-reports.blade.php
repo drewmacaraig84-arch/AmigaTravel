@@ -1,57 +1,142 @@
 <x-filament-panels::page>
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+<script type="text/javascript" src="https://cdn.jsdelivr.net/jquery/latest/jquery.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+
+<style>
+    /* Dark mode support for DateRangePicker */
+    .dark .daterangepicker {
+        background-color: #0f172a; /* slate-950 */
+        border-color: #1e293b; /* slate-800 */
+        color: #e2e8f0; /* slate-200 */
+    }
+    .dark .daterangepicker .calendar-table {
+        background-color: #0f172a;
+        border-color: #1e293b;
+    }
+    .dark .daterangepicker td.off, 
+    .dark .daterangepicker td.off.in-range, 
+    .dark .daterangepicker td.off.start-date, 
+    .dark .daterangepicker td.off.end-date {
+        background-color: #0f172a;
+        color: #475569; /* slate-600 */
+    }
+    .dark .daterangepicker td.available:hover, 
+    .dark .daterangepicker th.available:hover {
+        background-color: #1e293b; /* slate-800 */
+        color: #fff;
+    }
+    .dark .daterangepicker td.in-range {
+        background-color: #1e293b;
+        color: #e2e8f0;
+    }
+    .dark .daterangepicker td.active, 
+    .dark .daterangepicker td.active:hover {
+        background-color: #6366f1; /* indigo-500 */
+        color: #fff;
+    }
+    .dark .daterangepicker .ranges li {
+        color: #e2e8f0;
+        background-color: #0f172a;
+    }
+    .dark .daterangepicker .ranges li:hover {
+        background-color: #1e293b;
+    }
+    .dark .daterangepicker .ranges li.active {
+        background-color: #6366f1;
+        color: #fff;
+    }
+    .dark .daterangepicker.show-ranges .drp-calendar.left {
+        border-left: 1px solid #1e293b;
+    }
+    .dark .daterangepicker .drp-buttons {
+        border-top: 1px solid #1e293b;
+    }
+    .dark .daterangepicker .drp-selected {
+        color: #94a3b8; /* slate-400 */
+    }
+    .dark .daterangepicker select.monthselect, 
+    .dark .daterangepicker select.yearselect {
+        background-color: #1e293b;
+        border-color: #334155;
+        color: #e2e8f0;
+    }
+    .dark .daterangepicker:before {
+        border-bottom-color: #1e293b;
+    }
+    .dark .daterangepicker:after {
+        border-bottom-color: #0f172a;
+    }
+</style>
+
 <div wire:poll.3s="refreshData" class="space-y-6 w-full">
 
     {{-- ═══ Header: Period Selector + Custom Dates + Export ═══ --}}
-    <div class="rounded-[28px] border border-slate-800 bg-slate-950 p-4">
-        <div class="flex items-center justify-between gap-4">
-            {{-- Left invisible spacer to balance right buttons --}}
-            <div class="hidden lg:block lg:flex-1"></div>
-
-            {{-- Center Pill --}}
-            <div class="flex-none inline-flex items-center gap-2 overflow-x-auto rounded-full px-2 py-1 max-w-full"
-                 style="white-space: nowrap; background: rgba(148,163,184,0.12); border: 1px solid rgba(148,163,184,0.24);">
-                @foreach(['today' => 'Today', 'week' => 'This Week', 'month' => 'This Month', 'year' => 'This Year', 'all' => 'All Time', 'custom' => 'Custom'] as $value => $label)
-                    <button
-                        wire:click="$set('period', '{{ $value }}')"
-                        @if($period === $value)
-                            class="whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-semibold transition duration-200"
-                            style="background: #f1f5f9; color: #0f172a; border: 1px solid rgba(148,163,184,0.35);"
-                        @else
-                            class="whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-semibold text-slate-300 transition duration-200 hover:text-white hover:bg-white/10"
-                        @endif
-                    >
-                        {{ $label }}
-                    </button>
-                @endforeach
+    <div class="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+        <div class="flex items-center justify-end gap-4">
+            {{-- DateRangePicker --}}
+            <div class="flex-none" wire:ignore
+                 x-data="{ 
+                     initPicker() {
+                         const el = $(this.$refs.picker);
+                         el.daterangepicker({
+                             startDate: '{{ \Carbon\Carbon::parse($startDate)->format('m/d/Y') }}',
+                             endDate: '{{ \Carbon\Carbon::parse($endDate)->format('m/d/Y') }}',
+                             opens: 'left',
+                             autoApply: false,
+                             ranges: {
+                                'Today': [moment(), moment()],
+                                'Yesterday': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
+                                'Last 7 Days': [moment().subtract(6, 'days'), moment()],
+                                'Last 15 Days': [moment().subtract(14, 'days'), moment()],
+                                'Last 30 Days': [moment().subtract(29, 'days'), moment()],
+                                'This Month': [moment().startOf('month'), moment().endOf('month')],
+                                'Last Month': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')],
+                                'Last 6 Months': [moment().subtract(6, 'month').startOf('month'), moment().endOf('month')],
+                                'This Year': [moment().startOf('year'), moment().endOf('year')]
+                             },
+                             locale: { format: 'MM/DD/YYYY' }
+                         });
+                         el.on('apply.daterangepicker', (ev, picker) => {
+                             @this.updateDateRange(picker.startDate.format('YYYY-MM-DD'), picker.endDate.format('YYYY-MM-DD'));
+                         });
+                     }
+                 }"
+                 x-init="
+                     if (window.jQuery && window.moment && $.fn.daterangepicker) {
+                         initPicker();
+                     } else {
+                         let interval = setInterval(() => {
+                             if (window.jQuery && window.moment && $.fn.daterangepicker) {
+                                 clearInterval(interval);
+                                 initPicker();
+                             }
+                         }, 100);
+                     }
+                 ">
+                <div class="relative w-[260px]">
+                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                        <x-heroicon-m-magnifying-glass class="h-4 w-4 text-slate-400" />
+                    </div>
+                    <input type="text" x-ref="picker" readonly
+                           class="w-full cursor-pointer rounded-lg bg-white dark:bg-white/5 py-2 pl-10 pr-4 text-sm font-medium text-slate-900 shadow-sm border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-center dark:border-slate-700 dark:text-slate-100" />
+                </div>
             </div>
 
-            <div class="flex items-center gap-4 lg:flex-1 lg:justify-end flex-shrink-0">
-                <a href="{{ route('bookings.export.pdf') }}" class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition"
+            <div class="flex items-center gap-2 flex-shrink-0">
+                <a href="{{ route('bookings.export.pdf', ['start' => $startDate, 'end' => $endDate]) }}" class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition"
                    style="background: #334155; border: 1px solid #475569; color: #cbd5e1;">
                     <x-heroicon-m-arrow-down-tray class="h-4 w-4" />
                     PDF
                 </a>
-                <a href="{{ route('bookings.export.csv') }}" class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition"
+                <a href="{{ route('bookings.export.csv', ['start' => $startDate, 'end' => $endDate]) }}" class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition"
                    style="background: #334155; border: 1px solid #475569; color: #cbd5e1;">
                     <x-heroicon-m-table-cells class="h-4 w-4" />
                     CSV
                 </a>
             </div>
         </div>
-
-        @if($period === 'custom')
-            <div class="mt-4 rounded-[28px] border border-slate-800 bg-slate-950 p-5 ring-1 ring-white/5">
-                <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div class="min-w-0 lg:max-w-[320px]">
-                        <p class="text-sm font-semibold text-slate-100">Custom range</p>
-                        <p class="mt-1 text-sm text-slate-400">Select both start and end dates to refresh the report.</p>
-                    </div>
-                    <div class="grid w-full gap-4 sm:grid-cols-2 lg:max-w-[540px]">
-                        {{ $this->form }}
-                    </div>
-                </div>
-            </div>
-        @endif
     </div>
 
     {{-- ═══ KPI Cards ═══ --}}

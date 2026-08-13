@@ -28,6 +28,7 @@ class Passenger extends Model
         'promo_price',
     ];
 
+    protected $with = ['discount'];
     protected $appends = ['id_image_front_url', 'id_image_back_url'];
 
     protected $casts = [

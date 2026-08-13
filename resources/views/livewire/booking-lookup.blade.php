@@ -124,9 +124,11 @@
                                         Cancellation is free within 5 minutes after providing proof of payment.
                                     </p>
 
+                                    @if($booking->transaction && $booking->transaction->payment_status === 'unpaid')
                                     <div class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
                                         Please complete payment to issue your tickets.
                                     </div>
+                                    @endif
 
                                     <div class="mt-6 flex flex-wrap gap-3 justify-end">
                                         <button wire:click="dismissCancellationReminder" type="button" class="rounded-3xl border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
@@ -927,7 +929,7 @@
                                 @if($rebookingPaid)
                                     <div class="rounded-2xl border border-green-200 bg-green-50 p-4">
                                         <p class="text-sm font-semibold text-green-800">Rebooking Fee Paid!</p>
-                                        <p class="mt-2 text-sm text-green-700">Your rebooking fee payment has been received. Please contact us to complete your rebooking.</p>
+                                        <p class="mt-2 text-sm text-green-700">Your rebooking fee payment has been received. we will email you for your confirmation.</p>
                                     </div>
                                 @endif
                             </div>

@@ -4,16 +4,11 @@ namespace App\Filament\Pages;
 
 use App\Models\User;
 use App\Support\ReportingService;
-use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Concerns\InteractsWithForms;
-use Filament\Forms\Contracts\HasForms;
-use Filament\Forms\Form;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\Auth;
 
-class OverallReports extends Page implements HasForms
+class OverallReports extends Page
 {
-    use InteractsWithForms;
 
     public static function canAccess(): bool
     {
@@ -34,11 +29,9 @@ class OverallReports extends Page implements HasForms
 
     protected static string $view = 'filament.pages.overall-reports';
 
-    public string $period = 'month';
+    public ?string $startDate = null;
 
-    public ?string $customStartDate = null;
-
-    public ?string $customEndDate = null;
+    public ?string $endDate = null;
 
     public array $stats = [];
 
@@ -64,57 +57,25 @@ class OverallReports extends Page implements HasForms
 
     public function mount(): void
     {
+        $this->startDate = now()->startOfMonth()->toDateString();
+        $this->endDate = now()->endOfMonth()->toDateString();
         $this->loadStats();
     }
 
-    public function form(Form $form): Form
+    public function updateDateRange($start, $end)
     {
-        return $form
-            ->columns(2)
-            ->schema([
-                DatePicker::make('customStartDate')
-                    ->label('Start Date')
-                    ->native(false)
-                    ->maxDate(now())
-                    ->live()
-                    ->extraAttributes([
-                        'class' => 'rounded-3xl border border-slate-300 bg-white text-slate-900 shadow-sm ring-1 ring-gray-200 transition dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:ring-white/10',
-                    ])
-                    ->extraTriggerAttributes([
-                        'class' => 'w-full rounded-3xl bg-transparent px-4 py-3 text-left text-sm leading-6 text-slate-900 placeholder:text-slate-400 min-h-[52px] focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 dark:text-slate-100 dark:placeholder:text-slate-500',
-                    ])
-                    ->suffixIcon('heroicon-m-calendar')
-                    ->afterStateUpdated(fn () => $this->applyCustomDates()),
-                DatePicker::make('customEndDate')
-                    ->label('End Date')
-                    ->native(false)
-                    ->maxDate(now())
-                    ->live()
-                    ->extraAttributes([
-                        'class' => 'rounded-3xl border border-slate-300 bg-white text-slate-900 shadow-sm ring-1 ring-gray-200 transition dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:ring-white/10',
-                    ])
-                    ->extraTriggerAttributes([
-                        'class' => 'w-full rounded-3xl bg-transparent px-4 py-3 text-left text-sm leading-6 text-slate-900 placeholder:text-slate-400 min-h-[52px] focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 dark:text-slate-100 dark:placeholder:text-slate-500',
-                    ])
-                    ->suffixIcon('heroicon-m-calendar')
-                    ->afterStateUpdated(fn () => $this->applyCustomDates()),
-            ]);
-    }
-
-    public function applyCustomDates(): void
-    {
-        if ($this->customStartDate && $this->customEndDate) {
-            $this->period = 'custom';
-            $this->loadStats();
-        }
+        $this->startDate = $start;
+        $this->endDate = $end;
+        $this->loadStats();
     }
 
     public function loadStats(): void
     {
         $service = app(ReportingService::class);
-        $start = $this->period === 'custom' ? $this->customStartDate : null;
-        $end = $this->period === 'custom' ? $this->customEndDate : null;
-        $period = $this->period === 'custom' ? null : $this->period;
+        $period = null;
+        
+        $start = $this->startDate;
+        $end = $this->endDate;
 
         $this->stats = $service->getOverallStats($period, $start, $end);
         $this->breakdown = $service->getBookingStatusBreakdown($period, $start, $end);
@@ -148,15 +109,6 @@ class OverallReports extends Page implements HasForms
 
     public function refreshData(): void
     {
-        $this->loadStats();
-    }
-
-    public function updatedPeriod(): void
-    {
-        if ($this->period !== 'custom') {
-            $this->customStartDate = null;
-            $this->customEndDate = null;
-        }
         $this->loadStats();
     }
 }

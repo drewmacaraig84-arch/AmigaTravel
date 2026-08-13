@@ -26,6 +26,7 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
     {
         $totalAmount = $this->bookings->sum('total_price');
         $totalVoucherDiscount = $this->bookings->sum('voucher_discount_amount');
+        $totalPointsDiscount = $this->bookings->sum('points_discount');
 
         $collection = collect($this->bookings);
 
@@ -33,7 +34,8 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
             $collection->push((object)[
                 'is_total_row' => true,
                 'total_amount' => $totalAmount,
-                'total_voucher' => $totalVoucherDiscount
+                'total_voucher' => $totalVoucherDiscount,
+                'total_points_discount' => $totalPointsDiscount,
             ]);
         }
 
@@ -60,9 +62,11 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
             'Booking Status',
             'Amount (₱)',
             'Ref # (Payment)',
+            'Pass. Discount Type',
             'Voucher Code',
             'Voucher Discount (₱)',
             'Gracia Points Used',
+            'Points Discount (₱)',
         ];
     }
 
@@ -74,9 +78,11 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
                 'TOTAL AMOUNT',
                 number_format($booking->total_amount, 2),
                 '',
+                '',
                 'TOTAL VOUCHER DISCOUNT',
                 number_format($booking->total_voucher, 2),
-                ''
+                'TOTAL POINTS DISCOUNT',
+                number_format($booking->total_points_discount, 2),
             ];
         }
 
@@ -85,6 +91,12 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
         if (in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount > 0) {
             $statusStr = 'Refunded';
         }
+
+        $discountTypes = $booking->passengers->filter(function($p) {
+            return $p->discount_id !== null && $p->discount;
+        })->map(function($p) {
+            return $p->discount->name;
+        })->unique()->implode(', ');
 
         return [
             $booking->transaction_number,
@@ -99,9 +111,11 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
             $statusStr,
             number_format($booking->total_price, 2),
             $booking->transaction?->payment_reference ?? '-',
+            filled($discountTypes) ? $discountTypes : '-',
             filled($booking->voucher_code) ? $booking->voucher_code : '-',
             $booking->voucher_discount_amount > 0 ? number_format($booking->voucher_discount_amount, 2) : '-',
             $booking->points_used > 0 ? number_format($booking->points_used) . ' pts' : '-',
+            $booking->points_discount > 0 ? number_format($booking->points_discount, 2) : '-',
         ];
     }
 
@@ -120,9 +134,11 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
             'J' => 20, // Booking Status
             'K' => 15, // Amount
             'L' => 15, // Ref #
-            'M' => 15, // Voucher Code
-            'N' => 20, // Voucher Discount
-            'O' => 20, // Gracia Points
+            'M' => 20, // Pass. Discount Type
+            'N' => 15, // Voucher Code
+            'O' => 20, // Voucher Discount
+            'P' => 20, // Gracia Points
+            'Q' => 20, // Points Discount (₱)
         ];
     }
 

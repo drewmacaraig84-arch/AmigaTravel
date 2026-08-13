@@ -401,40 +401,104 @@
                                 </button>
                             </div>
 
-                            <div class="grid gap-4 grid-cols-1 sm:grid-cols-2">
-                                <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm" data-error="adults">
-                                    <div class="flex items-center justify-between gap-4">
-                                        <div>
-                                            <p class="text-slate-900 font-semibold">Adults</p>
-                                            <p class="mt-1 text-sm text-slate-500">Age 11 and above</p>
+                            @if($mode === 'airline')
+                                <div class="grid gap-4 grid-cols-1 sm:grid-cols-2">
+                                    <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm" data-error="adults">
+                                        <div class="flex items-center justify-between gap-4">
+                                            <div>
+                                                <p class="text-slate-900 font-semibold">Adults</p>
+                                                <p class="mt-1 text-sm text-slate-500">Age 11 and above</p>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <button type="button" wire:click.prevent="decrementAdults" @if($adults <= 1) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14"/></svg></button>
+                                                <span class="min-w-[3rem] text-center text-lg font-semibold text-slate-900">{{ $adults }}</span>
+                                                <button type="button" wire:click.prevent="incrementAdults" @if($adults + $children + ($mode === 'airline' ? $minors + $infants : 0) >= 8) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400">+</button>
+                                            </div>
                                         </div>
-                                        <div class="flex items-center gap-2">
-                                            <button type="button" wire:click.prevent="decrementAdults" @if($adults <= 1) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14"/></svg></button>
-                                            <span class="min-w-[3rem] text-center text-lg font-semibold text-slate-900">{{ $adults }}</span>
-                                            <button type="button" wire:click.prevent="incrementAdults" @if($adults + $children >= 8) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400">+</button>
-                                        </div>
+                                        @error('adults')<p class="mt-3 text-sm text-rose-600">{{ $message }}</p>@enderror
                                     </div>
-                                    @error('adults')<p class="mt-3 text-sm text-rose-600">{{ $message }}</p>@enderror
-                                </div>
 
-                                <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm" data-error="children">
-                                    <div class="flex items-center justify-between gap-4">
-                                        <div>
-                                            <p class="text-slate-900 font-semibold">Minor</p>
-                                            <p class="mt-1 text-sm text-slate-500">Age 2 to 11</p>
+                                    <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm" data-error="minors">
+                                        <div class="flex items-center justify-between gap-4">
+                                            <div>
+                                                <p class="text-slate-900 font-semibold">Minor</p>
+                                                <p class="mt-1 text-sm text-slate-500">Age 7 to 11</p>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <button type="button" wire:click.prevent="decrementMinors" @if($minors <= 0) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14"/></svg></button>
+                                                <span class="min-w-[3rem] text-center text-lg font-semibold text-slate-900">{{ $minors }}</span>
+                                                <button type="button" wire:click.prevent="incrementMinors" @if($adults + $children + ($mode === 'airline' ? $minors + $infants : 0) >= 8) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400">+</button>
+                                            </div>
                                         </div>
-                                        <div class="flex items-center gap-2">
-                                            <button type="button" wire:click.prevent="decrementChildren" @if($children <= 0) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14"/></svg></button>
-                                            <span class="min-w-[3rem] text-center text-lg font-semibold text-slate-900">{{ $children }}</span>
-                                            <button type="button" wire:click.prevent="incrementChildren" @if($adults + $children >= 8) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400">+</button>
-                                        </div>
+                                        @error('minors')<p class="mt-3 text-sm text-rose-600">{{ $message }}</p>@enderror
                                     </div>
-                                    @error('children')<p class="mt-3 text-sm text-rose-600">{{ $message }}</p>@enderror
+
+                                    <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm" data-error="children">
+                                        <div class="flex items-center justify-between gap-4">
+                                            <div>
+                                                <p class="text-slate-900 font-semibold">Child</p>
+                                                <p class="mt-1 text-sm text-slate-500">Age 2 to 6</p>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <button type="button" wire:click.prevent="decrementChildren" @if($children <= 0) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14"/></svg></button>
+                                                <span class="min-w-[3rem] text-center text-lg font-semibold text-slate-900">{{ $children }}</span>
+                                                <button type="button" wire:click.prevent="incrementChildren" @if($adults + $children + ($mode === 'airline' ? $minors + $infants : 0) >= 8) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400">+</button>
+                                            </div>
+                                        </div>
+                                        @error('children')<p class="mt-3 text-sm text-rose-600">{{ $message }}</p>@enderror
+                                    </div>
+
+                                    <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm" data-error="infants">
+                                        <div class="flex items-center justify-between gap-4">
+                                            <div>
+                                                <p class="text-slate-900 font-semibold">Infants</p>
+                                                <p class="mt-1 text-sm text-slate-500">0 to 23 months</p>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <button type="button" wire:click.prevent="decrementInfants" @if($infants <= 0) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14"/></svg></button>
+                                                <span class="min-w-[3rem] text-center text-lg font-semibold text-slate-900">{{ $infants }}</span>
+                                                <button type="button" wire:click.prevent="incrementInfants" @if($infants >= $adults || $adults + $children + ($mode === 'airline' ? $minors + $infants : 0) >= 8) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400">+</button>
+                                            </div>
+                                        </div>
+                                        @error('infants')<p class="mt-3 text-sm text-rose-600">{{ $message }}</p>@enderror
+                                    </div>
                                 </div>
-                            </div>
+                            @else
+                                <div class="grid gap-4 grid-cols-1 sm:grid-cols-2">
+                                    <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm" data-error="adults">
+                                        <div class="flex items-center justify-between gap-4">
+                                            <div>
+                                                <p class="text-slate-900 font-semibold">Adults</p>
+                                                <p class="mt-1 text-sm text-slate-500">Age 11 and above</p>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <button type="button" wire:click.prevent="decrementAdults" @if($adults <= 1) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14"/></svg></button>
+                                                <span class="min-w-[3rem] text-center text-lg font-semibold text-slate-900">{{ $adults }}</span>
+                                                <button type="button" wire:click.prevent="incrementAdults" @if($adults + $children + ($mode === 'airline' ? $minors + $infants : 0) >= 8) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400">+</button>
+                                            </div>
+                                        </div>
+                                        @error('adults')<p class="mt-3 text-sm text-rose-600">{{ $message }}</p>@enderror
+                                    </div>
+
+                                    <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm" data-error="children">
+                                        <div class="flex items-center justify-between gap-4">
+                                            <div>
+                                                <p class="text-slate-900 font-semibold">Minor</p>
+                                                <p class="mt-1 text-sm text-slate-500">Age 2 to 11</p>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <button type="button" wire:click.prevent="decrementChildren" @if($children <= 0) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14"/></svg></button>
+                                                <span class="min-w-[3rem] text-center text-lg font-semibold text-slate-900">{{ $children }}</span>
+                                                <button type="button" wire:click.prevent="incrementChildren" @if($adults + $children + ($mode === 'airline' ? $minors + $infants : 0) >= 8) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400">+</button>
+                                            </div>
+                                        </div>
+                                        @error('children')<p class="mt-3 text-sm text-rose-600">{{ $message }}</p>@enderror
+                                    </div>
+                                </div>
+                            @endif
 
                             <div class="rounded-xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-700">
-                                Total travelers: <span class="font-bold text-slate-900">{{ $adults + $children }}</span> / 8
+                                Total travelers: <span class="font-bold text-slate-900">{{ $adults + $children + ($mode === 'airline' ? $minors + $infants : 0) }}</span> / 8 
                             </div>
 
                             @if($mode === 'ferry' && stripos($operator ?? '', 'Starlite') !== false)
@@ -581,7 +645,7 @@
                                 </div>
                             @endif
 
-                            @if ($showMinorAgeWarning)
+                            @if ($showMinorAgeWarning && $mode !== 'airline')
                                 <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
                                     <div class="relative w-full max-w-md overflow-hidden rounded-2xl bg-white p-6 shadow-2xl">
                                         <button type="button" wire:click.prevent="closeMinorAgeWarning" class="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-600 transition hover:bg-slate-100">
@@ -1051,7 +1115,7 @@
                             <p class="text-black font-bold">Each traveler can have their own discount, if eligible. Name is required, discount is optional.</p>
 
                             @php
-                                $typeLabels = ['adult' => 'Adult', 'child' => 'Child', 'driver' => 'Driver'];
+                                $typeLabels = ['adult' => 'Adult', 'child' => 'Child', 'minor' => 'Minor', 'infant' => 'Infant', 'driver' => 'Driver'];
                                 $countByType = [];
                                 $availableDiscounts = $discounts->reject(function ($discount) {
                                     return str_contains(strtolower($discount->name), 'infant');
@@ -1284,7 +1348,7 @@
                                 <div class="space-y-3">
                                     <p class="text-slate-700 text-sm"><span class="font-bold text-slate-900">Route:</span> {{ $origin }} &rarr; {{ $destination }}</p>
                                     <p class="text-slate-700 text-sm"><span class="font-bold text-slate-900">Dates:</span> {{ $departure_date }}{{ $return_date ? ' &rarr; ' . $return_date : '' }}</p>
-                                    <p class="text-slate-700 text-sm"><span class="font-bold text-slate-900">Passengers:</span> {{ $adults }} adults, {{ $children }} children</p>
+                                    <p class="text-slate-700 text-sm"><span class="font-bold text-slate-900">Passengers:</span> {{ $adults }} adult{{ $adults !== 1 ? 's' : '' }}@if($mode === 'airline'){{ $minors > 0 ? ', ' . $minors . ' minor' . ($minors !== 1 ? 's' : '') : '' }}@endif{{ $children > 0 ? ', ' . $children . ' child' . ($children !== 1 ? 'ren' : '') : '' }}@if($mode === 'airline'){{ $infants > 0 ? ', ' . $infants . ' infant' . ($infants !== 1 ? 's' : '') : '' }}@endif</p>
                                     @if ($selected_transport_class_id && isset($selectedClass))
                                         <p class="text-slate-700 text-sm"><span class="font-bold text-slate-900">Travel Class:</span> {{ $selectedClass['name'] }}</p>
                                     @endif
@@ -1498,14 +1562,14 @@
                                 {{-- Tickets --}}
                                 @if ($breakdown['departure_ticket'] > 0)
                                     <div class="flex justify-between items-center rounded-lg bg-white p-4 border border-slate-200">
-                                        <span class="text-slate-700 font-medium">Departure Ticket & Class ({{ $adults }} adult{{ $adults !== 1 ? 's' : '' }}{{ $children > 0 ? ', ' . $children . ' child' . ($children !== 1 ? 'ren' : '') : '' }})</span>
+                                        <span class="text-slate-700 font-medium">Departure Ticket & Class ({{ $adults }} adult{{ $adults !== 1 ? 's' : '' }}@if($mode === 'airline'){{ $minors > 0 ? ', ' . $minors . ' minor' . ($minors !== 1 ? 's' : '') : '' }}@endif{{ $children > 0 ? ', ' . $children . ' child' . ($children !== 1 ? 'ren' : '') : '' }}@if($mode === 'airline'){{ $infants > 0 ? ', ' . $infants . ' infant' . ($infants !== 1 ? 's' : '') : '' }}@endif)</span>
                                         <span class="text-slate-900 font-bold">&#8369;{{ number_format($breakdown['departure_ticket'], 2) }}</span>
                                     </div>
                                 @endif
 
                                 @if ($trip_type === 'round_trip' && $breakdown['return_ticket'] > 0)
                                     <div class="flex justify-between items-center rounded-lg bg-white p-4 border border-slate-200">
-                                        <span class="text-slate-700 font-medium">Return Ticket & Class ({{ $adults }} adult{{ $adults !== 1 ? 's' : '' }}{{ $children > 0 ? ', ' . $children . ' child' . ($children !== 1 ? 'ren' : '') : '' }})</span>
+                                        <span class="text-slate-700 font-medium">Return Ticket & Class ({{ $adults }} adult{{ $adults !== 1 ? 's' : '' }}@if($mode === 'airline'){{ $minors > 0 ? ', ' . $minors . ' minor' . ($minors !== 1 ? 's' : '') : '' }}@endif{{ $children > 0 ? ', ' . $children . ' child' . ($children !== 1 ? 'ren' : '') : '' }}@if($mode === 'airline'){{ $infants > 0 ? ', ' . $infants . ' infant' . ($infants !== 1 ? 's' : '') : '' }}@endif)</span>
                                         <span class="text-slate-900 font-bold">&#8369;{{ number_format($breakdown['return_ticket'], 2) }}</span>
                                     </div>
                                 @endif
@@ -1751,7 +1815,7 @@
 
                 <div class="flex gap-3 px-6 py-4 bg-slate-50 border-t border-slate-200">
                     <button type="button" wire:click="changeSelection" class="flex-1 px-4 py-2.5 rounded-lg border border-slate-300 text-slate-700 font-semibold hover:bg-slate-100 transition">
-                        Change Selection
+                        Cancel
                     </button>
                     <button type="button" wire:click="confirmOperatorSelection" class="flex-1 px-4 py-2.5 rounded-lg bg-[#db2777] text-white font-semibold hover:bg-pink-700 transition">
                         Confirm
@@ -1766,17 +1830,173 @@
         @php
             $operatorLabel = !empty($operator) ? $operator : 'the selected operator';
         @endphp
-        <div x-data="{ accepted: @entangle('hasAcceptedTerms'), isSubmitting: @entangle('isSubmittingBooking'), scrolledToBottom: false }" x-init="initBookingModal($el); $nextTick(() => { const el = $refs.content; if (el) { this.scrolledToBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 24; } })" class="fixed inset-x-0 top-20 bottom-0 z-[100] flex items-center justify-center px-4 pb-4 pt-6 bg-slate-900/60 backdrop-blur-sm">
+        <div x-data="{ accepted: @entangle('hasAcceptedTerms'), isSubmitting: @entangle('isSubmittingBooking'), scrolledToBottom: false }" x-init="initBookingModal($el); $nextTick(() => { const el = $refs.content; if (el) { this.scrolledToBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 150; } })" class="fixed inset-x-0 top-20 bottom-0 z-[100] flex items-center justify-center px-4 pb-4 pt-6 bg-slate-900/60 backdrop-blur-sm">
             <div class="w-full max-w-2xl max-h-[calc(100vh-5rem)] overflow-hidden bg-white rounded-2xl shadow-2xl flex flex-col">
                 <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-                    <h2 class="text-xl font-bold text-slate-900">{{ $operatorLabel }} Terms and Conditions</h2>
+                    <h2 class="text-xl font-bold text-slate-900">Amiga Gracia Terms and Agreement</h2>
                 </div>
                 
-                <div x-ref="content" x-on:scroll.throttle.100ms="scrolledToBottom = $event.target.scrollTop + $event.target.clientHeight >= $event.target.scrollHeight - 24" class="flex-1 overflow-y-auto px-6 py-4">
+                <div x-ref="content" x-on:scroll.passive="scrolledToBottom = scrolledToBottom || $event.target.scrollTop + $event.target.clientHeight >= $event.target.scrollHeight - 150" class="flex-1 overflow-y-auto px-6 py-4">
                     <p class="text-sm text-slate-700 mb-6">
-                        Please go through these Terms and Conditions carefully. Your acceptance is required before continuing with your booking.
+                        Please go through these Terms and Agreement carefully. Your acceptance is required before continuing with your booking.
                     </p>
                     
+                    @if($mode === 'airline')
+                    <div class="space-y-6 text-sm text-slate-700">
+                        <p class="font-semibold text-slate-900">AMIGA GRACIA TRAVEL SERVICES<br>Airline Ticket Booking Guidelines</p>
+                        <p>Thank you for choosing Amiga Gracia Travel Services. To ensure a smooth and hassle-free booking experience, please read and understand the following guidelines before confirming your airline reservation.</p>
+                        
+                        <!-- Passenger Information -->
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900 mb-2">1. Passenger Information</h3>
+                            <ul class="list-disc pl-5 space-y-1">
+                                <li>The passenger's full name must exactly match the name on the passport or valid government-issued ID.</li>
+                                <li>Amiga Gracia Travel Services will not be responsible for any costs resulting from incorrect or incomplete passenger information provided by the client.</li>
+                                <li>Date of birth, nationality, passport details, and contact information must be accurate and complete.</li>
+                            </ul>
+                        </div>
+                        
+                        <!-- Fare Availability -->
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900 mb-2">2. Fare Availability</h3>
+                            <ul class="list-disc pl-5 space-y-1">
+                                <li>Airline fares are dynamic and may change without prior notice until the ticket is issued.</li>
+                                <li>Quoted fares are subject to seat availability and airline confirmation.</li>
+                                <li>A reservation is not guaranteed until full payment has been received and the ticket has been issued.</li>
+                            </ul>
+                        </div>
+
+                        <!-- Payment Policy -->
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900 mb-2">3. Payment Policy</h3>
+                            <ul class="list-disc pl-5 space-y-1">
+                                <li>Full payment is required before ticket issuance unless otherwise agreed in writing.</li>
+                                <li>Payment confirmation does not automatically guarantee the booking until verified by our office.</li>
+                                <li>Tickets will only be issued after payment has been successfully received and confirmed.</li>
+                            </ul>
+                        </div>
+
+                        <!-- Ticket Issuance -->
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900 mb-2">4. Ticket Issuance</h3>
+                            <ul class="list-disc pl-5 space-y-1">
+                                <li>Once payment is confirmed, the electronic ticket (E-ticket) and itinerary receipt will be sent to the passenger via the registered email address or preferred messaging platform.</li>
+                                <li>Passengers are advised to review their itinerary immediately and report any discrepancies within 24 hours of receipt.</li>
+                            </ul>
+                        </div>
+
+                        <!-- Changes and Corrections -->
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900 mb-2">5. Changes and Corrections</h3>
+                            <ul class="list-disc pl-5 space-y-1">
+                                <li>Name changes or corrections are subject to the airline's policies and may not be permitted.</li>
+                                <li>Flight date, time, or route changes are subject to fare conditions, airline approval, seat availability, and applicable penalties.</li>
+                                <li>Any additional fare difference and airline-imposed fees shall be borne by the passenger.</li>
+                            </ul>
+                        </div>
+
+                        <!-- Cancellation and Refunds -->
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900 mb-2">6. Cancellation and Refunds</h3>
+                            <ul class="list-disc pl-5 space-y-1">
+                                <li>Cancellation and refund requests are subject to the airline's fare rules and conditions.</li>
+                                <li>Promotional or discounted tickets may be non-refundable, non-reroutable, or non-rebookable.</li>
+                                <li>Processing time for approved refunds depends solely on the airline and may take several weeks or months.</li>
+                                <li>Service fees charged by Amiga Gracia Travel Services are non-refundable unless otherwise stated.</li>
+                            </ul>
+                        </div>
+
+                        <!-- Travel Documents -->
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900 mb-2">7. Travel Documents</h3>
+                            <p class="mb-2">Passengers are responsible for ensuring they possess all required travel documents, including:</p>
+                            <ul class="list-disc pl-5 space-y-1 mb-2">
+                                <li>Valid passport (with the required validity for the destination)</li>
+                                <li>Appropriate visa(s), if applicable</li>
+                                <li>Government-issued identification</li>
+                                <li>Health, vaccination, or other entry requirements imposed by the destination country</li>
+                            </ul>
+                            <p>Amiga Gracia Travel Services is not liable for denied boarding or entry due to incomplete, expired, or invalid travel documents.</p>
+                        </div>
+
+                        <!-- Baggage Policy -->
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900 mb-2">8. Baggage Policy</h3>
+                            <ul class="list-disc pl-5 space-y-1">
+                                <li>Baggage allowances vary by airline, route, and fare class.</li>
+                                <li>Additional baggage purchased after ticket issuance may be subject to different rates.</li>
+                                <li>Passengers are encouraged to verify baggage allowances before travel.</li>
+                            </ul>
+                        </div>
+
+                        <!-- Check-in Requirements -->
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900 mb-2">9. Check-in Requirements</h3>
+                            <ul class="list-disc pl-5 space-y-1">
+                                <li>Domestic flights: Arrive at the airport at least 2 hours before departure.</li>
+                                <li>International flights: Arrive at least 3 hours before departure.</li>
+                                <li>Passengers should complete online check-in whenever available.</li>
+                            </ul>
+                        </div>
+
+                        <!-- Flight Schedule Changes -->
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900 mb-2">10. Flight Schedule Changes</h3>
+                            <ul class="list-disc pl-5 space-y-1">
+                                <li>Airlines may change flight schedules without prior notice.</li>
+                                <li>Amiga Gracia Travel Services will notify passengers of any airline advisories received; however, passengers are also encouraged to monitor their flight status directly with the airline before departure.</li>
+                            </ul>
+                        </div>
+
+                        <!-- No-Show Policy -->
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900 mb-2">11. No-Show Policy</h3>
+                            <ul class="list-disc pl-5 space-y-1">
+                                <li>Failure to check in or board the scheduled flight may result in cancellation of the remaining itinerary, depending on the airline's policy.</li>
+                                <li>No-show penalties are determined solely by the airline.</li>
+                            </ul>
+                        </div>
+
+                        <!-- Special Requests -->
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900 mb-2">12. Special Requests</h3>
+                            <p class="mb-2">Requests such as:</p>
+                            <ul class="list-disc pl-5 space-y-1 mb-2">
+                                <li>Special meals</li>
+                                <li>Wheelchair assistance</li>
+                                <li>Bassinet requests</li>
+                                <li>Unaccompanied minor services</li>
+                                <li>Seat preferences</li>
+                                <li>Medical assistance</li>
+                            </ul>
+                            <p>are subject to airline approval and availability and cannot be guaranteed.</p>
+                        </div>
+
+                        <!-- Force Majeure -->
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900 mb-2">13. Force Majeure</h3>
+                            <p>Amiga Gracia Travel Services shall not be held liable for flight disruptions, cancellations, delays, missed connections, or additional expenses resulting from events beyond our control, including but not limited to adverse weather conditions, natural disasters, government regulations, airport closures, labor strikes, pandemics, security concerns, or airline operational decisions.</p>
+                        </div>
+
+                        <!-- Client Responsibility -->
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900 mb-2">14. Client Responsibility</h3>
+                            <p class="mb-2">By confirming your booking, you acknowledge that:</p>
+                            <ul class="list-disc pl-5 space-y-1">
+                                <li>All information provided is accurate.</li>
+                                <li>You have reviewed and accepted the airline's fare rules and conditions.</li>
+                                <li>You understand the applicable cancellation, refund, and rebooking policies.</li>
+                                <li>You agree to comply with all airline, airport, immigration, customs, and health regulations.</li>
+                            </ul>
+                        </div>
+
+                        <!-- Client Acknowledgment -->
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900 mb-2">Client Acknowledgment</h3>
+                            <p>I certify that I have read, understood, and agreed to the Airline Ticket Booking Guidelines of Amiga Gracia Travel Services. I acknowledge that airline fares, schedules, baggage allowances, and booking conditions are governed by the respective airline's policies and that I accept the applicable terms and conditions.</p>
+                        </div>
+                    </div>
+                    @else
                     <div class="space-y-6 text-sm text-slate-700">
                         <!-- Boarding Requirements -->
                         <div>
@@ -1871,12 +2091,13 @@
                             <p class="text-sm text-slate-700 font-medium">These terms may be updated by Amiga Gracia Travel Services. Please review the current version before each booking.</p>
                         </div>
                     </div>
+                    @endif
                 </div>
                 
                 <div class="flex flex-col gap-3 px-6 py-4 border-t border-slate-200">
                     <label class="flex items-start gap-3">
                         <input type="checkbox" x-model="accepted" :disabled="!scrolledToBottom" id="acceptTerms" class="mt-0.5 h-4 w-4 text-[#db2777] border-slate-300 focus:ring-[#db2777] disabled:cursor-not-allowed disabled:opacity-50">
-                        <span class="text-sm text-slate-700">I have read and agree to the {{ $operatorLabel }} Terms and Conditions.</span>
+                        <span class="text-sm text-slate-700">I have read and agree to the Amiga Gracia Terms and Agreement.</span>
                     </label>
                     <p class="text-xs text-slate-500" x-show="!scrolledToBottom">Scroll to the end of the document to enable acceptance.</p>
                     <p class="text-xs text-emerald-600" x-show="scrolledToBottom">You have reached the end of the document. You may now accept.</p>
@@ -1908,13 +2129,13 @@
     @endif
 
     @if ($showPrivacyModal)
-        <div x-data="{ accepted: @entangle('hasAcceptedPrivacy'), isSubmitting: @entangle('isSubmittingBooking'), scrolledToBottom: false }" x-init="initBookingModal($el); $nextTick(() => { const el = $refs.content; if (el) { this.scrolledToBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 24; } })" class="fixed inset-x-0 top-20 bottom-0 z-[100] flex items-center justify-center px-4 pb-4 pt-6 bg-slate-900/60 backdrop-blur-sm">
+        <div x-data="{ accepted: @entangle('hasAcceptedPrivacy'), isSubmitting: @entangle('isSubmittingBooking'), scrolledToBottom: false }" x-init="initBookingModal($el); $nextTick(() => { const el = $refs.content; if (el) { this.scrolledToBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 150; } })" class="fixed inset-x-0 top-20 bottom-0 z-[100] flex items-center justify-center px-4 pb-4 pt-6 bg-slate-900/60 backdrop-blur-sm">
             <div class="w-full max-w-2xl max-h-[calc(100vh-5rem)] overflow-hidden bg-white rounded-2xl shadow-2xl flex flex-col">
                 <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
                     <h2 class="text-xl font-bold text-slate-900">Amiga Gracia Travel Services Data Privacy Policy</h2>
                 </div>
 
-                <div x-ref="content" x-on:scroll.throttle.100ms="scrolledToBottom = $event.target.scrollTop + $event.target.clientHeight >= $event.target.scrollHeight - 24" class="flex-1 overflow-y-auto px-6 py-4">
+                <div x-ref="content" x-on:scroll.passive="scrolledToBottom = scrolledToBottom || $event.target.scrollTop + $event.target.clientHeight >= $event.target.scrollHeight - 150" class="flex-1 overflow-y-auto px-6 py-4">
                     <p class="text-sm text-slate-700 mb-6">
                         Please review how Amiga Gracia Travel Services collects, stores, and protects your personal data before continuing with your booking.
                     </p>
