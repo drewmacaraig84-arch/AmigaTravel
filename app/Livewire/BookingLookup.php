@@ -446,7 +446,7 @@ class BookingLookup extends Component
         $this->rebooking_departure_date = $this->booking->departure_date?->format('Y-m-d');
         $this->rebooking_return_date = $this->booking->return_date?->format('Y-m-d');
         $this->rebooking_step = 'departure_date';
-        $this->feedback = "Please select your new travel dates, preferred schedule, and accommodation below.";
+        $this->feedback = "Please select your new travel dates, preferred schedule, and accommodation below. Kindly note that you may only choose an accommodation or transport class that is equal to or higher in value than your original booking; downgrades are not permitted.";
     }
 
     public function setRebookingStep(string $step): void
