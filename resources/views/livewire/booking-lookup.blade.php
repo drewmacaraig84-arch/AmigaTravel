@@ -603,6 +603,7 @@
                                                             <div class="grid gap-3 sm:grid-cols-2">
                                                                 @foreach($depSchedules as $sch)
                                                                     <div 
+                                                                        wire:key="dep-sch-{{ $sch->id }}"
                                                                         wire:click="selectRebookingDepartureSchedule({{ $sch->id }}, {{ $booking->getMode() === 'airline' ? 0 : $sch->price }})"
                                                                         class="cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-blue-500 hover:bg-blue-50/40 transition flex flex-col justify-between"
                                                                     >
@@ -649,7 +650,7 @@
                                                     <div class="grid gap-3 sm:grid-cols-2">
                                                         @foreach($depAccommodations as $acc)
                                                             @if($acc->disabled)
-                                                                <div class="rounded-xl border border-slate-100 bg-slate-50 p-4 opacity-50 cursor-not-allowed flex flex-col justify-between">
+                                                                <div wire:key="dep-acc-{{ $acc->id }}" class="rounded-xl border border-slate-100 bg-slate-50 p-4 opacity-50 cursor-not-allowed flex flex-col justify-between">
                                                                     <div>
                                                                         <div class="flex items-center justify-between mb-1">
                                                                             <span class="text-sm font-bold text-slate-500">{{ $acc->name }}</span>
@@ -666,6 +667,7 @@
                                                                 </div>
                                                             @else
                                                                 <div
+                                                                    wire:key="dep-acc-{{ $acc->id }}"
                                                                     wire:click="selectRebookingDepartureAccommodation('{{ $acc->id }}', {{ $acc->price }})"
                                                                     class="cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-blue-500 hover:bg-blue-50/40 transition flex flex-col justify-between"
                                                                 >
@@ -718,6 +720,7 @@
                                                             <div class="grid gap-3 sm:grid-cols-2">
                                                                 @foreach($retSchedules as $sch)
                                                                     <div 
+                                                                        wire:key="ret-sch-{{ $sch->id }}"
                                                                         wire:click="selectRebookingReturnSchedule({{ $sch->id }}, {{ $booking->getMode() === 'airline' ? 0 : $sch->price }})"
                                                                         class="cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-blue-500 hover:bg-blue-50/40 transition flex flex-col justify-between"
                                                                     >
@@ -758,7 +761,7 @@
                                                     <div class="grid gap-3 sm:grid-cols-2">
                                                         @foreach($retAccommodations as $acc)
                                                             @if($acc->disabled)
-                                                                <div class="rounded-xl border border-slate-100 bg-slate-50 p-4 opacity-50 cursor-not-allowed flex flex-col justify-between">
+                                                                <div wire:key="ret-acc-{{ $acc->id }}" class="rounded-xl border border-slate-100 bg-slate-50 p-4 opacity-50 cursor-not-allowed flex flex-col justify-between">
                                                                     <div>
                                                                         <div class="flex items-center justify-between mb-1">
                                                                             <span class="text-sm font-bold text-slate-500">{{ $acc->name }}</span>
@@ -775,6 +778,7 @@
                                                                 </div>
                                                             @else
                                                                 <div
+                                                                    wire:key="ret-acc-{{ $acc->id }}"
                                                                     wire:click="selectRebookingReturnAccommodation('{{ $acc->id }}', {{ $acc->price }})"
                                                                     class="cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-blue-500 hover:bg-blue-50/40 transition flex flex-col justify-between"
                                                                 >
@@ -842,12 +846,18 @@
                                                                 $paxCount = $booking->passengers()->count() ?: 1;
                                                                 $booking->loadMissing('transportClasses');
                                                                 $_tcs       = $booking->transportClasses->values();
-                                                                $origDep    = (float)($booking->schedule_price ?? 0)
-                                                                            + (float)(optional($_tcs->get(0))->pivot?->price ?? 0)
-                                                                            + (float)($booking->schedule_accommodation_price ?? 0);
-                                                                $origRet    = (float)($booking->return_schedule_price ?? 0)
-                                                                            + (float)(optional($_tcs->get(1))->pivot?->price ?? 0)
-                                                                            + (float)($booking->return_schedule_accommodation_price ?? 0);
+                                                                
+                                                                $mode = $booking->getMode();
+                                                                $origDepTCPerPax = (float)optional($_tcs->get(0))->pivot?->price;
+                                                                $accPrice = (float)($booking->schedule_accommodation_price ?? 0);
+                                                                $classPrice = ($mode === 'airline') ? $origDepTCPerPax : ($accPrice > 0 ? $accPrice : $origDepTCPerPax);
+                                                                $origDep = (float)($booking->schedule_price ?? 0) + $classPrice;
+
+                                                                $origRetTCPerPax = (float)optional($_tcs->get(1))->pivot?->price;
+                                                                $retAccPrice = (float)($booking->return_schedule_accommodation_price ?? 0);
+                                                                $retClassPrice = ($mode === 'airline') ? $origRetTCPerPax : ($retAccPrice > 0 ? $retAccPrice : $origRetTCPerPax);
+                                                                $origRet = (float)($booking->return_schedule_price ?? 0) + $retClassPrice;
+                                                                
                                                                 $displayOrigFare = ($origDep + $origRet) * $paxCount;
                                                             @endphp
                                                             <span class="font-medium">₱{{ number_format($displayOrigFare, 2) }}</span>
