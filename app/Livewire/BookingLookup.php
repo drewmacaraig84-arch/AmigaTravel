@@ -723,7 +723,7 @@ class BookingLookup extends Component
         return $items;
     }
 
-    public function computeRebookingTotals(): void
+    public function calculateRebookingPriceDiff(): void
     {
         try {
             $passengerCount = max(1, $this->booking->passengers()->count());
