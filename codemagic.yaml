@@ -1,0 +1,53 @@
+workflows:
+  ios-release:
+    name: iOS Release
+    # You must use a macOS instance to build an iOS app (mac_mini_m1, mac_mini_m2, or mac_pro)
+    instance_type: mac_mini_m1
+    
+    # Since your Flutter project is inside the 'flutter_app' folder instead of the repository root, 
+    # we need to specify the working directory.
+    working_directory: flutter_app
+    
+    environment:
+      flutter: default
+      xcode: latest
+      cocoapods: default
+      # You need to set up App Store Connect integration in Codemagic UI (Team Settings > Integrations)
+      # and configure the automatic code signing.
+    
+    scripts:
+      - name: Get Flutter packages
+        script: |
+          flutter packages pub get
+          
+      - name: Install CocoaPods dependencies
+        script: |
+          find . -name "Podfile" -execdir pod install \;
+          
+      - name: Set up code signing settings on macOS builder
+        script: |
+          # The integration handles fetching certificates and provisioning profiles
+          keychain initialize
+          
+          # IMPORTANT: Replace "com.yourdomain.yourapp" with your actual iOS Bundle Identifier
+          app-store-connect fetch-signing-files "com.amigatravel.app" --type IOS_APP_STORE --create
+          
+          keychain add-certificates
+          xcode-project use-profiles
+          
+      - name: Build Flutter IPA
+        script: |
+          # This command builds the IPA file
+          flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
+          
+    artifacts:
+      # This tells Codemagic where to find the generated IPA file so you can download it
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      
+    publishing:
+      # Optional: Automatically upload to App Store Connect / TestFlight
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: false
+        submit_to_app_store: false
