@@ -723,12 +723,6 @@ class BookingLookup extends Component
         return $items;
     }
 
-    public function calculateRebookingPriceDiff(): void
-    {
-        if (!$this->booking) return;
-
-        $passengerCount = $this->booking->passengers()->count() ?: 1;
-        $mode = $this->booking->getMode();
     public function computeRebookingTotals(): void
     {
         try {
