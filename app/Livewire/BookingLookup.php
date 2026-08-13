@@ -349,7 +349,7 @@ class BookingLookup extends Component
             ]);
         }
 
-        $this->feedback = "Your booking has been cancelled successfully. Cancellation fee: ₱" . number_format($cancellationFee, 2) . ", Refund amount: ₱" . number_format($refundAmount, 2) . ". A confirmation email has been sent.";
+        $this->feedback = "Your booking has been refunded successfully. Cancellation fee: ₱" . number_format($cancellationFee, 2) . ", Refundable amount: ₱" . number_format($refundAmount, 2) . ". A confirmation email has been sent.";
         $this->resetCancellationState();
     }
 

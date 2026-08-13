@@ -224,7 +224,7 @@
                                         </span>
                                     @endif
                                     <span class="rounded-full px-4 py-1.5 text-sm font-semibold" @style(['background' => $statusStyle['bg'], 'color' => $statusStyle['text']])>
-                                        {{ $booking->status === 'operator_cancelled' ? 'Cancelled by Operator' : ucfirst($booking->status) }}
+                                        {{ $booking->status === 'operator_cancelled' ? 'Cancelled by Operator' : ($booking->status === 'cancelled' ? 'Refunded' : ucfirst($booking->status)) }}
                                         @if($booking->rebooking_status === 'pending')
                                             (Rebooking Pending)
                                         @endif
@@ -515,7 +515,7 @@
                                         @endif
 
                                         <div class="mt-4 flex flex-wrap gap-3">
-                                            <button wire:click.prevent="confirmCancellation" type="button" class="inline-flex items-center justify-center rounded-3xl px-6 py-3 text-sm font-semibold text-white shadow-sm transition" style="background:#ee018d;" onmouseover="this.style.background='#c30172'" onmouseout="this.style.background='#ee018d'">
+                                            <button @click="alert('Your refund will be processed within 48 hours'); $wire.confirmCancellation()" type="button" class="inline-flex items-center justify-center rounded-3xl px-6 py-3 text-sm font-semibold text-white shadow-sm transition" style="background:#ee018d;" onmouseover="this.style.background='#c30172'" onmouseout="this.style.background='#ee018d'">
                                                 @if(! $cancellationExpired)
                                                     Confirm Cancellation (100% Refund)
                                                 @else
