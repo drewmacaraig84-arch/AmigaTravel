@@ -1652,12 +1652,12 @@
                             @endphp
                             <div class="flex flex-col gap-3">
                                 <button type="button" wire:click.prevent="$set('showTermsModal', true)" class="text-left w-full text-[#db2777] hover:text-[#be185d] hover:underline focus:outline-none">
-                                    <h3 class="text-lg font-bold">{{ $operatorLabel }} Terms and Conditions</h3>
+                                    <h3 class="text-lg font-bold">Amiga Gracia Terms and Condition</h3>
                                 </button>
                                 <p class="text-sm text-slate-600">Please review the full terms in the modal below. The acceptance checkbox will only become available after you reach the end of the document.</p>
 
                                 <button type="button" wire:click.prevent="$set('showPrivacyModal', true)" class="text-left w-full text-[#db2777] hover:text-[#be185d] hover:underline focus:outline-none">
-                                    <h3 class="text-lg font-bold">Amiga Gracia Travel Agency Data Privacy Policy</h3>
+                                    <h3 class="text-lg font-bold">Amiga Gracia Travel Services Data Privacy</h3>
                                 </button>
                                 <p class="text-sm text-slate-600">Please review the full privacy policy in the modal below. The acceptance checkbox will only become available after you reach the end of the document.</p>
                             </div>

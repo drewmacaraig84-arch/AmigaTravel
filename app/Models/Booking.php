@@ -472,7 +472,7 @@ class Booking extends Model
                 'base_ticket' => (float) $this->total_price,
                 'surcharge_pct' => 0,
                 'surcharge_amount' => 0,
-                'non_refundable_fees' => $totalNonRefundableFees,
+                'non_refundable_fees' => 0,
                 'web_admin_fee' => 0,
                 'transaction_fee' => 0,
                 'rebooking_surcharge' => $rebookingSurcharge,
@@ -489,7 +489,7 @@ class Booking extends Model
 
         if ($mode === 'airline' && $afterDepart) {
             return [
-                'base_ticket' => $ticketBase,
+                'base_ticket' => (float) $this->total_price,
                 // NOTE: We force surcharge to 100% here so the UI breakdown accurately reflects 
                 // that the entire ticket base is forfeited (since it is non-refundable).
                 'surcharge_pct' => 100,
@@ -506,7 +506,7 @@ class Booking extends Model
 
         if ($mode !== 'airline' && $afterDepart && ! $this->isStarlite()) {
             return [
-                'base_ticket' => $ticketBase,
+                'base_ticket' => (float) $this->total_price,
                 // NOTE: We force surcharge to 100% here so the UI breakdown accurately reflects 
                 // that the entire ticket base is forfeited (since it is non-refundable).
                 'surcharge_pct' => 100,
@@ -527,7 +527,7 @@ class Booking extends Model
         $refundable = max(0, round($ticketBase - $surcharge, 2));
 
         return [
-            'base_ticket' => $ticketBase,
+            'base_ticket' => (float) $this->total_price,
             'surcharge_pct' => $surchargePct,
             'surcharge_amount' => $surcharge,
             'non_refundable_fees' => $totalNonRefundableFees,

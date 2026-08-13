@@ -552,17 +552,75 @@ class BookingLookup extends Component
     public function getAvailableRebookingDepartureSchedulesProperty()
     {
         if (!$this->booking || !$this->rebooking_departure_date) return collect();
-        return Schedule::forRouteAndDate($this->booking->origin, $this->booking->destination, $this->rebooking_departure_date)
-            ->with(['ferryRoute', 'vehicle'])
+        $schedules = Schedule::forRouteAndDate($this->booking->origin, $this->booking->destination, $this->rebooking_departure_date)
+            ->with(['ferryRoute', 'vehicle', 'scheduleAccommodations', 'transportClasses'])
             ->get();
+
+        $isAirline = $this->booking->getMode() === 'airline';
+        $this->booking->loadMissing('transportClasses');
+        $origTCPerPax = (float) optional($this->booking->transportClasses->values()->get(0))->pivot?->price;
+        $originalPerPax = (float)($this->booking->schedule_price ?? 0)
+                        + $origTCPerPax
+                        + (float)($this->booking->schedule_accommodation_price ?? 0);
+
+        return $schedules->filter(function($schedule) use ($isAirline, $originalPerPax) {
+            if ($schedule->scheduleAccommodations->isEmpty() && $schedule->transportClasses->isEmpty()) {
+                $newPerPax = (float)($schedule->price ?? 0);
+                return $newPerPax >= $originalPerPax;
+            }
+
+            foreach ($schedule->scheduleAccommodations->where('is_active', true) as $acc) {
+                $price = (float)$acc->price;
+                $newPerPax = $isAirline ? $price : (($schedule->price ?? 0) + $price);
+                if ($newPerPax >= $originalPerPax) return true;
+            }
+
+            foreach ($schedule->transportClasses->where('pivot.is_active', true) as $tc) {
+                $price = (float)$tc->pivot->additional_price;
+                $newPerPax = $isAirline ? $price : (($schedule->price ?? 0) + $price);
+                if ($newPerPax >= $originalPerPax) return true;
+            }
+
+            return false;
+        })->values();
     }
 
     public function getAvailableRebookingReturnSchedulesProperty()
     {
         if (!$this->booking || !$this->rebooking_return_date) return collect();
-        return Schedule::forRouteAndDate($this->booking->destination, $this->booking->origin, $this->rebooking_return_date)
-            ->with(['ferryRoute', 'vehicle'])
+        $schedules = Schedule::forRouteAndDate($this->booking->destination, $this->booking->origin, $this->rebooking_return_date)
+            ->with(['ferryRoute', 'vehicle', 'scheduleAccommodations', 'transportClasses'])
             ->get();
+
+        $isAirline = $this->booking->getMode() === 'airline';
+        $this->booking->loadMissing('transportClasses');
+        $origTCPerPax = (float) optional($this->booking->transportClasses->values()->get(0))->pivot?->price;
+        // Re-use original outward minimum as baseline for return ticket too, 
+        // or actually compute original return minimum:
+        $originalPerPax = (float)($this->booking->return_schedule_price ?? 0)
+                        + $origTCPerPax
+                        + (float)($this->booking->return_schedule_accommodation_price ?? 0);
+
+        return $schedules->filter(function($schedule) use ($isAirline, $originalPerPax) {
+            if ($schedule->scheduleAccommodations->isEmpty() && $schedule->transportClasses->isEmpty()) {
+                $newPerPax = (float)($schedule->price ?? 0);
+                return $newPerPax >= $originalPerPax;
+            }
+
+            foreach ($schedule->scheduleAccommodations->where('is_active', true) as $acc) {
+                $price = (float)$acc->price;
+                $newPerPax = $isAirline ? $price : (($schedule->price ?? 0) + $price);
+                if ($newPerPax >= $originalPerPax) return true;
+            }
+
+            foreach ($schedule->transportClasses->where('pivot.is_active', true) as $tc) {
+                $price = (float)$tc->pivot->additional_price;
+                $newPerPax = $isAirline ? $price : (($schedule->price ?? 0) + $price);
+                if ($newPerPax >= $originalPerPax) return true;
+            }
+
+            return false;
+        })->values();
     }
 
     public function getRebookingDepartureAccommodationsProperty()

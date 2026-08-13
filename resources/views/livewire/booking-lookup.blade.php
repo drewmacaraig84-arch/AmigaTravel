@@ -433,7 +433,7 @@
                                             @endphp
                                             <div class="mt-2 p-3 bg-white/60 rounded-xl space-y-1 text-sm text-amber-900 border border-amber-100/50">
                                                 <div class="flex justify-between">
-                                                    <span>Base Ticket Price:</span>
+                                                    <span>Total Price:</span>
                                                     <span>₱{{ number_format($refundBreakdown['base_ticket'], 2) }}</span>
                                                 </div>
                                                 <div class="flex justify-between">
