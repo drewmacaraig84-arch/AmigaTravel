@@ -644,6 +644,8 @@ class BookingLookup extends Component
         
         $originalPerPax = (float)($this->booking->schedule_price ?? 0) + $classPrice;
 
+        $items = collect();
+
         if (!$isAirline) {
             foreach ($schedule->scheduleAccommodations->where('is_active', true)->sortBy('sort_order') as $acc) {
                 $price = (float)$acc->price;
@@ -690,6 +692,8 @@ class BookingLookup extends Component
         $classPrice = $isAirline ? $origTCPerPax : ($accPrice > 0 ? $accPrice : $origTCPerPax);
         
         $originalPerPax = (float)($this->booking->return_schedule_price ?? 0) + $classPrice;
+
+        $items = collect();
 
         if (!$isAirline) {
             foreach ($schedule->scheduleAccommodations->where('is_active', true)->sortBy('sort_order') as $acc) {
