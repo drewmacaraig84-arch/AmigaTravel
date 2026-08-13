@@ -2556,6 +2556,18 @@ public function selectedSchedule(): ?array
         
         $discountsById = $this->discounts->keyBy('id');
 
+        $departureTransportClassTotal = 0;
+        if ($this->selected_transport_class_id) {
+            $stc = \App\Models\ScheduleTransportClass::with('transportClass')->find($this->selected_transport_class_id);
+            $departureTransportClassTotal = floatval($stc->additional_price ?? $stc->transportClass->price ?? 0);
+        }
+
+        $returnTransportClassTotal = 0;
+        if ($this->trip_type === 'round_trip' && $this->selected_return_transport_class_id) {
+            $rstc = \App\Models\ScheduleTransportClass::with('transportClass')->find($this->selected_return_transport_class_id);
+            $returnTransportClassTotal = floatval($rstc->additional_price ?? $rstc->transportClass->price ?? 0);
+        }
+
         // For airline bookings, fetch the active promo ticket once (if any)
         $activePromoTicket = ($this->mode === 'airline') ? $this->getActivePromoTicket() : null;
 
@@ -2564,15 +2576,17 @@ public function selectedSchedule(): ?array
             $scheduleAccommodationPrice,
             $returnSchedulePrice,
             $returnScheduleAccommodationPrice,
+            $departureTransportClassTotal,
+            $returnTransportClassTotal,
             $discountsById,
             $activePromoTicket
         ) {
             $scheduleAccommodationPrice_ = $scheduleAccommodationPrice;
-            $returnFare = $returnSchedulePrice + $returnScheduleAccommodationPrice;
+            $returnFare = $returnSchedulePrice + $returnScheduleAccommodationPrice + $returnTransportClassTotal;
 
             // Airline per-passenger promo: departure leg uses promo_price, no discount applied
             if ($activePromoTicket && ! empty($passenger['use_promo'])) {
-                $departureFare = floatval($activePromoTicket->promo_price) + $scheduleAccommodationPrice_;
+                $departureFare = floatval($activePromoTicket->promo_price) + $scheduleAccommodationPrice_ + $departureTransportClassTotal;
                 return $departureFare + $returnFare;
             }
 
@@ -2580,7 +2594,7 @@ public function selectedSchedule(): ?array
                 return 0; // Driver ticket is free
             }
 
-            $departureFare = $baseSchedulePrice + $scheduleAccommodationPrice_;
+            $departureFare = $baseSchedulePrice + $scheduleAccommodationPrice_ + $departureTransportClassTotal;
             $fare = $departureFare + $returnFare;
 
             if (! empty($passenger['discount_id'])) {
@@ -2594,21 +2608,7 @@ public function selectedSchedule(): ?array
             return $fare;
         });
 
-        $departureTransportClassTotal = 0;
-        if ($this->selected_transport_class_id) {
-            $stc = \App\Models\ScheduleTransportClass::with('transportClass')->find($this->selected_transport_class_id);
-            $departureTransportClassTotal = floatval($stc->additional_price ?? $stc->transportClass->price ?? 0);
-        }
-
-        $returnTransportClassTotal = 0;
-        if ($this->trip_type === 'round_trip' && $this->selected_return_transport_class_id) {
-            $rstc = \App\Models\ScheduleTransportClass::with('transportClass')->find($this->selected_return_transport_class_id);
-            $returnTransportClassTotal = floatval($rstc->additional_price ?? $rstc->transportClass->price ?? 0);
-        }
-
-        $baseTransportClassTotal = $departureTransportClassTotal + $returnTransportClassTotal;
-        $payingPassengers = collect($this->passengers)->where('type', '!=', 'driver')->count();
-        $transportClassTotal = $baseTransportClassTotal * $payingPassengers;
+        $transportClassTotal = 0; // Already added per passenger above
 
         $vehicleTotal = $this->has_vehicle ? floatval($this->vehicle_price ?? 0) : 0;
 
@@ -2658,6 +2658,18 @@ public function selectedSchedule(): ?array
         $returnTicketPrice = $this->getSelectedReturnSchedulePrice();
         $returnAccommodationPrice = $this->getSelectedReturnScheduleAccommodationPrice();
 
+        $departureTransportClassTotal = 0;
+        if ($this->selected_transport_class_id) {
+            $stc = \App\Models\ScheduleTransportClass::with('transportClass')->find($this->selected_transport_class_id);
+            $departureTransportClassTotal = floatval($stc->additional_price ?? $stc->transportClass->price ?? 0);
+        }
+
+        $returnTransportClassTotal = 0;
+        if ($this->trip_type === 'round_trip' && $this->selected_return_transport_class_id) {
+            $rstc = \App\Models\ScheduleTransportClass::with('transportClass')->find($this->selected_return_transport_class_id);
+            $returnTransportClassTotal = floatval($rstc->additional_price ?? $rstc->transportClass->price ?? 0);
+        }
+
         // Calculate totals considering discounts
         $discountsById = $this->discounts->keyBy('id');
         
@@ -2671,8 +2683,8 @@ public function selectedSchedule(): ?array
                 continue; // Driver ticket and accommodation are free
             }
 
-            $depTicket = $departureTicketPrice;
-            $retTicket = $returnTicketPrice;
+            $depTicket = $departureTicketPrice + $departureTransportClassTotal;
+            $retTicket = $returnTicketPrice + $returnTransportClassTotal;
             
             if (!empty($passenger['discount_id'])) {
                 $discount = $discountsById->get($passenger['discount_id']);
@@ -2692,28 +2704,7 @@ public function selectedSchedule(): ?array
         $breakdown['departure_ticket'] = $totalDepartureTicket;
         $breakdown['return_ticket'] = $totalReturnTicket;
         $breakdown['accommodation'] = $totalDepartureAccommodation + $totalReturnAccommodation;
-
-        // Transport class (per booking, not per person)
-        $departureTransportClassTotal = 0;
-        if ($this->selected_transport_class_id) {
-            $stc = \App\Models\ScheduleTransportClass::with('transportClass')->find($this->selected_transport_class_id);
-            $departureTransportClassTotal = floatval($stc->additional_price ?? $stc->transportClass->price ?? 0);
-        }
-
-        $returnTransportClassTotal = 0;
-        if ($this->trip_type === 'round_trip' && $this->selected_return_transport_class_id) {
-            $rstc = \App\Models\ScheduleTransportClass::with('transportClass')->find($this->selected_return_transport_class_id);
-            $returnTransportClassTotal = floatval($rstc->additional_price ?? $rstc->transportClass->price ?? 0);
-        }
-
-        $baseTransportClassTotal = $departureTransportClassTotal + $returnTransportClassTotal;
-        $payingPassengers = collect($this->passengers)->where('type', '!=', 'driver')->count();
-        $breakdown['transport_class'] = 0; // Combined into tickets below
-        
-        if ($payingPassengers > 0) {
-            $breakdown['departure_ticket'] += $departureTransportClassTotal;
-            $breakdown['return_ticket'] += $returnTransportClassTotal;
-        }
+        $breakdown['transport_class'] = 0; // Combined into tickets above
 
         // Vehicle (per booking, not per person)
         $breakdown['vehicle'] = $this->has_vehicle ? floatval($this->vehicle_price ?? 0) : 0;

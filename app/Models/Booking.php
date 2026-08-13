@@ -456,16 +456,29 @@ class Booking extends Model
         $transactionFeeTotal = floatval($settings->transaction_fee) * $multiplier;
         $nonRefundableFees   = $webAdminFeeTotal + $transactionFeeTotal;
 
+        $rebookingSurcharge = 0;
+        $rebookingRevalidationFee = 0;
+        if ($this->is_rebooked && !empty($this->disruption_notes)) {
+            $notes = json_decode($this->disruption_notes, true);
+            $rebookingSurcharge = (float) ($notes['surcharge'] ?? 0);
+            $rebookingRevalidationFee = (float) ($notes['revalidation_fee'] ?? 0);
+        }
+
+        $totalNonRefundableFees = $nonRefundableFees + $rebookingSurcharge + $rebookingRevalidationFee;
+        $totalPaid = (float) $this->total_price + $rebookingSurcharge + $rebookingRevalidationFee;
+
         if ($isWithinGracePeriod) {
             return [
                 'base_ticket' => (float) $this->total_price,
                 'surcharge_pct' => 0,
                 'surcharge_amount' => 0,
-                'non_refundable_fees' => 0,
+                'non_refundable_fees' => $totalNonRefundableFees,
                 'web_admin_fee' => 0,
                 'transaction_fee' => 0,
+                'rebooking_surcharge' => $rebookingSurcharge,
+                'rebooking_revalidation_fee' => $rebookingRevalidationFee,
                 'refundable_amount' => (float) $this->total_price,
-                'deduction_amount' => 0,
+                'deduction_amount' => $rebookingSurcharge + $rebookingRevalidationFee,
             ];
         }
 
@@ -481,11 +494,13 @@ class Booking extends Model
                 // that the entire ticket base is forfeited (since it is non-refundable).
                 'surcharge_pct' => 100,
                 'surcharge_amount' => $ticketBase,
-                'non_refundable_fees' => $nonRefundableFees,
+                'non_refundable_fees' => $totalNonRefundableFees,
                 'web_admin_fee' => $webAdminFeeTotal,
                 'transaction_fee' => $transactionFeeTotal,
+                'rebooking_surcharge' => $rebookingSurcharge,
+                'rebooking_revalidation_fee' => $rebookingRevalidationFee,
                 'refundable_amount' => 0,
-                'deduction_amount' => (float) $this->total_price,
+                'deduction_amount' => $totalPaid,
             ];
         }
 
@@ -496,11 +511,13 @@ class Booking extends Model
                 // that the entire ticket base is forfeited (since it is non-refundable).
                 'surcharge_pct' => 100,
                 'surcharge_amount' => $ticketBase,
-                'non_refundable_fees' => $nonRefundableFees,
+                'non_refundable_fees' => $totalNonRefundableFees,
                 'web_admin_fee' => $webAdminFeeTotal,
                 'transaction_fee' => $transactionFeeTotal,
+                'rebooking_surcharge' => $rebookingSurcharge,
+                'rebooking_revalidation_fee' => $rebookingRevalidationFee,
                 'refundable_amount' => 0,
-                'deduction_amount' => (float) $this->total_price,
+                'deduction_amount' => $totalPaid,
             ];
         }
 
@@ -513,11 +530,13 @@ class Booking extends Model
             'base_ticket' => $ticketBase,
             'surcharge_pct' => $surchargePct,
             'surcharge_amount' => $surcharge,
-            'non_refundable_fees' => $nonRefundableFees,
+            'non_refundable_fees' => $totalNonRefundableFees,
             'web_admin_fee' => $webAdminFeeTotal,
             'transaction_fee' => $transactionFeeTotal,
+            'rebooking_surcharge' => $rebookingSurcharge,
+            'rebooking_revalidation_fee' => $rebookingRevalidationFee,
             'refundable_amount' => $refundable,
-            'deduction_amount' => (float) $this->total_price - $refundable,
+            'deduction_amount' => $totalPaid - $refundable,
         ];
     }
 
