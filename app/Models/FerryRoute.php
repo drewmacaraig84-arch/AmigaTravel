@@ -47,7 +47,7 @@ class FerryRoute extends Model
         $parts = ["{$this->origin} → {$this->destination}"];
 
         // Show vehicle name if available
-        if ($this->vehicle) {
+        if ($this->relationLoaded('vehicle') && $this->vehicle) {
             $parts[] = $this->vehicle->full_name;
         } elseif (! empty($this->operator)) {
             $parts[] = $this->operator;
@@ -234,6 +234,7 @@ class FerryRoute extends Model
                 ->when($mode, fn ($query) => $query->where('mode', $mode))
                 ->whereHas('vehicle', fn ($q) => $q->whereNotNull('operator')->where('operator', '!=', ''))
                 ->whereHas('schedules', fn ($q) => $q->active())
+                ->with('vehicle')
                 ->get()
                 ->map(fn ($r) => $r->vehicle?->operator)
                 ->filter()

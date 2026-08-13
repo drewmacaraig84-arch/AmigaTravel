@@ -54,7 +54,7 @@ class BookingForm extends Component
         session()->put($confirmKey, true);
     }
     
-    public function changeSelection(): void
+    public function changeSelection()
     {
         $confirmKey = 'confirmed_operator_' . $this->mode . '_' . ($this->operator ?: 'all');
         session()->forget($confirmKey);
@@ -64,6 +64,8 @@ class BookingForm extends Component
         $this->isModePreselected = false;
         $this->isOperatorPreselected = false;
         $this->showOperatorConfirmation = false;
+        
+        return redirect('/');
     }
     public int $step = 1;
     public string $trip_type = 'one_way';
@@ -79,6 +81,7 @@ class BookingForm extends Component
     public array $availableReturnSchedules = [];
     public int $adults = 1;
     public int $children = 0;
+    public int $minors = 0;
     public int $infants = 0;
     public ?int $selected_schedule_id = null;
     public bool $showPassengerInfoModal = false;
@@ -1337,8 +1340,24 @@ public function selectedSchedule(): ?array
         if ($adultCount > 0) {
             $types['adult'] = $adultCount;
         }
-        if ($this->children + $this->infants > 0) {
-            $types['child'] = $this->children + $this->infants;
+        if ($this->mode === 'airline') {
+            if ($this->minors > 0) {
+                $types['minor'] = $this->minors;
+            }
+            if ($this->children > 0) {
+                $types['child'] = $this->children;
+            }
+            if ($this->infants > 0) {
+                $types['infant'] = $this->infants;
+            }
+        } else {
+            // For Ferry, combine minors/children into 'child' (or whatever they were before)
+            if ($this->children > 0) {
+                $types['child'] = $this->children;
+            }
+            if ($this->infants > 0) {
+                $types['infant'] = $this->infants;
+            }
         }
 
         // Helper to grab existing from either driver or adult if they toggle has_vehicle
@@ -2212,6 +2231,11 @@ public function selectedSchedule(): ?array
 
     protected function saveDraft(): void
     {
+        if ($this->step < 2) {
+            session()->forget('booking_draft');
+            return;
+        }
+
         session(['booking_draft' => [
             'step' => $this->step,
             'trip_type' => $this->trip_type,
@@ -2223,6 +2247,7 @@ public function selectedSchedule(): ?array
             'return_date' => $this->return_date,
             'adults' => $this->adults,
             'children' => $this->children,
+            'minors' => $this->minors,
             'infants' => $this->infants,
             'selected_schedule_id' => $this->selected_schedule_id,
             'selected_return_schedule_id' => $this->selected_return_schedule_id,
@@ -2271,7 +2296,7 @@ public function selectedSchedule(): ?array
                     'integer',
                     'min:1',
                     function ($attribute, $value, $fail) {
-                        if ($value + $this->children > 8) {
+                        if ($value + $this->children + ($this->mode === 'airline' ? $this->minors + $this->infants : 0) > 8) {
                             $fail('Maximum of 8 passengers per booking.');
                         }
                     },
@@ -2281,7 +2306,30 @@ public function selectedSchedule(): ?array
                     'integer',
                     'min:0',
                     function ($attribute, $value, $fail) {
-                        if ($value + $this->adults > 8) {
+                        if ($value + $this->adults + ($this->mode === 'airline' ? $this->minors + $this->infants : 0) > 8) {
+                            $fail('Maximum of 8 passengers per booking.');
+                        }
+                    },
+                ],
+                'minors' => [
+                    'required',
+                    'integer',
+                    'min:0',
+                    function ($attribute, $value, $fail) {
+                        if ($value + $this->adults + $this->children + ($this->mode === 'airline' ? $this->infants : 0) > 8) {
+                            $fail('Maximum of 8 passengers per booking.');
+                        }
+                    },
+                ],
+                'infants' => [
+                    'required',
+                    'integer',
+                    'min:0',
+                    function ($attribute, $value, $fail) {
+                        if ($value > $this->adults) {
+                            $fail('Maximum of 1 infant per adult is allowed.');
+                        }
+                        if ($value + $this->adults + $this->children + ($this->mode === 'airline' ? $this->minors : 0) > 8) {
                             $fail('Maximum of 8 passengers per booking.');
                         }
                     },
@@ -2342,7 +2390,7 @@ public function selectedSchedule(): ?array
                 'integer',
                 'min:1',
                 function ($attribute, $value, $fail) {
-                    if ($value + $this->children > 8) {
+                    if ($value + $this->children + ($this->mode === 'airline' ? $this->minors + $this->infants : 0) > 8) {
                         $fail('Maximum of 8 passengers per booking.');
                     }
                 },
@@ -2352,7 +2400,7 @@ public function selectedSchedule(): ?array
                 'integer',
                 'min:0',
                 function ($attribute, $value, $fail) {
-                    if ($value + $this->adults > 8) {
+                    if ($value + $this->adults + ($this->mode === 'airline' ? $this->minors + $this->infants : 0) > 8) {
                         $fail('Maximum of 8 passengers per booking.');
                     }
                 },
@@ -2728,7 +2776,7 @@ public function selectedSchedule(): ?array
 
     public function incrementAdults(): void
     {
-        if ($this->adults + $this->children >= 8) {
+        if ($this->adults + $this->children + ($this->mode === 'airline' ? $this->minors + $this->infants : 0) >= 8) {
             return;
         }
 
@@ -2743,19 +2791,25 @@ public function selectedSchedule(): ?array
         }
 
         $this->adults--;
+        
+        // Ensure infants don't exceed adults
+        if ($this->infants > $this->adults) {
+            $this->infants = $this->adults;
+        }
+        
         $this->saveDraft();
     }
 
     public function incrementChildren(): void
     {
-        if ($this->adults + $this->children >= 8) {
+        if ($this->adults + $this->children + ($this->mode === 'airline' ? $this->minors + $this->infants : 0) >= 8) {
             return;
         }
 
         $this->children++;
         $this->saveDraft();
 
-        if (! $this->hasSeenMinorAgeWarning) {
+        if (! $this->hasSeenMinorAgeWarning && $this->mode !== 'airline') {
             $this->showMinorAgeWarning = true;
             $this->hasSeenMinorAgeWarning = true;
         }
@@ -2768,6 +2822,49 @@ public function selectedSchedule(): ?array
         }
 
         $this->children--;
+        $this->saveDraft();
+    }
+    
+    public function incrementMinors(): void
+    {
+        if ($this->adults + $this->children + ($this->mode === 'airline' ? $this->minors + $this->infants : 0) >= 8) {
+            return;
+        }
+
+        $this->minors++;
+        $this->saveDraft();
+    }
+
+    public function decrementMinors(): void
+    {
+        if ($this->minors <= 0) {
+            return;
+        }
+
+        $this->minors--;
+        $this->saveDraft();
+    }
+    
+    public function incrementInfants(): void
+    {
+        if ($this->infants >= $this->adults) {
+            return; // 1 infant per adult limit
+        }
+        if ($this->adults + $this->children + ($this->mode === 'airline' ? $this->minors + $this->infants : 0) >= 8) {
+            return;
+        }
+
+        $this->infants++;
+        $this->saveDraft();
+    }
+
+    public function decrementInfants(): void
+    {
+        if ($this->infants <= 0) {
+            return;
+        }
+
+        $this->infants--;
         $this->saveDraft();
     }
 

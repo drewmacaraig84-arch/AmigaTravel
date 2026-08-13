@@ -248,6 +248,8 @@
              return_date: '{{ \Carbon\Carbon::tomorrow()->addDay()->format('Y-m-d') }}',
              adults: 1,
              children: 0,
+             minors: 0,
+             infants: 0,
              has_vehicle: false,
              vehicleRatesList: window.AMIGA_VEHICLE_RATES || [],
              vehicleBrandsList: window.AMIGA_VEHICLE_BRANDS || [],
@@ -404,7 +406,7 @@
                   return dates.sort();
               },
               get totalPassengers() {
-                 return parseInt(this.adults) + parseInt(this.children);
+                 return parseInt(this.adults) + parseInt(this.children) + (this.mode === 'airline' ? parseInt(this.minors) + parseInt(this.infants) : 0);
              },
              swapPorts() {
                  let tmp = this.origin;
@@ -498,7 +500,13 @@
                  }
                  params.append('adults', this.adults);
                  params.append('children', this.children);
-                 params.append('infants', 0);
+                 if (this.mode === 'airline') {
+                     params.append('minors', this.minors);
+                     params.append('infants', this.infants);
+                 } else {
+                     params.append('infants', 0);
+                     params.append('minors', 0);
+                 }
                  params.append('step', 2);
                  if (this.mode === 'ferry' && this.operator && this.operator.toLowerCase().includes('starlite') && this.has_vehicle) {
                      params.append('has_vehicle', '1');
@@ -669,51 +677,153 @@
                          class="absolute left-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-100 p-5 z-50"
                          style="display: none;">
                         
-                        {{-- Adult Row --}}
-                        <div class="flex items-center justify-between py-2.5 border-b border-slate-100">
+                        {{-- Airline Layout --}}
+                        <template x-if="mode === 'airline'">
                             <div>
-                                <p class="text-sm font-bold text-slate-900">Adults</p>
-                                <p class="text-xs text-slate-500">Age 11 and above</p>
-                            </div>
-                            <div class="flex items-center gap-3">
-                                <button type="button" 
-                                        @click="if(adults > 1) adults--" 
-                                        :disabled="adults <= 1"
-                                        class="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-700 hover:border-[#216417] hover:text-[#216417] disabled:opacity-40 disabled:cursor-not-allowed transition">
-                                    -
-                                </button>
-                                <span class="w-5 text-center font-bold text-slate-900" x-text="adults"></span>
-                                <button type="button" 
-                                        @click="if(totalPassengers < 8) adults++" 
-                                        :disabled="totalPassengers >= 8"
-                                        class="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-700 hover:border-[#216417] hover:text-[#216417] disabled:opacity-40 disabled:cursor-not-allowed transition">
-                                    +
-                                </button>
-                            </div>
-                        </div>
+                                {{-- Adult Row --}}
+                                <div class="flex items-center justify-between py-2.5 border-b border-slate-100">
+                                    <div>
+                                        <p class="text-sm font-bold text-slate-900">Adults</p>
+                                        <p class="text-xs text-slate-500">Age 11 and above</p>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <button type="button" 
+                                                @click="if(adults > 1) adults--" 
+                                                :disabled="adults <= 1"
+                                                class="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-700 hover:border-[#216417] hover:text-[#216417] disabled:opacity-40 disabled:cursor-not-allowed transition">
+                                            -
+                                        </button>
+                                        <span class="w-5 text-center font-bold text-slate-900" x-text="adults"></span>
+                                        <button type="button" 
+                                                @click="if(totalPassengers < 8) adults++" 
+                                                :disabled="totalPassengers >= 8"
+                                                class="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-700 hover:border-[#216417] hover:text-[#216417] disabled:opacity-40 disabled:cursor-not-allowed transition">
+                                            +
+                                        </button>
+                                    </div>
+                                </div>
 
-                        {{-- Child Row --}}
-                        <div class="flex items-center justify-between py-2.5">
+                                {{-- Minor Row --}}
+                                <div class="flex items-center justify-between py-2.5 border-b border-slate-100">
+                                    <div>
+                                        <p class="text-sm font-bold text-slate-900">Minor</p>
+                                        <p class="text-xs text-slate-500">Age 7 to 11</p>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <button type="button" 
+                                                @click="if(minors > 0) minors--" 
+                                                :disabled="minors <= 0"
+                                                class="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-700 hover:border-[#216417] hover:text-[#216417] disabled:opacity-40 disabled:cursor-not-allowed transition">
+                                            -
+                                        </button>
+                                        <span class="w-5 text-center font-bold text-slate-900" x-text="minors"></span>
+                                        <button type="button" 
+                                                @click="if(totalPassengers < 8) minors++" 
+                                                :disabled="totalPassengers >= 8"
+                                                class="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-700 hover:border-[#216417] hover:text-[#216417] disabled:opacity-40 disabled:cursor-not-allowed transition">
+                                            +
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {{-- Child Row --}}
+                                <div class="flex items-center justify-between py-2.5 border-b border-slate-100">
+                                    <div>
+                                        <p class="text-sm font-bold text-slate-900">Child</p>
+                                        <p class="text-xs text-slate-500">Age 2 to 6</p>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <button type="button" 
+                                                @click="if(children > 0) children--" 
+                                                :disabled="children <= 0"
+                                                class="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-700 hover:border-[#216417] hover:text-[#216417] disabled:opacity-40 disabled:cursor-not-allowed transition">
+                                            -
+                                        </button>
+                                        <span class="w-5 text-center font-bold text-slate-900" x-text="children"></span>
+                                        <button type="button" 
+                                                @click="if(totalPassengers < 8) children++" 
+                                                :disabled="totalPassengers >= 8"
+                                                class="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-700 hover:border-[#216417] hover:text-[#216417] disabled:opacity-40 disabled:cursor-not-allowed transition">
+                                            +
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {{-- Infant Row --}}
+                                <div class="flex items-center justify-between py-2.5">
+                                    <div>
+                                        <p class="text-sm font-bold text-slate-900">Infants</p>
+                                        <p class="text-xs text-slate-500">0 to 23 months</p>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <button type="button" 
+                                                @click="if(infants > 0) infants--" 
+                                                :disabled="infants <= 0"
+                                                class="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-700 hover:border-[#216417] hover:text-[#216417] disabled:opacity-40 disabled:cursor-not-allowed transition">
+                                            -
+                                        </button>
+                                        <span class="w-5 text-center font-bold text-slate-900" x-text="infants"></span>
+                                        <button type="button" 
+                                                @click="if(infants < adults && totalPassengers < 8) infants++" 
+                                                :disabled="infants >= adults || totalPassengers >= 8"
+                                                class="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-700 hover:border-[#216417] hover:text-[#216417] disabled:opacity-40 disabled:cursor-not-allowed transition">
+                                            +
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+
+                        {{-- Ferry Layout --}}
+                        <template x-if="mode !== 'airline'">
                             <div>
-                                <p class="text-sm font-bold text-slate-900">Child</p>
-                                <p class="text-xs text-slate-500">Age 2 to 11</p>
+                                {{-- Adult Row --}}
+                                <div class="flex items-center justify-between py-2.5 border-b border-slate-100">
+                                    <div>
+                                        <p class="text-sm font-bold text-slate-900">Adults</p>
+                                        <p class="text-xs text-slate-500">Age 11 and above</p>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <button type="button" 
+                                                @click="if(adults > 1) adults--" 
+                                                :disabled="adults <= 1"
+                                                class="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-700 hover:border-[#216417] hover:text-[#216417] disabled:opacity-40 disabled:cursor-not-allowed transition">
+                                            -
+                                        </button>
+                                        <span class="w-5 text-center font-bold text-slate-900" x-text="adults"></span>
+                                        <button type="button" 
+                                                @click="if(totalPassengers < 8) adults++" 
+                                                :disabled="totalPassengers >= 8"
+                                                class="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-700 hover:border-[#216417] hover:text-[#216417] disabled:opacity-40 disabled:cursor-not-allowed transition">
+                                            +
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {{-- Child Row --}}
+                                <div class="flex items-center justify-between py-2.5">
+                                    <div>
+                                        <p class="text-sm font-bold text-slate-900">Child</p>
+                                        <p class="text-xs text-slate-500">Age 2 to 11</p>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <button type="button" 
+                                                @click="if(children > 0) children--" 
+                                                :disabled="children <= 0"
+                                                class="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-700 hover:border-[#216417] hover:text-[#216417] disabled:opacity-40 disabled:cursor-not-allowed transition">
+                                            -
+                                        </button>
+                                        <span class="w-5 text-center font-bold text-slate-900" x-text="children"></span>
+                                        <button type="button" 
+                                                @click="if(totalPassengers < 8) { children++; if(!hasSeenMinorAgeWarning) { showMinorAgeWarning = true; hasSeenMinorAgeWarning = true; } }" 
+                                                :disabled="totalPassengers >= 8"
+                                                class="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-700 hover:border-[#216417] hover:text-[#216417] disabled:opacity-40 disabled:cursor-not-allowed transition">
+                                            +
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="flex items-center gap-3">
-                                <button type="button" 
-                                        @click="if(children > 0) children--" 
-                                        :disabled="children <= 0"
-                                        class="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-700 hover:border-[#216417] hover:text-[#216417] disabled:opacity-40 disabled:cursor-not-allowed transition">
-                                    -
-                                </button>
-                                <span class="w-5 text-center font-bold text-slate-900" x-text="children"></span>
-                                <button type="button" 
-                                        @click="if(totalPassengers < 8) { children++; if(!hasSeenMinorAgeWarning) { showMinorAgeWarning = true; hasSeenMinorAgeWarning = true; } }" 
-                                        :disabled="totalPassengers >= 8"
-                                        class="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-700 hover:border-[#216417] hover:text-[#216417] disabled:opacity-40 disabled:cursor-not-allowed transition">
-                                    +
-                                </button>
-                            </div>
-                        </div>
+                        </template>
 
                         {{-- Footer with Done button --}}
                         <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
@@ -1162,7 +1272,7 @@
         </div>
 
         <!-- Minor Age Reminder Modal -->
-        <div x-show="showMinorAgeWarning"
+        <div x-show="showMinorAgeWarning && mode !== 'airline'"
              x-cloak
              x-transition
              @click.self="showMinorAgeWarning = false"

@@ -284,7 +284,9 @@ class Booking extends Model
 
     public function canCancel(): bool
     {
-        if ($this->hasPromoTicket()) {
+        $isWithin5Mins = $this->created_at && $this->created_at->addMinutes(5)->isFuture();
+
+        if ($this->hasPromoTicket() && !$isWithin5Mins) {
             return false;
         }
 

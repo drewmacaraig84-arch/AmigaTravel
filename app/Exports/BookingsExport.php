@@ -24,6 +24,17 @@ class BookingsExport implements WithMultipleSheets
             $sheets[] = new BookingsSheet($title, $bookings);
         }
 
+        // Aggregate all unique bookings for the overall breakdown
+        $allBookings = collect();
+        foreach ($this->groupedBookings as $title => $bookings) {
+            foreach ($bookings as $booking) {
+                $allBookings->push($booking);
+            }
+        }
+        $allBookings = $allBookings->unique('id');
+
+        $sheets[] = new OverallBreakdownSheet('Overall Breakdown', $allBookings);
+
         return $sheets;
     }
 }
