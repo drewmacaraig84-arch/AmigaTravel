@@ -344,14 +344,18 @@ class BookingData {
       'selectedScheduleAccommodationId': selectedScheduleAccommodationId,
       'selectedScheduleAccommodation': selectedScheduleAccommodation,
       'selectedReturnSchedule': selectedReturnSchedule,
-      'selectedReturnScheduleAccommodationId': selectedReturnScheduleAccommodationId,
-      'selectedReturnScheduleAccommodation': selectedReturnScheduleAccommodation,
+      'selectedReturnScheduleAccommodationId':
+          selectedReturnScheduleAccommodationId,
+      'selectedReturnScheduleAccommodation':
+          selectedReturnScheduleAccommodation,
       'selectedFerryAccommodationId': selectedFerryAccommodationId,
       'selectedFerryAccommodationName': selectedFerryAccommodationName,
       'selectedFerryAccommodationPrice': selectedFerryAccommodationPrice,
       'selectedReturnFerryAccommodationId': selectedReturnFerryAccommodationId,
-      'selectedReturnFerryAccommodationName': selectedReturnFerryAccommodationName,
-      'selectedReturnFerryAccommodationPrice': selectedReturnFerryAccommodationPrice,
+      'selectedReturnFerryAccommodationName':
+          selectedReturnFerryAccommodationName,
+      'selectedReturnFerryAccommodationPrice':
+          selectedReturnFerryAccommodationPrice,
       'selectedAirlineClassId': selectedAirlineClassId,
       'selectedAirlineClassName': selectedAirlineClassName,
       'selectedAirlineClassPrice': selectedAirlineClassPrice,
@@ -422,15 +426,25 @@ class BookingData {
 
     b.selectedFerryAccommodationId = json['selectedFerryAccommodationId'];
     b.selectedFerryAccommodationName = json['selectedFerryAccommodationName'];
-    b.selectedFerryAccommodationPrice = json['selectedFerryAccommodationPrice'] != null ? (json['selectedFerryAccommodationPrice'] as num).toDouble() : null;
-    
-    b.selectedReturnFerryAccommodationId = json['selectedReturnFerryAccommodationId'];
-    b.selectedReturnFerryAccommodationName = json['selectedReturnFerryAccommodationName'];
-    b.selectedReturnFerryAccommodationPrice = json['selectedReturnFerryAccommodationPrice'] != null ? (json['selectedReturnFerryAccommodationPrice'] as num).toDouble() : null;
+    b.selectedFerryAccommodationPrice =
+        json['selectedFerryAccommodationPrice'] != null
+            ? (json['selectedFerryAccommodationPrice'] as num).toDouble()
+            : null;
+
+    b.selectedReturnFerryAccommodationId =
+        json['selectedReturnFerryAccommodationId'];
+    b.selectedReturnFerryAccommodationName =
+        json['selectedReturnFerryAccommodationName'];
+    b.selectedReturnFerryAccommodationPrice =
+        json['selectedReturnFerryAccommodationPrice'] != null
+            ? (json['selectedReturnFerryAccommodationPrice'] as num).toDouble()
+            : null;
 
     b.selectedAirlineClassId = json['selectedAirlineClassId'];
     b.selectedAirlineClassName = json['selectedAirlineClassName'];
-    b.selectedAirlineClassPrice = json['selectedAirlineClassPrice'] != null ? (json['selectedAirlineClassPrice'] as num).toDouble() : null;
+    b.selectedAirlineClassPrice = json['selectedAirlineClassPrice'] != null
+        ? (json['selectedAirlineClassPrice'] as num).toDouble()
+        : null;
 
     b.hasVehicle = json['hasVehicle'] ?? false;
     b.selectedVehicleRateId = json['selectedVehicleRateId'];
@@ -530,7 +544,9 @@ Map<String, dynamic>? pendingNotificationData;
 
 Future<void> handleNotificationTap(Map<String, dynamic> data) async {
   final String type = data['type'] ?? 'general';
-  final String targetId = data['target_id']?.toString() ?? data['transaction_number']?.toString() ?? '';
+  final String targetId = data['target_id']?.toString() ??
+      data['transaction_number']?.toString() ??
+      '';
 
   // Check if we have a context
   final context = navigatorKey.currentContext;
@@ -544,7 +560,8 @@ Future<void> handleNotificationTap(Map<String, dynamic> data) async {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const Center(child: CircularProgressIndicator(color: kGreen)),
+        builder: (context) =>
+            const Center(child: CircularProgressIndicator(color: kGreen)),
       );
 
       try {
@@ -564,18 +581,22 @@ Future<void> handleNotificationTap(Map<String, dynamic> data) async {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => BookingDetailsScreen(booking: resData['booking']),
+                builder: (_) =>
+                    BookingDetailsScreen(booking: resData['booking']),
               ),
             );
           } else {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Booking details not found.')));
+            ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Booking details not found.')));
           }
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to load booking details.')));
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Failed to load booking details.')));
         }
       } catch (e) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   } else if (type == 'promo') {
@@ -1080,7 +1101,8 @@ class _MainScreenState extends State<MainScreen> {
     NotificationService.requestPermission();
     NotificationService.initialize();
 
-    _notificationPollTimer = Timer.periodic(const Duration(seconds: 15), (timer) {
+    _notificationPollTimer =
+        Timer.periodic(const Duration(seconds: 5), (timer) {
       if (UserSession.isLoggedIn) {
         _fetchGlobalData(isBackground: true);
       }
@@ -1135,17 +1157,17 @@ class _MainScreenState extends State<MainScreen> {
         final notifData = jsonDecode(notifRes.body);
         if (notifRes.statusCode == 200 && notifData['status'] == 'success') {
           int newUnread = notifData['unread_count'] ?? 0;
-          
+
           if (newUnread > UserSession.unreadNotificationsCount) {
-             final notifs = notifData['notifications'] as List?;
-             if (notifs != null && notifs.isNotEmpty) {
-                 final latest = notifs.first;
-                 NotificationService.showNotification(
-                    id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-                    title: latest['title'] ?? 'New Notification',
-                    body: latest['body'] ?? '',
-                 );
-             }
+            final notifs = notifData['notifications'] as List?;
+            if (notifs != null && notifs.isNotEmpty) {
+              final latest = notifs.first;
+              NotificationService.showNotification(
+                id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+                title: latest['title'] ?? 'New Notification',
+                body: latest['body'] ?? '',
+              );
+            }
           }
 
           if (UserSession.unreadNotificationsCount != newUnread) {
@@ -1657,7 +1679,8 @@ class _HomeScreenState extends State<HomeScreen>
                                 child: Icon(Icons.broken_image,
                                     color: kSlate400, size: 40)))
                         : const Center(
-                            child: Icon(Icons.image, color: kSlate400, size: 40)),
+                            child:
+                                Icon(Icons.image, color: kSlate400, size: 40)),
                   );
                 }
               },
@@ -1831,8 +1854,7 @@ class _HomeScreenState extends State<HomeScreen>
                     onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (_) =>
-                                VouchersScreen(onUseVoucher: () {
+                            builder: (_) => VouchersScreen(onUseVoucher: () {
                                   Navigator.pop(context);
                                   widget.onBookFerry();
                                 }))),
@@ -2388,8 +2410,7 @@ class _ModernBookCard extends StatelessWidget {
                     fontSize: 15)),
             const SizedBox(height: 4),
             Text(subtitle,
-                style: const TextStyle(
-                    color: Colors.white70, fontSize: 11),
+                style: const TextStyle(color: Colors.white70, fontSize: 11),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis),
           ],
@@ -2400,7 +2421,6 @@ class _ModernBookCard extends StatelessWidget {
 }
 
 class _ServiceCard extends StatelessWidget {
-
   final String label;
   final String subtitle;
   final IconData icon;
@@ -2505,8 +2525,7 @@ class _WelcomeBanner extends StatelessWidget {
                     height: 1.2)),
             const SizedBox(height: 14),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                   color: kPink, borderRadius: BorderRadius.circular(20)),
               child: const Text(
@@ -4945,7 +4964,10 @@ class _ActivityScreenState extends State<ActivityScreen> {
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()));
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const ForgotPasswordScreen()));
                   },
                   style: TextButton.styleFrom(
                     padding:
@@ -5980,8 +6002,9 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               label: const Text('Payment Acknowledgement'),
             ),
           if ((transaction['confirmation_url'] != null ||
-              _booking['confirmation_url'] != null ||
-              _booking['confirmation_pdf_url'] != null) && _paymentStatus == 'paid')
+                  _booking['confirmation_url'] != null ||
+                  _booking['confirmation_pdf_url'] != null) &&
+              _paymentStatus == 'paid')
             FilledButton.icon(
               onPressed: () {
                 final url = transaction['confirmation_url'] ??
@@ -6385,7 +6408,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+                  MaterialPageRoute(
+                      builder: (_) => const ForgotPasswordScreen()),
                 );
               },
               style: OutlinedButton.styleFrom(
@@ -6420,7 +6444,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               'Are you sure you want to reset your password? We will send an OTP to your email.'),
                           actions: [
                             TextButton(
-                                onPressed: modalLoading ? null : () => Navigator.pop(ctx),
+                                onPressed: modalLoading
+                                    ? null
+                                    : () => Navigator.pop(ctx),
                                 child: const Text('Cancel')),
                             ElevatedButton(
                               onPressed: modalLoading
@@ -6431,38 +6457,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         final res = await http.post(
                                           Uri.parse(
                                               '${UserSession.getBaseUrl()}/api/forgot-password/request-otp'),
-                                          headers: {'Accept': 'application/json'},
+                                          headers: {
+                                            'Accept': 'application/json'
+                                          },
                                           body: {'email': UserSession.email},
                                         );
                                         final data = jsonDecode(res.body);
-                                        if (res.statusCode == 200 && data['status'] == 'success') {
+                                        if (res.statusCode == 200 &&
+                                            data['status'] == 'success') {
                                           setModalState(() {
                                             isOtpSent = true;
                                             modalLoading = false;
                                           });
                                           if (!mounted) return;
-                                          ScaffoldMessenger.of(context).showSnackBar(
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
                                             SnackBar(
-                                                content: Text(data['message'] ?? 'OTP sent! Check your email.'),
+                                                content: Text(data['message'] ??
+                                                    'OTP sent! Check your email.'),
                                                 backgroundColor: kGreen),
                                           );
                                         } else {
-                                          final msg = data['message'] ?? 'Failed to send OTP.';
+                                          final msg = data['message'] ??
+                                              'Failed to send OTP.';
                                           if (!mounted) return;
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                              SnackBar(content: Text(msg), backgroundColor: Colors.red));
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(SnackBar(
+                                                  content: Text(msg),
+                                                  backgroundColor: Colors.red));
                                           Navigator.pop(ctx);
                                         }
                                       } catch (e) {
-                                        setModalState(() => modalLoading = false);
+                                        setModalState(
+                                            () => modalLoading = false);
                                         if (!mounted) return;
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(content: Text('Network error'), backgroundColor: Colors.red));
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(const SnackBar(
+                                                content: Text('Network error'),
+                                                backgroundColor: Colors.red));
                                       }
                                     },
                               child: modalLoading
                                   ? const SizedBox(
-                                      width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2))
                                   : const Text('Send OTP'),
                             ),
                           ],
@@ -6474,23 +6514,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Text('Enter the verification code sent to your email and your new password.',
+                                const Text(
+                                    'Enter the verification code sent to your email and your new password.',
                                     style: TextStyle(fontSize: 14)),
                                 const SizedBox(height: 16),
                                 TextField(
-                                  decoration: const InputDecoration(labelText: 'Verification Code (OTP)'),
+                                  decoration: const InputDecoration(
+                                      labelText: 'Verification Code (OTP)'),
                                   onChanged: (val) => otp = val,
                                 ),
                                 const SizedBox(height: 12),
                                 TextField(
                                   obscureText: true,
-                                  decoration: const InputDecoration(labelText: 'New Password'),
+                                  decoration: const InputDecoration(
+                                      labelText: 'New Password'),
                                   onChanged: (val) => newPassword = val,
                                 ),
                                 const SizedBox(height: 12),
                                 TextField(
                                   obscureText: true,
-                                  decoration: const InputDecoration(labelText: 'Confirm Password'),
+                                  decoration: const InputDecoration(
+                                      labelText: 'Confirm Password'),
                                   onChanged: (val) => confirmPassword = val,
                                 ),
                               ],
@@ -6498,66 +6542,96 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           actions: [
                             TextButton(
-                                onPressed: modalLoading ? null : () => Navigator.pop(ctx),
+                                onPressed: modalLoading
+                                    ? null
+                                    : () => Navigator.pop(ctx),
                                 child: const Text('Cancel')),
                             ElevatedButton(
                               onPressed: modalLoading
                                   ? null
                                   : () async {
-                                      if (otp.isEmpty || newPassword.isEmpty || confirmPassword.isEmpty) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(content: Text('All fields are required.'), backgroundColor: Colors.red));
+                                      if (otp.isEmpty ||
+                                          newPassword.isEmpty ||
+                                          confirmPassword.isEmpty) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(const SnackBar(
+                                                content: Text(
+                                                    'All fields are required.'),
+                                                backgroundColor: Colors.red));
                                         return;
                                       }
                                       if (newPassword != confirmPassword) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(content: Text('Passwords do not match.'), backgroundColor: Colors.red));
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(const SnackBar(
+                                                content: Text(
+                                                    'Passwords do not match.'),
+                                                backgroundColor: Colors.red));
                                         return;
                                       }
                                       if (newPassword.length < 6) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(content: Text('Password must be at least 6 characters.'), backgroundColor: Colors.red));
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(const SnackBar(
+                                                content: Text(
+                                                    'Password must be at least 6 characters.'),
+                                                backgroundColor: Colors.red));
                                         return;
                                       }
 
                                       setModalState(() => modalLoading = true);
                                       try {
                                         final res = await http.post(
-                                          Uri.parse('${UserSession.getBaseUrl()}/api/forgot-password/reset'),
-                                          headers: {'Accept': 'application/json'},
+                                          Uri.parse(
+                                              '${UserSession.getBaseUrl()}/api/forgot-password/reset'),
+                                          headers: {
+                                            'Accept': 'application/json'
+                                          },
                                           body: {
                                             'email': UserSession.email,
                                             'otp': otp.trim(),
                                             'password': newPassword,
-                                            'password_confirmation': confirmPassword,
+                                            'password_confirmation':
+                                                confirmPassword,
                                           },
                                         );
                                         final data = jsonDecode(res.body);
-                                        if (res.statusCode == 200 && data['status'] == 'success') {
+                                        if (res.statusCode == 200 &&
+                                            data['status'] == 'success') {
                                           if (!mounted) return;
-                                          ScaffoldMessenger.of(context).showSnackBar(
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
                                             SnackBar(
-                                                content: Text(data['message'] ?? 'Password reset successfully.'),
+                                                content: Text(data['message'] ??
+                                                    'Password reset successfully.'),
                                                 backgroundColor: kGreen),
                                           );
                                           Navigator.pop(ctx);
                                         } else {
-                                          final msg = data['message'] ?? 'Failed to reset password.';
+                                          final msg = data['message'] ??
+                                              'Failed to reset password.';
                                           if (!mounted) return;
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                              SnackBar(content: Text(msg), backgroundColor: Colors.red));
-                                          setModalState(() => modalLoading = false);
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(SnackBar(
+                                                  content: Text(msg),
+                                                  backgroundColor: Colors.red));
+                                          setModalState(
+                                              () => modalLoading = false);
                                         }
                                       } catch (e) {
-                                        setModalState(() => modalLoading = false);
+                                        setModalState(
+                                            () => modalLoading = false);
                                         if (!mounted) return;
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(content: Text('Network error'), backgroundColor: Colors.red));
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(const SnackBar(
+                                                content: Text('Network error'),
+                                                backgroundColor: Colors.red));
                                       }
                                     },
                               child: modalLoading
                                   ? const SizedBox(
-                                      width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2))
                                   : const Text('Reset Password'),
                             ),
                           ],
@@ -7302,8 +7376,11 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        icon: const Icon(Icons.info_outline, color: Color(0xFFF59E0B), size: 48),
-                        title: const Text('Promotional Ticket', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                        icon: const Icon(Icons.info_outline,
+                            color: Color(0xFFF59E0B), size: 48),
+                        title: const Text('Promotional Ticket',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 18)),
                         content: const Text(
                           'This is a promotional ticket and is STRICTLY non-refundable. It cannot be cancelled or rebooked.\n\nDo you wish to proceed?',
                           textAlign: TextAlign.center,
@@ -7314,20 +7391,26 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                           TextButton(
                             onPressed: () => Navigator.pop(ctx, false),
                             style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 24, vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
                             ),
-                            child: const Text('Cancel', style: TextStyle(color: Colors.black54)),
+                            child: const Text('Cancel',
+                                style: TextStyle(color: Colors.black54)),
                           ),
                           ElevatedButton(
                             onPressed: () => Navigator.pop(ctx, true),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFFF59E0B),
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 24, vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
                             ),
-                            child: const Text('Proceed', style: TextStyle(fontWeight: FontWeight.bold)),
+                            child: const Text('Proceed',
+                                style: TextStyle(fontWeight: FontWeight.bold)),
                           ),
                         ],
                       ),
@@ -7339,13 +7422,16 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                     if (widget.booking.mode == 'ferry') {
                       // Ferry uses transport_classes but must store in ferry fields
                       if (isReturn) {
-                        widget.booking.selectedReturnFerryAccommodationId = c['id'];
-                        widget.booking.selectedReturnFerryAccommodationName = c['name'];
+                        widget.booking.selectedReturnFerryAccommodationId =
+                            c['id'];
+                        widget.booking.selectedReturnFerryAccommodationName =
+                            c['name'];
                         widget.booking.selectedReturnFerryAccommodationPrice =
                             _parseDouble(c['price']);
                       } else {
                         widget.booking.selectedFerryAccommodationId = c['id'];
-                        widget.booking.selectedFerryAccommodationName = c['name'];
+                        widget.booking.selectedFerryAccommodationName =
+                            c['name'];
                         widget.booking.selectedFerryAccommodationPrice =
                             _parseDouble(c['price']);
                       }
@@ -7353,7 +7439,8 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                       // Airline
                       if (isReturn) {
                         widget.booking.selectedReturnAirlineClassId = c['id'];
-                        widget.booking.selectedReturnAirlineClassName = c['name'];
+                        widget.booking.selectedReturnAirlineClassName =
+                            c['name'];
                         widget.booking.selectedReturnAirlineClassPrice =
                             _parseDouble(c['price']);
                       } else {
@@ -7368,14 +7455,26 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: isPromo ? const Color(0xFFFFF7E6) : (isSelected
-                        ? kPink.withValues(alpha: 0.05)
-                        : Colors.white),
+                    color: isPromo
+                        ? const Color(0xFFFFF7E6)
+                        : (isSelected
+                            ? kPink.withValues(alpha: 0.05)
+                            : Colors.white),
                     border: Border.all(
-                        color: isPromo ? const Color(0xFFF59E0B) : (isSelected ? kPink : Colors.grey.shade300),
+                        color: isPromo
+                            ? const Color(0xFFF59E0B)
+                            : (isSelected ? kPink : Colors.grey.shade300),
                         width: isPromo || isSelected ? 2 : 1),
                     borderRadius: BorderRadius.circular(8),
-                    boxShadow: isPromo && !isSelected ? [BoxShadow(color: const Color(0xFFF59E0B).withValues(alpha: 0.1), blurRadius: 4, spreadRadius: 1)] : null,
+                    boxShadow: isPromo && !isSelected
+                        ? [
+                            BoxShadow(
+                                color: const Color(0xFFF59E0B)
+                                    .withValues(alpha: 0.1),
+                                blurRadius: 4,
+                                spreadRadius: 1)
+                          ]
+                        : null,
                   ),
                   child: Stack(
                     clipBehavior: Clip.none,
@@ -7385,7 +7484,8 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                           top: -24,
                           right: -10,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 4),
                             decoration: const BoxDecoration(
                               color: Color(0xFFF59E0B),
                               borderRadius: BorderRadius.only(
@@ -7395,7 +7495,11 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                                 bottomRight: Radius.circular(0),
                               ),
                             ),
-                            child: const Text('PROMO', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                            child: const Text('PROMO',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold)),
                           ),
                         ),
                       Column(
@@ -7408,8 +7512,11 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                                 child: Text(
                                   c['name'] ?? '',
                                   style: TextStyle(
-                                      fontWeight: FontWeight.bold, fontSize: 13,
-                                      color: isPromo ? const Color(0xFF92400E) : Colors.black87),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: isPromo
+                                          ? const Color(0xFF92400E)
+                                          : Colors.black87),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -7443,11 +7550,13 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                             const SizedBox(height: 4),
                             Row(
                               children: [
-                                const Icon(Icons.access_time, size: 10, color: Color(0xFFB45309)),
+                                const Icon(Icons.access_time,
+                                    size: 10, color: Color(0xFFB45309)),
                                 const SizedBox(width: 4),
                                 Text(
                                   'Until ${DateFormat('MMM dd, yyyy hh:mm a').format(DateTime.parse(c['promo_duration_end']).toLocal())}',
-                                  style: const TextStyle(fontSize: 9, color: Color(0xFFB45309)),
+                                  style: const TextStyle(
+                                      fontSize: 9, color: Color(0xFFB45309)),
                                 ),
                               ],
                             ),
@@ -7458,7 +7567,9 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                               Text(
                                 '₱${(_parseDouble(c['price']) + schedulePrice).toStringAsFixed(2)}',
                                 style: TextStyle(
-                                    color: isPromo ? const Color(0xFFEA580C) : kPink, // orange-600 vs pink
+                                    color: isPromo
+                                        ? const Color(0xFFEA580C)
+                                        : kPink, // orange-600 vs pink
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16),
                               ),
@@ -9010,24 +9121,31 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
           // - schedules that have transport_classes → send as selected_transport_class_id
           // - schedules that have accommodations    → send as selected_schedule_accommodation_id
           if (widget.booking.mode == 'ferry' &&
-              widget.booking.selectedFerryAccommodationId != null) ...((){
-            final depClasses = (widget.booking.selectedSchedule?['transport_classes'] as List<dynamic>? ?? []);
-            if (depClasses.isNotEmpty) {
-              // Ferry using transport_classes (e.g. Starlite, 2GO that have TransportClass rows)
-              return {
-                'selected_transport_class_id': widget.booking.selectedFerryAccommodationId,
-                'selected_schedule_accommodation_id': null,
-              };
-            } else {
-              // Ferry using schedule_accommodations
-              return {
-                'selected_transport_class_id': null,
-                'selected_schedule_accommodation_id': widget.booking.selectedFerryAccommodationId,
-              };
-            }
-          }())
+              widget.booking.selectedFerryAccommodationId != null)
+            ...(() {
+              final depClasses =
+                  (widget.booking.selectedSchedule?['transport_classes']
+                          as List<dynamic>? ??
+                      []);
+              if (depClasses.isNotEmpty) {
+                // Ferry using transport_classes (e.g. Starlite, 2GO that have TransportClass rows)
+                return {
+                  'selected_transport_class_id':
+                      widget.booking.selectedFerryAccommodationId,
+                  'selected_schedule_accommodation_id': null,
+                };
+              } else {
+                // Ferry using schedule_accommodations
+                return {
+                  'selected_transport_class_id': null,
+                  'selected_schedule_accommodation_id':
+                      widget.booking.selectedFerryAccommodationId,
+                };
+              }
+            }())
           else if (widget.booking.mode != 'ferry') ...{
-            'selected_transport_class_id': widget.booking.selectedAirlineClassId,
+            'selected_transport_class_id':
+                widget.booking.selectedAirlineClassId,
             'selected_schedule_accommodation_id': null,
           },
           if (widget.booking.tripType == 'round_trip' &&
@@ -9035,23 +9153,30 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
             'return_schedule_id': widget.booking.selectedReturnSchedule!['id'],
           // Return leg: same routing logic
           if (widget.booking.tripType == 'round_trip' &&
-              widget.booking.selectedReturnFerryAccommodationId != null) ...((){
-            final retClasses = (widget.booking.selectedReturnSchedule?['transport_classes'] as List<dynamic>? ?? []);
-            if (retClasses.isNotEmpty) {
-              return {
-                'return_selected_transport_class_id': widget.booking.selectedReturnFerryAccommodationId,
-                'selected_return_schedule_accommodation_id': null,
-              };
-            } else {
-              return {
-                'return_selected_transport_class_id': null,
-                'selected_return_schedule_accommodation_id': widget.booking.selectedReturnFerryAccommodationId,
-              };
-            }
-          }())
+              widget.booking.selectedReturnFerryAccommodationId != null)
+            ...(() {
+              final retClasses =
+                  (widget.booking.selectedReturnSchedule?['transport_classes']
+                          as List<dynamic>? ??
+                      []);
+              if (retClasses.isNotEmpty) {
+                return {
+                  'return_selected_transport_class_id':
+                      widget.booking.selectedReturnFerryAccommodationId,
+                  'selected_return_schedule_accommodation_id': null,
+                };
+              } else {
+                return {
+                  'return_selected_transport_class_id': null,
+                  'selected_return_schedule_accommodation_id':
+                      widget.booking.selectedReturnFerryAccommodationId,
+                };
+              }
+            }())
           else if (widget.booking.tripType == 'round_trip' &&
               widget.booking.selectedReturnAirlineClassId != null) ...{
-            'return_selected_transport_class_id': widget.booking.selectedReturnAirlineClassId,
+            'return_selected_transport_class_id':
+                widget.booking.selectedReturnAirlineClassId,
           },
           if (widget.booking.voucherCode != null &&
               !(widget.booking.usePromoTicket &&
@@ -9120,30 +9245,43 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
 
     // Auto-populate missing class prices (if loaded from older SharedPreferences session)
     if (widget.booking.mode == 'ferry') {
-      if ((widget.booking.selectedFerryAccommodationPrice ?? 0) == 0 && widget.booking.selectedFerryAccommodationId != null) {
-        final classes = (s['schedule_accommodations'] ?? s['transport_classes'] ?? s['accommodations'] ?? []) as List<dynamic>;
+      if ((widget.booking.selectedFerryAccommodationPrice ?? 0) == 0 &&
+          widget.booking.selectedFerryAccommodationId != null) {
+        final classes = (s['schedule_accommodations'] ??
+            s['transport_classes'] ??
+            s['accommodations'] ??
+            []) as List<dynamic>;
         for (var c in classes) {
           if (c['id'] == widget.booking.selectedFerryAccommodationId) {
-            widget.booking.selectedFerryAccommodationPrice = _parseDouble(c['price']);
+            widget.booking.selectedFerryAccommodationPrice =
+                _parseDouble(c['price']);
             break;
           }
         }
       }
-      if (widget.booking.tripType == 'round_trip' && widget.booking.selectedReturnSchedule != null) {
-        if ((widget.booking.selectedReturnFerryAccommodationPrice ?? 0) == 0 && widget.booking.selectedReturnFerryAccommodationId != null) {
+      if (widget.booking.tripType == 'round_trip' &&
+          widget.booking.selectedReturnSchedule != null) {
+        if ((widget.booking.selectedReturnFerryAccommodationPrice ?? 0) == 0 &&
+            widget.booking.selectedReturnFerryAccommodationId != null) {
           final retS = widget.booking.selectedReturnSchedule!;
-          final classes = (retS['schedule_accommodations'] ?? retS['transport_classes'] ?? retS['accommodations'] ?? []) as List<dynamic>;
+          final classes = (retS['schedule_accommodations'] ??
+              retS['transport_classes'] ??
+              retS['accommodations'] ??
+              []) as List<dynamic>;
           for (var c in classes) {
             if (c['id'] == widget.booking.selectedReturnFerryAccommodationId) {
-              widget.booking.selectedReturnFerryAccommodationPrice = _parseDouble(c['price']);
+              widget.booking.selectedReturnFerryAccommodationPrice =
+                  _parseDouble(c['price']);
               break;
             }
           }
         }
       }
     } else {
-      if ((widget.booking.selectedAirlineClassPrice ?? 0) == 0 && widget.booking.selectedAirlineClassId != null) {
-        final classes = (s['airline_classes'] ?? s['transport_classes'] ?? []) as List<dynamic>;
+      if ((widget.booking.selectedAirlineClassPrice ?? 0) == 0 &&
+          widget.booking.selectedAirlineClassId != null) {
+        final classes = (s['airline_classes'] ?? s['transport_classes'] ?? [])
+            as List<dynamic>;
         for (var c in classes) {
           if (c['id'] == widget.booking.selectedAirlineClassId) {
             widget.booking.selectedAirlineClassPrice = _parseDouble(c['price']);
@@ -9151,13 +9289,18 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
           }
         }
       }
-      if (widget.booking.tripType == 'round_trip' && widget.booking.selectedReturnSchedule != null) {
-        if ((widget.booking.selectedReturnAirlineClassPrice ?? 0) == 0 && widget.booking.selectedReturnAirlineClassId != null) {
+      if (widget.booking.tripType == 'round_trip' &&
+          widget.booking.selectedReturnSchedule != null) {
+        if ((widget.booking.selectedReturnAirlineClassPrice ?? 0) == 0 &&
+            widget.booking.selectedReturnAirlineClassId != null) {
           final retS = widget.booking.selectedReturnSchedule!;
-          final classes = (retS['airline_classes'] ?? retS['transport_classes'] ?? []) as List<dynamic>;
+          final classes = (retS['airline_classes'] ??
+              retS['transport_classes'] ??
+              []) as List<dynamic>;
           for (var c in classes) {
             if (c['id'] == widget.booking.selectedReturnAirlineClassId) {
-              widget.booking.selectedReturnAirlineClassPrice = _parseDouble(c['price']);
+              widget.booking.selectedReturnAirlineClassPrice =
+                  _parseDouble(c['price']);
               break;
             }
           }
@@ -12232,12 +12375,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator(color: kGreen)),
+      builder: (context) =>
+          const Center(child: CircularProgressIndicator(color: kGreen)),
     );
 
     try {
       final response = await http.get(
-        Uri.parse('${UserSession.getBaseUrl()}/api/bookings/$transactionNumber'),
+        Uri.parse(
+            '${UserSession.getBaseUrl()}/api/bookings/$transactionNumber'),
         headers: {
           'Authorization': 'Bearer ${UserSession.token}',
           'Accept': 'application/json',
@@ -12257,15 +12402,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ),
           );
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Booking details not found.')));
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Booking details not found.')));
         }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to load booking details.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to load booking details.')));
       }
     } catch (e) {
       if (!mounted) return;
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
@@ -12287,7 +12435,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     context: context,
                     builder: (ctx) => AlertDialog(
                       title: const Text('Delete All'),
-                      content: const Text('Are you sure you want to delete all notifications?'),
+                      content: const Text(
+                          'Are you sure you want to delete all notifications?'),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(ctx),
@@ -12298,7 +12447,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             Navigator.pop(ctx);
                             _deleteAllNotifications();
                           },
-                          child: const Text('Delete All', style: TextStyle(color: Colors.red)),
+                          child: const Text('Delete All',
+                              style: TextStyle(color: Colors.red)),
                         ),
                       ],
                     ),
@@ -12318,7 +12468,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   value: 'delete_all',
                   child: ListTile(
                     leading: Icon(Icons.delete_sweep, color: Colors.red),
-                    title: Text('Delete all', style: TextStyle(color: Colors.red)),
+                    title:
+                        Text('Delete all', style: TextStyle(color: Colors.red)),
                     contentPadding: EdgeInsets.zero,
                   ),
                 ),
@@ -12367,7 +12518,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 if (notif['created_at'] != null)
                                   Text(
                                     _formatDate(notif['created_at']),
-                                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                    style: const TextStyle(
+                                        fontSize: 12, color: Colors.grey),
                                   ),
                               ],
                             ),
@@ -12380,7 +12532,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                   _deleteNotification(notif['id']);
                                 }
                               },
-                              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                              itemBuilder: (BuildContext context) =>
+                                  <PopupMenuEntry<String>>[
                                 if (!isRead)
                                   const PopupMenuItem<String>(
                                     value: 'read',
@@ -12388,7 +12541,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                   ),
                                 const PopupMenuItem<String>(
                                   value: 'delete',
-                                  child: Text('Delete', style: TextStyle(color: Colors.red)),
+                                  child: Text('Delete',
+                                      style: TextStyle(color: Colors.red)),
                                 ),
                               ],
                             ),
@@ -16108,22 +16262,26 @@ class _RebookScreenState extends State<RebookScreen> {
               final isTooLow = combinedPrice < originalTotal;
 
               return GestureDetector(
-                onTap: isTooLow ? null : () {
-                  setState(() {
-                    if (isReturn) {
-                      _selRetAccId = tc['id'];
-                    } else {
-                      _selDepAccId = tc['id'];
-                    }
-                  });
-                },
+                onTap: isTooLow
+                    ? null
+                    : () {
+                        setState(() {
+                          if (isReturn) {
+                            _selRetAccId = tc['id'];
+                          } else {
+                            _selDepAccId = tc['id'];
+                          }
+                        });
+                      },
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: isTooLow ? Colors.grey.shade100 : (isAccSel
-                        ? const Color(0xFFdb2777).withValues(alpha: 0.05)
-                        : Colors.white),
+                    color: isTooLow
+                        ? Colors.grey.shade100
+                        : (isAccSel
+                            ? const Color(0xFFdb2777).withValues(alpha: 0.05)
+                            : Colors.white),
                     border: Border.all(
                         color: isAccSel
                             ? const Color(0xFFdb2777)
@@ -16138,7 +16296,9 @@ class _RebookScreenState extends State<RebookScreen> {
                       Text(
                         tc['name'] ?? '',
                         style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 13, color: isTooLow ? Colors.grey : Colors.black),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: isTooLow ? Colors.grey : Colors.black),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.center,
@@ -16147,14 +16307,18 @@ class _RebookScreenState extends State<RebookScreen> {
                       Text(
                         '₱${combinedPrice.toStringAsFixed(2)}',
                         style: TextStyle(
-                            color: isTooLow ? Colors.grey : const Color(0xFFdb2777),
+                            color: isTooLow
+                                ? Colors.grey
+                                : const Color(0xFFdb2777),
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
-                            decoration: isTooLow ? TextDecoration.lineThrough : null),
+                            decoration:
+                                isTooLow ? TextDecoration.lineThrough : null),
                         textAlign: TextAlign.center,
                       ),
                       if (isTooLow)
-                        const Text('Price lower than original', style: TextStyle(color: Colors.red, fontSize: 10)),
+                        const Text('Price lower than original',
+                            style: TextStyle(color: Colors.red, fontSize: 10)),
                     ],
                   ),
                 ),

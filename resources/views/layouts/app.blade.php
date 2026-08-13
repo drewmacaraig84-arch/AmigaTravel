@@ -249,18 +249,9 @@
                         <a href="{{ url('/') }}" class="py-1 text-white transition-all duration-200 {{ request()->is('/') ? 'border-b-2 border-white font-semibold' : 'border-b-2 border-transparent hover:border-white/70' }}">Home</a>
                         <a href="{{ url('/about') }}" class="py-1 text-white transition-all duration-200 {{ request()->is('about') ? 'border-b-2 border-white font-semibold' : 'border-b-2 border-transparent hover:border-white/70' }}">About</a>
                         <a href="{{ url('/schedules') }}" class="py-1 text-white transition-all duration-200 {{ request()->is('schedules') ? 'border-b-2 border-white font-semibold' : 'border-b-2 border-transparent hover:border-white/70' }}">Schedules</a>
-                        <div x-data="{ open: false }" class="relative" @mouseenter="open = true" @mouseleave="open = false">
-                            <button class="py-1 text-white transition-all duration-200 flex items-center gap-1 {{ request()->is('services') || request()->is('tour-package') ? 'border-b-2 border-white font-semibold' : 'border-b-2 border-transparent hover:border-white/70' }}">
-                                Discover
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
-                            </button>
-                            <div x-show="open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="transform opacity-0 scale-95" x-transition:enter-end="transform opacity-100 scale-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="transform opacity-100 scale-100" x-transition:leave-end="transform opacity-0 scale-95" class="absolute left-1/2 -translate-x-1/2 mt-2 w-48 rounded-xl shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none overflow-hidden" style="display: none;">
-                                <div class="py-1">
-                                    <a href="{{ url('/services') }}" class="block px-4 py-2.5 text-sm font-medium {{ request()->is('services') ? 'bg-slate-100 text-slate-900' : 'text-slate-800 hover:bg-slate-50 hover:text-slate-900' }}">Services</a>
-                                    <a href="{{ url('/tour-package') }}" class="block px-4 py-2.5 text-sm font-medium {{ request()->is('tour-package') ? 'bg-slate-100 text-slate-900' : 'text-slate-800 hover:bg-slate-50 hover:text-slate-900' }}">Tour Package</a>
-                                </div>
-                            </div>
-                        </div>
+                        <a href="{{ url('/services') }}" class="py-1 text-white transition-all duration-200 {{ request()->is('services') ? 'border-b-2 border-white font-semibold' : 'border-b-2 border-transparent hover:border-white/70' }}">Services</a>
+                        <a href="{{ url('/tour-package') }}" class="py-1 text-white transition-all duration-200 {{ request()->is('tour-package') ? 'border-b-2 border-white font-semibold' : 'border-b-2 border-transparent hover:border-white/70' }}">Tour Packages</a>
+                        <a href="{{ url('/download') }}" class="py-1 text-white transition-all duration-200 {{ request()->is('download') ? 'border-b-2 border-white font-semibold' : 'border-b-2 border-transparent hover:border-white/70' }}">Download</a>
                         <div x-data="{ open: false }" class="relative" @mouseenter="open = true" @mouseleave="open = false">
                             <button class="py-1 text-white transition-all duration-200 flex items-center gap-1 {{ request()->is('contact-us') || request()->is('faqs') ? 'border-b-2 border-white font-semibold' : 'border-b-2 border-transparent hover:border-white/70' }}">
                                 Get Help

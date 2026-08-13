@@ -1746,6 +1746,20 @@
         </div>
     @endif
 </div>
+
+{{-- SEO Subpage Sitelinks --}}
+<div class="w-full bg-white py-12 border-t border-slate-100">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 class="sr-only">Explore Amiga Travel Services</h2>
+        <div class="flex flex-wrap items-center justify-center gap-4 md:gap-8 text-center">
+            <a href="{{ url('/about') }}" class="text-sm font-semibold text-slate-600 hover:text-[#008000] hover:underline transition-colors">Learn About Us</a>
+            <a href="{{ url('/schedules') }}" class="text-sm font-semibold text-slate-600 hover:text-[#008000] hover:underline transition-colors">Check Ferry Schedules</a>
+            <a href="{{ url('/services') }}" class="text-sm font-semibold text-slate-600 hover:text-[#008000] hover:underline transition-colors">View Our Services</a>
+            <a href="{{ url('/tour-package') }}" class="text-sm font-semibold text-slate-600 hover:text-[#008000] hover:underline transition-colors">Explore Tour Packages</a>
+            <a href="{{ url('/download') }}" class="text-sm font-semibold text-slate-600 hover:text-[#008000] hover:underline transition-colors">Download App</a>
+        </div>
+    </div>
+</div>
 </div>
 
 <script>

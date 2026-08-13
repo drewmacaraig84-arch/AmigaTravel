@@ -395,3 +395,27 @@ Route::get('/db-test', function () {
     }
 })->middleware(['auth:admin,web', 'admin']);
 
+Route::get('/sitemap.xml', function () {
+    $urls = [
+        url('/'),
+        url('/about'),
+        url('/schedules'),
+        url('/services'),
+        url('/tour-package'),
+        url('/download'),
+    ];
+
+    $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+    $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+    foreach ($urls as $url) {
+        $xml .= '  <url>' . "\n";
+        $xml .= '    <loc>' . htmlspecialchars($url) . '</loc>' . "\n";
+        $xml .= '    <lastmod>' . now()->tz('UTC')->toAtomString() . '</lastmod>' . "\n";
+        $xml .= '    <changefreq>daily</changefreq>' . "\n";
+        $xml .= '    <priority>0.8</priority>' . "\n";
+        $xml .= '  </url>' . "\n";
+    }
+    $xml .= '</urlset>';
+
+    return response($xml, 200)->header('Content-Type', 'text/xml');
+});
