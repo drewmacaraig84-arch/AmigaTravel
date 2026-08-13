@@ -79,7 +79,9 @@ class TourResource extends Resource
                                     ->image()
                                     ->disk('public')
                                     ->directory('tours')
-                                    ->maxSize(5120) // 5MB
+                                    ->maxSize(7168) // 7MB
+                                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+                                    ->helperText('Max 7 MB. Accepted: JPG, PNG, WebP, GIF.')
                                     ->nullable(),
                                 Forms\Components\TextInput::make('origin')
                                     ->label('Departure City')

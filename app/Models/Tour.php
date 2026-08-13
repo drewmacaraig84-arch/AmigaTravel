@@ -31,7 +31,20 @@ class Tour extends Model
 
     protected static function booted()
     {
-        // No global ordering scope, use local scope ordered() when needed
+        // Guard: `destinations` is NOT NULL in the DB schema.
+        // Coerce null → '' so any code path (Filament, CSV import, API) never
+        // triggers the integrity constraint violation.
+        static::creating(function (self $tour) {
+            if (is_null($tour->destinations)) {
+                $tour->destinations = '';
+            }
+        });
+
+        static::saving(function (self $tour) {
+            if (is_null($tour->destinations)) {
+                $tour->destinations = '';
+            }
+        });
     }
 
     public function scopeOrdered($query)

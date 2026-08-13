@@ -16,4 +16,13 @@ class EditTour extends EditRecord
             Actions\DeleteAction::make(),
         ];
     }
+
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        // Prevent NOT NULL constraint violation: default destinations to ''
+        $data['destinations'] = $data['destinations'] ?? '';
+
+        return $data;
+    }
 }
+
