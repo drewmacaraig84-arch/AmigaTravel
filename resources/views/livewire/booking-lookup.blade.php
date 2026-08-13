@@ -181,8 +181,7 @@
                                                 @endif
                                             </div>
                                         @else
-                                            <ul class="space-y-2 list-disc pl-5">
-                                                <li>Would you like to proceed with rebooking?</li>
+                                            <ul class="mt-4 list-inside list-disc space-y-2 text-sm text-slate-600">
                                                 <li>Please select your preferred new travel date.</li>
                                                 <li>Rebooking charges apply and fare difference (if applicable.)</li>
                                             </ul>

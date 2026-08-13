@@ -638,22 +638,28 @@ class BookingController extends Controller
             $accommodations = [];
             $schedulePrice = (float)($schedule->price ?? 0);
             
-            foreach ($schedule->scheduleAccommodations->where('is_active', true) as $acc) {
-                $price = $schedulePrice + (float)$acc->price;
-                $accommodations[] = [
-                    'id' => 'acc_' . $acc->id,
-                    'name' => $acc->name,
-                    'price' => (float)$price
-                ];
+            $hasAccs = false;
+            if (!$isAirline) {
+                foreach ($schedule->scheduleAccommodations->where('is_active', true) as $acc) {
+                    $hasAccs = true;
+                    $price = $schedulePrice + (float)$acc->price;
+                    $accommodations[] = [
+                        'id' => 'acc_' . $acc->id,
+                        'name' => $acc->name,
+                        'price' => (float)$price
+                    ];
+                }
             }
             
-            foreach ($schedule->transportClasses->where('pivot.is_active', true) as $tc) {
-                $price = $schedulePrice + (float)$tc->pivot->additional_price;
-                $accommodations[] = [
-                    'id' => 'tc_' . $tc->id,
-                    'name' => $tc->name,
-                    'price' => (float)$price
-                ];
+            if ($isAirline || !$hasAccs) {
+                foreach ($schedule->transportClasses->where('pivot.is_active', true) as $tc) {
+                    $price = $schedulePrice + (float)$tc->pivot->additional_price;
+                    $accommodations[] = [
+                        'id' => 'tc_' . $tc->id,
+                        'name' => $tc->name,
+                        'price' => (float)$price
+                    ];
+                }
             }
             
             $results[] = [

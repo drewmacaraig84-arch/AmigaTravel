@@ -476,12 +476,14 @@ class BookingLookup extends Component
         $passengerCount = max(1, $this->booking->passengers()->count());
         $mode = $this->booking ? $this->booking->getMode() : 'ferry';
 
-        // Original per-pax: base fare + transport class from pivot (index 0 = departure)
+        // Original per-pax: base fare + transport class/accommodation
         $this->booking->loadMissing('transportClasses');
         $transportClasses = $this->booking->transportClasses;
         $origDepTCPerPax = (float)optional($transportClasses->values()->get(0))->pivot?->price;
-        $originalPerPax  = (float)($this->booking->schedule_price ?? 0) + $origDepTCPerPax
-                         + (float)($this->booking->schedule_accommodation_price ?? 0);
+        $accPrice = (float)($this->booking->schedule_accommodation_price ?? 0);
+        $classPrice = ($mode === 'airline') ? $origDepTCPerPax : ($accPrice > 0 ? $accPrice : $origDepTCPerPax);
+        
+        $originalPerPax = (float)($this->booking->schedule_price ?? 0) + $classPrice;
 
         if ($mode === 'airline') {
             // For airlines, the displayed price is already (schedule + class) * 1.5 markup.
@@ -523,12 +525,14 @@ class BookingLookup extends Component
         $passengerCount = max(1, $this->booking->passengers()->count());
         $mode = $this->booking ? $this->booking->getMode() : 'ferry';
 
-        // Original per-pax return: base fare + transport class from pivot (index 1 = return)
+        // Original per-pax return: base fare + transport class/accommodation
         $this->booking->loadMissing('transportClasses');
         $transportClasses = $this->booking->transportClasses;
         $origRetTCPerPax = (float)optional($transportClasses->values()->get(1))->pivot?->price;
-        $originalPerPax  = (float)($this->booking->return_schedule_price ?? 0) + $origRetTCPerPax
-                         + (float)($this->booking->return_schedule_accommodation_price ?? 0);
+        $retAccPrice = (float)($this->booking->return_schedule_accommodation_price ?? 0);
+        $classPrice = ($mode === 'airline') ? $origRetTCPerPax : ($retAccPrice > 0 ? $retAccPrice : $origRetTCPerPax);
+        
+        $originalPerPax = (float)($this->booking->return_schedule_price ?? 0) + $classPrice;
 
         if ($mode === 'airline') {
             $newPerPax = (float)$price;
@@ -632,35 +636,40 @@ class BookingLookup extends Component
         $isAirline    = $this->booking && $this->booking->getMode() === 'airline';
         $schedulePrice = $isAirline ? ($schedule->price ?? 0) : 0;
 
-        // Compute the original per-pax minimum (ticket + original transport class)
+        // Compute the original per-pax minimum
         $this->booking->loadMissing('transportClasses');
-        $origTCPerPax   = (float) optional($this->booking->transportClasses->values()->get(0))->pivot?->price;
-        $originalPerPax = (float)($this->booking->schedule_price ?? 0)
-                        + $origTCPerPax
-                        + (float)($this->booking->schedule_accommodation_price ?? 0);
+        $origTCPerPax = (float)optional($this->booking->transportClasses->values()->get(0))->pivot?->price;
+        $accPrice = (float)($this->booking->schedule_accommodation_price ?? 0);
+        $classPrice = $isAirline ? $origTCPerPax : ($accPrice > 0 ? $accPrice : $origTCPerPax);
+        
+        $originalPerPax = (float)($this->booking->schedule_price ?? 0) + $classPrice;
 
-        $items = collect();
-        foreach ($schedule->scheduleAccommodations->where('is_active', true)->sortBy('sort_order') as $acc) {
-            $price = (float)$acc->price;
-            $newPerPax = $isAirline ? $price : (($this->rebooking_dep_schedule_price ?? 0) + $price);
-            $items->push((object)[
-                'id'       => 'acc_' . $acc->id,
-                'name'     => $acc->name,
-                'description' => $acc->description,
-                'price'    => $price,
-                'disabled' => $newPerPax < $originalPerPax,
-            ]);
+        if (!$isAirline) {
+            foreach ($schedule->scheduleAccommodations->where('is_active', true)->sortBy('sort_order') as $acc) {
+                $price = (float)$acc->price;
+                $newPerPax = (($this->rebooking_dep_schedule_price ?? 0) + $price);
+                $items->push((object)[
+                    'id'       => 'acc_' . $acc->id,
+                    'name'     => $acc->name,
+                    'description' => $acc->description,
+                    'price'    => $price,
+                    'disabled' => $newPerPax < $originalPerPax,
+                ]);
+            }
         }
-        foreach ($schedule->transportClasses->where('pivot.is_active', true)->sortBy('pivot.sort_order') as $tc) {
-            $price = (float)$tc->pivot->additional_price;
-            $newPerPax = $isAirline ? $price : (($this->rebooking_dep_schedule_price ?? 0) + $price);
-            $items->push((object)[
-                'id'       => 'tc_' . $tc->id,
-                'name'     => $tc->name,
-                'description' => $tc->pivot->description ?? $tc->description,
-                'price'    => $price,
-                'disabled' => $newPerPax < $originalPerPax,
-            ]);
+        
+        if ($isAirline || $items->isEmpty()) {
+            foreach ($schedule->transportClasses->where('pivot.is_active', true)->sortBy('pivot.sort_order') as $tc) {
+                $price = (float)$tc->pivot->additional_price;
+                $newPerPax = $isAirline ? $price : (($this->rebooking_dep_schedule_price ?? 0) + $price);
+                $items->push((object)[
+                    'id'       => 'tc_' . $tc->id,
+                    'name'     => $tc->name,
+                    'description' => $tc->pivot->description ?? $tc->description,
+                    'price'    => $price,
+                    'disabled' => $newPerPax < $originalPerPax,
+                ]);
+            }
         }
         return $items;
     }
@@ -674,35 +683,40 @@ class BookingLookup extends Component
         $isAirline    = $this->booking && $this->booking->getMode() === 'airline';
         $schedulePrice = $isAirline ? ($schedule->price ?? 0) : 0;
 
-        // Compute the original per-pax minimum for the return leg (index 1 = return transport class)
+        // Compute the original per-pax minimum for the return leg
         $this->booking->loadMissing('transportClasses');
-        $origTCPerPax   = (float) optional($this->booking->transportClasses->values()->get(1))->pivot?->price;
-        $originalPerPax = (float)($this->booking->return_schedule_price ?? 0)
-                        + $origTCPerPax
-                        + (float)($this->booking->return_schedule_accommodation_price ?? 0);
+        $origTCPerPax = (float)optional($this->booking->transportClasses->values()->get(1))->pivot?->price;
+        $accPrice = (float)($this->booking->return_schedule_accommodation_price ?? 0);
+        $classPrice = $isAirline ? $origTCPerPax : ($accPrice > 0 ? $accPrice : $origTCPerPax);
+        
+        $originalPerPax = (float)($this->booking->return_schedule_price ?? 0) + $classPrice;
 
-        $items = collect();
-        foreach ($schedule->scheduleAccommodations->where('is_active', true)->sortBy('sort_order') as $acc) {
-            $price = (float)$acc->price;
-            $newPerPax = $isAirline ? $price : (($this->rebooking_ret_schedule_price ?? 0) + $price);
-            $items->push((object)[
-                'id'       => 'acc_' . $acc->id,
-                'name'     => $acc->name,
-                'description' => $acc->description,
-                'price'    => $price,
-                'disabled' => $newPerPax < $originalPerPax,
-            ]);
+        if (!$isAirline) {
+            foreach ($schedule->scheduleAccommodations->where('is_active', true)->sortBy('sort_order') as $acc) {
+                $price = (float)$acc->price;
+                $newPerPax = (($this->rebooking_ret_schedule_price ?? 0) + $price);
+                $items->push((object)[
+                    'id'       => 'acc_' . $acc->id,
+                    'name'     => $acc->name,
+                    'description' => $acc->description,
+                    'price'    => $price,
+                    'disabled' => $newPerPax < $originalPerPax,
+                ]);
+            }
         }
-        foreach ($schedule->transportClasses->where('pivot.is_active', true)->sortBy('pivot.sort_order') as $tc) {
-            $price = (float)$tc->pivot->additional_price;
-            $newPerPax = $isAirline ? $price : (($this->rebooking_ret_schedule_price ?? 0) + $price);
-            $items->push((object)[
-                'id'       => 'tc_' . $tc->id,
-                'name'     => $tc->name,
-                'description' => $tc->pivot->description ?? $tc->description,
-                'price'    => $price,
-                'disabled' => $newPerPax < $originalPerPax,
-            ]);
+        
+        if ($isAirline || $items->isEmpty()) {
+            foreach ($schedule->transportClasses->where('pivot.is_active', true)->sortBy('pivot.sort_order') as $tc) {
+                $price = (float)$tc->pivot->additional_price;
+                $newPerPax = $isAirline ? $price : (($this->rebooking_ret_schedule_price ?? 0) + $price);
+                $items->push((object)[
+                    'id'       => 'tc_' . $tc->id,
+                    'name'     => $tc->name,
+                    'description' => $tc->pivot->description ?? $tc->description,
+                    'price'    => $price,
+                    'disabled' => $newPerPax < $originalPerPax,
+                ]);
+            }
         }
         return $items;
     }
