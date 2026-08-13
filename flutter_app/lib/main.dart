@@ -2429,7 +2429,6 @@ class _ServiceCard extends StatelessWidget {
   final VoidCallback onTap;
 
   const _ServiceCard({
-    super.key,
     required this.label,
     required this.subtitle,
     required this.icon,
@@ -2491,7 +2490,7 @@ class _ServiceCard extends StatelessWidget {
 }
 
 class _WelcomeBanner extends StatelessWidget {
-  const _WelcomeBanner({Key? key}) : super(key: key);
+  const _WelcomeBanner({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -2543,7 +2542,7 @@ class _WelcomeBanner extends StatelessWidget {
 }
 
 class _HeroVideoBanner extends StatefulWidget {
-  const _HeroVideoBanner({Key? key}) : super(key: key);
+  const _HeroVideoBanner({super.key});
 
   @override
   __HeroVideoBannerState createState() => __HeroVideoBannerState();
