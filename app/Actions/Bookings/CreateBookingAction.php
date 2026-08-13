@@ -373,34 +373,6 @@ class CreateBookingAction
             return \App\Models\Discount::all()->keyBy('id');
         });
 
-        $ferryTotal = collect($passengers)->sum(function (array $passenger) use (
-            $schedulePrice,
-            $scheduleAccommodationPrice,
-            $returnSchedulePrice,
-            $returnScheduleAccomPrice,
-            $discounts,
-            $hasVehicle
-        ) {
-            if ($hasVehicle && ($passenger['type'] ?? '') === 'driver') {
-                return 0.0; // Driver travels free
-            }
-
-            $fare = ($schedulePrice + $scheduleAccommodationPrice) + ($returnSchedulePrice + $returnScheduleAccomPrice);
-
-            if (! empty($passenger['discount_id'])) {
-                $discount = $discounts->get($passenger['discount_id']);
-                if ($discount) {
-                    $fare -= $fare * ((float) $discount->percentage / 100);
-                }
-            }
-
-            return $fare;
-        });
-
-        $payingPaxCount = collect($passengers)->filter(function($p) use ($hasVehicle) {
-            return !($hasVehicle && ($p['type'] ?? '') === 'driver');
-        })->count();
-
         $departureTransportClassTotal = 0;
         if ($selectedTransportClassId) {
             $transportClass = TransportClass::find($selectedTransportClassId);
@@ -425,8 +397,38 @@ class CreateBookingAction
             }
         }
 
-        // Transport class price applies per paying passenger
-        $transportClassTotal = ($departureTransportClassTotal + $returnTransportClassTotal) * max(0, $payingPaxCount);
+        $ferryTotal = collect($passengers)->sum(function (array $passenger) use (
+            $schedulePrice,
+            $scheduleAccommodationPrice,
+            $departureTransportClassTotal,
+            $returnSchedulePrice,
+            $returnScheduleAccomPrice,
+            $returnTransportClassTotal,
+            $discounts,
+            $hasVehicle
+        ) {
+            if ($hasVehicle && ($passenger['type'] ?? '') === 'driver') {
+                return 0.0; // Driver travels free
+            }
+
+            $fare = ($schedulePrice + $scheduleAccommodationPrice + $departureTransportClassTotal) + ($returnSchedulePrice + $returnScheduleAccomPrice + $returnTransportClassTotal);
+
+            if (! empty($passenger['discount_id'])) {
+                $discount = $discounts->get($passenger['discount_id']);
+                if ($discount) {
+                    $fare -= $fare * ((float) $discount->percentage / 100);
+                }
+            }
+
+            return $fare;
+        });
+
+        $payingPaxCount = collect($passengers)->filter(function($p) use ($hasVehicle) {
+            return !($hasVehicle && ($p['type'] ?? '') === 'driver');
+        })->count();
+
+        // Transport class price applies per paying passenger, but is already included in $ferryTotal
+        $transportClassTotal = 0;
 
         $accommodationsTotal = 0;
         if (! empty($accommodationIds)) {
