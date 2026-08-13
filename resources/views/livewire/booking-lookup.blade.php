@@ -519,7 +519,7 @@
                                                 @if(! $cancellationExpired)
                                                     Confirm Cancellation (100% Refund)
                                                 @else
-                                                    Confirm Cancellation
+                                                    Confirm Refund
                                                 @endif
                                             </button>
                                             <button wire:click.prevent="cancelCancellationRequest" type="button" class="inline-flex items-center justify-center rounded-3xl border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
