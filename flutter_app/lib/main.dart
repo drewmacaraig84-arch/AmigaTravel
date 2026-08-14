@@ -11736,6 +11736,133 @@ class _PackageList extends StatelessWidget {
   final List<Map<String, dynamic>> packages;
   const _PackageList({required this.packages});
 
+  void _showPackageDetailsModal(BuildContext context, Map<String, dynamic> p) {
+    final gradient = p['gradient'] as List<Color>;
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          insetPadding: const EdgeInsets.all(16),
+          child: Stack(
+            children: [
+              SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      height: 180,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                            colors: gradient,
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight),
+                        borderRadius:
+                            const BorderRadius.vertical(top: Radius.circular(18)),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(20)),
+                              child: Text(p['tag'] as String,
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold)),
+                            ),
+                            const Spacer(),
+                            Text(p['name'] as String,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 22)),
+                            Text(p['detail'] as String,
+                                style: const TextStyle(
+                                    color: Colors.white70, fontSize: 13)),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Description',
+                              style: TextStyle(
+                                  color: kSlate700,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16)),
+                          const SizedBox(height: 8),
+                          Text(p['desc'] as String,
+                              style: const TextStyle(
+                                  color: kSlate600, fontSize: 14, height: 1.5)),
+                          const SizedBox(height: 24),
+                          const Text('Starting from',
+                              style: TextStyle(
+                                  color: kSlate400, fontSize: 12)),
+                          Text(p['price'] as String,
+                              style: const TextStyle(
+                                  color: kGreen,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 20)),
+                          const SizedBox(height: 60), // Space for button
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.black.withValues(alpha: 0.3),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 16,
+                right: 16,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) =>
+                                RequestBookingScreen(package: p)));
+                  },
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: kPink,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12)),
+                  child: const Text('Book Now',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 14)),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
@@ -11743,102 +11870,40 @@ class _PackageList extends StatelessWidget {
       itemCount: packages.length,
       itemBuilder: (context, i) {
         final p = packages[i];
-        final gradient = p['gradient'] as List<Color>;
         return Card(
-          margin: const EdgeInsets.only(bottom: 16),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          elevation: 3,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                height: 120,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                      colors: gradient,
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight),
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(18)),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
+          margin: const EdgeInsets.only(bottom: 12),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: kSlate200)),
+          elevation: 0,
+          color: kSlate50,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(20)),
-                        child: Text(p['tag'] as String,
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold)),
-                      ),
-                      const Spacer(),
                       Text(p['name'] as String,
                           style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 17)),
+                              color: kSlate800,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15)),
+                      const SizedBox(height: 4),
                       Text(p['detail'] as String,
                           style: const TextStyle(
-                              color: Colors.white70, fontSize: 11)),
+                              color: kSlate500, fontSize: 12)),
                     ],
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(p['desc'] as String,
-                        style: const TextStyle(
-                            color: kSlate600, fontSize: 13, height: 1.5)),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Starting from',
-                                  style: TextStyle(
-                                      color: kSlate400, fontSize: 11)),
-                              Text(p['price'] as String,
-                                  style: const TextStyle(
-                                      color: kGreen,
-                                      fontWeight: FontWeight.w900,
-                                      fontSize: 16)),
-                            ]),
-                        ElevatedButton(
-                          onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) =>
-                                      RequestBookingScreen(package: p))),
-                          style: ElevatedButton.styleFrom(
-                              backgroundColor: kPink,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20)),
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 20)),
-                          child: const Text('Book Now',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 13)),
-                        ),
-                      ],
-                    ),
-                  ],
+                TextButton(
+                  onPressed: () => _showPackageDetailsModal(context, p),
+                  child: const Text('View',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
