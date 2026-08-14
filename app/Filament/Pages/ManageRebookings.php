@@ -187,8 +187,33 @@ class ManageRebookings extends Page implements HasTable
                     ->requiresConfirmation()
                     ->modalHeading('Verify Rebooking Payment & Approve')
                     ->modalDescription(fn (Booking $record): string => "This will verify the rebooking payment for booking #{$record->transaction_number} and automatically assign a replacement schedule.")
-                    ->action(function (Booking $record): void {
+                    ->form([
+                        Forms\Components\TextInput::make('confirmation_url')
+                            ->label('Confirmation/Ticket URL')
+                            ->placeholder('https://...')
+                            ->url()
+                            ->maxLength(255)
+                            ->columnSpanFull(),
+                        Forms\Components\FileUpload::make('confirmation_pdf')
+                            ->label('Upload Itinerary/Ticket PDF')
+                            ->disk('public')
+                            ->directory('receipts')
+                            ->acceptedFileTypes(['application/pdf'])
+                            ->maxSize(5120)
+                            ->columnSpanFull(),
+                    ])
+                    ->action(function (Booking $record, array $data): void {
                         try {
+                            if ($record->transaction) {
+                                if (!empty($data['confirmation_url'])) {
+                                    $record->transaction->confirmation_url = $data['confirmation_url'];
+                                }
+                                if (!empty($data['confirmation_pdf'])) {
+                                    $record->transaction->confirmation_pdf = $data['confirmation_pdf'];
+                                }
+                                $record->transaction->save();
+                            }
+
                             app(ServiceCancellationManager::class)->processAutomaticRebookingApproval(
                                 $record,
                                 auth()->user()
@@ -243,7 +268,32 @@ class ManageRebookings extends Page implements HasTable
                     ->color('secondary')
                     ->visible(fn (Booking $record): bool => $record->is_rebooked && $record->rebooking_status === 'pending')
                     ->requiresConfirmation()
-                    ->action(function (Booking $record): void {
+                    ->form([
+                        Forms\Components\TextInput::make('confirmation_url')
+                            ->label('Confirmation/Ticket URL')
+                            ->placeholder('https://...')
+                            ->url()
+                            ->maxLength(255)
+                            ->columnSpanFull(),
+                        Forms\Components\FileUpload::make('confirmation_pdf')
+                            ->label('Upload Itinerary/Ticket PDF')
+                            ->disk('public')
+                            ->directory('receipts')
+                            ->acceptedFileTypes(['application/pdf'])
+                            ->maxSize(5120)
+                            ->columnSpanFull(),
+                    ])
+                    ->action(function (Booking $record, array $data): void {
+                        if ($record->transaction) {
+                            if (!empty($data['confirmation_url'])) {
+                                $record->transaction->confirmation_url = $data['confirmation_url'];
+                            }
+                            if (!empty($data['confirmation_pdf'])) {
+                                $record->transaction->confirmation_pdf = $data['confirmation_pdf'];
+                            }
+                            $record->transaction->save();
+                        }
+
                         $record->verifyRebooking(
                             $record->transaction?->confirmation_url,
                             $record->transaction?->confirmation_pdf ?? null,
