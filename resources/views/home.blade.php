@@ -333,7 +333,7 @@
                      'logo' => $op->logo_path ? \Illuminate\Support\Facades\Storage::url($op->logo_path) : null,
                      'mode' => $op->mode
                  ];
-             })->toArray()) !!},
+             })->toArray(), 15) !!},
              get filteredOperatorsList() {
                  if (!this.mode) return this.operatorsList;
                  return this.operatorsList.filter(o => o.mode === 'all' || o.mode === this.mode);
