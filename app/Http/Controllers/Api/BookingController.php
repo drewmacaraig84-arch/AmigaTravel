@@ -345,14 +345,17 @@ class BookingController extends Controller
             return response()->json([
                 'status'           => 'success',
                 'message'          => 'Cancellation started.',
+                'base_ticket'      => $breakdown['base_ticket'] ?? 0,
                 'cancellation_fee' => $breakdown['deduction_amount'],
                 'refund_amount'    => $breakdown['refundable_amount'],
+                'non_refundable_fees'=> $breakdown['non_refundable_fees'] ?? 0,
                 'transaction_fee'  => $breakdown['transaction_fee'],
                 'web_admin_fee'    => $breakdown['web_admin_fee'],
                 'surcharge_amount' => $breakdown['surcharge_amount'],
                 'surcharge_pct'    => $breakdown['surcharge_pct'],
                 'rebooking_surcharge' => $breakdown['rebooking_surcharge'] ?? 0,
                 'rebooking_revalidation_fee' => $breakdown['rebooking_revalidation_fee'] ?? 0,
+                'rebooking_rate_diff' => $breakdown['rebooking_rate_diff'] ?? 0,
             ]);
         }
 

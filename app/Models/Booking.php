@@ -456,20 +456,27 @@ class Booking extends Model
         $transactionFeeTotal = floatval($settings->transaction_fee) * $multiplier;
         $nonRefundableFees   = $webAdminFeeTotal + $transactionFeeTotal;
 
+        $rebookingFeeTotal = $this->transaction ? (float) $this->transaction->rebooking_fee : 0.0;
+
         $rebookingSurcharge = 0;
         $rebookingRevalidationFee = 0;
-        if ($this->is_rebooked && !empty($this->disruption_notes)) {
+        $rebookingRateDiff = 0;
+        
+        if (!empty($this->disruption_notes)) {
             $notes = json_decode($this->disruption_notes, true);
             $rebookingSurcharge = (float) ($notes['surcharge'] ?? 0);
             $rebookingRevalidationFee = (float) ($notes['revalidation_fee'] ?? 0);
+            $rebookingRateDiff = (float) ($notes['rate_diff'] ?? 0);
+        } else if ($rebookingFeeTotal > 0) {
+            $rebookingRevalidationFee = $rebookingFeeTotal;
         }
 
-        $totalNonRefundableFees = $nonRefundableFees + $rebookingSurcharge + $rebookingRevalidationFee;
-        $totalPaid = (float) $this->total_price + $rebookingSurcharge + $rebookingRevalidationFee;
+        $totalNonRefundableFees = $nonRefundableFees + $rebookingFeeTotal;
+        $totalPaid = (float) $this->total_price + $rebookingFeeTotal;
 
         if ($isWithinGracePeriod) {
             return [
-                'base_ticket' => (float) $this->total_price,
+                'base_ticket' => $totalPaid,
                 'surcharge_pct' => 0,
                 'surcharge_amount' => 0,
                 'non_refundable_fees' => 0,
@@ -477,8 +484,9 @@ class Booking extends Model
                 'transaction_fee' => 0,
                 'rebooking_surcharge' => $rebookingSurcharge,
                 'rebooking_revalidation_fee' => $rebookingRevalidationFee,
-                'refundable_amount' => (float) $this->total_price,
-                'deduction_amount' => $rebookingSurcharge + $rebookingRevalidationFee,
+                'rebooking_rate_diff' => $rebookingRateDiff,
+                'refundable_amount' => $totalPaid,
+                'deduction_amount' => 0,
             ];
         }
 
@@ -489,7 +497,7 @@ class Booking extends Model
 
         if ($mode === 'airline' && $afterDepart) {
             return [
-                'base_ticket' => (float) $this->total_price,
+                'base_ticket' => $totalPaid,
                 // NOTE: We force surcharge to 100% here so the UI breakdown accurately reflects 
                 // that the entire ticket base is forfeited (since it is non-refundable).
                 'surcharge_pct' => 100,
@@ -499,6 +507,7 @@ class Booking extends Model
                 'transaction_fee' => $transactionFeeTotal,
                 'rebooking_surcharge' => $rebookingSurcharge,
                 'rebooking_revalidation_fee' => $rebookingRevalidationFee,
+                'rebooking_rate_diff' => $rebookingRateDiff,
                 'refundable_amount' => 0,
                 'deduction_amount' => $totalPaid,
             ];
@@ -506,7 +515,7 @@ class Booking extends Model
 
         if ($mode !== 'airline' && $afterDepart && ! $this->isStarlite()) {
             return [
-                'base_ticket' => (float) $this->total_price,
+                'base_ticket' => $totalPaid,
                 // NOTE: We force surcharge to 100% here so the UI breakdown accurately reflects 
                 // that the entire ticket base is forfeited (since it is non-refundable).
                 'surcharge_pct' => 100,
@@ -516,6 +525,7 @@ class Booking extends Model
                 'transaction_fee' => $transactionFeeTotal,
                 'rebooking_surcharge' => $rebookingSurcharge,
                 'rebooking_revalidation_fee' => $rebookingRevalidationFee,
+                'rebooking_rate_diff' => $rebookingRateDiff,
                 'refundable_amount' => 0,
                 'deduction_amount' => $totalPaid,
             ];
@@ -524,10 +534,10 @@ class Booking extends Model
         $surchargePct = $this->getRefundSurchargePercentage();
         $surcharge  = $ticketBase * ($surchargePct / 100);
         
-        $refundable = max(0, round($ticketBase - $surcharge, 2));
+        $refundable = max(0, round($totalPaid - $surcharge - $totalNonRefundableFees, 2));
 
         return [
-            'base_ticket' => (float) $this->total_price,
+            'base_ticket' => $totalPaid,
             'surcharge_pct' => $surchargePct,
             'surcharge_amount' => $surcharge,
             'non_refundable_fees' => $totalNonRefundableFees,
@@ -535,6 +545,7 @@ class Booking extends Model
             'transaction_fee' => $transactionFeeTotal,
             'rebooking_surcharge' => $rebookingSurcharge,
             'rebooking_revalidation_fee' => $rebookingRevalidationFee,
+            'rebooking_rate_diff' => $rebookingRateDiff,
             'refundable_amount' => $refundable,
             'deduction_amount' => $totalPaid - $refundable,
         ];
@@ -765,11 +776,40 @@ class Booking extends Model
         }
         
         if ($this->transaction && (float) $this->transaction->rebooking_fee > 0) {
-            $breakdown[] = [
-                'label' => 'Rebooking Fee',
-                'amount' => (float) $this->transaction->rebooking_fee,
-                'class' => 'text-amber-600'
-            ];
+            $notes = $this->disruption_notes ? json_decode($this->disruption_notes, true) : [];
+            $surcharge = (float) ($notes['surcharge'] ?? 0);
+            $reval = (float) ($notes['revalidation_fee'] ?? 0);
+            $rateDiff = (float) ($notes['rate_diff'] ?? 0);
+
+            if ($surcharge > 0 || $reval > 0 || $rateDiff > 0) {
+                if ($reval > 0) {
+                    $breakdown[] = [
+                        'label' => 'Rebooking Revalidation Fee',
+                        'amount' => $reval,
+                        'class' => 'text-amber-600'
+                    ];
+                }
+                if ($surcharge > 0) {
+                    $breakdown[] = [
+                        'label' => 'Rebooking Surcharge',
+                        'amount' => $surcharge,
+                        'class' => 'text-amber-600'
+                    ];
+                }
+                if ($rateDiff > 0) {
+                    $breakdown[] = [
+                        'label' => 'Rebooking Rate Difference',
+                        'amount' => $rateDiff,
+                        'class' => 'text-amber-600'
+                    ];
+                }
+            } else {
+                $breakdown[] = [
+                    'label' => 'Rebooking Fee',
+                    'amount' => (float) $this->transaction->rebooking_fee,
+                    'class' => 'text-amber-600'
+                ];
+            }
         }
 
         return $breakdown;

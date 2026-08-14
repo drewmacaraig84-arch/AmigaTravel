@@ -452,17 +452,23 @@
                                                         <span>Transaction Fee</span>
                                                         <span>₱{{ number_format($refundBreakdown['transaction_fee'], 2) }}</span>
                                                     </div>
-                                                    @if(isset($refundBreakdown['rebooking_surcharge']) && $refundBreakdown['rebooking_surcharge'] > 0)
-                                                    <div class="flex justify-between">
-                                                        <span>Rebooking Surcharge</span>
-                                                        <span>₱{{ number_format($refundBreakdown['rebooking_surcharge'], 2) }}</span>
-                                                    </div>
+                                                    @if(($refundBreakdown['rebooking_revalidation_fee'] ?? 0) > 0)
+                                                        <div class="flex justify-between">
+                                                            <span>Rebooking Revalidation Fee</span>
+                                                            <span>₱{{ number_format($refundBreakdown['rebooking_revalidation_fee'], 2) }}</span>
+                                                        </div>
                                                     @endif
-                                                    @if(isset($refundBreakdown['rebooking_revalidation_fee']) && $refundBreakdown['rebooking_revalidation_fee'] > 0)
-                                                    <div class="flex justify-between">
-                                                        <span>Revalidation Fee</span>
-                                                        <span>₱{{ number_format($refundBreakdown['rebooking_revalidation_fee'], 2) }}</span>
-                                                    </div>
+                                                    @if(($refundBreakdown['rebooking_surcharge'] ?? 0) > 0)
+                                                        <div class="flex justify-between">
+                                                            <span>Rebooking Surcharge</span>
+                                                            <span>₱{{ number_format($refundBreakdown['rebooking_surcharge'], 2) }}</span>
+                                                        </div>
+                                                    @endif
+                                                    @if(($refundBreakdown['rebooking_rate_diff'] ?? 0) > 0)
+                                                        <div class="flex justify-between">
+                                                            <span>Rebooking Rate Difference</span>
+                                                            <span>₱{{ number_format($refundBreakdown['rebooking_rate_diff'], 2) }}</span>
+                                                        </div>
                                                     @endif
                                                 </div>
                                                 <div class="flex justify-between pt-1 mt-1 border-t border-amber-200/50 font-bold text-base">
