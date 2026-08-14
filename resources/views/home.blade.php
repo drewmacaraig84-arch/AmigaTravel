@@ -240,7 +240,7 @@
     $operatorsList = \App\Models\Operator::where('is_active', true)->get()->map(function($op) {
         return [
             'name' => $op->name,
-            'value' => $op->name,
+            'value' => normalize_operator_name($op->name) ?: $op->name,
             'logo' => $op->logo_path ? \Illuminate\Support\Facades\Storage::url($op->logo_path) : null,
             'mode' => $op->mode
         ];
