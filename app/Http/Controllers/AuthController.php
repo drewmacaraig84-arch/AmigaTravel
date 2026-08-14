@@ -399,10 +399,10 @@ class AuthController extends Controller
             'password' => \Illuminate\Support\Facades\Hash::make($validated['password']),
             'referral_code' => $validated['referral_code'] ?? null,
             'otp'      => $otp,
-        ], now()->addMinutes(10));
+        ], now()->addMinutes(2));
 
         Mail::raw(
-            "Hello {$validated['name']},\n\nYour Amiga Gracia registration verification code is: {$otp}\n\nThis code expires in 10 minutes. Do not share it with anyone.",
+            "Hello {$validated['name']},\n\nYour Amiga Gracia registration verification code is: {$otp}\n\nThis code expires in 2 minutes. Do not share it with anyone.",
             function ($message) use ($email, $validated): void {
                 $message->to($email)->subject('Amiga Gracia – Email Verification Code');
             }
@@ -411,6 +411,39 @@ class AuthController extends Controller
         return response()->json([
             'status'  => 'success',
             'message' => 'A 6-digit verification code has been sent to your email.',
+        ]);
+    }
+
+    public function resendRegisterOtp(Request $request)
+    {
+        $validated = $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        $email = strtolower(trim($validated['email']));
+        $pending = Cache::get('pending_register:' . $email);
+
+        if (! $pending) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No pending registration found. Please register again.',
+            ], 422);
+        }
+
+        $otp = (string) random_int(100000, 999999);
+        $pending['otp'] = $otp;
+        Cache::put('pending_register:' . $email, $pending, now()->addMinutes(2));
+
+        Mail::raw(
+            "Hello {$pending['name']},\n\nYour new Amiga Gracia registration verification code is: {$otp}\n\nThis code expires in 2 minutes. Do not share it with anyone.",
+            function ($message) use ($email): void {
+                $message->to($email)->subject('Amiga Gracia – New Email Verification Code');
+            }
+        );
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'A new 6-digit verification code has been sent to your email.',
         ]);
     }
 
@@ -434,7 +467,9 @@ class AuthController extends Controller
             ], 422);
         }
 
-        if (! hash_equals((string) $pending['otp'], $validated['otp'])) {
+        $otpInput = trim((string) $validated['otp']);
+
+        if (! hash_equals((string) $pending['otp'], $otpInput)) {
             return response()->json([
                 'status'  => 'error',
                 'message' => 'Invalid or expired verification code.',
@@ -442,7 +477,8 @@ class AuthController extends Controller
         }
 
         // Double-check uniqueness (race condition guard)
-        if (User::where('email', $email)->exists()) {
+        $existingUser = User::where('email', $email)->first();
+        if ($existingUser && $existingUser->is_app_user) {
             Cache::forget('pending_register:' . $email);
             return response()->json([
                 'status'  => 'error',

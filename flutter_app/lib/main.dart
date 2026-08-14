@@ -4174,6 +4174,24 @@ class _ActivityScreenState extends State<ActivityScreen> {
   String? _pendingRegisterEmail; // non-null when OTP step is active
   final _otpCtrl = TextEditingController();
   bool _otpLoading = false;
+  Timer? _otpTimer;
+  int _otpCountdown = 0;
+
+  void _startOtpTimer() {
+    _otpTimer?.cancel();
+    setState(() => _otpCountdown = 120);
+    _otpTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_otpCountdown > 0) {
+        setState(() => _otpCountdown--);
+      } else {
+        timer.cancel();
+      }
+    });
+  }
 
   // Guest booking lookup (separate from login/register fields)
   final _guestEmailCtrl = TextEditingController();
@@ -4201,6 +4219,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
     _otpCtrl.dispose();
     _guestEmailCtrl.dispose();
     _verificationCodeCtrl.dispose();
+    _otpTimer?.cancel();
     super.dispose();
   }
 
@@ -4296,6 +4315,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
         setState(() {
           _pendingRegisterEmail = email;
           _otpCtrl.clear();
+          _startOtpTimer();
         });
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -4387,6 +4407,44 @@ class _ActivityScreenState extends State<ActivityScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
               content: Text(data['message'] ?? 'Verification failed.'),
+              backgroundColor: Colors.red),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Connection error: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => _otpLoading = false);
+    }
+  }
+
+  Future<void> _resendRegisterOtp() async {
+    if (_pendingRegisterEmail == null) return;
+    setState(() => _otpLoading = true);
+    try {
+      final response = await http.post(
+        Uri.parse('${UserSession.getBaseUrl()}/api/register/resend-otp'),
+        headers: {'Accept': 'application/json'},
+        body: {'email': _pendingRegisterEmail!},
+      );
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['status'] == 'success') {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(data['message'] ?? 'A new code has been sent.'),
+              backgroundColor: kGreen),
+        );
+        _otpCtrl.clear();
+        _startOtpTimer();
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(data['message'] ?? 'Could not resend OTP.'),
               backgroundColor: Colors.red),
         );
       }
@@ -4833,11 +4891,36 @@ class _ActivityScreenState extends State<ActivityScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'The code expires in 10 minutes.',
-                style: TextStyle(fontSize: 12, color: kSlate400),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _otpCountdown > 0
+                      ? Text(
+                          'Code expires in ${_otpCountdown ~/ 60}:${(_otpCountdown % 60).toString().padLeft(2, '0')}',
+                          style: const TextStyle(fontSize: 12, color: kSlate400),
+                        )
+                      : const Text(
+                          'Your code has expired.',
+                          style: TextStyle(fontSize: 12, color: Colors.red, fontWeight: FontWeight.bold),
+                        ),
+                  TextButton(
+                    onPressed: (_otpLoading || _otpCountdown > 0) ? null : _resendRegisterOtp,
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(50, 30),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(
+                      'Resend Code',
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: (_otpLoading || _otpCountdown > 0) ? Colors.grey : kPink),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 height: 52,
@@ -6397,27 +6480,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     borderRadius: BorderRadius.circular(12)),
               ),
               child: const Text('Save Profile',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 48,
-            child: OutlinedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => const ForgotPasswordScreen()),
-                );
-              },
-              style: OutlinedButton.styleFrom(
-                foregroundColor: kGreen,
-                side: const BorderSide(color: kGreen),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-              child: const Text('Reset Password',
                   style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ),

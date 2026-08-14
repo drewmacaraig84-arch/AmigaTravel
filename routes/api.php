@@ -16,6 +16,7 @@ Route::middleware('throttle:60,1')->group(function () {
     Route::post('/login',                     [AuthController::class, 'apiLogin']);
     Route::post('/register',                  [AuthController::class, 'apiRegister']);
     Route::post('/register/request-otp',      [AuthController::class, 'requestRegisterOtp']);
+    Route::post('/register/resend-otp',       [AuthController::class, 'resendRegisterOtp']);
     Route::post('/register/verify-otp',       [AuthController::class, 'verifyRegisterOtp']);
     Route::post('/email-verification/request',[AuthController::class, 'requestEmailVerification']);
     Route::post('/email-verification/verify', [AuthController::class, 'verifyEmail']);
