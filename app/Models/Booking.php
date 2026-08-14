@@ -309,7 +309,12 @@ class Booking extends Model
             return false;
         }
 
+        if ($this->hasBeenRebooked() || !empty($this->rebooking_status)) {
+            return false;
+        }
+
         if (! $this->transaction || ! in_array($this->transaction->payment_status, ['paid', 'pending', 'unpaid'])) {
+
             return false;
         }
 
@@ -365,6 +370,30 @@ class Booking extends Model
 
         // Time window for refunds is identical to the cancellation window
         return $this->canCancel();
+    }
+
+    public function hasBeenRebooked(): bool
+    {
+        if ($this->is_rebooked) {
+            return true;
+        }
+
+        if ($this->rebooking_status === 'verified') {
+            return true;
+        }
+
+        if ($this->transaction && (float) $this->transaction->rebooking_fee > 0) {
+            return true;
+        }
+
+        if (!empty($this->disruption_notes)) {
+            $notes = json_decode($this->disruption_notes, true);
+            if ((float)($notes['revalidation_fee'] ?? 0) > 0 || (float)($notes['surcharge'] ?? 0) > 0) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

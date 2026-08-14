@@ -377,7 +377,7 @@
                                                         </button>
                                                     @endif
                                                 @endif
-                                                @if(!$booking->is_rebooked)
+                                                @if(!$booking->hasBeenRebooked() && empty($booking->rebooking_status))
                                                     @if($booking->transaction && $booking->transaction->payment_status === 'paid')
                                                         <button wire:click.prevent="requestRebooking" type="button" class="inline-flex items-center justify-center rounded-3xl border border-blue-500 px-6 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-50">
                                                             Rebook
@@ -532,7 +532,7 @@
                                             <button wire:click.prevent="cancelCancellationRequest" type="button" class="inline-flex items-center justify-center rounded-3xl border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
                                                 Cancel Request
                                             </button>
-                                            @if(!$booking->is_rebooked)
+                                            @if(!$booking->hasBeenRebooked() && empty($booking->rebooking_status))
                                                 @if($booking->transaction && $booking->transaction->payment_status === 'paid')
                                                     <button wire:click.prevent="confirmRebookingRequest" type="button" class="inline-flex items-center justify-center rounded-3xl border border-blue-500 px-6 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-50">
                                                         Switch to Rebook

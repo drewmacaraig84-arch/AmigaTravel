@@ -441,17 +441,17 @@ class BookingController extends Controller
             ], 400);
         }
 
-        if ($booking->is_rebooked) {
+        if ($booking->hasBeenRebooked()) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'This booking has already been rebooked once.',
             ], 400);
         }
 
-        if ($booking->rebooking_status === 'pending') {
+        if (!empty($booking->rebooking_status)) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'A rebooking request is already pending verification.',
+                'message' => 'A rebooking request is already in progress or completed.',
             ], 400);
         }
 
