@@ -352,20 +352,15 @@ class FerryRouteResource extends Resource
                 ->schema([
                     Select::make('transport_class_id')
                         ->label('Transport Class')
-                        ->options(
-                            \App\Models\TransportClass::with('operatorRecord')
-                                ->where('is_active', true)
-                                ->orderBy('name')
-                                ->get()
-                                ->mapWithKeys(fn ($item) => [
-                                    $item->id => $item->operatorRecord
-                                        ? "{$item->operatorRecord->name} - {$item->name}"
-                                        : $item->name,
-                                ])
-                                ->toArray()
-                        )
+                        ->options(fn (callable $get) => \App\Models\TransportClass::query()
+                            ->when($get('../../../../operator_id'), fn ($query, $operatorId) => $query->where('operator_id', $operatorId))
+                            // Intentionally skipping mode filter because the DB has ferry classes seeded as 'airline'
+                            ->where('is_active', true)
+                            ->orderBy('name')
+                            ->get()
+                            ->mapWithKeys(fn ($item) => [$item->id => $item->operator_record ? "{$item->operator_record->name} - {$item->name}" : $item->name])
+                            ->toArray())
                         ->required()
-                        ->searchable()
                         ->reactive()
                         ->afterStateUpdated(function ($state, callable $set) {
                             if ($state) {
