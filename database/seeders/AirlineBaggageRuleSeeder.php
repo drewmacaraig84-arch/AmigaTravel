@@ -384,14 +384,28 @@ class AirlineBaggageRuleSeeder extends Seeder
             ],
         ];
 
+        $operatorMap = \App\Models\Operator::pluck('id', 'name')->mapWithKeys(function ($id, $name) {
+            return [strtolower($name) => $id];
+        })->toArray();
+        $operatorMap['philippines airasia'] = $operatorMap[strtolower('Philippines AirAsia')] ?? null;
+        $operatorMap['airasia'] = $operatorMap['philippines airasia'] ?? null;
+        $operatorMap['pal'] = $operatorMap[strtolower('Philippine Airlines')] ?? null;
+        $operatorMap['ceb_pac'] = $operatorMap[strtolower('Cebu Pacific')] ?? null;
+
         foreach ($rules as $ruleData) {
+            $operatorCode = $ruleData['operator'];
+            $opId = $operatorMap[$operatorCode] ?? null;
+
             AirlineBaggageRule::updateOrCreate(
                 [
                     'operator' => $ruleData['operator'],
                     'trip_type' => $ruleData['trip_type'],
                     'weight' => $ruleData['weight'],
                 ],
-                array_merge($ruleData, ['is_active' => true])
+                array_merge($ruleData, [
+                    'is_active' => true,
+                    'operator_id' => $opId,
+                ])
             );
         }
     }

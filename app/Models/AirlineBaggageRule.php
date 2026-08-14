@@ -96,8 +96,8 @@ class AirlineBaggageRule extends Model
                     ],
                 ],
                 'airasia' => [
-                    'name' => 'AirAsia International',
-                    'code' => 'AirAsia',
+                    'name' => 'Philippines AirAsia International',
+                    'code' => 'Philippines AirAsia',
                     'logo' => 'AirAsia-Logo.png',
                     'options' => [
                         ['weight' => '20 kg', 'price' => 1470],
@@ -138,8 +138,8 @@ class AirlineBaggageRule extends Model
                 ],
             ],
             'airasia' => [
-                'name' => 'AirAsia',
-                'code' => 'AirAsia',
+                'name' => 'Philippines AirAsia',
+                'code' => 'Philippines AirAsia',
                 'logo' => 'AirAsia-Logo.png',
                 'options' => [
                     ['weight' => '15 kg', 'price' => 594],

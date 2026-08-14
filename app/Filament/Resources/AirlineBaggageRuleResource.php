@@ -67,7 +67,7 @@ class AirlineBaggageRuleResource extends Resource
         return $form
             ->schema([
                 Select::make('operator_id')
-                    ->relationship('operatorRecord', 'name')
+                    ->relationship('operatorRecord', 'name', fn ($query) => $query->where('mode', 'airline'))
                     ->label('Airline Operator')
                     ->required()
                     ->live()
@@ -204,7 +204,7 @@ class AirlineBaggageRuleResource extends Resource
                     ->placeholder('All Scopes (Domestic & International)'),
 
                 SelectFilter::make('operator_id')
-                    ->relationship('operatorRecord', 'name')
+                    ->relationship('operatorRecord', 'name', fn ($query) => $query->where('mode', 'airline'))
                     ->label('Filter by Airline Operator')
                     ->placeholder('All Operators'),
             ], layout: \Filament\Tables\Enums\FiltersLayout::AboveContent)
