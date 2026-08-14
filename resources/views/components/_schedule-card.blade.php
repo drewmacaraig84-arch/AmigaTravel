@@ -7,12 +7,7 @@
     $isSelected = (int)$selectedId === (int)($schedule['id'] ?? -1);
     $isPast     = (bool) ($schedule['is_past'] ?? false);
     $opName = $schedule['operator'] ?? '';
-    $opLogo = null;
-    if (stripos($opName, '2GO') !== false) $opLogo = '2GO-Logo.png';
-    elseif (stripos($opName, 'Starlite') !== false) $opLogo = 'Starlite_Logo.png';
-    elseif (stripos($opName, 'Cebu') !== false) $opLogo = 'CebuPecific-Logo.png';
-    elseif (stripos($opName, 'Pal') !== false || stripos($opName, 'Philippine') !== false) $opLogo = 'Pal-Logo.jfif';
-    elseif (stripos($opName, 'AirAsia') !== false) $opLogo = 'AirAsia-Logo.png';
+    $opLogoUrl = $schedule['operator_logo'] ?? null;
 
     $safeSelectMethod = is_string($selectMethod) && preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $selectMethod) ? $selectMethod : 'selectSchedule';
     $scheduleId = (int) ($schedule['id'] ?? 0);
@@ -40,9 +35,9 @@
     @endif
 
     <div class="flex items-start justify-between mb-2 gap-1">
-        @if($opLogo)
+        @if($opLogoUrl)
             <div class="w-8 h-8 sm:w-10 sm:h-10 shrink-0 bg-white rounded border {{ $isSelected && !$isPast ? 'border-white/30 shadow' : 'border-slate-200' }} flex items-center justify-center p-1 overflow-hidden">
-                <img src="{{ asset('images/' . $opLogo) }}" alt="{{ $opName }}" class="w-full h-full object-contain {{ $isPast ? 'grayscale' : '' }}">
+                <img src="{{ $opLogoUrl }}" alt="{{ $opName }}" class="w-full h-full object-contain {{ $isPast ? 'grayscale' : '' }}">
             </div>
         @else
             <div class="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded border {{ $isSelected && !$isPast ? 'border-white/30 bg-white/20' : 'border-slate-200 bg-slate-50' }} flex items-center justify-center">
