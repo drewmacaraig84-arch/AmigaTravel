@@ -302,19 +302,11 @@ class ManageWebsiteSettings extends Page implements HasForms
                         ->tabs([
                             Tabs\Tab::make('Promotion Carousel')
                                 ->schema([
-                                    Section::make('Promotion Carousel')->collapsible()
-                                        ->description('Upload images for the promotion carousel')
+                                    Section::make('Promotion Carousel')
+                                        ->collapsible()
+                                        ->description('Manage the promotion carousel images shown on the homepage. Images are stored as numbered files (1.png, 2.png, etc.) so the website carousel reads them automatically.')
                                         ->schema([
-                                            FileUpload::make('hero_images')
-                                                ->label('Carousel Images')
-                                                ->multiple()
-                                                ->image()
-                                                ->maxSize(12288)
-                                                ->reorderable()
-                                                ->appendFiles()
-                                                ->disk('public')
-                                                ->visibility('public')
-                                                ->directory('website-settings/promotions'),
+                                            \Filament\Forms\Components\View::make('livewire.promo-image-manager-wrapper'),
                                         ]),
                                 ])
                                 ->visible(fn () => $this->currentPage === 'home'),
