@@ -3,13 +3,14 @@
 use App\Http\Controllers\AdminNotificationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BookingExportController;
+use App\Http\Controllers\TourController;
+use App\Models\Booking;
+use App\Models\ServiceCancellation;
 use App\Models\Transaction;
 use App\Models\WebsiteSetting;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
-use App\Models\Booking;
-use App\Models\ServiceCancellation;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/test-all-emails', function () {
     $email = 'drewmacaraig84@gmail.com';
@@ -43,7 +44,6 @@ Route::get('/test-all-emails', function () {
 
     return response()->json(['message' => 'All 7 test emails successfully sent to ' . $email]);
 });
-use App\Http\Controllers\TourController;
 
 // ─── Diagnostic Health Check (no middleware, no session) ──────────────────────
 // Remove this route once production is stable.
