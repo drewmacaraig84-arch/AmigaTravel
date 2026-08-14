@@ -38,7 +38,7 @@ class PromoImageManager extends Component
                 if (in_array(strtolower(pathinfo($basename, PATHINFO_EXTENSION)), $extensions, true)) {
                     $slot = pathinfo($basename, PATHINFO_FILENAME);
                     $this->images[$slot] = [
-                        'url'    => Storage::disk(self::DISK)->url(self::STORE_DIR . '/' . $basename),
+                        'url'    => storage_asset_path(self::STORE_DIR . '/' . $basename),
                         'source' => 'storage',
                         'file'   => $basename,
                     ];

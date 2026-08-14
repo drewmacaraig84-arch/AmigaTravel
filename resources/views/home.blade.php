@@ -1393,7 +1393,7 @@
                             'slot'     => (int) pathinfo($__basename, PATHINFO_FILENAME),
                             'title'    => ucwords(str_replace(['-', '_'], ' ', pathinfo($__basename, PATHINFO_FILENAME))),
                             'subtitle' => '',
-                            'image'    => \Illuminate\Support\Facades\Storage::disk('public')->url('prmotion_images/' . $__basename),
+                            'image'    => storage_asset_path('prmotion_images/' . $__basename),
                         ];
                     }
                 }
