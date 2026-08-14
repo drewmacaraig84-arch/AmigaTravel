@@ -352,18 +352,20 @@ class FerryRouteResource extends Resource
                 ->schema([
                     Select::make('transport_class_id')
                         ->label('Transport Class')
-                        ->relationship(
-                            name: 'transportClass',
-                            titleAttribute: 'name',
-                            modifyQueryUsing: fn ($query) => $query->where('is_active', true)->orderBy('name')
+                        ->options(
+                            \App\Models\TransportClass::with('operatorRecord')
+                                ->where('is_active', true)
+                                ->orderBy('name')
+                                ->get()
+                                ->mapWithKeys(fn ($item) => [
+                                    $item->id => $item->operatorRecord
+                                        ? "{$item->operatorRecord->name} - {$item->name}"
+                                        : $item->name,
+                                ])
+                                ->toArray()
                         )
-                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->operatorRecord
-                            ? "{$record->operatorRecord->name} - {$record->name}"
-                            : $record->name
-                        )
-                        ->preload()
-                        ->searchable()
                         ->required()
+                        ->searchable()
                         ->reactive()
                         ->afterStateUpdated(function ($state, callable $set) {
                             if ($state) {
