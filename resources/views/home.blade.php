@@ -1377,25 +1377,51 @@
     </div>
 
     @php
-        // Prepare promo slides without GLOB_BRACE for compatibility with Alpine Linux / musl libc (Railway hosting)
+        // Load promo slides: primary source = storage/app/public/prmotion_images (Railway persistent volume)
+        // Fallback = public/images/prmotion_images (legacy local folder)
         if (!isset($__promo_slides)) {
-            $__promo_dir = public_path('images/prmotion_images');
-            if (!is_dir($__promo_dir)) {
-                $__promo_dir = public_path('images/promotion_images');
-            }
             $__promo_files = [];
-            if (is_dir($__promo_dir)) {
-                $__dir_name = basename($__promo_dir);
-                foreach (scandir($__promo_dir) as $__f) {
-                    if (in_array(strtolower(pathinfo($__f, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'gif', 'webp', 'jfif'], true)) {
+            $extensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'jfif'];
+
+            // Primary: Storage disk (persistent on Railway)
+            if (\Illuminate\Support\Facades\Storage::disk('public')->exists('prmotion_images')) {
+                $storageFiles = \Illuminate\Support\Facades\Storage::disk('public')->files('prmotion_images');
+                foreach ($storageFiles as $__f) {
+                    $__basename = basename($__f);
+                    if (in_array(strtolower(pathinfo($__basename, PATHINFO_EXTENSION)), $extensions, true)) {
                         $__promo_files[] = [
-                            'title' => ucwords(str_replace(['-', '_'], ' ', pathinfo($__f, PATHINFO_FILENAME))),
+                            'slot'     => (int) pathinfo($__basename, PATHINFO_FILENAME),
+                            'title'    => ucwords(str_replace(['-', '_'], ' ', pathinfo($__basename, PATHINFO_FILENAME))),
                             'subtitle' => '',
-                            'image' => asset('images/' . $__dir_name . '/' . $__f),
+                            'image'    => \Illuminate\Support\Facades\Storage::disk('public')->url('prmotion_images/' . $__basename),
                         ];
                     }
                 }
             }
+
+            // Fallback: legacy public/images/prmotion_images folder
+            if (empty($__promo_files)) {
+                $__promo_dir = public_path('images/prmotion_images');
+                if (!is_dir($__promo_dir)) {
+                    $__promo_dir = public_path('images/promotion_images');
+                }
+                if (is_dir($__promo_dir)) {
+                    $__dir_name = basename($__promo_dir);
+                    foreach (scandir($__promo_dir) as $__f) {
+                        if (in_array(strtolower(pathinfo($__f, PATHINFO_EXTENSION)), $extensions, true)) {
+                            $__promo_files[] = [
+                                'slot'     => (int) pathinfo($__f, PATHINFO_FILENAME),
+                                'title'    => ucwords(str_replace(['-', '_'], ' ', pathinfo($__f, PATHINFO_FILENAME))),
+                                'subtitle' => '',
+                                'image'    => asset('images/' . $__dir_name . '/' . $__f),
+                            ];
+                        }
+                    }
+                }
+            }
+
+            // Sort by slot number
+            usort($__promo_files, fn($a, $b) => $a['slot'] <=> $b['slot']);
             $__promo_slides = $__promo_files;
         }
     @endphp

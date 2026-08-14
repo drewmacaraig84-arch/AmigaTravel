@@ -10,14 +10,14 @@ class PromoImageManager extends Component
 {
     use WithFileUploads;
 
-    // The folder relative to /public/images/
-    const PROMO_DIR = 'images/prmotion_images';
+    const DISK        = 'public';
+    const PROMO_DIR   = 'prmotion_images'; // lives in storage/app/public/prmotion_images (persistent on Railway)
 
-    public array $images = [];         // [slot => filename]
-    public ?int $replacingSlot = null; // which slot is being replaced
-    public $newImage = null;           // uploaded temp file
-    public bool $showAddModal = false;
-    public $addImage = null;           // new image for "add more"
+    public array  $images        = [];  // [slot => filename]
+    public ?string $replacingSlot = null;
+    public        $newImage       = null;
+    public bool   $showAddModal  = false;
+    public        $addImage       = null;
 
     public function mount(): void
     {
@@ -26,20 +26,22 @@ class PromoImageManager extends Component
 
     private function loadImages(): void
     {
-        $dir = public_path(self::PROMO_DIR);
-        if (! is_dir($dir)) {
-            mkdir($dir, 0755, true);
+        // Ensure directory exists
+        if (! Storage::disk(self::DISK)->exists(self::PROMO_DIR)) {
+            Storage::disk(self::DISK)->makeDirectory(self::PROMO_DIR);
         }
 
-        $files = collect(glob($dir . '/*.{png,jpg,jpeg,webp,gif}', GLOB_BRACE))
+        $extensions = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'jfif'];
+        $files = collect(Storage::disk(self::DISK)->files(self::PROMO_DIR))
             ->map(fn($f) => basename($f))
-            ->sortBy(fn($name) => (int) pathinfo($name, PATHINFO_FILENAME))
+            ->filter(fn($f) => in_array(strtolower(pathinfo($f, PATHINFO_EXTENSION)), $extensions))
+            ->sortBy(fn($f) => (int) pathinfo($f, PATHINFO_FILENAME))
             ->values()
             ->toArray();
 
         $this->images = [];
         foreach ($files as $file) {
-            $slot = pathinfo($file, PATHINFO_FILENAME); // "1", "2", "10", etc.
+            $slot = pathinfo($file, PATHINFO_FILENAME);
             $this->images[$slot] = $file;
         }
     }
@@ -47,7 +49,6 @@ class PromoImageManager extends Component
     public function startReplace(string $slot): void
     {
         $this->replacingSlot = $slot;
-        $this->newImage = null;
         $this->reset('newImage');
     }
 
@@ -59,25 +60,19 @@ class PromoImageManager extends Component
 
     public function confirmReplace(): void
     {
-        $this->validate([
-            'newImage' => 'required|image|max:12288',
-        ]);
+        $this->validate(['newImage' => 'required|image|max:12288']);
 
         $slot = $this->replacingSlot;
-        $dir = public_path(self::PROMO_DIR);
 
-        // Delete old file if exists
+        // Delete old file
         if (isset($this->images[$slot])) {
-            $oldPath = $dir . '/' . $this->images[$slot];
-            if (file_exists($oldPath)) {
-                unlink($oldPath);
-            }
+            Storage::disk(self::DISK)->delete(self::PROMO_DIR . '/' . $this->images[$slot]);
         }
 
-        // Save new file with same slot name, preserving original extension
-        $ext = $this->newImage->getClientOriginalExtension() ?: 'png';
-        $filename = $slot . '.' . $ext;
-        $this->newImage->move($dir, $filename);
+        // Save with slot-number filename so website carousel can read it
+        $ext      = $this->newImage->getClientOriginalExtension() ?: 'png';
+        $filename = self::PROMO_DIR . '/' . $slot . '.' . $ext;
+        $this->newImage->storeAs(self::PROMO_DIR, $slot . '.' . $ext, self::DISK);
 
         $this->replacingSlot = null;
         $this->reset('newImage');
@@ -89,10 +84,7 @@ class PromoImageManager extends Component
     public function deleteImage(string $slot): void
     {
         if (isset($this->images[$slot])) {
-            $path = public_path(self::PROMO_DIR . '/' . $this->images[$slot]);
-            if (file_exists($path)) {
-                unlink($path);
-            }
+            Storage::disk(self::DISK)->delete(self::PROMO_DIR . '/' . $this->images[$slot]);
         }
         $this->loadImages();
         $this->dispatch('notify', type: 'success', message: "Image {$slot} deleted.");
@@ -101,7 +93,6 @@ class PromoImageManager extends Component
     public function openAddModal(): void
     {
         $this->showAddModal = true;
-        $this->addImage = null;
         $this->reset('addImage');
     }
 
@@ -113,19 +104,14 @@ class PromoImageManager extends Component
 
     public function confirmAdd(): void
     {
-        $this->validate([
-            'addImage' => 'required|image|max:12288',
-        ]);
+        $this->validate(['addImage' => 'required|image|max:12288']);
 
-        $dir = public_path(self::PROMO_DIR);
-
-        // Find next available slot number
-        $existingSlots = array_map('intval', array_keys($this->images));
-        $next = empty($existingSlots) ? 1 : (max($existingSlots) + 1);
+        // Next sequential slot
+        $slots = array_map('intval', array_keys($this->images));
+        $next  = empty($slots) ? 1 : (max($slots) + 1);
 
         $ext = $this->addImage->getClientOriginalExtension() ?: 'png';
-        $filename = $next . '.' . $ext;
-        $this->addImage->move($dir, $filename);
+        $this->addImage->storeAs(self::PROMO_DIR, $next . '.' . $ext, self::DISK);
 
         $this->showAddModal = false;
         $this->reset('addImage');
@@ -134,20 +120,32 @@ class PromoImageManager extends Component
         $this->dispatch('notify', type: 'success', message: "Image added as slot {$next}.");
     }
 
+    public function getImageUrl(string $slot): string
+    {
+        if (isset($this->images[$slot])) {
+            return Storage::disk(self::DISK)->url(self::PROMO_DIR . '/' . $this->images[$slot]);
+        }
+        return '';
+    }
+
     public function render()
     {
-        // Build display list: always show slots 1 and 5 as placeholders if missing
-        $required = ['1', '5'];
+        $required     = ['1', '5'];
         $displaySlots = collect(array_keys($this->images))
             ->merge($required)
             ->unique()
-            ->sortBy(fn($v) => (int)$v)
+            ->sortBy(fn($v) => (int) $v)
             ->values()
             ->toArray();
 
+        $imageUrls = [];
+        foreach ($this->images as $slot => $file) {
+            $imageUrls[$slot] = Storage::disk(self::DISK)->url(self::PROMO_DIR . '/' . $file);
+        }
+
         return view('livewire.promo-image-manager', [
             'displaySlots' => $displaySlots,
-            'promoDir'     => self::PROMO_DIR,
+            'imageUrls'    => $imageUrls,
         ]);
     }
 }
