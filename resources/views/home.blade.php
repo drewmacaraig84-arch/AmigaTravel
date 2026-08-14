@@ -1511,8 +1511,8 @@
                     {{-- Card Footer Navigation & Control Bar (Outside the Image) --}}
                     <div class="p-4 bg-white border-t border-slate-100 flex items-center justify-between gap-3">
                         <div class="min-w-0 flex-1">
-                            <div class="font-bold text-sm text-[#216417] truncate" x-text="slides[currentSlide] ? (slides[currentSlide].title || 'Promotion') : 'Promotion'"></div>
-                            <div class="text-xs text-slate-500 truncate" x-text="((currentSlide + 1) + ' of ' + slides.length + (slides[currentSlide] && slides[currentSlide].subtitle ? ' • ' + slides[currentSlide].subtitle : ''))"></div>
+                            <div class="font-bold text-sm text-[#216417] truncate">Promotion Offer</div>
+                            <div class="text-xs text-slate-500 truncate" x-text="(currentSlide + 1) + ' of ' + slides.length"></div>
                         </div>
 
                         {{-- Prev / View (Eye) / Next Arrow Buttons Outside the Image --}}
