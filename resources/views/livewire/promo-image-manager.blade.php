@@ -14,7 +14,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
         <span>
-            Images are saved as numbered files (1.png, 2.png…) — the homepage carousel reads them automatically.
+            Images are saved with their filenames — the homepage carousel reads them automatically in alphabetical order.
             Local images (📁) cannot be deleted on Railway — replace them to migrate to persistent storage.
         </span>
     </div>
@@ -22,15 +22,15 @@
     {{-- Grid --}}
     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
 
-        @foreach($displaySlots as $slot)
+        @foreach($displayFiles as $filename)
             @php
-                $info       = $images[$slot] ?? null;
+                $info       = $images[$filename] ?? null;
                 $hasImage   = $info !== null;
             @endphp
 
             {{-- wire:key ensures Livewire morphs instead of full-replacing → no scroll jump --}}
-            <div wire:key="promo-slot-{{ $slot }}"
-                 x-data="{ open: {{ $replacingSlot === $slot ? 'true' : 'false' }} }"
+            <div wire:key="promo-file-{{ $filename }}"
+                 x-data="{ open: {{ $replacingFile === $filename ? 'true' : 'false' }} }"
                  class="rounded-xl border {{ $hasImage ? 'border-gray-600' : 'border-dashed border-gray-600' }} bg-gray-900 overflow-hidden flex flex-col">
 
                 {{-- Thumbnail --}}
@@ -38,7 +38,7 @@
                     @if($hasImage)
                         @php $infoFile = $info['file']; @endphp
                         <img src="{{ $info['url'] }}"
-                             alt="Slot {{ $slot }}"
+                             alt="{{ $filename }}"
                              class="w-full h-full object-cover"
                              loading="lazy"
                              onerror="this.style.opacity='0.3'; this.insertAdjacentHTML('afterend','<div class=&quot;absolute inset-0 flex items-center justify-center text-red-400 text-xs font-bold&quot;>⚠ Load error</div>')">
@@ -61,21 +61,21 @@
                 {{-- Card footer --}}
                 <div class="px-2 py-2 flex flex-col gap-1.5">
                     <div class="flex items-center justify-between">
-                        <span class="text-xs font-bold text-gray-400">
-                            Slot {{ $slot }}
+                        <span class="text-[10px] font-bold text-gray-400 truncate pr-2" title="{{ $filename }}">
+                            {{ $filename }}
                         </span>
                         @if($hasImage && $info['source'] === 'storage')
-                            <button wire:click="deleteImage('{{ $slot }}')"
-                                    wire:confirm="Delete slot {{ $slot }}? Cannot be undone."
+                            <button wire:click="deleteImage('{{ $filename }}')"
+                                    wire:confirm="Delete {{ $filename }}? Cannot be undone."
                                     wire:loading.attr="disabled"
-                                    class="text-[10px] text-red-400 hover:text-red-300 font-semibold transition">
+                                    class="text-[10px] text-red-400 hover:text-red-300 font-semibold transition shrink-0">
                                 ✕ Del
                             </button>
                         @endif
                     </div>
 
-                    {{-- Replace / Upload button — uses Alpine to toggle panel, also sets Livewire slot --}}
-                    <button @click="open = !open; if(open) $wire.startReplace('{{ $slot }}')"
+                    {{-- Replace / Upload button — uses Alpine to toggle panel, also sets Livewire --}}
+                    <button @click="open = !open; if(open) $wire.startReplace('{{ $filename }}')"
                             class="w-full text-xs py-1.5 rounded-lg font-semibold transition
                                 {{ $hasImage ? 'bg-blue-700 hover:bg-blue-600 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-200' }}">
                         <span x-show="!open">{{ $hasImage ? '✏ Replace' : '+ Upload' }}</span>
@@ -85,13 +85,13 @@
 
                 {{-- Inline replace panel --}}
                 <div x-show="open" x-transition class="border-t border-blue-700 bg-gray-800/60 p-3 space-y-2">
-                    <p class="text-xs text-blue-300 font-semibold">
-                        Pick a new image for Slot {{ $slot }}:
+                    <p class="text-[10px] text-blue-300 font-semibold leading-tight">
+                        Pick a new image to replace<br><span class="text-blue-100">{{ $filename }}</span>
                     </p>
                     <input type="file" wire:model="newImage" accept="image/*"
-                           class="block w-full text-xs text-gray-300
-                                  file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0
-                                  file:bg-blue-700 file:text-white file:text-xs file:font-semibold
+                           class="block w-full text-[10px] text-gray-300
+                                  file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0
+                                  file:bg-blue-700 file:text-white file:text-[10px] file:font-semibold
                                   hover:file:bg-blue-600 cursor-pointer">
                     @error('newImage')
                         <p class="text-[10px] text-red-400">{{ $message }}</p>
@@ -99,19 +99,19 @@
 
                     <div wire:loading wire:target="newImage" class="text-[10px] text-blue-300">Uploading preview…</div>
 
-                    @if($newImage && $replacingSlot === $slot)
+                    @if($newImage && $replacingFile === $filename)
                         <img src="{{ $newImage->temporaryUrl() }}"
                              class="h-20 w-full object-contain rounded border border-gray-600 bg-gray-900">
                     @endif
 
                     <div class="flex gap-2 pt-1">
                         <button @click="open = false; $wire.cancelReplace()"
-                                class="flex-1 text-xs py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-200 font-semibold transition">
+                                class="flex-1 text-[10px] py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-200 font-semibold transition">
                             Cancel
                         </button>
                         <button wire:click="confirmReplace"
                                 wire:loading.attr="disabled"
-                                class="flex-1 text-xs py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold transition disabled:opacity-50">
+                                class="flex-1 text-[10px] py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold transition disabled:opacity-50">
                             <span wire:loading.remove wire:target="confirmReplace">✓ Save</span>
                             <span wire:loading wire:target="confirmReplace">Saving…</span>
                         </button>
@@ -131,7 +131,7 @@
                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
-                <span class="text-xs font-bold uppercase tracking-wide">Add More</span>
+                <span class="text-xs font-bold uppercase tracking-wide">Add Image</span>
             </button>
 
             <div x-show="open" x-transition class="p-3 space-y-2">
