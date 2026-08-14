@@ -90,10 +90,10 @@ class PromoImageManager extends Component
         if (isset($this->images[$slot]) && $this->images[$slot]['source'] === 'storage') {
             Storage::disk(self::DISK)->delete(self::STORE_DIR . '/' . $this->images[$slot]['file']);
         }
-        // Also delete legacy file if exists (migrate it)
+        // Try to delete legacy file (may fail on read-only filesystems like Railway)
         $legacyPath = public_path(self::LEGACY_DIR . '/' . ($this->images[$slot]['file'] ?? ''));
         if (file_exists($legacyPath)) {
-            unlink($legacyPath);
+            try { @unlink($legacyPath); } catch (\Throwable) {}
         }
 
         $ext = $this->newImage->getClientOriginalExtension() ?: 'png';
@@ -112,8 +112,9 @@ class PromoImageManager extends Component
             if ($info['source'] === 'storage') {
                 Storage::disk(self::DISK)->delete(self::STORE_DIR . '/' . $info['file']);
             } else {
+                // Legacy public path — may be read-only on Railway, skip silently
                 $path = public_path(self::LEGACY_DIR . '/' . $info['file']);
-                if (file_exists($path)) unlink($path);
+                try { if (file_exists($path)) @unlink($path); } catch (\Throwable) {}
             }
         }
         $this->loadImages();
