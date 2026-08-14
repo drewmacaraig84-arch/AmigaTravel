@@ -15,7 +15,6 @@
         </svg>
         <span>
             Images are saved as numbered files (1.png, 2.png…) — the homepage carousel reads them automatically.
-            <strong class="text-amber-400">Slots 1 &amp; 5 are required.</strong>
             Local images (📁) cannot be deleted on Railway — replace them to migrate to persistent storage.
         </span>
     </div>
@@ -27,7 +26,6 @@
             @php
                 $info       = $images[$slot] ?? null;
                 $hasImage   = $info !== null;
-                $isRequired = in_array($slot, ['1', '5']);
             @endphp
 
             {{-- wire:key ensures Livewire morphs instead of full-replacing → no scroll jump --}}
@@ -63,8 +61,8 @@
                 {{-- Card footer --}}
                 <div class="px-2 py-2 flex flex-col gap-1.5">
                     <div class="flex items-center justify-between">
-                        <span class="text-xs font-bold {{ $isRequired ? 'text-amber-400' : 'text-gray-400' }}">
-                            Slot {{ $slot }}{{ $isRequired ? ' ★' : '' }}
+                        <span class="text-xs font-bold text-gray-400">
+                            Slot {{ $slot }}
                         </span>
                         @if($hasImage && $info['source'] === 'storage')
                             <button wire:click="deleteImage('{{ $slot }}')"

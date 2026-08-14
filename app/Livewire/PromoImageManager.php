@@ -151,10 +151,7 @@ class PromoImageManager extends Component
 
     public function render()
     {
-        $required     = ['1', '5'];
         $displaySlots = collect(array_keys($this->images))
-            ->merge($required)
-            ->unique()
             ->sortBy(fn($v) => (int)$v)
             ->values()
             ->toArray();
