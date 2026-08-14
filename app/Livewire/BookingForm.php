@@ -465,7 +465,7 @@ class BookingForm extends Component
             ->whereNotNull('logo_path')
             ->get()
             ->mapWithKeys(function ($op) {
-                return [$op->name => \Illuminate\Support\Facades\Storage::url($op->logo_path)];
+                return [$op->name => $op->logo_url];
             })
             ->toArray();
     }

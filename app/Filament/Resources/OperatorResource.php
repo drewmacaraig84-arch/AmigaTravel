@@ -52,6 +52,7 @@ class OperatorResource extends Resource
             ->columns([
                 Tables\Columns\ImageColumn::make('logo_path')
                     ->label('Logo')
+                    ->getStateUsing(fn ($record) => $record->logo_url)
                     ->circular(),
                 Tables\Columns\TextColumn::make('name')
                     ->searchable()
