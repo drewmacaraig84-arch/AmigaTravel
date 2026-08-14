@@ -10,10 +10,12 @@ class PromoImageManager extends Component
 {
     use WithFileUploads;
 
-    const DISK        = 'public';
-    const PROMO_DIR   = 'prmotion_images'; // lives in storage/app/public/prmotion_images (persistent on Railway)
+    const DISK      = 'public';
+    const STORE_DIR = 'prmotion_images';              // storage/app/public/prmotion_images
+    const LEGACY_DIR = 'images/prmotion_images';      // public/images/prmotion_images (fallback)
 
-    public array  $images        = [];  // [slot => filename]
+    // [slot => ['url' => string, 'source' => 'storage'|'legacy']]
+    public array  $images        = [];
     public ?string $replacingSlot = null;
     public        $newImage       = null;
     public bool   $showAddModal  = false;
@@ -26,24 +28,44 @@ class PromoImageManager extends Component
 
     private function loadImages(): void
     {
-        // Ensure directory exists
-        if (! Storage::disk(self::DISK)->exists(self::PROMO_DIR)) {
-            Storage::disk(self::DISK)->makeDirectory(self::PROMO_DIR);
-        }
-
         $extensions = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'jfif'];
-        $files = collect(Storage::disk(self::DISK)->files(self::PROMO_DIR))
-            ->map(fn($f) => basename($f))
-            ->filter(fn($f) => in_array(strtolower(pathinfo($f, PATHINFO_EXTENSION)), $extensions))
-            ->sortBy(fn($f) => (int) pathinfo($f, PATHINFO_FILENAME))
-            ->values()
-            ->toArray();
-
         $this->images = [];
-        foreach ($files as $file) {
-            $slot = pathinfo($file, PATHINFO_FILENAME);
-            $this->images[$slot] = $file;
+
+        // --- Source 1: Storage disk (persistent Railway volume) ---
+        if (Storage::disk(self::DISK)->exists(self::STORE_DIR)) {
+            foreach (Storage::disk(self::DISK)->files(self::STORE_DIR) as $path) {
+                $basename = basename($path);
+                if (in_array(strtolower(pathinfo($basename, PATHINFO_EXTENSION)), $extensions, true)) {
+                    $slot = pathinfo($basename, PATHINFO_FILENAME);
+                    $this->images[$slot] = [
+                        'url'    => Storage::disk(self::DISK)->url(self::STORE_DIR . '/' . $basename),
+                        'source' => 'storage',
+                        'file'   => $basename,
+                    ];
+                }
+            }
         }
+
+        // --- Source 2: legacy public/images/prmotion_images ---
+        $legacyDir = public_path(self::LEGACY_DIR);
+        if (is_dir($legacyDir)) {
+            foreach (scandir($legacyDir) as $basename) {
+                if (in_array(strtolower(pathinfo($basename, PATHINFO_EXTENSION)), $extensions, true)) {
+                    $slot = pathinfo($basename, PATHINFO_FILENAME);
+                    // Don't overwrite if Storage already has this slot
+                    if (!isset($this->images[$slot])) {
+                        $this->images[$slot] = [
+                            'url'    => asset(self::LEGACY_DIR . '/' . $basename),
+                            'source' => 'legacy',
+                            'file'   => $basename,
+                        ];
+                    }
+                }
+            }
+        }
+
+        // Sort by numeric slot
+        uksort($this->images, fn($a, $b) => (int)$a <=> (int)$b);
     }
 
     public function startReplace(string $slot): void
@@ -60,34 +82,42 @@ class PromoImageManager extends Component
 
     public function confirmReplace(): void
     {
-        $this->validate(['newImage' => 'required|image|max:12288']);
+        $this->validate(['newImage' => 'required|image|max:20480']);
 
         $slot = $this->replacingSlot;
 
-        // Delete old file
-        if (isset($this->images[$slot])) {
-            Storage::disk(self::DISK)->delete(self::PROMO_DIR . '/' . $this->images[$slot]);
+        // Delete old from storage if it was stored there
+        if (isset($this->images[$slot]) && $this->images[$slot]['source'] === 'storage') {
+            Storage::disk(self::DISK)->delete(self::STORE_DIR . '/' . $this->images[$slot]['file']);
+        }
+        // Also delete legacy file if exists (migrate it)
+        $legacyPath = public_path(self::LEGACY_DIR . '/' . ($this->images[$slot]['file'] ?? ''));
+        if (file_exists($legacyPath)) {
+            unlink($legacyPath);
         }
 
-        // Save with slot-number filename so website carousel can read it
-        $ext      = $this->newImage->getClientOriginalExtension() ?: 'png';
-        $filename = self::PROMO_DIR . '/' . $slot . '.' . $ext;
-        $this->newImage->storeAs(self::PROMO_DIR, $slot . '.' . $ext, self::DISK);
+        $ext = $this->newImage->getClientOriginalExtension() ?: 'png';
+        $this->newImage->storeAs(self::STORE_DIR, $slot . '.' . $ext, self::DISK);
 
         $this->replacingSlot = null;
         $this->reset('newImage');
         $this->loadImages();
-
-        $this->dispatch('notify', type: 'success', message: "Image {$slot} replaced successfully.");
+        $this->dispatch('notify', type: 'success', message: "Slot {$slot} replaced successfully.");
     }
 
     public function deleteImage(string $slot): void
     {
         if (isset($this->images[$slot])) {
-            Storage::disk(self::DISK)->delete(self::PROMO_DIR . '/' . $this->images[$slot]);
+            $info = $this->images[$slot];
+            if ($info['source'] === 'storage') {
+                Storage::disk(self::DISK)->delete(self::STORE_DIR . '/' . $info['file']);
+            } else {
+                $path = public_path(self::LEGACY_DIR . '/' . $info['file']);
+                if (file_exists($path)) unlink($path);
+            }
         }
         $this->loadImages();
-        $this->dispatch('notify', type: 'success', message: "Image {$slot} deleted.");
+        $this->dispatch('notify', type: 'success', message: "Slot {$slot} deleted.");
     }
 
     public function openAddModal(): void
@@ -104,28 +134,18 @@ class PromoImageManager extends Component
 
     public function confirmAdd(): void
     {
-        $this->validate(['addImage' => 'required|image|max:12288']);
+        $this->validate(['addImage' => 'required|image|max:20480']);
 
-        // Next sequential slot
         $slots = array_map('intval', array_keys($this->images));
         $next  = empty($slots) ? 1 : (max($slots) + 1);
 
         $ext = $this->addImage->getClientOriginalExtension() ?: 'png';
-        $this->addImage->storeAs(self::PROMO_DIR, $next . '.' . $ext, self::DISK);
+        $this->addImage->storeAs(self::STORE_DIR, $next . '.' . $ext, self::DISK);
 
         $this->showAddModal = false;
         $this->reset('addImage');
         $this->loadImages();
-
         $this->dispatch('notify', type: 'success', message: "Image added as slot {$next}.");
-    }
-
-    public function getImageUrl(string $slot): string
-    {
-        if (isset($this->images[$slot])) {
-            return Storage::disk(self::DISK)->url(self::PROMO_DIR . '/' . $this->images[$slot]);
-        }
-        return '';
     }
 
     public function render()
@@ -134,18 +154,12 @@ class PromoImageManager extends Component
         $displaySlots = collect(array_keys($this->images))
             ->merge($required)
             ->unique()
-            ->sortBy(fn($v) => (int) $v)
+            ->sortBy(fn($v) => (int)$v)
             ->values()
             ->toArray();
 
-        $imageUrls = [];
-        foreach ($this->images as $slot => $file) {
-            $imageUrls[$slot] = Storage::disk(self::DISK)->url(self::PROMO_DIR . '/' . $file);
-        }
-
         return view('livewire.promo-image-manager', [
             'displaySlots' => $displaySlots,
-            'imageUrls'    => $imageUrls,
         ]);
     }
 }
