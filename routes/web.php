@@ -3,46 +3,9 @@
 use App\Http\Controllers\AdminNotificationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BookingExportController;
-use App\Models\Transaction;
 use App\Models\WebsiteSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Models\Booking;
-use App\Models\ServiceCancellation;
-use Illuminate\Support\Facades\Mail;
-
-Route::get('/test-all-emails', function () {
-    $email = 'drewmacaraig84@gmail.com';
-
-    $booking = Booking::latest()->first() ?? new Booking([
-        'reference_number' => 'TEST-BK-001',
-        'client_name' => 'Drew Macaraig',
-        'client_email' => $email,
-    ]);
-    $booking->client_email = $email;
-
-    $transaction = $booking->transaction ?? new Transaction([
-        'reference_number' => 'TXN-001',
-        'amount' => 5000,
-        'status' => 'paid'
-    ]);
-    $transaction->booking = $booking;
-
-    $cancellation = new ServiceCancellation([
-        'reason' => 'Weather disturbance (Test)',
-        'status' => 'cancelled'
-    ]);
-
-    Mail::to($email)->send(new \App\Mail\BookingConfirmation($booking, 'https://example.com/ticket', 'dummy-receipt.pdf'));
-    Mail::to($email)->send(new \App\Mail\BookingCancellation($booking, 'Gcash (09123456789)'));
-    Mail::to($email)->send(new \App\Mail\RebookingRequested($booking));
-    Mail::to($email)->send(new \App\Mail\RebookingVerification($booking, 'https://example.com/ticket-new', 'dummy-receipt-new.pdf'));
-    Mail::to($email)->send(new \App\Mail\ServiceCancellationNotificationMail($booking, $cancellation, false));
-    Mail::to($email)->send(new \App\Mail\RescheduleApprovalNotificationMail($booking, true, 'Looks good, approved!'));
-    Mail::to($email)->send(new \App\Mail\PaymentProofReceived($transaction));
-
-    return response()->json(['message' => 'All 7 test emails successfully sent to ' . $email]);
-});
 use App\Http\Controllers\TourController;
 
 // ─── Diagnostic Health Check (no middleware, no session) ──────────────────────
