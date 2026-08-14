@@ -86,7 +86,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.72+83';
+  static const String appVersion = '1.0.73+84';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -2646,6 +2646,8 @@ class _TravelScreenState extends State<TravelScreen>
   DateTime? _returnDate;
   int _adults = 1;
   int _children = 0;
+  int _minors = 0;
+  int _infants = 0;
   bool _showPassengerDropdown = false;
 
   String? _operator;
@@ -2952,7 +2954,7 @@ class _TravelScreenState extends State<TravelScreen>
     return '${months[d.month - 1]} ${d.day}, ${d.year}';
   }
 
-  int get _totalPassengers => _adults + _children;
+  int get _totalPassengers => _adults + _children + (_mode == 'airline' ? _minors + _infants : 0);
 
   void _goToSchedule() {
     if (!UserSession.isLoggedIn) {
@@ -3331,43 +3333,73 @@ class _TravelScreenState extends State<TravelScreen>
                                   ),
                                   const Divider(height: 20),
                                   _PassengerCounter(
-                                    label: 'Minor',
+                                    label: _mode == 'airline' ? 'Child' : 'Minor',
                                     subtitle: '2 - 11 years',
                                     count: _children,
                                     onIncrement: _totalPassengers < 8
                                         ? () {
-                                            showDialog(
-                                              context: context,
-                                              builder: (c) => AlertDialog(
-                                                title: const Text(
-                                                    'Minor age reminder',
-                                                    style: TextStyle(
-                                                        fontWeight:
-                                                            FontWeight.bold)),
-                                                content: const Text(
-                                                    '23 months and under will be issued upon arrival at the port/airport.',
-                                                    style: TextStyle(
-                                                        color: kSlate700)),
-                                                actions: [
-                                                  TextButton(
-                                                    onPressed: () {
-                                                      Navigator.pop(c);
-                                                      setState(
-                                                          () => _children++);
-                                                    },
-                                                    child: const Text('Close',
-                                                        style: TextStyle(
-                                                            color: kPink)),
-                                                  ),
-                                                ],
-                                              ),
-                                            );
+                                            if (_mode != 'airline') {
+                                              showDialog(
+                                                context: context,
+                                                builder: (c) => AlertDialog(
+                                                  title: const Text(
+                                                      'Minor age reminder',
+                                                      style: TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.bold)),
+                                                  content: const Text(
+                                                      '23 months and under will be issued upon arrival at the port/airport.',
+                                                      style: TextStyle(
+                                                          color: kSlate700)),
+                                                  actions: [
+                                                    TextButton(
+                                                      onPressed: () {
+                                                        Navigator.pop(c);
+                                                        setState(
+                                                            () => _children++);
+                                                      },
+                                                      child: const Text('Close',
+                                                          style: TextStyle(
+                                                              color: kPink)),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            } else {
+                                              setState(() => _children++);
+                                            }
                                           }
                                         : null,
                                     onDecrement: _children > 0
                                         ? () => setState(() => _children--)
                                         : null,
                                   ),
+                                  if (_mode == 'airline') ...[
+                                    const Divider(height: 20),
+                                    _PassengerCounter(
+                                      label: 'Minor',
+                                      subtitle: '12 - 17 years',
+                                      count: _minors,
+                                      onIncrement: _totalPassengers < 8
+                                          ? () => setState(() => _minors++)
+                                          : null,
+                                      onDecrement: _minors > 0
+                                          ? () => setState(() => _minors--)
+                                          : null,
+                                    ),
+                                    const Divider(height: 20),
+                                    _PassengerCounter(
+                                      label: 'Infant',
+                                      subtitle: 'Under 2 years',
+                                      count: _infants,
+                                      onIncrement: _totalPassengers < 8 && _infants < _adults
+                                          ? () => setState(() => _infants++)
+                                          : null,
+                                      onDecrement: _infants > 0
+                                          ? () => setState(() => _infants--)
+                                          : null,
+                                    ),
+                                  ],
                                   const Divider(height: 20),
                                   GestureDetector(
                                     onTap: () {
@@ -3379,12 +3411,17 @@ class _TravelScreenState extends State<TravelScreen>
                                               style: TextStyle(
                                                   fontWeight: FontWeight.bold,
                                                   fontSize: 16)),
-                                          content: const Text(
-                                            'You can book up to 8 travelers total. This includes both adults and minors combined. Any discounts are applied per traveler on the next step.\n\n'
-                                            '1. Adults are counted separately from minors, but both count toward the same 8-person total.\n\n'
-                                            '2. Minors aged 2 to 11 are still part of the booking capacity limit.\n\n'
-                                            '3. Use the buttons to update counts. The form prevents totals above 8.',
-                                            style: TextStyle(
+                                          content: Text(
+                                            _mode == 'airline'
+                                                ? 'You can book up to 8 travelers total (Adults, Children, Minors, Infants).\n\n'
+                                                  '1. Adults and minors count towards the 8-person total.\n\n'
+                                                  '2. Infants under 2 years must be accompanied by an adult (max 1 infant per adult).\n\n'
+                                                  '3. Use the buttons to update counts. The form prevents totals above 8.'
+                                                : 'You can book up to 8 travelers total. This includes both adults and minors combined. Any discounts are applied per traveler on the next step.\n\n'
+                                                  '1. Adults are counted separately from minors, but both count toward the same 8-person total.\n\n'
+                                                  '2. Minors aged 2 to 11 are still part of the booking capacity limit.\n\n'
+                                                  '3. Use the buttons to update counts. The form prevents totals above 8.',
+                                            style: const TextStyle(
                                                 fontSize: 13,
                                                 color: kSlate600,
                                                 height: 1.5),
@@ -11720,6 +11757,7 @@ class _TourPackagesScreenState extends State<TourPackagesScreen>
       'inclusions': raw['inclusions'] ?? '',
       'exclusions': raw['exclusions'] ?? '',
       'remarks': raw['remarks'] ?? '',
+      'image': raw['image'] ?? '',
       'raw': raw,
       'gradient': [const Color(0xFF1565C0), const Color(0xFF42A5F5)],
     };
@@ -11816,10 +11854,18 @@ class _PackageList extends StatelessWidget {
                     Container(
                       height: 180,
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
+                        gradient: p['image'].toString().isEmpty ? LinearGradient(
                             colors: gradient,
                             begin: Alignment.topLeft,
-                            end: Alignment.bottomRight),
+                            end: Alignment.bottomRight) : null,
+                        image: p['image'].toString().isNotEmpty ? DecorationImage(
+                          image: NetworkImage('${UserSession.getBaseUrl()}/storage/${p['image']}'),
+                          fit: BoxFit.cover,
+                          colorFilter: ColorFilter.mode(
+                            Colors.black.withOpacity(0.3), 
+                            BlendMode.darken
+                          ),
+                        ) : null,
                         borderRadius:
                             const BorderRadius.vertical(top: Radius.circular(18)),
                       ),
@@ -11858,16 +11904,54 @@ class _PackageList extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Description',
+                          const Text('Description / Details',
                               style: TextStyle(
                                   color: kSlate700,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16)),
                           const SizedBox(height: 8),
-                          Text(p['desc'] as String,
-                              style: const TextStyle(
-                                  color: kSlate600, fontSize: 14, height: 1.5)),
-                          const SizedBox(height: 24),
+                          if (p['desc'].toString().isNotEmpty) ...[
+                            Text(p['desc'] as String,
+                                style: const TextStyle(
+                                    color: kSlate600, fontSize: 14, height: 1.5)),
+                            const SizedBox(height: 16),
+                          ],
+                          if (p['inclusions'].toString().isNotEmpty) ...[
+                            const Text('Inclusions:', style: TextStyle(fontWeight: FontWeight.bold, color: kSlate700)),
+                            const SizedBox(height: 4),
+                            Text(p['inclusions'] as String, style: const TextStyle(color: kSlate600, fontSize: 13, height: 1.5)),
+                            const SizedBox(height: 16),
+                          ],
+                          if (p['exclusions'].toString().isNotEmpty) ...[
+                            const Text('Exclusions:', style: TextStyle(fontWeight: FontWeight.bold, color: kSlate700)),
+                            const SizedBox(height: 4),
+                            Text(p['exclusions'] as String, style: const TextStyle(color: kSlate600, fontSize: 13, height: 1.5)),
+                            const SizedBox(height: 16),
+                          ],
+                          if (p['remarks'].toString().isNotEmpty) ...[
+                            const Text('Remarks:', style: TextStyle(fontWeight: FontWeight.bold, color: kSlate700)),
+                            const SizedBox(height: 4),
+                            Text(p['remarks'] as String, style: const TextStyle(color: kSlate600, fontSize: 13, height: 1.5)),
+                            const SizedBox(height: 16),
+                          ],
+                          if (p['raw']['day1'] != null && p['raw']['day1'].toString().isNotEmpty) ...[
+                            const Text('Itinerary:', style: TextStyle(fontWeight: FontWeight.bold, color: kSlate700)),
+                            const SizedBox(height: 8),
+                            for (int i = 1; i <= 6; i++)
+                              if (p['raw']['day$i'] != null && p['raw']['day$i'].toString().isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Day $i', style: const TextStyle(fontWeight: FontWeight.bold, color: kPink, fontSize: 13)),
+                                      Text(p['raw']['day$i'].toString(), style: const TextStyle(color: kSlate600, fontSize: 13, height: 1.5)),
+                                    ],
+                                  ),
+                                ),
+                            const SizedBox(height: 16),
+                          ],
+                          const SizedBox(height: 8),
                           const Text('Starting from',
                               style: TextStyle(
                                   color: kSlate400, fontSize: 12)),
@@ -15990,16 +16074,6 @@ class _RefundScreenState extends State<RefundScreen> {
                                 onPressed: () => Navigator.pop(context),
                                 child: const Text('Cancel Request',
                                     style: TextStyle(color: Colors.blueGrey)),
-                              ),
-                              OutlinedButton(
-                                style: OutlinedButton.styleFrom(
-                                    side: const BorderSide(color: Colors.blue),
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 24, vertical: 12)),
-                                onPressed: () => Navigator.pop(
-                                    context), // Typically would go to Rebook
-                                child: const Text('Switch to Rebook',
-                                    style: TextStyle(color: Colors.blue)),
                               ),
                             ],
                           )
