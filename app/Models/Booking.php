@@ -505,9 +505,9 @@ class Booking extends Model
                 'non_refundable_fees' => $totalNonRefundableFees,
                 'web_admin_fee' => $webAdminFeeTotal,
                 'transaction_fee' => $transactionFeeTotal,
-                'rebooking_surcharge' => $rebookingSurcharge,
-                'rebooking_revalidation_fee' => $rebookingRevalidationFee,
-                'rebooking_rate_diff' => $rebookingRateDiff,
+                'rebooking_surcharge' => 0,
+                'rebooking_revalidation_fee' => $rebookingSurcharge + $rebookingRevalidationFee + $rebookingRateDiff,
+                'rebooking_rate_diff' => 0,
                 'refundable_amount' => 0,
                 'deduction_amount' => $totalPaid,
             ];
@@ -523,9 +523,9 @@ class Booking extends Model
                 'non_refundable_fees' => $totalNonRefundableFees,
                 'web_admin_fee' => $webAdminFeeTotal,
                 'transaction_fee' => $transactionFeeTotal,
-                'rebooking_surcharge' => $rebookingSurcharge,
-                'rebooking_revalidation_fee' => $rebookingRevalidationFee,
-                'rebooking_rate_diff' => $rebookingRateDiff,
+                'rebooking_surcharge' => 0,
+                'rebooking_revalidation_fee' => $rebookingSurcharge + $rebookingRevalidationFee + $rebookingRateDiff,
+                'rebooking_rate_diff' => 0,
                 'refundable_amount' => 0,
                 'deduction_amount' => $totalPaid,
             ];
@@ -543,9 +543,9 @@ class Booking extends Model
             'non_refundable_fees' => $totalNonRefundableFees,
             'web_admin_fee' => $webAdminFeeTotal,
             'transaction_fee' => $transactionFeeTotal,
-            'rebooking_surcharge' => $rebookingSurcharge,
-            'rebooking_revalidation_fee' => $rebookingRevalidationFee,
-            'rebooking_rate_diff' => $rebookingRateDiff,
+            'rebooking_surcharge' => 0,
+            'rebooking_revalidation_fee' => $rebookingSurcharge + $rebookingRevalidationFee + $rebookingRateDiff,
+            'rebooking_rate_diff' => 0,
             'refundable_amount' => $refundable,
             'deduction_amount' => $totalPaid - $refundable,
         ];
@@ -782,30 +782,14 @@ class Booking extends Model
             $rateDiff = (float) ($notes['rate_diff'] ?? 0);
 
             if ($surcharge > 0 || $reval > 0 || $rateDiff > 0) {
-                if ($reval > 0) {
-                    $breakdown[] = [
-                        'label' => 'Rebooking Revalidation Fee',
-                        'amount' => $reval,
-                        'class' => 'text-amber-600'
-                    ];
-                }
-                if ($surcharge > 0) {
-                    $breakdown[] = [
-                        'label' => 'Rebooking Surcharge',
-                        'amount' => $surcharge,
-                        'class' => 'text-amber-600'
-                    ];
-                }
-                if ($rateDiff > 0) {
-                    $breakdown[] = [
-                        'label' => 'Rebooking Rate Difference',
-                        'amount' => $rateDiff,
-                        'class' => 'text-amber-600'
-                    ];
-                }
+                $breakdown[] = [
+                    'label' => 'Revalidation Fee',
+                    'amount' => $surcharge + $reval + $rateDiff,
+                    'class' => 'text-amber-600'
+                ];
             } else {
                 $breakdown[] = [
-                    'label' => 'Rebooking Fee',
+                    'label' => 'Revalidation Fee',
                     'amount' => (float) $this->transaction->rebooking_fee,
                     'class' => 'text-amber-600'
                 ];

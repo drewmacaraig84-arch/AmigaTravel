@@ -15869,10 +15869,6 @@ class _RefundScreenState extends State<RefundScreen> {
                                       _buildBreakdownRow('Transaction Fee',
                                           _transactionFee!.toStringAsFixed(2),
                                           isSub: true),
-                                    if ((_rebookingSurcharge ?? 0) > 0)
-                                      _buildBreakdownRow('Rebooking Surcharge',
-                                          _rebookingSurcharge!.toStringAsFixed(2),
-                                          isSub: true),
                                     if ((_rebookingRevalidationFee ?? 0) > 0)
                                       _buildBreakdownRow('Revalidation Fee',
                                           _rebookingRevalidationFee!.toStringAsFixed(2),
@@ -16542,14 +16538,8 @@ class _RebookScreenState extends State<RebookScreen> {
                       _breakdown!['new_ticket_price']?.toString() ?? '0.00'),
                   const SizedBox(height: 8),
                 ],
-                _buildBreakdownRow('Rate Difference',
-                    _breakdown!['rate_diff']?.toString() ?? '0.00'),
-                const SizedBox(height: 8),
-                _buildBreakdownRow('Surcharge',
-                    _breakdown!['surcharge']?.toString() ?? '0.00'),
-                const SizedBox(height: 8),
                 _buildBreakdownRow('Revalidation Fee',
-                    _breakdown!['revalidation_fee']?.toString() ?? '0.00'),
+                    _breakdown!['total_to_pay']?.toString() ?? '0.00'),
                 if (_breakdown!['transaction_fee'] != null) ...[
                   const SizedBox(height: 8),
                   _buildBreakdownRow('Transaction Fee',
