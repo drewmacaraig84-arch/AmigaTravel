@@ -532,36 +532,45 @@ class AuthController extends Controller
         $welcomeBonus = $rewards['welcome_bonus'] ?? 50;
 
         if ($referredBy) {
-            \App\Models\GraciaPointLedger::create([
-                'user_id' => $referredBy,
-                'points' => $referrerPoints,
-                'entry_type' => 'earned',
-                'reason' => 'Referral Bonus (Referred: ' . $user->email . ')',
-                'idempotency_key' => 'ref_bonus_' . $referredBy . '_' . $user->id
-            ]);
-            $referrer->graciaBalance()->firstOrCreate(['user_id' => $referrer->id])->increment('current_points', $referrerPoints);
+            $refBonusKey = 'ref_bonus_' . $referredBy . '_' . $user->id;
+            if (!\App\Models\GraciaPointLedger::where('idempotency_key', $refBonusKey)->exists()) {
+                \App\Models\GraciaPointLedger::create([
+                    'user_id' => $referredBy,
+                    'points' => $referrerPoints,
+                    'entry_type' => 'earned',
+                    'reason' => 'Referral Bonus (Referred: ' . $user->email . ')',
+                    'idempotency_key' => $refBonusKey
+                ]);
+                $referrer->graciaBalance()->firstOrCreate(['user_id' => $referrer->id])->increment('current_points', $referrerPoints);
+            }
 
-            \App\Models\GraciaPointLedger::create([
-                'user_id' => $user->id,
-                'points' => $refereePoints,
-                'entry_type' => 'earned',
-                'reason' => 'Referral Code Used',
-                'idempotency_key' => 'ref_code_' . $user->id
-            ]);
-            $user->graciaBalance()->firstOrCreate(['user_id' => $user->id])->increment('current_points', $refereePoints);
+            $refCodeKey = 'ref_code_' . $user->id;
+            if (!\App\Models\GraciaPointLedger::where('idempotency_key', $refCodeKey)->exists()) {
+                \App\Models\GraciaPointLedger::create([
+                    'user_id' => $user->id,
+                    'points' => $refereePoints,
+                    'entry_type' => 'earned',
+                    'reason' => 'Referral Code Used',
+                    'idempotency_key' => $refCodeKey
+                ]);
+                $user->graciaBalance()->firstOrCreate(['user_id' => $user->id])->increment('current_points', $refereePoints);
+            }
             
             $user->update(['referral_redeemed' => true]);
         }
 
         if (User::count() <= 100) {
-            \App\Models\GraciaPointLedger::create([
-                'user_id' => $user->id,
-                'points' => $welcomeBonus,
-                'entry_type' => 'earned',
-                'reason' => 'First 100 Users Welcome Bonus',
-                'idempotency_key' => 'welcome_bonus_' . $user->id
-            ]);
-            $user->graciaBalance()->firstOrCreate(['user_id' => $user->id])->increment('current_points', $welcomeBonus);
+            $welcomeBonusKey = 'welcome_bonus_' . $user->id;
+            if (!\App\Models\GraciaPointLedger::where('idempotency_key', $welcomeBonusKey)->exists()) {
+                \App\Models\GraciaPointLedger::create([
+                    'user_id' => $user->id,
+                    'points' => $welcomeBonus,
+                    'entry_type' => 'earned',
+                    'reason' => 'First 100 Users Welcome Bonus',
+                    'idempotency_key' => $welcomeBonusKey
+                ]);
+                $user->graciaBalance()->firstOrCreate(['user_id' => $user->id])->increment('current_points', $welcomeBonus);
+            }
             $user->update(['welcome_bonus_claimed' => true]);
         }
 
