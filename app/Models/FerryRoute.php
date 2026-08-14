@@ -161,7 +161,19 @@ class FerryRoute extends Model
             $q->where('operator', $operator)
               ->orWhere('operator', 'like', '%' . $operator . '%')
               ->orWhereHas('operatorRecord', fn ($oq) => $oq->where('name', $operator))
-              ->orWhereHas('vehicle', fn ($vq) => $vq->where('operator', $operator));
+              ->orWhereHas('vehicle', fn ($vq) => $vq->where('operator', $operator))
+              // Fallback for legacy string matching when operator_id is not yet backfilled
+              ->when(stripos($operator, 'Philippine Airline') !== false || stripos($operator, 'PAL') !== false, function($sq) {
+                  $sq->orWhere('operator', 'like', '%Philippines Airline%')
+                     ->orWhere('operator', 'like', '%PAL%');
+              })
+              ->when(stripos($operator, 'Cebu') !== false, function($sq) {
+                  $sq->orWhere('operator', 'like', '%CebuPecific%')
+                     ->orWhere('operator', 'like', '%Cebu%');
+              })
+              ->when(stripos($operator, 'AirAsia') !== false, function($sq) {
+                  $sq->orWhere('operator', 'like', '%AirAsia%');
+              });
         });
     }
 

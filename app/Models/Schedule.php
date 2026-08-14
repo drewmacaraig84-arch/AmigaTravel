@@ -490,7 +490,7 @@ class Schedule extends Model
             'tickets_available' => (int) ($this->tickets_available ?? 0),
             'mode' => $mode,
             'trip_type' => $this->ferryRoute?->trip_type ?: 'local',
-            'operator' => $this->ferryRoute?->operator,
+            'operator' => $this->ferryRoute?->operatorRecord?->name ?? $this->ferryRoute?->operator,
             'operator_logo' => $this->ferryRoute?->operatorRecord?->logo_url,
             // ISO 8601 timestamp for real-time client-side filtering (JS Date comparison)
             'departure_time_iso' => $this->departure_time->toIso8601String(),
