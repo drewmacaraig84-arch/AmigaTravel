@@ -1000,7 +1000,7 @@ public function selectedSchedule(): ?array
         }
 
         $departureDates = Schedule::active()
-            ->where('departure_time', '>=', now()->startOfDay())
+            ->where('departure_time', '>=', now())
             ->whereHas('ferryRoute', function ($query) {
                 $query->where('origin', $this->origin)
                       ->where('destination', $this->destination)
@@ -1051,7 +1051,7 @@ public function selectedSchedule(): ?array
         }
 
         $returnDates = Schedule::active()
-            ->where('departure_time', '>=', now()->startOfDay())
+            ->where('departure_time', '>=', now())
             ->whereHas('ferryRoute', function ($query) {
                 $query->where('origin', $this->destination)
                       ->where('destination', $this->origin)
@@ -1059,7 +1059,10 @@ public function selectedSchedule(): ?array
                       ->where('is_active', true);
 
                 if (! empty($this->operator)) {
-                    $query->where('operator', $this->operator);
+                    $query->where(function ($q) {
+                        $q->where('operator', $this->operator)
+                          ->orWhere('operator', 'like', '%' . $this->operator . '%');
+                    });
                 }
             })
             ->selectRaw('DATE(departure_time) as date')
