@@ -7,6 +7,8 @@ use App\Models\Transaction;
 use App\Models\WebsiteSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\TourController;
+
 Route::get('/queue-status', function () {
     try {
         $jobs = \Illuminate\Support\Facades\DB::table('jobs')->count();
@@ -22,7 +24,6 @@ Route::get('/queue-status', function () {
         return response()->json(['error' => $e->getMessage()]);
     }
 });
-use App\Http\Controllers\TourController;
 
 // ─── Diagnostic Health Check (no middleware, no session) ──────────────────────
 // Remove this route once production is stable.
