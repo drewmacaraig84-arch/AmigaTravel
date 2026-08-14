@@ -352,14 +352,19 @@ class FerryRouteResource extends Resource
                 ->schema([
                     Select::make('transport_class_id')
                         ->label('Transport Class')
-                        ->options(fn (callable $get) => \App\Models\TransportClass::query()
-                            ->when($get('../../../../operator_id'), fn ($query, $operatorId) => $query->where('operator_id', $operatorId))
-                            // Intentionally skipping mode filter because the DB has ferry classes seeded as 'airline'
-                            ->where('is_active', true)
-                            ->orderBy('name')
-                            ->get()
-                            ->mapWithKeys(fn ($item) => [$item->id => $item->operator_record ? "{$item->operator_record->name} - {$item->name}" : $item->name])
-                            ->toArray())
+                        ->options(function (callable $get) {
+                            // Path: transport_class_id is inside scheduleTransportClasses (inside schedules repeater, inside form)
+                            // Go up: ../scheduleTransportClasses item → ../schedules item → ../../form root
+                            $operatorId = $get('../../../operator_id') ?? $get('../../operator_id') ?? $get('../../../../operator_id');
+
+                            return \App\Models\TransportClass::query()
+                                ->when(filled($operatorId), fn ($query) => $query->where('operator_id', $operatorId))
+                                ->where('is_active', true)
+                                ->orderBy('name')
+                                ->get()
+                                ->mapWithKeys(fn ($item) => [$item->id => $item->operator_record ? "{$item->operator_record->name} - {$item->name}" : $item->name])
+                                ->toArray();
+                        })
                         ->required()
                         ->reactive()
                         ->afterStateUpdated(function ($state, callable $set) {
