@@ -326,13 +326,14 @@
              },
              activeRoutes: window.AMIGA_ACTIVE_ROUTES || [],
              popularPorts: ['Batangas', 'Calapan', 'Caticlan', 'Odiongan', 'Manila', 'Cebu', 'Puerto Princesa', 'Roxas'],
-             operatorsList: [
-                 { name: '2GO', value: '2GO', logo: '{{ asset('images/2GO-Logo.png') }}', mode: 'ferry' },
-                 { name: 'Starlite', value: 'Starlite', logo: '{{ asset('images/Starlite_Logo.png') }}', mode: 'ferry' },
-                 { name: 'Cebu Pacific', value: 'Cebu Pacific', logo: '{{ asset('images/CebuPecific-Logo.png') }}', mode: 'airline' },
-                 { name: 'Philippine Airline', value: 'Philippine Airline', logo: '{{ asset('images/Pal-Logo.jfif') }}', mode: 'airline' },
-                 { name: 'AirAsia', value: 'AirAsia', logo: '{{ asset('images/AirAsia-Logo.png') }}', mode: 'airline' }
-             ],
+             operatorsList: @json(\App\Models\Operator::where('is_active', true)->get()->map(function($op) {
+                 return [
+                     'name' => $op->name,
+                     'value' => $op->name,
+                     'logo' => $op->logo_path ? \Illuminate\Support\Facades\Storage::url($op->logo_path) : null,
+                     'mode' => $op->mode
+                 ];
+             })->toArray()),
              get filteredOperatorsList() {
                  if (!this.mode) return this.operatorsList;
                  return this.operatorsList.filter(o => o.mode === 'all' || o.mode === this.mode);

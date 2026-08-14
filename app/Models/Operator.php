@@ -15,4 +15,9 @@ class Operator extends Model
         'logo_path',
         'is_active',
     ];
+
+    public function ferryRoutes()
+    {
+        return $this->hasMany(FerryRoute::class, 'operator_id');
+    }
 }

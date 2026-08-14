@@ -84,7 +84,7 @@ class OperatorResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            RelationManagers\FerryRoutesRelationManager::class,
         ];
     }
 

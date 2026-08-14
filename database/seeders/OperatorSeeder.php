@@ -23,7 +23,7 @@ class OperatorSeeder extends Seeder
             [
                 'name' => 'Starlite Ferries',
                 'mode' => 'ferry',
-                'logo' => 'Starlite_Logo.png',
+                'logo' => 'starlite-Logo.jfif',
             ],
             [
                 'name' => 'Philippine Airlines',
@@ -60,7 +60,7 @@ class OperatorSeeder extends Seeder
                 }
             }
 
-            $operator = Operator::firstOrCreate(
+            $operator = Operator::updateOrCreate(
                 ['name' => $op['name']],
                 [
                     'mode' => $op['mode'],
