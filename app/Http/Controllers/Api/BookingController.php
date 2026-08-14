@@ -471,6 +471,7 @@ class BookingController extends Controller
             'payment_status' => 'pending',
         ]);
         $booking->update([
+            'is_rebooked' => true,
             'rebooking_status' => 'pending',
             'preferred_replacement_schedule_id' => $request->input('dep_schedule_id'),
             'preferred_replacement_date' => $request->input('departure_date'),

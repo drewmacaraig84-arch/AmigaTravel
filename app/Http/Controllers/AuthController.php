@@ -443,18 +443,20 @@ class AuthController extends Controller
         if ($referredBy) {
             \App\Models\GraciaPointLedger::create([
                 'user_id' => $referredBy,
-                'points_earned' => $referrerPoints,
-                'points_used' => 0,
-                'description' => 'Referral Bonus (Referred: ' . $user->email . ')'
+                'points' => $referrerPoints,
+                'entry_type' => 'earned',
+                'reason' => 'Referral Bonus (Referred: ' . $user->email . ')',
+                'idempotency_key' => 'ref_bonus_' . $referredBy . '_' . $user->id
             ]);
             $referrer->graciaBalance()->firstOrCreate(['user_id' => $referrer->id])->increment('current_balance', $referrerPoints);
             $referrer->graciaBalance()->firstOrCreate(['user_id' => $referrer->id])->increment('total_earned', $referrerPoints);
 
             \App\Models\GraciaPointLedger::create([
                 'user_id' => $user->id,
-                'points_earned' => $refereePoints,
-                'points_used' => 0,
-                'description' => 'Referral Code Used'
+                'points' => $refereePoints,
+                'entry_type' => 'earned',
+                'reason' => 'Referral Code Used',
+                'idempotency_key' => 'ref_code_' . $user->id
             ]);
             $user->graciaBalance()->firstOrCreate(['user_id' => $user->id])->increment('current_balance', $refereePoints);
             $user->graciaBalance()->firstOrCreate(['user_id' => $user->id])->increment('total_earned', $refereePoints);
@@ -465,9 +467,10 @@ class AuthController extends Controller
         if (User::count() <= 100) {
             \App\Models\GraciaPointLedger::create([
                 'user_id' => $user->id,
-                'points_earned' => $welcomeBonus,
-                'points_used' => 0,
-                'description' => 'First 100 Users Welcome Bonus'
+                'points' => $welcomeBonus,
+                'entry_type' => 'earned',
+                'reason' => 'First 100 Users Welcome Bonus',
+                'idempotency_key' => 'welcome_bonus_' . $user->id
             ]);
             $user->graciaBalance()->firstOrCreate(['user_id' => $user->id])->increment('current_balance', $welcomeBonus);
             $user->graciaBalance()->firstOrCreate(['user_id' => $user->id])->increment('total_earned', $welcomeBonus);
