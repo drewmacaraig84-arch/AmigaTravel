@@ -1389,11 +1389,13 @@
                 foreach ($storageFiles as $__f) {
                     $__basename = basename($__f);
                     if (in_array(strtolower(pathinfo($__basename, PATHINFO_EXTENSION)), $extensions, true)) {
+                        $__fullPath = \Illuminate\Support\Facades\Storage::disk('public')->path($__f);
+                        $__mtime = file_exists($__fullPath) ? filemtime($__fullPath) : time();
                         $__promo_files[] = [
-                            'slot'     => (int) pathinfo($__basename, PATHINFO_FILENAME),
+                            'slot'     => pathinfo($__basename, PATHINFO_FILENAME),
                             'title'    => ucwords(str_replace(['-', '_'], ' ', pathinfo($__basename, PATHINFO_FILENAME))),
                             'subtitle' => '',
-                            'image'    => storage_asset_path('prmotion_images/' . $__basename),
+                            'image'    => storage_asset_path('prmotion_images/' . $__basename) . '?v=' . $__mtime,
                         ];
                     }
                 }
@@ -1409,19 +1411,21 @@
                     $__dir_name = basename($__promo_dir);
                     foreach (scandir($__promo_dir) as $__f) {
                         if (in_array(strtolower(pathinfo($__f, PATHINFO_EXTENSION)), $extensions, true)) {
+                            $__fullPath = $__promo_dir . '/' . $__f;
+                            $__mtime = file_exists($__fullPath) ? filemtime($__fullPath) : time();
                             $__promo_files[] = [
-                                'slot'     => (int) pathinfo($__f, PATHINFO_FILENAME),
+                                'slot'     => pathinfo($__f, PATHINFO_FILENAME),
                                 'title'    => ucwords(str_replace(['-', '_'], ' ', pathinfo($__f, PATHINFO_FILENAME))),
                                 'subtitle' => '',
-                                'image'    => asset('images/' . $__dir_name . '/' . $__f),
+                                'image'    => asset('images/' . $__dir_name . '/' . $__f) . '?v=' . $__mtime,
                             ];
                         }
                     }
                 }
             }
 
-            // Sort by slot number
-            usort($__promo_files, fn($a, $b) => $a['slot'] <=> $b['slot']);
+            // Sort naturally by slot/filename
+            usort($__promo_files, fn($a, $b) => strnatcasecmp($a['slot'], $b['slot']));
             $__promo_slides = $__promo_files;
         }
     @endphp

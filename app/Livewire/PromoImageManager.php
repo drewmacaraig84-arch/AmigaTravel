@@ -37,8 +37,10 @@ class PromoImageManager extends Component
                 $basename = basename($path);
                 if (in_array(strtolower(pathinfo($basename, PATHINFO_EXTENSION)), $extensions, true)) {
                     $slot = pathinfo($basename, PATHINFO_FILENAME);
+                    $fullPath = Storage::disk(self::DISK)->path(self::STORE_DIR . '/' . $basename);
+                    $mtime = file_exists($fullPath) ? filemtime($fullPath) : time();
                     $this->images[$slot] = [
-                        'url'    => storage_asset_path(self::STORE_DIR . '/' . $basename),
+                        'url'    => storage_asset_path(self::STORE_DIR . '/' . $basename) . '?v=' . $mtime,
                         'source' => 'storage',
                         'file'   => $basename,
                     ];
@@ -54,8 +56,10 @@ class PromoImageManager extends Component
                     $slot = pathinfo($basename, PATHINFO_FILENAME);
                     // Don't overwrite if Storage already has this slot
                     if (!isset($this->images[$slot])) {
+                        $fullPath = $legacyDir . '/' . $basename;
+                        $mtime = file_exists($fullPath) ? filemtime($fullPath) : time();
                         $this->images[$slot] = [
-                            'url'    => asset(self::LEGACY_DIR . '/' . $basename),
+                            'url'    => asset(self::LEGACY_DIR . '/' . $basename) . '?v=' . $mtime,
                             'source' => 'legacy',
                             'file'   => $basename,
                         ];
@@ -64,8 +68,8 @@ class PromoImageManager extends Component
             }
         }
 
-        // Sort by numeric slot
-        uksort($this->images, fn($a, $b) => (int)$a <=> (int)$b);
+        // Sort naturally by filename
+        uksort($this->images, fn($a, $b) => strnatcasecmp($a, $b));
     }
 
     public function startReplace(string $slot): void
@@ -96,8 +100,11 @@ class PromoImageManager extends Component
             try { @unlink($legacyPath); } catch (\Throwable) {}
         }
 
-        $ext = $this->newImage->getClientOriginalExtension() ?: 'png';
-        $this->newImage->storeAs(self::STORE_DIR, $slot . '.' . $ext, self::DISK);
+        $originalName = $this->newImage->getClientOriginalName();
+        // Remove special chars
+        $originalName = preg_replace('/[^A-Za-z0-9\-\_\.]/', '_', $originalName);
+        
+        $this->newImage->storeAs(self::STORE_DIR, $originalName, self::DISK);
 
         $this->replacingSlot = null;
         $this->reset('newImage');
@@ -137,11 +144,10 @@ class PromoImageManager extends Component
     {
         $this->validate(['addImage' => 'required|image|max:20480']);
 
-        $slots = array_map('intval', array_keys($this->images));
-        $next  = empty($slots) ? 1 : (max($slots) + 1);
+        $originalName = $this->addImage->getClientOriginalName();
+        $originalName = preg_replace('/[^A-Za-z0-9\-\_\.]/', '_', $originalName);
 
-        $ext = $this->addImage->getClientOriginalExtension() ?: 'png';
-        $this->addImage->storeAs(self::STORE_DIR, $next . '.' . $ext, self::DISK);
+        $this->addImage->storeAs(self::STORE_DIR, $originalName, self::DISK);
 
         $this->showAddModal = false;
         $this->reset('addImage');
@@ -152,7 +158,7 @@ class PromoImageManager extends Component
     public function render()
     {
         $displaySlots = collect(array_keys($this->images))
-            ->sortBy(fn($v) => (int)$v)
+            ->sort(fn($a, $b) => strnatcasecmp($a, $b))
             ->values()
             ->toArray();
 
