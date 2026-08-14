@@ -154,10 +154,7 @@ class Schedule extends Model
                 }
                 
                 if (! empty($operator)) {
-                    $routeQuery->where(function ($q) use ($operator) {
-                        $q->where('operator', $operator)
-                          ->orWhere('operator', 'like', '%' . $operator . '%');
-                    });
+                    $routeQuery->forOperator($operator);
                 }
             })
             ->where('departure_time', '>=', $lowerBound)

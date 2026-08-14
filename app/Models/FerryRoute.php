@@ -155,6 +155,17 @@ class FerryRoute extends Model
             ->all();
     }
 
+    public function scopeForOperator($query, string $operator)
+    {
+        return $query->where(function ($q) use ($operator) {
+            $q->where('operator', $operator)
+              ->orWhere('operator', 'like', '%' . $operator . '%')
+              ->orWhereHas('operatorRecord', fn ($oq) => $oq->where('name', $operator))
+              ->orWhereHas('vehicle', fn ($vq) => $vq->where('operator', $operator));
+        });
+    }
+
+
     public static function scheduleOrigins(?string $mode = null, ?string $operator = null): array
     {
         $cacheKey = 'ferry_route:schedule_origins_v4:' . md5(serialize([$mode, $operator]));
@@ -163,12 +174,7 @@ class FerryRoute extends Model
             return static::query()
                 ->active()
                 ->when($mode, fn ($query) => $query->where('mode', $mode))
-                ->when($operator, function ($query, $operator) {
-                    $query->where(function ($q) use ($operator) {
-                        $q->where('operator', $operator)
-                          ->orWhereHas('vehicle', fn ($vq) => $vq->where('operator', $operator));
-                    });
-                })
+                ->when($operator, fn ($query) => $query->forOperator($operator))
                 ->whereHas('schedules', fn ($q) => $q->active())
                 ->select('origin')
                 ->distinct()
@@ -188,12 +194,7 @@ class FerryRoute extends Model
                 ->active()
                 ->where('origin', $origin)
                 ->when($mode, fn ($query) => $query->where('mode', $mode))
-                ->when($operator, function ($query, $operator) {
-                    $query->where(function ($q) use ($operator) {
-                        $q->where('operator', $operator)
-                          ->orWhereHas('vehicle', fn ($vq) => $vq->where('operator', $operator));
-                    });
-                })
+                ->when($operator, fn ($query) => $query->forOperator($operator))
                 ->whereHas('schedules', fn ($q) => $q->active());
 
             if ($requireReturn) {
@@ -209,6 +210,13 @@ class FerryRoute extends Model
                         ->when($operator, function ($q) use ($operator) {
                             $q->where(function ($opq) use ($operator) {
                                 $opq->where('return_routes.operator', $operator)
+                                    ->orWhere('return_routes.operator', 'like', '%' . $operator . '%')
+                                    ->orWhereExists(function ($oq) use ($operator) {
+                                        $oq->selectRaw('1')
+                                            ->from('operators')
+                                            ->whereColumn('operators.id', 'return_routes.operator_id')
+                                            ->where('operators.name', $operator);
+                                    })
                                     ->orWhereExists(function ($vsub) use ($operator) {
                                         $vsub->selectRaw('1')
                                             ->from('vehicles')
@@ -220,8 +228,7 @@ class FerryRoute extends Model
                 });
             }
 
-            return $query
-                ->select('destination')
+            return $query->select('destination')
                 ->distinct()
                 ->orderBy('destination')
                 ->pluck('destination')
@@ -258,7 +265,7 @@ class FerryRoute extends Model
                 ->where('origin', $origin)
                 ->where('destination', $destination)
                 ->when($mode, fn ($q) => $q->where('mode', $mode))
-                ->when($operator, fn ($q) => $q->where('operator', $operator))
+                ->when($operator, fn ($q) => $q->forOperator($operator))
                 ->whereHas('schedules', function ($q) {
                     $q->active();
                 })
@@ -273,7 +280,7 @@ class FerryRoute extends Model
                 ->where('origin', $destination)
                 ->where('destination', $origin)
                 ->when($mode, fn ($q) => $q->where('mode', $mode))
-                ->when($operator, fn ($q) => $q->where('operator', $operator))
+                ->when($operator, fn ($q) => $q->forOperator($operator))
                 ->whereHas('schedules', function ($q) {
                     $q->active();
                 })

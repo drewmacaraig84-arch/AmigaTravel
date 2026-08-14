@@ -100,7 +100,7 @@ class ScheduleController extends Controller
                 $query->where('mode', $mode);
             }
             if ($operator) {
-                $query->where('operator', 'like', "%{$operator}%");
+                $query->forOperator($operator);
             }
 
             $routes = $query->with(['schedules' => function($q) {
