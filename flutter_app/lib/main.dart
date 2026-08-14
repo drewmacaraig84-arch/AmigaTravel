@@ -5547,6 +5547,45 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     super.dispose();
   }
 
+  Future<void> _refreshBooking() async {
+    try {
+      final res = await http.get(
+        Uri.parse('$_baseUrl/api/bookings/${_booking['transaction_number']}'),
+        headers: {
+          'Accept': 'application/json',
+          if (UserSession.token.isNotEmpty)
+            'Authorization': 'Bearer ${UserSession.token}'
+        },
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data['status'] == 'success' && data['booking'] != null) {
+          if (mounted) {
+            setState(() {
+              _booking = data['booking'];
+              if (_booking['price_breakdown'] is String) {
+                try {
+                  _booking['price_breakdown'] = jsonDecode(_booking['price_breakdown']);
+                } catch (_) {
+                  _booking['price_breakdown'] = [];
+                }
+              }
+              if (_booking['passengers'] is String) {
+                try {
+                  _booking['passengers'] = jsonDecode(_booking['passengers']);
+                } catch (_) {
+                  _booking['passengers'] = [];
+                }
+              }
+            });
+          }
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
   Future<void> _fetchPaymentSettings() async {
     try {
       final response = await http.get(
@@ -5969,7 +6008,9 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                             builder: (_) =>
                                 ServiceCancellationScreen(booking: _booking),
                           ),
-                        );
+                        ).then((res) {
+                          if (res == true) _refreshBooking();
+                        });
                       },
                       icon: const Icon(Icons.swap_horiz_rounded),
                       label: const Text('Reschedule / Refund Options'),
@@ -6151,7 +6192,9 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                           MaterialPageRoute(
                             builder: (_) => RebookScreen(booking: _booking),
                           ),
-                        );
+                        ).then((res) {
+                          if (res == true) _refreshBooking();
+                        });
                       },
                 icon: const Icon(Icons.calendar_month),
                 label: const Text('Request rebooking')),
@@ -6166,7 +6209,9 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                         MaterialPageRoute(
                           builder: (_) => RefundScreen(booking: _booking),
                         ),
-                      );
+                      ).then((res) {
+                        if (res == true) _refreshBooking();
+                      });
                     },
               icon: Icon(isWithin5Mins
                   ? Icons.cancel_outlined
@@ -14988,7 +15033,11 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () {
+                  if (Navigator.canPop(context)) {
+                    Navigator.pop(context, true);
+                  }
+                },
                 style: ElevatedButton.styleFrom(
                     backgroundColor: kGreen,
                     foregroundColor: Colors.white,
@@ -15918,8 +15967,11 @@ class _RefundScreenState extends State<RefundScreen> {
                                       textAlign: TextAlign.center),
                                   const SizedBox(height: 24),
                                   FilledButton(
-                                      onPressed: () =>
-                                          Navigator.pop(context, true),
+                                      onPressed: () {
+                                        if (Navigator.canPop(context)) {
+                                          Navigator.pop(context, true);
+                                        }
+                                      },
                                       child: const Text('Done'))
                                 ])))
                     : ListView(
@@ -16262,7 +16314,9 @@ class _RebookScreenState extends State<RebookScreen> {
       final res = await req.send();
       if (res.statusCode == 200) {
         if (!mounted) return;
-        Navigator.pop(context, true);
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context, true);
+        }
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Rebooking requested successfully')));
       } else {
