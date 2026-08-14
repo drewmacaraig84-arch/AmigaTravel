@@ -14,8 +14,16 @@ class TransportClassSeeder extends Seeder
     {
         $operatorConfigs = config('airline_seating.operators', []);
         $classIdsByCode = [];
+        
+        $operatorMap = \App\Models\Operator::pluck('id', 'name')->mapWithKeys(function ($id, $name) {
+            return [strtolower($name) => $id];
+        })->toArray();
+        $operatorMap['philippines airasia'] = $operatorMap[strtolower('Philippines AirAsia')] ?? null;
+        $operatorMap['airasia'] = $operatorMap['philippines airasia'] ?? null;
+        $operatorMap['pal'] = $operatorMap[strtolower('Philippine Airlines')] ?? null;
 
         foreach ($operatorConfigs as $operator => $operatorConfig) {
+            $opId = $operatorMap[strtolower($operator)] ?? null;
             foreach ($operatorConfig['classes'] ?? [] as $code => $classConfig) {
                 $class = TransportClass::updateOrCreate(
                     ['operator' => $operator, 'code' => $code],
@@ -25,6 +33,7 @@ class TransportClassSeeder extends Seeder
                         'price' => $classConfig['price'],
                         'sort_order' => $classConfig['sort_order'],
                         'is_active' => true,
+                        'operator_id' => $opId,
                     ],
                 );
                 $classIdsByCode[$operator][$code] = $class->id;
@@ -75,6 +84,7 @@ class TransportClassSeeder extends Seeder
             ->all();
 
         foreach ($ferryOperators as $operator) {
+            $opId = $operatorMap[strtolower($operator)] ?? null;
             foreach ($defaultFerryClasses as $code => $cfg) {
                 TransportClass::updateOrCreate(
                     ['operator' => $operator, 'code' => $code],
@@ -84,6 +94,7 @@ class TransportClassSeeder extends Seeder
                         'price' => $cfg['price'],
                         'sort_order' => $cfg['sort_order'],
                         'is_active' => true,
+                        'operator_id' => $opId,
                     ]
                 );
             }
@@ -100,6 +111,8 @@ class TransportClassSeeder extends Seeder
             if (! $operator) {
                 continue;
             }
+            
+            $opId = $operatorMap[strtolower($operator)] ?? null;
 
             $pivotData = [];
             foreach ($schedule->scheduleAccommodations as $acc) {
@@ -112,6 +125,7 @@ class TransportClassSeeder extends Seeder
                         'price' => $acc->price ?? 0,
                         'sort_order' => $acc->sort_order ?? 1,
                         'is_active' => true,
+                        'operator_id' => $opId,
                     ]
                 );
 

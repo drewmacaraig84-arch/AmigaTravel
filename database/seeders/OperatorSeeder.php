@@ -36,7 +36,7 @@ class OperatorSeeder extends Seeder
                 'logo' => 'CebuPecific-Logo.png',
             ],
             [
-                'name' => 'AirAsia',
+                'name' => 'Philippines AirAsia',
                 'mode' => 'airline',
                 'logo' => 'AirAsia-Logo.png',
             ],
@@ -77,7 +77,8 @@ class OperatorSeeder extends Seeder
         $operatorMap['pal'] = $operatorMap[strtolower('Philippine Airlines')];
         $operatorMap['philippine airline'] = $operatorMap[strtolower('Philippine Airlines')];
         $operatorMap['philippines airlines(pal)'] = $operatorMap[strtolower('Philippine Airlines')];
-        $operatorMap['philippine airasia'] = $operatorMap[strtolower('AirAsia')];
+        $operatorMap['philippine airasia'] = $operatorMap[strtolower('Philippines AirAsia')];
+        $operatorMap['airasia'] = $operatorMap[strtolower('Philippines AirAsia')];
         $operatorMap['ceb_pac'] = $operatorMap[strtolower('Cebu Pacific')];
 
         // Migrate existing tables

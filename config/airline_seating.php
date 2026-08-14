@@ -49,7 +49,7 @@ return [
                 ],
             ],
         ],
-        'AirAsia' => [
+        'Philippines AirAsia' => [
             'classes' => [
                 'premium-flatbed' => [
                     'name' => 'Premium Flatbed',
