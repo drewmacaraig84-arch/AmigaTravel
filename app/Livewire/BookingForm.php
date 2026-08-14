@@ -457,6 +457,18 @@ class BookingForm extends Component
 
         return FerryRoute::scheduleOperatorsFor($this->mode);
     }
+
+    #[Computed]
+    public function operatorLogos(): array
+    {
+        return \App\Models\Operator::where('is_active', true)
+            ->whereNotNull('logo_path')
+            ->get()
+            ->mapWithKeys(function ($op) {
+                return [$op->name => \Illuminate\Support\Facades\Storage::url($op->logo_path)];
+            })
+            ->toArray();
+    }
     
     #[Computed]
     public function baggageRules(): ?array

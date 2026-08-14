@@ -204,20 +204,13 @@
                                     @php
                                         $availableOperators = $this->operators;
                                         $operatorButtonsDisabled = $prefilled_from_package || blank($mode) || $isOperatorPreselected;
-                                        $selectedOpLogo = null;
-                                        if ($operator) {
-                                            if (stripos($operator, '2GO') !== false) $selectedOpLogo = '2GO-Logo.png';
-                                            elseif (stripos($operator, 'Starlite') !== false) $selectedOpLogo = 'Starlite_Logo.png';
-                                            elseif (stripos($operator, 'Cebu') !== false) $selectedOpLogo = 'CebuPecific-Logo.png';
-                                            elseif (stripos($operator, 'Pal') !== false || stripos($operator, 'Philippine') !== false) $selectedOpLogo = 'Pal-Logo.jfif';
-                                            elseif (stripos($operator, 'AirAsia') !== false) $selectedOpLogo = 'AirAsia-Logo.png';
-                                        }
+                                        $selectedOpLogo = $operator ? ($this->operatorLogos[$operator] ?? null) : null;
                                     @endphp
                                     <button type="button" wire:click.prevent="toggleOperatorDropdown" @disabled($operatorButtonsDisabled) class="mt-2 flex h-12 w-full items-center justify-between rounded-xl border border-slate-300 bg-white px-4 py-3 text-left text-slate-900 shadow-sm transition hover:border-[#216417] focus:outline-none focus:ring-2 focus:ring-[#216417]/20 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500">
                                         <div class="flex items-center gap-2 truncate">
                                             @if($selectedOpLogo)
                                                 <div class="w-5 h-5 shrink-0 bg-white rounded flex items-center justify-center overflow-hidden">
-                                                    <img src="{{ asset('images/' . $selectedOpLogo) }}" alt="{{ $operator }}" class="w-full h-full object-contain">
+                                                    <img src="{{ $selectedOpLogo }}" alt="{{ $operator }}" class="w-full h-full object-contain">
                                                 </div>
                                             @endif
                                             <span class="truncate">{{ $operator ?: (blank($mode) ? 'Select mode first' : (empty($availableOperators) ? 'No operators available' : 'All operators')) }}</span>
@@ -246,19 +239,14 @@
                                                 </button>
                                                 @foreach($availableOperators as $op)
                                                     @php
-                                                        $opLogo = null;
-                                                        if (stripos($op, '2GO') !== false) $opLogo = '2GO-Logo.png';
-                                                        elseif (stripos($op, 'Starlite') !== false) $opLogo = 'Starlite_Logo.png';
-                                                        elseif (stripos($op, 'Cebu') !== false) $opLogo = 'CebuPecific-Logo.png';
-                                                        elseif (stripos($op, 'Pal') !== false || stripos($op, 'Philippine') !== false) $opLogo = 'Pal-Logo.jfif';
-                                                        elseif (stripos($op, 'AirAsia') !== false) $opLogo = 'AirAsia-Logo.png';
+                                                        $opLogo = $this->operatorLogos[$op] ?? null;
                                                     @endphp
                                                     <button type="button" wire:click.prevent="selectOperator('{{ $op }}')" class="w-full rounded-lg px-4 py-3 text-left text-slate-700 transition hover:bg-slate-50 hover:text-slate-900 {{ $operator === $op ? 'bg-slate-50 font-semibold' : '' }}">
                                                         <div class="flex items-center justify-between gap-3">
                                                             <div class="flex items-center gap-2">
                                                                 @if($opLogo)
                                                                     <div class="w-6 h-6 shrink-0 bg-white rounded flex items-center justify-center overflow-hidden">
-                                                                        <img src="{{ asset('images/' . $opLogo) }}" alt="{{ $op }}" class="w-full h-full object-contain">
+                                                                        <img src="{{ $opLogo }}" alt="{{ $op }}" class="w-full h-full object-contain">
                                                                     </div>
                                                                 @endif
                                                                 <span>{{ $op }}</span>
@@ -1458,20 +1446,13 @@
                                     
                                     {{-- Operator Logo and Route --}}
                                     @php
-                                        $depOpLogo = null;
-                                        if ($operator) {
-                                            if (stripos($operator, '2GO') !== false) $depOpLogo = '2GO-Logo.png';
-                                            elseif (stripos($operator, 'Starlite') !== false) $depOpLogo = 'Starlite_Logo.png';
-                                            elseif (stripos($operator, 'Cebu') !== false) $depOpLogo = 'CebuPecific-Logo.png';
-                                            elseif (stripos($operator, 'Pal') !== false || stripos($operator, 'Philippine') !== false) $depOpLogo = 'Pal-Logo.jfif';
-                                            elseif (stripos($operator, 'AirAsia') !== false) $depOpLogo = 'AirAsia-Logo.png';
-                                        }
+                                        $depOpLogo = $operator ? ($this->operatorLogos[$operator] ?? null) : null;
                                     @endphp
                                     
                                     <div class="mb-4 flex items-center gap-4 pb-4 border-b border-slate-100">
                                         @if($depOpLogo)
                                             <div class="w-16 h-12 flex-shrink-0">
-                                                <img src="{{ asset('images/' . $depOpLogo) }}" alt="{{ $operator }}" class="w-full h-full object-contain">
+                                                <img src="{{ $depOpLogo }}" alt="{{ $operator }}" class="w-full h-full object-contain">
                                             </div>
                                         @endif
                                         <div class="flex-1">
@@ -1508,20 +1489,13 @@
                                         
                                         {{-- Operator Logo and Route (reversed for return) --}}
                                         @php
-                                            $retOpLogo = null;
-                                            if ($operator) {
-                                                if (stripos($operator, '2GO') !== false) $retOpLogo = '2GO-Logo.png';
-                                                elseif (stripos($operator, 'Starlite') !== false) $retOpLogo = 'Starlite_Logo.png';
-                                                elseif (stripos($operator, 'Cebu') !== false) $retOpLogo = 'CebuPecific-Logo.png';
-                                                elseif (stripos($operator, 'Pal') !== false || stripos($operator, 'Philippine') !== false) $retOpLogo = 'Pal-Logo.jfif';
-                                                elseif (stripos($operator, 'AirAsia') !== false) $retOpLogo = 'AirAsia-Logo.png';
-                                            }
+                                            $retOpLogo = $operator ? ($this->operatorLogos[$operator] ?? null) : null;
                                         @endphp
                                         
                                         <div class="mb-4 flex items-center gap-4 pb-4 border-b border-slate-100">
                                             @if($retOpLogo)
                                                 <div class="w-16 h-12 flex-shrink-0">
-                                                    <img src="{{ asset('images/' . $retOpLogo) }}" alt="{{ $operator }}" class="w-full h-full object-contain">
+                                                    <img src="{{ $retOpLogo }}" alt="{{ $operator }}" class="w-full h-full object-contain">
                                                 </div>
                                             @endif
                                             <div class="flex-1">
@@ -1791,16 +1765,11 @@
                             <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Operator</div>
                             <div class="flex items-center gap-3">
                                 @php
-                                    $opLogo = null;
-                                    if ($operator && stripos($operator, '2GO') !== false) $opLogo = '2GO-Logo.png';
-                                    elseif ($operator && stripos($operator, 'Starlite') !== false) $opLogo = 'Starlite_Logo.png';
-                                    elseif ($operator && stripos($operator, 'Cebu') !== false) $opLogo = 'CebuPecific-Logo.png';
-                                    elseif ($operator && (stripos($operator, 'Pal') !== false || stripos($operator, 'Philippine') !== false)) $opLogo = 'Pal-Logo.jfif';
-                                    elseif ($operator && stripos($operator, 'AirAsia') !== false) $opLogo = 'AirAsia-Logo.png';
+                                    $opLogo = $operator ? ($this->operatorLogos[$operator] ?? null) : null;
                                 @endphp
                                 @if($opLogo)
                                     <div class="w-8 h-8 shrink-0 bg-white rounded flex items-center justify-center overflow-hidden border border-slate-200">
-                                        <img src="{{ asset('images/' . $opLogo) }}" alt="{{ $operator }}" class="w-full h-full object-contain">
+                                        <img src="{{ $opLogo }}" alt="{{ $operator }}" class="w-full h-full object-contain">
                                     </div>
                                 @endif
                                 <span class="font-semibold text-slate-900">{{ $operator }}</span>

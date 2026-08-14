@@ -42,6 +42,11 @@ class FerryRoute extends Model
         return $this->hasMany(Schedule::class);
     }
 
+    public function operatorRecord(): BelongsTo
+    {
+        return $this->belongsTo(Operator::class, 'operator_id');
+    }
+
     public function getLabelAttribute(): string
     {
         $parts = ["{$this->origin} → {$this->destination}"];
@@ -99,23 +104,34 @@ class FerryRoute extends Model
 
     public static function activeOperatorsFor(?string $mode = null): array
     {
-        return static::query()
-            ->active()
+        return \App\Models\Operator::query()
+            ->where('is_active', true)
             ->when($mode, function ($query, $mode) {
-                $query->where('mode', $mode);
+                if ($mode === 'ferry' || $mode === 'airline') {
+                    $query->where('mode', $mode);
+                }
             })
-            ->whereNotNull('operator')
-            ->where('operator', '!=', '')
-            ->select('operator')
-            ->distinct()
-            ->orderBy('operator')
-            ->pluck('operator')
-            ->values()
+            ->orderBy('name')
+            ->pluck('name')
             ->all();
     }
 
     protected static function booted(): void
     {
+        static::saving(function ($route) {
+            if ($route->operator_id) {
+                $operator = \App\Models\Operator::find($route->operator_id);
+                if ($operator) {
+                    $route->operator = $operator->name;
+                }
+            } elseif ($route->operator) {
+                $operator = \App\Models\Operator::where('name', $route->operator)->first();
+                if ($operator) {
+                    $route->operator_id = $operator->id;
+                }
+            }
+        });
+
         static::saved(function () {
             \Illuminate\Support\Facades\Cache::flush();
         });
@@ -127,16 +143,15 @@ class FerryRoute extends Model
 
     public static function operators(?string $mode = null): array
     {
-        return static::query()
-            ->active()
-            ->when($mode, fn ($query) => $query->where('mode', $mode))
-            ->whereNotNull('operator')
-            ->where('operator', '!=', '')
-            ->select('operator')
-            ->distinct()
-            ->orderBy('operator')
-            ->pluck('operator')
-            ->values()
+        return \App\Models\Operator::query()
+            ->where('is_active', true)
+            ->when($mode, function ($query, $mode) {
+                if ($mode === 'ferry' || $mode === 'airline') {
+                    $query->where('mode', $mode);
+                }
+            })
+            ->orderBy('name')
+            ->pluck('name')
             ->all();
     }
 
@@ -220,31 +235,15 @@ class FerryRoute extends Model
         $cacheKey = 'ferry_route:schedule_operators_v4:' . md5(serialize([$mode]));
 
         return \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addHours(2), function () use ($mode) {
-            $routeOperators = static::query()
-                ->active()
-                ->when($mode, fn ($query) => $query->where('mode', $mode))
-                ->whereNotNull('operator')
-                ->where('operator', '!=', '')
-                ->whereHas('schedules', fn ($q) => $q->active())
-                ->pluck('operator')
-                ->all();
-
-            $vehicleOperators = static::query()
-                ->active()
-                ->when($mode, fn ($query) => $query->where('mode', $mode))
-                ->whereHas('vehicle', fn ($q) => $q->whereNotNull('operator')->where('operator', '!=', ''))
-                ->whereHas('schedules', fn ($q) => $q->active())
-                ->with('vehicle')
-                ->get()
-                ->map(fn ($r) => $r->vehicle?->operator)
-                ->filter()
-                ->all();
-
-            return collect(array_merge($routeOperators, $vehicleOperators))
-                ->filter()
-                ->unique()
-                ->sort()
-                ->values()
+            return \App\Models\Operator::query()
+                ->where('is_active', true)
+                ->when($mode, function ($query, $mode) {
+                    if ($mode === 'ferry' || $mode === 'airline') {
+                        $query->where('mode', $mode);
+                    }
+                })
+                ->orderBy('name')
+                ->pluck('name')
                 ->all();
         });
     }
