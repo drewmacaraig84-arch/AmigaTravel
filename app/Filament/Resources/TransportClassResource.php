@@ -89,6 +89,14 @@ class TransportClassResource extends Resource
                     ->placeholder('e.g. ECO, BIZ')
                     ->maxLength(10),
 
+                TextInput::make('price')
+                    ->label('Base Price (₱)')
+                    ->placeholder('0.00')
+                    ->numeric()
+                    ->default(0)
+                    ->minValue(0)
+                    ->prefix('₱'),
+
                 Textarea::make('description')
                     ->placeholder('Class details, amenities, etc.')
                     ->rows(3)
