@@ -11,7 +11,7 @@
         [
             'id' => 2,
             'title' => 'Wide Selection of Travel Products',
-            'desc' => 'Enjoy memorable journeys with 2GO Travel, Starlite Ferries, Cebu Pacific, PAL, and tour packages.',
+            'desc' => 'Enjoy memorable journeys with major partners and tour packages.',
             'bg' => 'bg-pink-50/80',
             'text_color' => 'text-pink-600',
         ],
