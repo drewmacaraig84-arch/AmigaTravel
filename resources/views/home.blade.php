@@ -326,14 +326,14 @@
              },
              activeRoutes: window.AMIGA_ACTIVE_ROUTES || [],
              popularPorts: ['Batangas', 'Calapan', 'Caticlan', 'Odiongan', 'Manila', 'Cebu', 'Puerto Princesa', 'Roxas'],
-             operatorsList: @json(\App\Models\Operator::where('is_active', true)->get()->map(function($op) {
+             operatorsList: {!! json_encode(\App\Models\Operator::where('is_active', true)->get()->map(function($op) {
                  return [
                      'name' => $op->name,
                      'value' => $op->name,
                      'logo' => $op->logo_path ? \Illuminate\Support\Facades\Storage::url($op->logo_path) : null,
                      'mode' => $op->mode
                  ];
-             })->toArray()),
+             })->toArray()) !!},
              get filteredOperatorsList() {
                  if (!this.mode) return this.operatorsList;
                  return this.operatorsList.filter(o => o.mode === 'all' || o.mode === this.mode);
