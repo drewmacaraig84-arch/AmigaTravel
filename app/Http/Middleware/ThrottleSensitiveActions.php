@@ -14,13 +14,17 @@ class ThrottleSensitiveActions
         $key = 'sensitive-actions:' . ($request->ip() ?? 'unknown') . ':' . $request->route()?->getName() . ':' . $request->method();
 
         $attempts = Cache::get($key, 0);
-        if ($attempts >= 8) {
+        if ($attempts >= 50) {
             return response()->json([
                 'message' => 'Too many sensitive actions from this device. Please wait a moment and try again.',
             ], 429);
         }
 
-        Cache::put($key, $attempts + 1, now()->addMinutes(5));
+        if (!Cache::has($key)) {
+            Cache::put($key, 1, now()->addMinutes(5));
+        } else {
+            Cache::increment($key);
+        }
 
         if ($request->hasFile('proof') && ! $request->file('proof')->isValid()) {
             return response()->json([
