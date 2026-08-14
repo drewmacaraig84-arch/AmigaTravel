@@ -53,6 +53,7 @@ class DatabaseSeeder extends Seeder
             WebsiteSettingSeeder::class,
             GraciaEarningRuleSeeder::class,
             AirlineBaggageRuleSeeder::class,
+            OperatorSeeder::class,
             // Routes, schedules and related transport classes
             RouteScheduleSeeder::class,
             TransportClassSeeder::class,
