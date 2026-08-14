@@ -236,14 +236,17 @@
             }
         };
     }
-    window.AMIGA_OPERATORS_LIST = @json(\App\Models\Operator::where('is_active', true)->get()->map(function($op) {
+@php
+    $operatorsList = \App\Models\Operator::where('is_active', true)->get()->map(function($op) {
         return [
             'name' => $op->name,
             'value' => $op->name,
             'logo' => $op->logo_path ? \Illuminate\Support\Facades\Storage::url($op->logo_path) : null,
             'mode' => $op->mode
         ];
-    })->toArray());
+    })->toArray();
+@endphp
+    window.AMIGA_OPERATORS_LIST = @json($operatorsList);
 </script>
 <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-30 -mt-16 sm:-mt-20 lg:-mt-20"
      x-data="{
@@ -334,18 +337,7 @@
              },
              activeRoutes: window.AMIGA_ACTIVE_ROUTES || [],
              popularPorts: ['Batangas', 'Calapan', 'Caticlan', 'Odiongan', 'Manila', 'Cebu', 'Puerto Princesa', 'Roxas'],
-<<<<<<< HEAD
              operatorsList: window.AMIGA_OPERATORS_LIST || [],
-=======
-             operatorsList: {!! json_encode(\App\Models\Operator::where('is_active', true)->get()->map(function($op) {
-                 return [
-                     'name' => $op->name,
-                     'value' => $op->name,
-                     'logo' => $op->logo_path ? \Illuminate\Support\Facades\Storage::url($op->logo_path) : null,
-                     'mode' => $op->mode
-                 ];
-             })->toArray(), 15) !!},
->>>>>>> 806df4883d7bb14b5b8b7833a7b84cf4d5ae6dd4
              get filteredOperatorsList() {
                  if (!this.mode) return this.operatorsList;
                  return this.operatorsList.filter(o => o.mode === 'all' || o.mode === this.mode);
@@ -1718,9 +1710,9 @@
             @endphp
             <a href="{{ url($cardLink) }}" class="group rounded-xl sm:rounded-[2rem] bg-white border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-200 flex flex-col overflow-hidden">
                 @php
-                    $isSmallLogo = in_array($cardTitle, ['Cebu Pacific', 'Philippine Airline']);
-                    $paddingClass = $isSmallLogo ? 'p-2 sm:p-4' : 'p-2 sm:p-8';
-                    $scaleClass = $isSmallLogo ? 'scale-125 group-hover:scale-[1.3]' : 'scale-100 group-hover:scale-105';
+                    $isSmallLogo = in_array($cardTitle, ['Cebu Pacific', 'Philippine Airline', 'AirAsia']);
+                    $paddingClass = $isSmallLogo ? 'p-1 sm:p-2' : 'p-2 sm:p-8';
+                    $scaleClass = $isSmallLogo ? 'scale-[1.6] group-hover:scale-[1.7]' : 'scale-100 group-hover:scale-105';
                 @endphp
                 <div class="h-20 sm:h-36 w-full bg-white flex items-center justify-center {{ $paddingClass }} border-b border-slate-100">
                     <img src="{{ $cardImage }}" alt="{{ $cardTitle }}" class="max-h-full max-w-full object-contain transition-transform duration-300 {{ $scaleClass }}" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80';">
