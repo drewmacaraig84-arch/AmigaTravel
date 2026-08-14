@@ -38,11 +38,12 @@
                 {{-- Thumbnail --}}
                 <div class="relative aspect-[4/3] bg-gray-800 flex items-center justify-center overflow-hidden">
                     @if($hasImage)
+                        @php $infoFile = $info['file']; @endphp
                         <img src="{{ $info['url'] }}"
                              alt="Slot {{ $slot }}"
                              class="w-full h-full object-cover"
                              loading="lazy"
-                             onerror="this.parentElement.innerHTML='<div class=\'flex flex-col items-center gap-1 text-red-400 text-xs p-2\'><span>⚠ Load error</span><span class=\'text-gray-500\'>{{ $info[\'file\'] }}</span></div>'">
+                             onerror="this.style.opacity='0.3'; this.insertAdjacentHTML('afterend','<div class=&quot;absolute inset-0 flex items-center justify-center text-red-400 text-xs font-bold&quot;>⚠ Load error</div>')">
                         {{-- Source badge --}}
                         <span class="absolute top-1 right-1 text-[9px] font-bold px-1.5 py-0.5 rounded
                               {{ $info['source'] === 'storage' ? 'bg-blue-600' : 'bg-yellow-600' }} text-white">
