@@ -31,7 +31,17 @@ class BookingExportController extends Controller
 
     protected function getGroupedBookings(): array
     {
-        $bookings = Booking::with(['transaction', 'schedule.ferryRoute', 'passengers.discount'])->get();
+        $query = Booking::with(['transaction', 'schedule.ferryRoute', 'passengers.discount']);
+
+        if (request()->filled('from_date')) {
+            $query->whereDate('created_at', '>=', request()->input('from_date'));
+        }
+
+        if (request()->filled('to_date')) {
+            $query->whereDate('created_at', '<=', request()->input('to_date'));
+        }
+
+        $bookings = $query->get();
 
         $refundedBookings = $bookings->filter(function ($booking) {
             return in_array($booking->status, [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED]) 
