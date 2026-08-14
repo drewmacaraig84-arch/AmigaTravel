@@ -8,7 +8,6 @@ use App\Models\WebsiteSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Models\Booking;
-use App\Models\Transaction;
 use App\Models\ServiceCancellation;
 use Illuminate\Support\Facades\Mail;
 
