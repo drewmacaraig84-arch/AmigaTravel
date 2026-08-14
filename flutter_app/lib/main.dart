@@ -86,7 +86,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.71+82';
+  static const String appVersion = '1.0.72+83';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -11932,39 +11932,54 @@ class _PackageList extends StatelessWidget {
       itemCount: packages.length,
       itemBuilder: (context, i) {
         final p = packages[i];
+        final gradient = p['gradient'] as List<Color>;
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
               side: const BorderSide(color: kSlate200)),
           elevation: 0,
-          color: kSlate50,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(p['name'] as String,
-                          style: const TextStyle(
-                              color: kSlate800,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15)),
-                      const SizedBox(height: 4),
-                      Text(p['detail'] as String,
-                          style: const TextStyle(
-                              color: kSlate500, fontSize: 12)),
-                    ],
+          clipBehavior: Clip.antiAlias,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                  colors: gradient,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(p['name'] as String,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15)),
+                        const SizedBox(height: 4),
+                        Text(p['detail'] as String,
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 12)),
+                      ],
+                    ),
                   ),
-                ),
-                TextButton(
-                  onPressed: () => _showPackageDetailsModal(context, p),
-                  child: const Text('View',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-              ],
+                  ElevatedButton(
+                    onPressed: () => _showPackageDetailsModal(context, p),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: kPink,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    ),
+                    child: const Text('View',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -12672,7 +12687,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 ),
                               ],
                             ),
-                            onTap: () => _handleNotificationTap(notif),
                           );
                         },
                       ),
