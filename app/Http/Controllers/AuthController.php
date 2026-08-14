@@ -227,6 +227,19 @@ class AuthController extends Controller
 
         $user = Auth::user();
 
+        if (!$user->is_app_user) {
+            $this->logUserLogin(
+                $user,
+                'api_login',
+                $request,
+                false,
+                'Denied: Account is not an app user.'
+            );
+            return response()->json([
+                'message' => 'This account isn\'t registered on the app. Try registering first.'
+            ], 403);
+        }
+
         if (empty($user->referral_code)) {
             $user->referral_code = strtoupper(Str::random(8));
             $user->save();
@@ -301,15 +314,31 @@ class AuthController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email',
+            'email' => [
+                'required',
+                'email',
+                'max:255',
+                function ($attribute, $value, $fail) {
+                    $user = User::where('email', $value)->first();
+                    if ($user && $user->is_app_user) {
+                        $fail('The email has already been taken.');
+                    }
+                },
+            ],
             'password' => 'required|string|min:8',
         ]);
 
         $legacyToken = Str::random(80);
         $validated['password']  = \Illuminate\Support\Facades\Hash::make($validated['password']);
         $validated['api_token'] = $legacyToken;
+        $validated['is_app_user'] = true;
 
-        $user = User::create($validated);
+        $user = User::where('email', $validated['email'])->first();
+        if ($user) {
+            $user->update($validated);
+        } else {
+            $user = User::create($validated);
+        }
 
         // Issue Sanctum token for new users
         $sanctumToken = $user->createToken('api-access')->plainTextToken;
@@ -345,7 +374,17 @@ class AuthController extends Controller
     {
         $validated = $request->validate([
             'name'     => 'required|string|max:255',
-            'email'    => 'required|email|max:255|unique:users,email',
+            'email'    => [
+                'required',
+                'email',
+                'max:255',
+                function ($attribute, $value, $fail) {
+                    $user = User::where('email', $value)->first();
+                    if ($user && $user->is_app_user) {
+                        $fail('The email has already been taken.');
+                    }
+                },
+            ],
             'password' => 'required|string|min:8',
             'referral_code' => 'nullable|string',
         ]);
@@ -423,15 +462,31 @@ class AuthController extends Controller
             }
         }
 
-        $user = User::create([
-            'name'              => $pending['name'],
-            'email'             => $pending['email'],
-            'password'          => $pending['password'],
-            'api_token'         => $legacyToken,
-            'email_verified_at' => now(),
-            'referral_code'     => strtoupper(Str::random(8)),
-            'referred_by'       => $referredBy,
-        ]);
+        $user = User::where('email', $pending['email'])->first();
+        if ($user) {
+            $user->update([
+                'name'              => $pending['name'],
+                'password'          => $pending['password'],
+                'api_token'         => $legacyToken,
+                'email_verified_at' => now(),
+                'referred_by'       => $referredBy,
+                'is_app_user'       => true,
+            ]);
+            if (empty($user->referral_code)) {
+                $user->update(['referral_code' => strtoupper(Str::random(8))]);
+            }
+        } else {
+            $user = User::create([
+                'name'              => $pending['name'],
+                'email'             => $pending['email'],
+                'password'          => $pending['password'],
+                'api_token'         => $legacyToken,
+                'email_verified_at' => now(),
+                'referral_code'     => strtoupper(Str::random(8)),
+                'referred_by'       => $referredBy,
+                'is_app_user'       => true,
+            ]);
+        }
 
         // Process Rewards
         $settings = \App\Models\WebsiteSetting::where('page', 'referrals')->first();
