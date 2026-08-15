@@ -32,21 +32,30 @@ class BookingConfirmation extends Mailable implements ShouldQueue
             ->view('emails.booking-confirmation');
 
         // Generate the official receipt PDF now that they have paid
-        $receiptDir  = storage_path('app/receipts');
-        $autoReceiptPath = $receiptDir . '/receipt-' . $this->booking->transaction_number . '.pdf';
+        try {
+            $receiptDir  = storage_path('app/receipts');
+            $autoReceiptPath = $receiptDir . '/receipt-' . $this->booking->transaction_number . '.pdf';
 
-        if (! is_dir($receiptDir)) {
-            mkdir($receiptDir, 0755, true);
+            if (! is_dir($receiptDir)) {
+                mkdir($receiptDir, 0755, true);
+            }
+
+            \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.receipt', ['booking' => $this->booking])
+                ->setPaper('a4')
+                ->save($autoReceiptPath);
+
+            $mail->attach($autoReceiptPath, [
+                'as' => 'Payment_Acknowledgement.pdf',
+                'mime' => 'application/pdf',
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('BookingConfirmation: Failed to generate receipt PDF', [
+                'booking_id' => $this->booking->id ?? null,
+                'transaction_number' => $this->booking->transaction_number ?? null,
+                'error' => $e->getMessage(),
+            ]);
+            // Email will still send, just without the auto-generated PDF
         }
-
-        \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.receipt', ['booking' => $this->booking])
-            ->setPaper('a4')
-            ->save($autoReceiptPath);
-
-        $mail->attach($autoReceiptPath, [
-            'as' => 'Payment_Acknowledgement.pdf',
-            'mime' => 'application/pdf',
-        ]);
 
         if ($this->receiptPath) {
             if ($this->receiptDisk && Storage::disk($this->receiptDisk)->exists($this->receiptPath)) {
@@ -63,4 +72,5 @@ class BookingConfirmation extends Mailable implements ShouldQueue
 
         return $mail;
     }
+
 }
