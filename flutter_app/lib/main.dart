@@ -14,6 +14,7 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:async';
 import 'package:intl/intl.dart';
 import 'package:video_player/video_player.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:flutter_app_badger/flutter_app_badger.dart';
 import 'notification_service.dart';
@@ -1226,6 +1227,30 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    Widget buildNavItem(int index, IconData iconOutlined, IconData iconActive, String label) {
+      final isSelected = _selectedIndex == index;
+      return InkWell(
+        onTap: () => setState(() => _selectedIndex = index),
+        customBorder: const CircleBorder(),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(isSelected ? iconActive : iconOutlined, 
+                   color: isSelected ? kPink : kSlate400, size: 26),
+              const SizedBox(height: 2),
+              Text(label, style: TextStyle(
+                   color: isSelected ? kPink : kSlate400,
+                   fontSize: 11,
+                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal)),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       key: _scaffoldKey,
       drawer: AppDrawer(
@@ -1358,42 +1383,32 @@ class _MainScreenState extends State<MainScreen> {
               key: _activityKey, onLoginSuccess: () => setState(() {})),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (i) => setState(() => _selectedIndex = i),
-        selectedItemColor: kPink,
-        unselectedItemColor: kSlate400,
-        showUnselectedLabels: true,
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => setState(() => _selectedIndex = 2),
+        backgroundColor: kPink,
+        elevation: 4,
+        shape: const CircleBorder(),
+        child: const Icon(Icons.explore, color: Colors.white, size: 30),
+      ),
+      bottomNavigationBar: BottomAppBar(
+        shape: const CircularNotchedRectangle(),
+        notchMargin: 8.0,
+        color: Colors.white,
         elevation: 12,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Home',
+        child: SizedBox(
+          height: 64,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              buildNavItem(0, Icons.home_outlined, Icons.home, 'Home'),
+              buildNavItem(1, Icons.calendar_month_outlined, Icons.calendar_month, 'Schedules'),
+              const SizedBox(width: 48), // Spacer for the FAB
+              buildNavItem(3, Icons.local_activity_outlined, Icons.local_activity, 'Vouchers'),
+              buildNavItem(4, Icons.receipt_long_outlined, Icons.receipt_long, 'Transactions'),
+            ],
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_month_outlined),
-            activeIcon: Icon(Icons.calendar_month),
-            label: 'Schedules',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.explore_outlined),
-            activeIcon: Icon(Icons.explore),
-            label: 'Travel',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.local_activity_outlined),
-            activeIcon: Icon(Icons.local_activity),
-            label: 'Vouchers',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.receipt_long_outlined),
-            activeIcon: Icon(Icons.receipt_long),
-            label: 'Transactions',
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -1441,7 +1456,7 @@ class _HomeScreenState extends State<HomeScreen>
     _fetchTours();
     _fetchServices();
 
-    _carouselTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
+    _carouselTimer = Timer.periodic(const Duration(seconds: 11), (timer) {
       if (_promoPageController.hasClients) {
         final nextPage = (_currentPromoPage + 1) % (2 + _promotions.length);
         _promoPageController.animateToPage(nextPage,
@@ -1661,17 +1676,9 @@ class _HomeScreenState extends State<HomeScreen>
                   final promo = _promotions[i - 2];
                   final imgUrl = promo['image_url'] as String?;
                   return Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(24),
+                    margin: EdgeInsets.zero,
+                    decoration: const BoxDecoration(
                       color: kSlate100,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.10),
-                          blurRadius: 12,
-                          offset: const Offset(0, 6),
-                        )
-                      ],
                     ),
                     clipBehavior: Clip.antiAlias,
                     child: imgUrl != null
@@ -1709,45 +1716,7 @@ class _HomeScreenState extends State<HomeScreen>
 
           const SizedBox(height: 24),
 
-          // ── 2. Quick-Book Grid ────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _ModernBookCard(
-                    label: 'Book Ferry',
-                    subtitle: 'Starlite · 2GO · FastCat',
-                    icon: Icons.directions_boat_rounded,
-                    gradient: const LinearGradient(
-                      colors: [kGreen, Color(0xFF1B5E20)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    onTap: widget.onBookFerry,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _ModernBookCard(
-                    label: 'Book Airline',
-                    subtitle: 'PAL · CebuPac · AirAsia',
-                    icon: Icons.flight_takeoff_rounded,
-                    gradient: const LinearGradient(
-                      colors: [kPink, Color(0xFF880E4F)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    onTap: widget.onBookAirline,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
-          // ── 3. Track Booking ──────────────────────────────────────────────
+          // ── 2. Track Booking ──────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Container(
@@ -1797,6 +1766,44 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                 ],
               ),
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // ── 3. Quick-Book Grid ────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _ModernBookCard(
+                    label: 'Book Ferry',
+                    subtitle: 'Starlite · 2GO · FastCat',
+                    icon: Icons.directions_boat_rounded,
+                    gradient: const LinearGradient(
+                      colors: [kGreen, Color(0xFF1B5E20)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    onTap: widget.onBookFerry,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _ModernBookCard(
+                    label: 'Book Airline',
+                    subtitle: 'PAL · CebuPac · AirAsia',
+                    icon: Icons.flight_takeoff_rounded,
+                    gradient: const LinearGradient(
+                      colors: [kPink, Color(0xFF880E4F)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    onTap: widget.onBookAirline,
+                  ),
+                ),
+              ],
             ),
           ),
 
@@ -2497,47 +2504,55 @@ class _WelcomeBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
+      margin: EdgeInsets.zero,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
             colors: [kGreen, Color(0xFF0e2709)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-              color: kGreen.withValues(alpha: 0.3),
-              blurRadius: 20,
-              offset: const Offset(0, 8))
-        ],
       ),
       clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('Welcome to Amiga Gracia\nTravel Services',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    height: 1.2)),
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                  color: kPink, borderRadius: BorderRadius.circular(20)),
-              child: const Text(
-                  'Your journey deserves more than a destination - it deserves an exceptional experience',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold)),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Positioned.fill(
+            child: Opacity(
+              opacity: 0.15,
+              child: SvgPicture.network(
+                '${UserSession.getBaseUrl()}/images/world-map.svg',
+                fit: BoxFit.cover,
+                colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+              ),
             ),
-          ],
-        ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text('Welcome to Amiga Gracia\nTravel Services',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        height: 1.2)),
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                      color: kPink, borderRadius: BorderRadius.circular(20)),
+                  child: const Text(
+                      'Your journey deserves more than a destination - it deserves an exceptional experience',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -2580,16 +2595,9 @@ class __HeroVideoBannerState extends State<_HeroVideoBanner> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
+      margin: EdgeInsets.zero,
+      decoration: const BoxDecoration(
         color: kGreen,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-              color: kGreen.withValues(alpha: 0.3),
-              blurRadius: 20,
-              offset: const Offset(0, 8))
-        ],
       ),
       clipBehavior: Clip.antiAlias,
       child: Stack(
@@ -7508,7 +7516,6 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
             itemBuilder: (context, index) {
               final c = classes[index];
               final isSelected = c['id'] == val;
-              final seats = c['tickets_available'] ?? 50;
 
               final isPromo = c['is_promo'] == true || c['is_promo'] == 1;
 
@@ -7668,29 +7675,6 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 6),
-                          Wrap(
-                            spacing: 6,
-                            runSpacing: 4,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFD1FAE5), // emerald-100
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  '$seats seats left',
-                                  style: const TextStyle(
-                                      color: Color(0xFF047857), // emerald-700
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                            ],
-                          ),
                           if (isPromo && c['promo_duration_end'] != null) ...[
                             const SizedBox(height: 4),
                             Row(
@@ -7776,7 +7760,6 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
             itemBuilder: (context, index) {
               final c = accommodations[index];
               final isSelected = c['id'] == val;
-              final seats = c['tickets_available'] ?? 50;
 
               return GestureDetector(
                 onTap: () {
@@ -7823,22 +7806,6 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF10b981)
-                                  .withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              '$seats seats left',
-                              style: const TextStyle(
-                                  color: Color(0xFF047857),
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold),
-                            ),
-                          )
                         ],
                       ),
                       const SizedBox(height: 8),
@@ -14203,68 +14170,189 @@ int _getVoucherPercentage(dynamic v) {
   return 30;
 }
 
-String _formatVoucherDate(String? dateStr) {
-  if (dateStr == null || dateStr.isEmpty) return 'Valid Until August 2027';
+String _formatVoucherExpiry(String? dateStr) {
+  if (dateStr == null || dateStr.isEmpty) return 'Expiring: 0 hour left';
   try {
     final dt = DateTime.parse(dateStr);
-    const months = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December'
-    ];
-    return 'Valid Until ${months[dt.month - 1]} ${dt.year}';
+    final now = DateTime.now();
+    if (dt.isBefore(now)) return 'Expiring: 0 hour left';
+    final diff = dt.difference(now);
+    final hours = diff.inHours;
+    if (hours < 1) return 'Expiring: 0 hour left';
+    if (hours < 24) return 'Expiring: $hours hour${hours == 1 ? '' : 's'} left';
+    final days = diff.inDays;
+    if (days < 30) return 'Expiring: $days day${days == 1 ? '' : 's'} left';
+    final months = (days / 30).floor();
+    return 'Expiring: $months month${months == 1 ? '' : 's'} left';
   } catch (_) {
-    return 'Valid Until August 2027';
+    return 'Expiring: 0 hour left';
   }
 }
 
+// ── Ticket Outline Clipper ───────────────────────────────────────────────
 class _CouponCardClipper extends CustomClipper<Path> {
-  final double dividerRatio;
-  final int notchCount;
-  final double notchRadius;
-
-  _CouponCardClipper({
-    this.dividerRatio = 0.63,
-    this.notchCount = 13,
-    this.notchRadius = 4.5,
+  const _CouponCardClipper({
+    required this.seamX,
+    required this.cornerRadius,
+    required this.notchRadius,
   });
+
+  final double seamX;
+  final double cornerRadius;
+  final double notchRadius;
 
   @override
   Path getClip(Size size) {
-    Path outer = Path();
-    const double r = 16.0;
-    outer.addRRect(RRect.fromRectAndRadius(
-      Rect.fromLTWH(0, 0, size.width, size.height),
-      const Radius.circular(r),
-    ));
-
-    Path notches = Path();
-    final double divX = size.width * dividerRatio;
-    final double step = size.height / (notchCount + 1);
-    for (int i = 1; i <= notchCount; i++) {
-      final double y = step * i;
-      notches.addOval(Rect.fromCircle(
-        center: Offset(divX, y),
-        radius: notchRadius,
-      ));
-    }
-
-    return Path.combine(PathOperation.difference, outer, notches);
+    final outer = Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(0, 0, size.width, size.height),
+          Radius.circular(cornerRadius),
+        ),
+      );
+    final topNotch = Path()
+      ..addOval(
+          Rect.fromCircle(center: Offset(seamX, 0), radius: notchRadius));
+    final bottomNotch = Path()
+      ..addOval(Rect.fromCircle(
+          center: Offset(seamX, size.height), radius: notchRadius));
+    final withTop =
+        Path.combine(PathOperation.difference, outer, topNotch);
+    return Path.combine(PathOperation.difference, withTop, bottomNotch);
   }
 
   @override
-  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
+  bool shouldReclip(covariant _CouponCardClipper old) =>
+      old.seamX != seamX ||
+      old.cornerRadius != cornerRadius ||
+      old.notchRadius != notchRadius;
 }
 
+// ── Zigzag Fill Painter ──────────────────────────────────────────────────
+class _ZigzagFillPainter extends CustomPainter {
+  const _ZigzagFillPainter({
+    required this.seamX,
+    required this.color,
+    this.toothHeight = 14.0,
+    this.amplitude = 7.0,
+  });
+
+  final double seamX;
+  final Color color;
+  final double toothHeight;
+  final double amplitude;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = color;
+    final path = Path()..moveTo(seamX, 0);
+    double y = 0;
+    bool tipOut = true;
+    while (y < size.height) {
+      final segEnd =
+          (y + toothHeight) > size.height ? size.height : y + toothHeight;
+      final midY = (y + segEnd) / 2;
+      final tipX = seamX + (tipOut ? amplitude : -amplitude);
+      path.lineTo(tipX, midY);
+      path.lineTo(seamX, segEnd);
+      y = segEnd;
+      tipOut = !tipOut;
+    }
+    path
+      ..lineTo(size.width, size.height)
+      ..lineTo(size.width, 0)
+      ..close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _ZigzagFillPainter old) =>
+      old.seamX != seamX || old.color != color;
+}
+
+// ── Gift Box Painter ─────────────────────────────────────────────────────
+class _GiftBoxPainter extends CustomPainter {
+  const _GiftBoxPainter({required this.color});
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final sw = size.width * 0.032;
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = sw
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final w = size.width;
+    final h = size.height;
+    // Box body
+    canvas.drawRRect(
+        RRect.fromRectAndRadius(Rect.fromLTWH(w * 0.10, h * 0.44, w * 0.80, h * 0.46),
+            Radius.circular(w * 0.05)),
+        paint);
+    // Lid
+    canvas.drawRRect(
+        RRect.fromRectAndRadius(Rect.fromLTWH(w * 0.03, h * 0.32, w * 0.94, h * 0.15),
+            Radius.circular(w * 0.04)),
+        paint);
+    // Ribbon vertical
+    canvas.drawLine(Offset(w * 0.5, h * 0.32), Offset(w * 0.5, h * 0.90), paint);
+    // Bow loops
+    canvas.drawOval(
+        Rect.fromCenter(
+            center: Offset(w * 0.36, h * 0.16),
+            width: w * 0.30,
+            height: h * 0.26),
+        paint);
+    canvas.drawOval(
+        Rect.fromCenter(
+            center: Offset(w * 0.64, h * 0.16),
+            width: w * 0.30,
+            height: h * 0.26),
+        paint);
+    // Knot
+    canvas.drawCircle(
+        Offset(w * 0.5, h * 0.30), w * 0.045, Paint()..color = color);
+  }
+
+  @override
+  bool shouldRepaint(covariant _GiftBoxPainter old) => old.color != color;
+}
+
+// ── Mini Stat (Min. Spend / Max off) ─────────────────────────────────────
+class _VoucherMiniStat extends StatelessWidget {
+  const _VoucherMiniStat({
+    required this.label,
+    required this.value,
+    required this.height,
+  });
+  final String label;
+  final String value;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(label,
+            style: TextStyle(
+                color: Colors.white,
+                fontSize: height * 0.032,
+                fontWeight: FontWeight.w600)),
+        Text(value,
+            style: TextStyle(
+                color: Colors.white,
+                fontSize: height * 0.05,
+                fontWeight: FontWeight.w800)),
+      ],
+    );
+  }
+}
+
+// ── Main Coupon Card ─────────────────────────────────────────────────────
 class _DiscountCouponCard extends StatelessWidget {
   final Map<String, dynamic>? voucher;
   final bool isSelected;
@@ -14276,231 +14364,286 @@ class _DiscountCouponCard extends StatelessWidget {
     this.onTap,
   });
 
+  static const Color _brandGreen = Color(0xFF1B7A3B);
+  static const Color _brandPink = Color(0xFFEC1E96);
+  static const double _seamFraction = 0.625;
+  static const double _cornerFraction = 0.12;
+  static const double _notchFraction = 0.135;
+
+  String _formatDiscount(num value) {
+    final isWhole = value == value.roundToDouble();
+    return isWhole ? '${value.toInt()}%' : '$value%';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final String discountLabel = _getVoucherLabel(voucher);
     final int percentage = _getVoucherPercentage(voucher);
-    final String validDate = _formatVoucherDate(voucher?['end_at']?.toString());
-    const Color voucherGreen = Color(0xFF137F28);
-    const Color voucherPink = Color(0xFFFF1694);
+    final String discountLabel = _formatDiscount(percentage);
+    final String expiryLabel =
+        _formatVoucherExpiry(voucher?['end_at']?.toString());
+    final String minSpend = voucher?['minimum_spend'] != null
+        ? '₱${double.tryParse(voucher!['minimum_spend'].toString())?.toStringAsFixed(0) ?? '0'}'
+        : '₱0';
+    final String maxOff = voucher?['max_discount'] != null
+        ? '₱${double.tryParse(voucher!['max_discount'].toString())?.toStringAsFixed(0) ?? '—'}'
+        : '—';
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        height: 165,
+        margin: const EdgeInsets.only(bottom: 20),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.12),
-              blurRadius: 12,
-              offset: const Offset(0, 5),
+              color: Colors.black.withValues(alpha: 0.14),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
-        child: ClipPath(
-          clipper: _CouponCardClipper(
-              dividerRatio: 0.63, notchCount: 13, notchRadius: 4.5),
-          child: Stack(
-            children: [
-              Row(
-                children: [
-                  // Left GREEN section (63%)
-                  Expanded(
-                    flex: 63,
-                    child: Container(
-                      color: voucherGreen,
-                      padding: const EdgeInsets.fromLTRB(18, 14, 20, 14),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+        child: LayoutBuilder(
+          builder: (ctx, constraints) {
+            final width = constraints.maxWidth.clamp(0.0, 480.0);
+            final height = width / 2.35; // slightly taller ratio → smaller card
+            final seamX = width * _seamFraction;
+            final cornerRadius = height * _cornerFraction;
+            final notchRadius = height * _notchFraction;
+            final leftPad = width * 0.045;
+            final greenContentRight = (width - seamX) + width * 0.025;
+
+            return SizedBox(
+              width: width,
+              height: height,
+              child: ClipPath(
+                clipper: _CouponCardClipper(
+                  seamX: seamX,
+                  cornerRadius: cornerRadius,
+                  notchRadius: notchRadius,
+                ),
+                child: Stack(
+                  children: [
+                    // Base green fill
+                    Positioned.fill(child: Container(color: _brandGreen)),
+                    // Pink zigzag right half
+                    Positioned.fill(
+                      child: CustomPaint(
+                        painter: _ZigzagFillPainter(
+                            seamX: seamX, color: _brandPink),
+                      ),
+                    ),
+
+                    // ── Green side ──
+
+                    // Logo top-left
+                    Positioned(
+                      left: leftPad,
+                      top: height * 0.08,
+                      child: Image.network(
+                        '${UserSession.getBaseUrl()}/images/amiga_logo_white_outline.png',
+                        height: height * 0.28,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => Image.asset(
+                          'assets/icon/amiga_logo_white_outline.png',
+                          height: height * 0.28,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => Container(
+                            width: height * 0.28,
+                            height: height * 0.28,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.14),
+                              borderRadius:
+                                  BorderRadius.circular(height * 0.05),
+                              border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.65),
+                                  width: 1.4),
+                            ),
+                            alignment: Alignment.center,
+                            child: Icon(Icons.image_outlined,
+                                color: Colors.white.withValues(alpha: 0.85),
+                                size: height * 0.13),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // DISCOUNT COUPON headline
+                    Positioned(
+                      left: leftPad,
+                      right: greenContentRight,
+                      top: height * 0.35,
+                      child: Text.rich(
+                        TextSpan(children: [
+                          TextSpan(
+                              text: 'DISCOUNT\n',
+                              style: _headlineStyle(height)),
+                          TextSpan(
+                              text: 'COUPON',
+                              style: _headlineStyle(height)),
+                        ]),
+                      ),
+                    ),
+
+                    // Expiry label
+                    Positioned(
+                      left: leftPad,
+                      right: greenContentRight,
+                      top: height * 0.685,
+                      child: Text(
+                        expiryLabel,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: height * 0.052,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+
+                    // Min. Spend / Max off + percent label
+                    Positioned(
+                      left: leftPad,
+                      right: greenContentRight,
+                      top: height * 0.80,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          // Logo Header
                           Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Image.asset(
-                                'assets/icon/amiga_logo_white_outline.png',
-                                height: 48,
-                                fit: BoxFit.contain,
-                                errorBuilder: (_, __, ___) => const Icon(
-                                  Icons.location_on,
-                                  color: Colors.white,
-                                  size: 34,
-                                ),
-                              ),
-                            ],
-                          ),
-                          // Main Title
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              const SizedBox(height: 10),
-                              const Text(
-                                'DISCOUNT',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 34,
-                                  fontWeight: FontWeight.w900,
-                                  height: 0.92,
-                                  letterSpacing: -0.6,
-                                ),
-                              ),
-                              const Text(
-                                'COUPON',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 34,
-                                  fontWeight: FontWeight.w900,
-                                  height: 0.92,
-                                  letterSpacing: -0.6,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                validDate,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
+                              _VoucherMiniStat(
+                                  label: 'Min. Spend',
+                                  value: minSpend,
+                                  height: height),
+                              SizedBox(width: width * 0.04),
+                              _VoucherMiniStat(
+                                  label: 'Max off',
+                                  value: maxOff,
+                                  height: height),
                             ],
                           ),
-                          const Spacer(),
                           Text(
-                            discountLabel,
-                            style: const TextStyle(
+                            '$discountLabel OFF',
+                            style: TextStyle(
                               color: Colors.white,
-                              fontSize: 18,
+                              fontSize: height * 0.075,
                               fontWeight: FontWeight.w900,
-                              letterSpacing: 0.5,
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                  // Right PINK section (37%)
-                  Expanded(
-                    flex: 37,
-                    child: Container(
-                      color: voucherPink,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 14),
+
+                    // ── Pink side ──
+
+                    // Gift box with percent inside
+                    Positioned(
+                      left: seamX,
+                      right: 0,
+                      top: height * 0.07,
+                      child: Center(
+                        child: SizedBox(
+                          width: height * 0.60,
+                          height: height * 0.60,
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              CustomPaint(
+                                size: Size(height * 0.60, height * 0.60),
+                                painter:
+                                    const _GiftBoxPainter(color: Colors.white),
+                              ),
+                              Padding(
+                                padding:
+                                    EdgeInsets.only(top: height * 0.09),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(discountLabel,
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: height * 0.10,
+                                          fontWeight: FontWeight.w900,
+                                        )),
+                                    Text('OFF',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: height * 0.085,
+                                          fontWeight: FontWeight.w900,
+                                          height: 0.95,
+                                        )),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Brand text bottom-right
+                    Positioned(
+                      left: seamX + width * 0.02,
+                      right: width * 0.02,
+                      bottom: height * 0.07,
                       child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Container(
-                            width: 52,
-                            height: 52,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.16),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: const Icon(
-                              Icons.card_giftcard,
-                              color: Colors.white,
-                              size: 32,
-                            ),
-                          ),
-                          const SizedBox(height: 18),
                           Text(
-                            '$percentage%',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 40,
-                              fontWeight: FontWeight.w900,
-                              height: 0.85,
-                            ),
-                          ),
-                          const Text(
-                            'OFF',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.w900,
-                              height: 0.95,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          const Text(
                             'AMIGA GRACIA TRAVEL SERVICES',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 8,
+                              fontSize: height * 0.036,
                               fontWeight: FontWeight.w700,
-                              letterSpacing: 0.3,
-                              height: 1.25,
                             ),
                           ),
-                          const Text(
+                          SizedBox(height: height * 0.015),
+                          Text(
                             'ONLINE COUPON',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 8,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.3,
-                              height: 1.25,
+                              fontSize: height * 0.034,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ],
-              ),
-              if (isSelected)
-                Positioned(
-                  top: 10,
-                  right: 10,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.check_circle,
-                      color: kGreen,
-                      size: 20,
-                    ),
-                  ),
+
+                    // Selected check overlay
+                    if (isSelected)
+                      Positioned(
+                        top: 10,
+                        right: 10,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                              color: Colors.white, shape: BoxShape.circle),
+                          child: const Icon(Icons.check_circle,
+                              color: kGreen, size: 20),
+                        ),
+                      ),
+                  ],
                 ),
-            ],
-          ),
+              ),
+            );
+          },
         ),
       ),
     );
   }
-}
 
-class TicketClipper extends CustomClipper<Path> {
-  final double punchRadius;
-  final double dividerX;
-  TicketClipper({this.punchRadius = 8.0, this.dividerX = 100.0});
-  @override
-  Path getClip(Size size) {
-    final path = Path();
-    path.lineTo(dividerX - punchRadius, 0);
-    path.arcToPoint(Offset(dividerX + punchRadius, 0),
-        radius: Radius.circular(punchRadius), clockwise: false);
-    path.lineTo(size.width, 0);
-    path.lineTo(size.width, size.height);
-    path.lineTo(dividerX + punchRadius, size.height);
-    path.arcToPoint(Offset(dividerX - punchRadius, size.height),
-        radius: Radius.circular(punchRadius), clockwise: false);
-    path.lineTo(0, size.height);
-    path.close();
-    return path;
+  TextStyle _headlineStyle(double height) {
+    return TextStyle(
+      color: Colors.white,
+      fontSize: height * 0.155,
+      fontWeight: FontWeight.w900,
+      height: 0.95,
+      letterSpacing: -0.5,
+    );
   }
-
-  @override
-  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }
 
 // ==========================================

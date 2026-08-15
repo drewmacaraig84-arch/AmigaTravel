@@ -167,11 +167,7 @@
                             <div class="flex flex-wrap items-center justify-between gap-2">
                                 <h4 class="font-bold text-slate-900 text-xs sm:text-sm">{{ $accommodation['name'] }}</h4>
                                 <div class="flex items-center gap-1.5">
-                                    @if(isset($accommodation['tickets_available']))
-                                        <span class="text-[10px] font-extrabold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-200">
-                                            {{ $accommodation['tickets_available'] }} {{ \Illuminate\Support\Str::plural('ticket', $accommodation['tickets_available']) }} left
-                                        </span>
-                                    @endif
+
                                     @if($accommodation['has_bed'])
                                         <span class="text-[9px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full border border-slate-200">With Bed</span>
                                     @endif
@@ -219,11 +215,7 @@
                                     @endif
                                 </h4>
                                 <div class="flex items-center gap-1.5 flex-wrap justify-start w-full mt-1">
-                                    @if(isset($class['tickets_available']))
-                                        <span class="text-[10px] font-extrabold {{ (int)$selectedClassId === (int)$uniqueId ? (!empty($class['is_promo']) ? 'bg-amber-500 text-white' : 'bg-[#db2777] text-white') : 'bg-emerald-100 text-emerald-800 border border-emerald-200' }} px-2.5 py-0.5 rounded-full">
-                                            {{ $class['tickets_available'] }} {{ \Illuminate\Support\Str::plural('seat', $class['tickets_available']) }} left
-                                        </span>
-                                    @endif
+
                                     @if(!empty($class['is_promo']))
                                         <span class="text-[9px] font-bold uppercase tracking-wider bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full border border-rose-200">Non-refundable</span>
                                     @endif

@@ -47,6 +47,37 @@ class CreateBookingAction
             ? ScheduleAccommodation::find($data['selected_return_schedule_accommodation_id'])
             : null;
 
+        // --- Promo ticket validation ---
+        $isPromoBooking = false;
+        if (! empty($data['selected_transport_class_id'])) {
+            $isPromoBooking = $isPromoBooking || DB::table('schedule_transport_class')
+                ->where('schedule_id', $schedule->id)
+                ->where('transport_class_id', $data['selected_transport_class_id'])
+                ->value('is_promo');
+        }
+        if (! empty($data['return_selected_transport_class_id']) && $returnSchedule) {
+            $isPromoBooking = $isPromoBooking || DB::table('schedule_transport_class')
+                ->where('schedule_id', $returnSchedule->id)
+                ->where('transport_class_id', $data['return_selected_transport_class_id'])
+                ->value('is_promo');
+        }
+
+        if ($isPromoBooking) {
+            if (! empty($data['voucher_code'])) {
+                throw new \InvalidArgumentException('Vouchers cannot be used with promotional tickets.');
+            }
+            if (! empty($data['use_points'])) {
+                throw new \InvalidArgumentException('Gracia points cannot be used with promotional tickets.');
+            }
+            if (isset($data['passengers']) && is_array($data['passengers'])) {
+                foreach ($data['passengers'] as $passenger) {
+                    if (! empty($passenger['discount_id'])) {
+                        throw new \InvalidArgumentException('Passenger discounts cannot be used with promotional tickets.');
+                    }
+                }
+            }
+        }
+
         // --- Voucher validation ---
         $voucher            = null;
         $voucherCalculation = null;

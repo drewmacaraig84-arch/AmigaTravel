@@ -311,25 +311,15 @@
                                                             @endif
                                                         </div>
                                                     </div>
-                                                    {{-- Tickets Left Badge --}}
+                                                    {{-- Availability Badge --}}
                                                     @php
                                                         $totalTickets = $schedule->scheduleAccommodations->sum('tickets_available');
                                                     @endphp
-                                                    @if($totalTickets !== null)
+                                                    @if($totalTickets <= 0)
                                                         <div class="ml-auto shrink-0">
-                                                            @if($totalTickets <= 0)
-                                                                <span class="inline-flex items-center rounded-full bg-red-50 px-2.5 py-1 text-[10px] font-semibold text-red-600 border border-red-100">
-                                                                    Sold out
-                                                                </span>
-                                                            @elseif($totalTickets <= 10)
-                                                                <span class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-semibold text-amber-700 border border-amber-100">
-                                                                    {{ $totalTickets }} tickets left
-                                                                </span>
-                                                            @else
-                                                                <span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700 border border-emerald-100">
-                                                                    {{ $totalTickets }} tickets left
-                                                                </span>
-                                                            @endif
+                                                            <span class="inline-flex items-center rounded-full bg-red-50 px-2.5 py-1 text-[10px] font-semibold text-red-600 border border-red-100">
+                                                                Sold out
+                                                            </span>
                                                         </div>
                                                     @endif
                                                 </div>

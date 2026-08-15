@@ -125,20 +125,12 @@ class VoucherResource extends Resource
                     ->label('Total Usage Limit')
                     ->numeric()
                     ->minValue(1)
-                    ->helperText('Optional: Leave empty for unlimited usage'),
+                    ->helperText('Optional: Leave empty for unlimited usage')
+                    ->hintIcon('heroicon-m-question-mark-circle', tooltip: 'The maximum number of times this voucher can be used across all customers. Leave empty for unlimited.'),
                 Toggle::make('one_use_per_customer')
                     ->label('One Use Per Customer')
+                    ->hintIcon('heroicon-m-question-mark-circle', tooltip: 'If checked, each user account or email can only use this voucher once.')
                     ->default(true),
-                Select::make('eligible_scope')
-                    ->label('Eligible For')
-                    ->options([
-                        'ticket_fare' => 'Ticket Fare Only',
-                        'booking_total' => 'Booking Total (Excludes Service Fees)',
-                        'vehicle' => 'Vehicle Only',
-                        'accommodation' => 'Accommodation Only',
-                    ])
-                    ->default('ticket_fare')
-                    ->required(),
                 TextInput::make('eligible_origin')
                     ->label('Eligible Origin')
                     ->maxLength(255)
@@ -206,9 +198,7 @@ class VoucherResource extends Resource
                 Infolists\Components\IconEntry::make('one_use_per_customer')
                     ->label('One Use Per Customer')
                     ->boolean(),
-                Infolists\Components\TextEntry::make('eligible_scope')
-                    ->label('Scope')
-                    ->formatStateUsing(fn (string $state) => ucwords(str_replace('_', ' ', $state))),
+
                 Infolists\Components\TextEntry::make('eligible_origin')
                     ->label('Eligible Origin'),
                 Infolists\Components\TextEntry::make('eligible_destination')
@@ -260,9 +250,7 @@ class VoucherResource extends Resource
                     ->formatStateUsing(fn (Voucher $record) => $record->discount_type === 'percentage' 
                         ? "{$record->discount_value}%" 
                         : "₱" . number_format($record->discount_value, 2)),
-                TextColumn::make('eligible_scope')
-                    ->label('Scope')
-                    ->formatStateUsing(fn (string $state) => ucwords(str_replace('_', ' ', $state))),
+
                 ToggleColumn::make('is_active')
                     ->label('Active'),
                 ToggleColumn::make('is_hidden')
@@ -298,14 +286,7 @@ class VoucherResource extends Resource
                         'percentage' => 'Percentage',
                         'fixed' => 'Fixed Amount',
                     ]),
-                SelectFilter::make('eligible_scope')
-                    ->label('Scope')
-                    ->options([
-                        'ticket_fare' => 'Ticket Fare',
-                        'booking_total' => 'Booking Total',
-                        'vehicle' => 'Vehicle',
-                        'accommodation' => 'Accommodation',
-                    ]),
+
             ])
             ->defaultSort('created_at', 'desc')
             ->actions([

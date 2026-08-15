@@ -48,15 +48,8 @@
                 @endif
             </div>
         @endif
-        @php
-            $ticketsCount = $schedule['tickets_available'] ?? null;
-        @endphp
         @if($isPast)
             {{-- No availability badge when departed --}}
-        @elseif($ticketsCount !== null && $ticketsCount > 0)
-            <span class="rounded-full border px-2 py-0.5 text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider ml-auto {{ $isSelected ? 'border-white/40 bg-white/25 text-white' : 'border-emerald-200 bg-emerald-50 text-emerald-700' }}">
-                {{ $ticketsCount }} {{ \Illuminate\Support\Str::plural('ticket', $ticketsCount) }} left
-            </span>
         @else
             <span class="rounded-full border px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider ml-auto {{ $isSelected ? 'border-white/30 bg-white/20 text-white' : 'border-slate-200 bg-slate-50 text-slate-600' }}">
                 {{ $schedule['availability'] ?? 'Available' }}

@@ -2572,16 +2572,22 @@ public function selectedSchedule(): ?array
         $discountsById = $this->discounts->keyBy('id');
 
         $departureTransportClassTotal = 0;
+        $hasPromoClass = false;
         if ($this->selected_transport_class_id) {
             $stc = \App\Models\ScheduleTransportClass::with('transportClass')->find($this->selected_transport_class_id);
             $departureTransportClassTotal = floatval($stc->additional_price ?? $stc->transportClass->price ?? 0);
+            if ($stc && $stc->is_promo) $hasPromoClass = true;
         }
 
         $returnTransportClassTotal = 0;
         if ($this->trip_type === 'round_trip' && $this->selected_return_transport_class_id) {
             $rstc = \App\Models\ScheduleTransportClass::with('transportClass')->find($this->selected_return_transport_class_id);
             $returnTransportClassTotal = floatval($rstc->additional_price ?? $rstc->transportClass->price ?? 0);
+            if ($rstc && $rstc->is_promo) $hasPromoClass = true;
         }
+
+        $isFerryPromo = ($this->mode !== 'airline' && $this->use_promo_ticket);
+        $disableDiscounts = $isFerryPromo || $hasPromoClass;
 
         // For airline bookings, fetch the active promo ticket once (if any)
         $activePromoTicket = ($this->mode === 'airline') ? $this->getActivePromoTicket() : null;
@@ -2594,7 +2600,8 @@ public function selectedSchedule(): ?array
             $departureTransportClassTotal,
             $returnTransportClassTotal,
             $discountsById,
-            $activePromoTicket
+            $activePromoTicket,
+            $disableDiscounts
         ) {
             $scheduleAccommodationPrice_ = $scheduleAccommodationPrice;
             $returnFare = $returnSchedulePrice + $returnScheduleAccommodationPrice + $returnTransportClassTotal;
@@ -2612,7 +2619,7 @@ public function selectedSchedule(): ?array
             $departureFare = $baseSchedulePrice + $scheduleAccommodationPrice_ + $departureTransportClassTotal;
             $fare = $departureFare + $returnFare;
 
-            if (! empty($passenger['discount_id'])) {
+            if (! empty($passenger['discount_id']) && !$disableDiscounts) {
                 $discount = $discountsById->get($passenger['discount_id']);
 
                 if ($discount) {
@@ -2674,16 +2681,22 @@ public function selectedSchedule(): ?array
         $returnAccommodationPrice = $this->getSelectedReturnScheduleAccommodationPrice();
 
         $departureTransportClassTotal = 0;
+        $hasPromoClass = false;
         if ($this->selected_transport_class_id) {
             $stc = \App\Models\ScheduleTransportClass::with('transportClass')->find($this->selected_transport_class_id);
             $departureTransportClassTotal = floatval($stc->additional_price ?? $stc->transportClass->price ?? 0);
+            if ($stc && $stc->is_promo) $hasPromoClass = true;
         }
 
         $returnTransportClassTotal = 0;
         if ($this->trip_type === 'round_trip' && $this->selected_return_transport_class_id) {
             $rstc = \App\Models\ScheduleTransportClass::with('transportClass')->find($this->selected_return_transport_class_id);
             $returnTransportClassTotal = floatval($rstc->additional_price ?? $rstc->transportClass->price ?? 0);
+            if ($rstc && $rstc->is_promo) $hasPromoClass = true;
         }
+
+        $isFerryPromo = ($this->mode !== 'airline' && $this->use_promo_ticket);
+        $disableDiscounts = $isFerryPromo || $hasPromoClass;
 
         // Calculate totals considering discounts
         $discountsById = $this->discounts->keyBy('id');
@@ -2701,7 +2714,9 @@ public function selectedSchedule(): ?array
             $depTicket = $departureTicketPrice + $departureTransportClassTotal;
             $retTicket = $returnTicketPrice + $returnTransportClassTotal;
             
-            if (!empty($passenger['discount_id'])) {
+            $isAirlinePromoPassenger = ($this->mode === 'airline' && !empty($passenger['use_promo']));
+
+            if (!empty($passenger['discount_id']) && !$disableDiscounts && !$isAirlinePromoPassenger) {
                 $discount = $discountsById->get($passenger['discount_id']);
                 if ($discount) {
                     $percentage = floatval($discount->percentage) / 100;
