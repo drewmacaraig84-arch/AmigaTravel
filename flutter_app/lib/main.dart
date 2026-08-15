@@ -1383,27 +1383,32 @@ class _MainScreenState extends State<MainScreen> {
               key: _activityKey, onLoginSuccess: () => setState(() {})),
         ],
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => setState(() => _selectedIndex = 2),
-        backgroundColor: kPink,
-        elevation: 4,
-        shape: const CircleBorder(),
-        child: const Icon(Icons.explore, color: Colors.white, size: 30),
+      floatingActionButtonLocation: const _RaisedCenterDockedFabLocation(riseAboveNotch: 6),
+      floatingActionButton: SizedBox(
+        width: 60,
+        height: 60,
+        child: FloatingActionButton(
+          onPressed: () => setState(() => _selectedIndex = 2),
+          backgroundColor: kPink,
+          elevation: 6,
+          shape: const CircleBorder(),
+          child: const Icon(Icons.explore, color: Colors.white, size: 28),
+        ),
       ),
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
-        notchMargin: 8.0,
+        notchMargin: 6.0,
         color: Colors.white,
         elevation: 12,
+        shadowColor: Colors.black26,
         child: SizedBox(
-          height: 64,
+          height: 68,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               buildNavItem(0, Icons.home_outlined, Icons.home, 'Home'),
               buildNavItem(1, Icons.calendar_month_outlined, Icons.calendar_month, 'Schedules'),
-              const SizedBox(width: 48), // Spacer for the FAB
+              const SizedBox(width: 56), // Spacer for the FAB notch
               buildNavItem(3, Icons.local_activity_outlined, Icons.local_activity, 'Vouchers'),
               buildNavItem(4, Icons.receipt_long_outlined, Icons.receipt_long, 'Transactions'),
             ],
@@ -1411,6 +1416,22 @@ class _MainScreenState extends State<MainScreen> {
         ),
       ),
     );
+  }
+}
+
+// ── Custom FAB Location: sits flush inside the bar notch ─────────────────────
+/// Behaves like [FloatingActionButtonLocation.centerDocked] but lets you
+/// nudge the button up/down by [riseAboveNotch] pixels.
+/// riseAboveNotch: 6  → circle sits nearly flush with the bar surface.
+class _RaisedCenterDockedFabLocation extends FloatingActionButtonLocation {
+  const _RaisedCenterDockedFabLocation({this.riseAboveNotch = 6});
+  final double riseAboveNotch;
+
+  @override
+  Offset getOffset(ScaffoldPrelayoutGeometry scaffoldGeometry) {
+    final Offset base =
+        FloatingActionButtonLocation.centerDocked.getOffset(scaffoldGeometry);
+    return Offset(base.dx, base.dy - riseAboveNotch);
   }
 }
 
@@ -14233,8 +14254,8 @@ class _ZigzagFillPainter extends CustomPainter {
   const _ZigzagFillPainter({
     required this.seamX,
     required this.color,
-    this.toothHeight = 14.0,
-    this.amplitude = 7.0,
+    this.toothHeight = 7.0,
+    this.amplitude = 5.5,
   });
 
   final double seamX;
@@ -14277,7 +14298,7 @@ class _GiftBoxPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final sw = size.width * 0.032;
+    final sw = size.width * 0.036;
     final paint = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
@@ -14286,34 +14307,33 @@ class _GiftBoxPainter extends CustomPainter {
       ..strokeJoin = StrokeJoin.round;
     final w = size.width;
     final h = size.height;
-    // Box body
+    // Box body (open top — no bottom lid line to keep it clean)
     canvas.drawRRect(
-        RRect.fromRectAndRadius(Rect.fromLTWH(w * 0.10, h * 0.44, w * 0.80, h * 0.46),
+        RRect.fromRectAndRadius(Rect.fromLTWH(w * 0.08, h * 0.42, w * 0.84, h * 0.50),
             Radius.circular(w * 0.05)),
         paint);
     // Lid
     canvas.drawRRect(
-        RRect.fromRectAndRadius(Rect.fromLTWH(w * 0.03, h * 0.32, w * 0.94, h * 0.15),
+        RRect.fromRectAndRadius(Rect.fromLTWH(w * 0.01, h * 0.30, w * 0.98, h * 0.15),
             Radius.circular(w * 0.04)),
         paint);
-    // Ribbon vertical
-    canvas.drawLine(Offset(w * 0.5, h * 0.32), Offset(w * 0.5, h * 0.90), paint);
+    // NOTE: No vertical ribbon line through the body (matches image 2)
     // Bow loops
     canvas.drawOval(
         Rect.fromCenter(
-            center: Offset(w * 0.36, h * 0.16),
-            width: w * 0.30,
+            center: Offset(w * 0.35, h * 0.16),
+            width: w * 0.32,
             height: h * 0.26),
         paint);
     canvas.drawOval(
         Rect.fromCenter(
-            center: Offset(w * 0.64, h * 0.16),
-            width: w * 0.30,
+            center: Offset(w * 0.65, h * 0.16),
+            width: w * 0.32,
             height: h * 0.26),
         paint);
     // Knot
     canvas.drawCircle(
-        Offset(w * 0.5, h * 0.30), w * 0.045, Paint()..color = color);
+        Offset(w * 0.5, h * 0.30), w * 0.05, Paint()..color = color);
   }
 
   @override
@@ -14368,24 +14388,44 @@ class _DiscountCouponCard extends StatelessWidget {
   static const Color _brandPink = Color(0xFFEC1E96);
   static const double _seamFraction = 0.625;
   static const double _cornerFraction = 0.12;
-  static const double _notchFraction = 0.135;
+  static const double _notchFraction = 0.085;
 
-  String _formatDiscount(num value) {
-    final isWhole = value == value.roundToDouble();
-    return isWhole ? '${value.toInt()}%' : '$value%';
+  /// Returns the display label for the discount, e.g. "20%" or "₱100"
+  String _discountLabel() {
+    if (voucher == null) return '30%';
+    final type = voucher!['discount_type']?.toString() ?? '';
+    final raw = voucher!['discount_value'];
+    if (raw != null) {
+      final val = double.tryParse(raw.toString());
+      if (val != null && val > 0) {
+        if (type == 'percentage') {
+          final isWhole = val == val.roundToDouble();
+          return isWhole ? '${val.toInt()}%' : '${val}%';
+        } else {
+          // flat discount
+          return '₱${val.toStringAsFixed(0)}';
+        }
+      }
+    }
+    return '30%';
   }
 
   @override
   Widget build(BuildContext context) {
-    final int percentage = _getVoucherPercentage(voucher);
-    final String discountLabel = _formatDiscount(percentage);
+    final String discountLabel = _discountLabel();
     final String expiryLabel =
         _formatVoucherExpiry(voucher?['end_at']?.toString());
-    final String minSpend = voucher?['minimum_spend'] != null
-        ? '₱${double.tryParse(voucher!['minimum_spend'].toString())?.toStringAsFixed(0) ?? '0'}'
+    final double? minVal = voucher?['minimum_spend'] != null
+        ? double.tryParse(voucher!['minimum_spend'].toString())
+        : null;
+    final String minSpend = minVal != null && minVal > 0
+        ? '₱${minVal.toStringAsFixed(0)}'
         : '₱0';
-    final String maxOff = voucher?['max_discount'] != null
-        ? '₱${double.tryParse(voucher!['max_discount'].toString())?.toStringAsFixed(0) ?? '—'}'
+    final double? maxVal = voucher?['max_discount'] != null
+        ? double.tryParse(voucher!['max_discount'].toString())
+        : null;
+    final String maxOff = maxVal != null && maxVal > 0
+        ? '₱${maxVal.toStringAsFixed(0)}'
         : '—';
 
     return GestureDetector(
@@ -14405,7 +14445,7 @@ class _DiscountCouponCard extends StatelessWidget {
         child: LayoutBuilder(
           builder: (ctx, constraints) {
             final width = constraints.maxWidth.clamp(0.0, 480.0);
-            final height = width / 2.35; // slightly taller ratio → smaller card
+            final height = width / 2.35;
             final seamX = width * _seamFraction;
             final cornerRadius = height * _cornerFraction;
             final notchRadius = height * _notchFraction;
@@ -14435,25 +14475,25 @@ class _DiscountCouponCard extends StatelessWidget {
 
                     // ── Green side ──
 
-                    // Logo top-left
+                    // Logo top-left (smaller)
                     Positioned(
                       left: leftPad,
-                      top: height * 0.08,
+                      top: height * 0.06,
                       child: Image.network(
                         '${UserSession.getBaseUrl()}/images/amiga_logo_white_outline.png',
-                        height: height * 0.28,
+                        height: height * 0.20,
                         fit: BoxFit.contain,
                         errorBuilder: (_, __, ___) => Image.asset(
                           'assets/icon/amiga_logo_white_outline.png',
-                          height: height * 0.28,
+                          height: height * 0.20,
                           fit: BoxFit.contain,
                           errorBuilder: (_, __, ___) => Container(
-                            width: height * 0.28,
-                            height: height * 0.28,
+                            width: height * 0.20,
+                            height: height * 0.20,
                             decoration: BoxDecoration(
                               color: Colors.white.withValues(alpha: 0.14),
                               borderRadius:
-                                  BorderRadius.circular(height * 0.05),
+                                  BorderRadius.circular(height * 0.04),
                               border: Border.all(
                                   color: Colors.white.withValues(alpha: 0.65),
                                   width: 1.4),
@@ -14461,17 +14501,17 @@ class _DiscountCouponCard extends StatelessWidget {
                             alignment: Alignment.center,
                             child: Icon(Icons.image_outlined,
                                 color: Colors.white.withValues(alpha: 0.85),
-                                size: height * 0.13),
+                                size: height * 0.10),
                           ),
                         ),
                       ),
                     ),
 
-                    // DISCOUNT COUPON headline
+                    // DISCOUNT COUPON headline (bigger, starts higher)
                     Positioned(
                       left: leftPad,
                       right: greenContentRight,
-                      top: height * 0.35,
+                      top: height * 0.27,
                       child: Text.rich(
                         TextSpan(children: [
                           TextSpan(
@@ -14499,15 +14539,24 @@ class _DiscountCouponCard extends StatelessWidget {
                       ),
                     ),
 
-                    // Min. Spend / Max off + percent label
+                    // Discount label + Min/Max (stacked, pushed left to avoid cutoff)
                     Positioned(
                       left: leftPad,
-                      right: greenContentRight,
-                      top: height * 0.80,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      right: greenContentRight + width * 0.01,
+                      bottom: height * 0.06,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
+                          Text(
+                            '$discountLabel OFF',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: height * 0.078,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          SizedBox(height: height * 0.02),
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.end,
@@ -14523,57 +14572,53 @@ class _DiscountCouponCard extends StatelessWidget {
                                   height: height),
                             ],
                           ),
-                          Text(
-                            '$discountLabel OFF',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: height * 0.075,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
                         ],
                       ),
                     ),
 
                     // ── Pink side ──
 
-                    // Gift box with percent inside
+                    // Gift box with discount label inside (bigger text, no vertical ribbon)
                     Positioned(
                       left: seamX,
                       right: 0,
-                      top: height * 0.07,
+                      top: height * 0.04,
+                      bottom: height * 0.22,
                       child: Center(
-                        child: SizedBox(
-                          width: height * 0.60,
-                          height: height * 0.60,
+                        child: AspectRatio(
+                          aspectRatio: 1,
                           child: Stack(
                             alignment: Alignment.center,
                             children: [
                               CustomPaint(
-                                size: Size(height * 0.60, height * 0.60),
+                                size: Size.infinite,
                                 painter:
                                     const _GiftBoxPainter(color: Colors.white),
                               ),
                               Padding(
                                 padding:
-                                    EdgeInsets.only(top: height * 0.09),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(discountLabel,
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: height * 0.10,
-                                          fontWeight: FontWeight.w900,
-                                        )),
-                                    Text('OFF',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: height * 0.085,
-                                          fontWeight: FontWeight.w900,
-                                          height: 0.95,
-                                        )),
-                                  ],
+                                    EdgeInsets.only(top: height * 0.12),
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(discountLabel,
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: height * 0.145,
+                                            fontWeight: FontWeight.w900,
+                                            height: 1.0,
+                                          )),
+                                      Text('OFF',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: height * 0.115,
+                                            fontWeight: FontWeight.w900,
+                                            height: 0.9,
+                                          )),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ],
@@ -14638,9 +14683,9 @@ class _DiscountCouponCard extends StatelessWidget {
   TextStyle _headlineStyle(double height) {
     return TextStyle(
       color: Colors.white,
-      fontSize: height * 0.155,
+      fontSize: height * 0.175,
       fontWeight: FontWeight.w900,
-      height: 0.95,
+      height: 0.92,
       letterSpacing: -0.5,
     );
   }
