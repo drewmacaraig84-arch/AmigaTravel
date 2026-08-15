@@ -14,12 +14,16 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use App\Mail\BookingConfirmation;
+use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Throwable;
 
 class BookingResource extends Resource
 {
@@ -273,6 +277,29 @@ class BookingResource extends Resource
                                 'verified_at' => now(),
                             ]);
                             app(\App\Services\GraciaPointsService::class)->awardPointsForBooking($record, auth()->user());
+
+                            // Send confirmation email — mirrors TransactionResource verify logic
+                            try {
+                                Mail::to($record->client_email)->send(
+                                    new BookingConfirmation($record, $ticketUrl, $receiptPath, $receiptDisk)
+                                );
+                                Notification::make()
+                                    ->title('Booking verified')
+                                    ->body('Booking verified and confirmation email sent.')
+                                    ->success()
+                                    ->send();
+                            } catch (Throwable $e) {
+                                Log::error('Failed sending booking confirmation email (booking list verify)', [
+                                    'booking_id' => $record->id ?? null,
+                                    'email'      => $record->client_email ?? null,
+                                    'error'      => $e->getMessage(),
+                                ]);
+                                Notification::make()
+                                    ->title('Booking verified with warning')
+                                    ->body('Booking was verified, but the confirmation email failed to send.')
+                                    ->warning()
+                                    ->send();
+                            }
                         }
                      })
                      ->color('success'),

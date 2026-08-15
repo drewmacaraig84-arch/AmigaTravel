@@ -16,6 +16,8 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class ManageRebookings extends Page implements HasTable
 {
@@ -294,17 +296,30 @@ class ManageRebookings extends Page implements HasTable
                             $record->transaction->save();
                         }
 
-                        $record->verifyRebooking(
-                            $record->transaction?->confirmation_url,
-                            $record->transaction?->confirmation_pdf ?? null,
-                            $record->transaction?->confirmation_pdf ? 'public' : null,
-                        );
+                        $ticketUrl    = $record->transaction?->confirmation_url;
+                        $receiptPath  = $record->transaction?->confirmation_pdf ?? null;
+                        $receiptDisk  = $receiptPath ? 'public' : null;
 
-                        Notification::make()
-                            ->title('Rebooking Verified')
-                            ->body("Rebooking for #{$record->transaction_number} has been verified.")
-                            ->success()
-                            ->send();
+                        try {
+                            $record->verifyRebooking($ticketUrl, $receiptPath, $receiptDisk);
+
+                            Notification::make()
+                                ->title('Rebooking Verified')
+                                ->body("Rebooking for #{$record->transaction_number} has been verified and email sent.")
+                                ->success()
+                                ->send();
+                        } catch (Throwable $e) {
+                            Log::error('Failed verifyRebooking action in ManageRebookings', [
+                                'booking_id' => $record->id ?? null,
+                                'email'      => $record->client_email ?? null,
+                                'error'      => $e->getMessage(),
+                            ]);
+                            Notification::make()
+                                ->title('Rebooking Verified with Warning')
+                                ->body('Rebooking was verified, but the confirmation email failed to send.')
+                                ->warning()
+                                ->send();
+                        }
                     }),
             ])
             ->bulkActions([])

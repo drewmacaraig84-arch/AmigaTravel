@@ -487,22 +487,23 @@ class ViewBooking extends ViewRecord
 
 
                     $booking->update([
-                        'status' => 'confirmed',
                         'verified_by_user_id' => auth()->id(),
-                        'verified_at' => now(),
+                        'verified_at'         => now(),
                     ]);
 
                     if ($booking->transaction) {
                         $booking->transaction->update([
-                            'payment_status' => 'paid',
-                            'confirmation_url' => $ticketUrl,
-                            'confirmation_pdf' => $confirmationPdfPath,
+                            'payment_status'      => 'paid',
+                            'confirmation_url'    => $ticketUrl,
+                            'confirmation_pdf'    => $confirmationPdfPath,
                             'verified_by_user_id' => auth()->id(),
-                            'verified_at' => now(),
+                            'verified_at'         => now(),
                         ]);
                     }
 
                     if ($booking->rebooking_status === 'pending') {
+                        // Rebooking path: delegate entirely to the service which handles
+                        // schedule assignment, DB updates, and sends BookingConfirmation email.
                         try {
                             app(\App\Services\ServiceCancellationManager::class)->processAutomaticRebookingApproval(
                                 $booking,
@@ -513,7 +514,6 @@ class ViewBooking extends ViewRecord
                                 ->body('Both original booking and rebooking have been verified and confirmed.')
                                 ->success()
                                 ->send();
-                            return;
                         } catch (\Exception $e) {
                             Log::error('Failed automatic rebooking during confirmation: ' . $e->getMessage());
                             Notification::make()
@@ -522,7 +522,12 @@ class ViewBooking extends ViewRecord
                                 ->danger()
                                 ->send();
                         }
+                        return;
                     }
+
+                    // Normal (non-rebooking) path: mark confirmed and send email.
+                    $booking->update(['status' => 'confirmed']);
+                    app(\App\Services\GraciaPointsService::class)->awardPointsForBooking($booking, auth()->user());
 
                     try {
                         Mail::to($booking->client_email)->send(new BookingConfirmation($booking, $ticketUrl, $receiptPath, $receiptDisk));
@@ -534,8 +539,8 @@ class ViewBooking extends ViewRecord
                     } catch (Throwable $e) {
                         Log::error('Failed sending booking confirmation email', [
                             'booking_id' => $booking->id ?? null,
-                            'email' => $booking->client_email ?? null,
-                            'error' => $e->getMessage(),
+                            'email'      => $booking->client_email ?? null,
+                            'error'      => $e->getMessage(),
                         ]);
                         Notification::make()
                             ->title('Booking confirmed with warning')

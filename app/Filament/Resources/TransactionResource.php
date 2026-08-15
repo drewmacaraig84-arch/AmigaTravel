@@ -13,6 +13,7 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\ViewEntry;
 use Filament\Infolists\Infolist;
 use Filament\Resources\Resource;
+use Filament\Notifications\Notification;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -416,6 +417,11 @@ class TransactionResource extends Resource
 
                         try {
                             Mail::to($record->booking->client_email)->send(new BookingConfirmation($record->booking, $ticketUrl, $receiptPath, $receiptDisk));
+                            Notification::make()
+                                ->title('Payment verified')
+                                ->body('Payment verified and confirmation email sent.')
+                                ->success()
+                                ->send();
                         } catch (Throwable $e) {
                             Log::error('Failed sending booking confirmation email (transaction verify)', [
                                 'transaction_id' => $record->id ?? null,
@@ -423,6 +429,11 @@ class TransactionResource extends Resource
                                 'email' => $record->booking->client_email ?? null,
                                 'error' => $e->getMessage(),
                             ]);
+                            Notification::make()
+                                ->title('Payment verified with warning')
+                                ->body('Payment was verified, but the confirmation email failed to send.')
+                                ->warning()
+                                ->send();
                         }
                     })
                     ->requiresConfirmation()
