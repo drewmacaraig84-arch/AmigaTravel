@@ -1080,14 +1080,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 // MAIN SCREEN WITH BOTTOM NAV
 // ==========================================
 class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+  final int initialTab;
+  const MainScreen({super.key, this.initialTab = 0});
 
   @override
   State<MainScreen> createState() => _MainScreenState();
 }
 
 class _MainScreenState extends State<MainScreen> {
-  int _selectedIndex = 0;
+  late int _selectedIndex;
   String? _travelMode;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   Key _activityKey = UniqueKey();
@@ -1097,6 +1098,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedIndex = widget.initialTab;
     _fetchGlobalData();
     NotificationService.requestPermission();
     NotificationService.initialize();
@@ -2490,7 +2492,7 @@ class _ServiceCard extends StatelessWidget {
 }
 
 class _WelcomeBanner extends StatelessWidget {
-  const _WelcomeBanner({super.key});
+  const _WelcomeBanner();
 
   @override
   Widget build(BuildContext context) {
@@ -2542,7 +2544,7 @@ class _WelcomeBanner extends StatelessWidget {
 }
 
 class _HeroVideoBanner extends StatefulWidget {
-  const _HeroVideoBanner({super.key});
+  const _HeroVideoBanner();
 
   @override
   __HeroVideoBannerState createState() => __HeroVideoBannerState();
@@ -9100,6 +9102,29 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
         'accommodation_ids': booking.selectedAccommodationIds,
         'has_vehicle': booking.hasVehicle,
         if (booking.hasVehicle) 'vehicle_price': booking.vehiclePrice,
+        // Include accommodation/class IDs so backend calculates correct base amount
+        if (booking.mode == 'ferry' && booking.selectedFerryAccommodationId != null)
+          ...(() {
+            final depClasses = (booking.selectedSchedule?['transport_classes'] as List<dynamic>? ?? []);
+            if (depClasses.isNotEmpty) {
+              return {'selected_transport_class_id': booking.selectedFerryAccommodationId};
+            } else {
+              return {'selected_schedule_accommodation_id': booking.selectedFerryAccommodationId};
+            }
+          }())
+        else if (booking.mode != 'ferry' && booking.selectedAirlineClassId != null)
+          'selected_transport_class_id': booking.selectedAirlineClassId,
+        if (booking.tripType == 'round_trip' && booking.selectedReturnFerryAccommodationId != null)
+          ...(() {
+            final retClasses = (booking.selectedReturnSchedule?['transport_classes'] as List<dynamic>? ?? []);
+            if (retClasses.isNotEmpty) {
+              return {'return_selected_transport_class_id': booking.selectedReturnFerryAccommodationId};
+            } else {
+              return {'selected_return_schedule_accommodation_id': booking.selectedReturnFerryAccommodationId};
+            }
+          }())
+        else if (booking.tripType == 'round_trip' && booking.selectedReturnAirlineClassId != null)
+          'return_selected_transport_class_id': booking.selectedReturnAirlineClassId,
       };
       final res = await http.post(
         Uri.parse('${UserSession.getBaseUrl()}/api/vouchers/validate'),
@@ -9199,6 +9224,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
   }
 
   Future<void> _submit() async {
+    if (_isSubmitting) return;
     if (!_formKey.currentState!.validate()) return;
 
     final phone = _clientPhoneCtrl.text.trim();
@@ -10930,6 +10956,29 @@ class _VoucherPickerScreenState extends State<VoucherPickerScreen> {
         'accommodation_ids': booking.selectedAccommodationIds,
         'has_vehicle': booking.hasVehicle,
         if (booking.hasVehicle) 'vehicle_price': booking.vehiclePrice,
+        // Include accommodation/class IDs so backend calculates correct base amount
+        if (booking.mode == 'ferry' && booking.selectedFerryAccommodationId != null)
+          ...(() {
+            final depClasses = (booking.selectedSchedule?['transport_classes'] as List<dynamic>? ?? []);
+            if (depClasses.isNotEmpty) {
+              return {'selected_transport_class_id': booking.selectedFerryAccommodationId};
+            } else {
+              return {'selected_schedule_accommodation_id': booking.selectedFerryAccommodationId};
+            }
+          }())
+        else if (booking.mode != 'ferry' && booking.selectedAirlineClassId != null)
+          'selected_transport_class_id': booking.selectedAirlineClassId,
+        if (booking.tripType == 'round_trip' && booking.selectedReturnFerryAccommodationId != null)
+          ...(() {
+            final retClasses = (booking.selectedReturnSchedule?['transport_classes'] as List<dynamic>? ?? []);
+            if (retClasses.isNotEmpty) {
+              return {'return_selected_transport_class_id': booking.selectedReturnFerryAccommodationId};
+            } else {
+              return {'selected_return_schedule_accommodation_id': booking.selectedReturnFerryAccommodationId};
+            }
+          }())
+        else if (booking.tripType == 'round_trip' && booking.selectedReturnAirlineClassId != null)
+          'return_selected_transport_class_id': booking.selectedReturnAirlineClassId,
       };
       final res = await http.post(
         Uri.parse('${UserSession.getBaseUrl()}/api/vouchers/validate'),
@@ -11907,7 +11956,7 @@ class _PackageList extends StatelessWidget {
                           image: NetworkImage('${UserSession.getBaseUrl()}/storage/${p['image']}'),
                           fit: BoxFit.cover,
                           colorFilter: ColorFilter.mode(
-                            Colors.black.withOpacity(0.3), 
+                            Colors.black.withValues(alpha: 0.3), 
                             BlendMode.darken
                           ),
                         ) : null,
@@ -15034,9 +15083,10 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  if (Navigator.canPop(context)) {
-                    Navigator.pop(context, true);
-                  }
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const MainScreen(initialTab: 4)),
+                    (route) => false,
+                  );
                 },
                 style: ElevatedButton.styleFrom(
                     backgroundColor: kGreen,
@@ -15968,9 +16018,10 @@ class _RefundScreenState extends State<RefundScreen> {
                                   const SizedBox(height: 24),
                                   FilledButton(
                                       onPressed: () {
-                                        if (Navigator.canPop(context)) {
-                                          Navigator.pop(context, true);
-                                        }
+                                        Navigator.of(context).pushAndRemoveUntil(
+                                          MaterialPageRoute(builder: (_) => const MainScreen(initialTab: 4)),
+                                          (route) => false,
+                                        );
                                       },
                                       child: const Text('Done'))
                                 ])))
@@ -16314,11 +16365,12 @@ class _RebookScreenState extends State<RebookScreen> {
       final res = await req.send();
       if (res.statusCode == 200) {
         if (!mounted) return;
-        if (Navigator.canPop(context)) {
-          Navigator.pop(context, true);
-        }
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Rebooking requested successfully')));
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const MainScreen(initialTab: 4)),
+          (route) => false,
+        );
       } else {
         final b = await res.stream.bytesToString();
         final data = jsonDecode(b);

@@ -11,7 +11,7 @@ class ThrottleSensitiveActions
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $key = 'sensitive-actions:' . ($request->ip() ?? 'unknown') . ':' . $request->route()?->getName() . ':' . $request->method();
+        $key = 'sensitive-actions:' . ($request->ip() ?? 'unknown') . ':' . $request->path() . ':' . $request->method();
 
         $attempts = Cache::get($key, 0);
         if ($attempts >= 50) {
