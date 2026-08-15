@@ -86,7 +86,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.75+86';
+  static const String appVersion = '1.0.76+87';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -9226,6 +9226,8 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
   Future<void> _submit() async {
     if (_isSubmitting) return;
     if (!_formKey.currentState!.validate()) return;
+    
+    setState(() => _isSubmitting = true);
 
     final phone = _clientPhoneCtrl.text.trim();
     if (phone.isNotEmpty) {
@@ -9249,8 +9251,6 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
         } catch (_) {}
       }
     }
-
-    setState(() => _isSubmitting = true);
 
     try {
       final baseUrl = UserSession.getBaseUrl();

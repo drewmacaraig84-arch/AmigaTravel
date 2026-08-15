@@ -279,6 +279,16 @@ class BookingController extends Controller
             'payment_status' => 'pending',
         ]);
 
+        try {
+            \Illuminate\Support\Facades\Mail::to($booking->client_email)->send(new \App\Mail\PaymentProofReceived($transaction));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Failed sending PaymentProofReceived email', [
+                'booking_id' => $booking->id,
+                'email' => $booking->client_email,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         return response()->json([
             'status' => 'success',
             'message' => 'Proof of payment uploaded successfully!',
