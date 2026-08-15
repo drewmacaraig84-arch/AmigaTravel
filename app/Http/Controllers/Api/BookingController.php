@@ -279,6 +279,16 @@ class BookingController extends Controller
             'payment_status' => 'pending',
         ]);
 
+        try {
+            \Illuminate\Support\Facades\Mail::to($booking->client_email)->send(new \App\Mail\PaymentProofReceived($transaction));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Failed sending PaymentProofReceived email', [
+                'booking_id' => $booking->id,
+                'email' => $booking->client_email,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         return response()->json([
             'status' => 'success',
             'message' => 'Proof of payment uploaded successfully!',
@@ -420,9 +430,9 @@ class BookingController extends Controller
             'return_date' => 'nullable|date|after_or_equal:departure_date',
             'proof' => 'required|file|image|max:10240',
             'dep_schedule_id' => 'required|exists:schedules,id',
-            'dep_accommodation_id' => 'nullable|exists:transport_classes,id',
+            'dep_accommodation_id' => 'nullable|integer',
             'ret_schedule_id' => 'nullable|exists:schedules,id',
-            'ret_accommodation_id' => 'nullable|exists:transport_classes,id',
+            'ret_accommodation_id' => 'nullable|integer',
             'rate_diff' => 'required|numeric',
             'surcharge' => 'required|numeric',
             'revalidation_fee' => 'required|numeric',
