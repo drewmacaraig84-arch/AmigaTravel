@@ -1,4 +1,4 @@
-﻿// ignore_for_file: use_build_context_synchronously, curly_braces_in_flow_control_structures, unused_local_variable, unnecessary_cast, unused_field, unused_element
+// ignore_for_file: use_build_context_synchronously, curly_braces_in_flow_control_structures, unused_local_variable, unnecessary_cast, unused_field, unused_element
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -87,7 +87,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.85+96';
+  static const String appVersion = '1.0.86+97';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -1477,7 +1477,7 @@ class _MainScreenState extends State<MainScreen> {
                       Icons.local_activity, 'Vouchers')),
               Expanded(
                   child: buildNavItem(4, Icons.receipt_long_outlined,
-                      Icons.receipt_long, 'Transactions')),
+                      Icons.receipt_long, 'Booking')),
             ],
           ),
         ),
@@ -10704,14 +10704,17 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
                     Row(
                       children: [
                         if (_proofImage != null) ...[
-                          Expanded(
-                            child: OutlinedButton.icon(
+                          SizedBox(
+                            width: 52,
+                            child: IconButton.filledTonal(
+                              tooltip: 'Change image',
                               onPressed: _pickProofImage,
-                              icon: const Icon(Icons.image, size: 16),
-                              label: const Text('Change Image'),
-                              style: OutlinedButton.styleFrom(
-                                  foregroundColor: kSlate600,
-                                  side: const BorderSide(color: kSlate200)),
+                              icon: const Icon(Icons.image_outlined, size: 20),
+                              style: IconButton.styleFrom(
+                                foregroundColor: kSlate600,
+                                side: const BorderSide(color: kSlate200),
+                                backgroundColor: kSlate50,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 10),
@@ -16714,6 +16717,7 @@ class _RebookScreenState extends State<RebookScreen> {
   Map<String, dynamic>? _breakdown;
   String? _qrUrl;
   XFile? _proof;
+  final TextEditingController _rebookingReferenceCtrl = TextEditingController();
 
   bool get _isRoundTrip => widget.booking['return_date'] != null;
 
@@ -16832,7 +16836,15 @@ class _RebookScreenState extends State<RebookScreen> {
   }
 
   Future<void> _submitRebook() async {
-    if (_proof == null) return;
+    final reference = _rebookingReferenceCtrl.text.trim();
+    if (_proof == null) {
+      setState(() => _error = 'Please upload a proof of payment first.');
+      return;
+    }
+    if (reference.isEmpty) {
+      setState(() => _error = 'Please enter the payment reference number.');
+      return;
+    }
     setState(() {
       _isLoading = true;
       _error = '';
@@ -16843,6 +16855,7 @@ class _RebookScreenState extends State<RebookScreen> {
           Uri.parse('$baseUrl/api/bookings/${widget.booking['id']}/rebook'));
       req.headers['Accept'] = 'application/json';
       req.fields['email'] = UserSession.email;
+      req.fields['reference_number'] = reference;
       req.fields['departure_date'] = _depDate!.toIso8601String().split('T')[0];
       if (_isRoundTrip)
         req.fields['return_date'] = _retDate!.toIso8601String().split('T')[0];
@@ -17269,6 +17282,26 @@ class _RebookScreenState extends State<RebookScreen> {
                   ],
                 ),
               ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+        const Text('Reference Number',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _rebookingReferenceCtrl,
+          decoration: InputDecoration(
+            hintText: 'e.g. 000123456789',
+            filled: true,
+            fillColor: kSlate50,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: kSlate200),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: kSlate200),
             ),
           ),
         ),
