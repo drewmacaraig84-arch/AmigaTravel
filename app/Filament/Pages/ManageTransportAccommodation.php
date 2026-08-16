@@ -28,8 +28,8 @@ class ManageTransportAccommodation extends Page implements HasForms, HasTable
     protected static bool $shouldRegisterNavigation = false;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
     protected static ?string $navigationLabel = 'Transport & Accommodation';
-    protected static ?string $navigationGroup = 'Ferry & Airline';
-    protected static ?int $navigationSort = 1;
+    protected static ?string $navigationGroup = 'Travel & Tours';
+    protected static ?int $navigationSort = 30;
     protected static string $view = 'filament.pages.manage-transport-accommodation';
     
     public static function canAccess(): bool

@@ -13,7 +13,8 @@ class MyPage extends Page
 {
     protected static ?string $navigationIcon = 'heroicon-o-user-circle';
 
-    protected static ?string $navigationGroup = 'Account';
+    protected static ?string $navigationGroup = 'My Account';
+    protected static ?int $navigationSort = 10;
 
     protected static ?string $navigationLabel = 'My Page & Reports';
 

@@ -28,7 +28,7 @@ class ApkUserResource extends Resource
 
     protected static ?string $navigationGroup = 'Administration';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 20;
 
     public static function canAccess(): bool
     {

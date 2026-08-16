@@ -26,7 +26,7 @@ class StaffPerformance extends Page implements HasForms
 
     protected static ?string $navigationIcon = 'heroicon-o-users';
     protected static ?string $navigationGroup = 'Reports';
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 20;
     protected static ?string $navigationLabel = 'Staff Performance';
     protected static ?string $title = 'Staff Performance Reports';
     protected static string $view = 'filament.pages.staff-performance';

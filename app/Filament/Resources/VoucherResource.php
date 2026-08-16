@@ -32,8 +32,8 @@ class VoucherResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-ticket';
 
-    protected static ?string $navigationGroup = 'Travel';
-    protected static ?int $navigationSort = 1;
+    protected static ?string $navigationGroup = 'Promotions & Rewards';
+    protected static ?int $navigationSort = 10;
 
     public static function canAccess(): bool
     {

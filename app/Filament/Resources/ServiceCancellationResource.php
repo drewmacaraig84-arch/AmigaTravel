@@ -32,11 +32,11 @@ class ServiceCancellationResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-exclamation-triangle';
 
-    protected static ?string $navigationGroup = 'Travel';
+    protected static ?string $navigationGroup = 'Bookings';
 
     protected static ?string $navigationLabel = 'Service Cancellations';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 40;
 
     public static function canAccess(): bool
     {

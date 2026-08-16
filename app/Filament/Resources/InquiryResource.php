@@ -20,7 +20,7 @@ class InquiryResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-envelope';
 
     protected static ?string $navigationGroup = 'Administration';
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 10;
     protected static ?string $navigationLabel = 'Inquiries';
 
     public static function canAccess(): bool

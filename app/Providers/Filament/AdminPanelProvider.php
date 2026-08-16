@@ -112,6 +112,16 @@ class AdminPanelProvider extends PanelProvider
             ->widgets([
                 // Removed AccountWidget
             ])
+            ->navigationGroups([
+                'Bookings',
+                'Travel & Tours',
+                'Transport Master Data',
+                'Promotions & Rewards',
+                'Administration',
+                'Reports',
+                'Settings',
+                'My Account',
+            ])
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,

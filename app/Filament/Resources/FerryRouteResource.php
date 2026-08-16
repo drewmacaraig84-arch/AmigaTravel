@@ -32,8 +32,8 @@ class FerryRouteResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-map';
 
-    protected static ?string $navigationGroup = 'Travel';
-    protected static ?int $navigationSort = 1;
+    protected static ?string $navigationGroup = 'Travel & Tours';
+    protected static ?int $navigationSort = 20;
 
     public static function canAccess(): bool
     {

@@ -21,7 +21,7 @@ class OverallReports extends Page
 
     protected static ?string $navigationGroup = 'Reports';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 10;
 
     protected static ?string $navigationLabel = 'Overall Reports';
 

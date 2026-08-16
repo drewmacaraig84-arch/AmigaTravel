@@ -24,8 +24,8 @@ class TransportClassResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-ticket';
 
-    protected static ?string $navigationGroup = 'Travel';
-    protected static ?int $navigationSort = 2;
+    protected static ?string $navigationGroup = 'Transport Master Data';
+    protected static ?int $navigationSort = 20;
     protected static ?string $navigationLabel = 'Transport Classes';
     protected static bool $shouldRegisterNavigation = true;
 

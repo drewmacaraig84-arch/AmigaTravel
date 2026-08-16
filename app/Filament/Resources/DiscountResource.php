@@ -22,8 +22,8 @@ class DiscountResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
-    protected static ?string $navigationGroup = 'Travel';
-    protected static ?int $navigationSort = 2;
+    protected static ?string $navigationGroup = 'Promotions & Rewards';
+    protected static ?int $navigationSort = 20;
 
     public static function canAccess(): bool
     {

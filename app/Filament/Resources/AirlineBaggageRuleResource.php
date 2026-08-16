@@ -24,9 +24,9 @@ class AirlineBaggageRuleResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-briefcase';
 
-    protected static ?string $navigationGroup = 'Airline';
+    protected static ?string $navigationGroup = 'Transport Master Data';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 30;
 
     protected static ?string $navigationLabel = 'Baggage Settings';
 

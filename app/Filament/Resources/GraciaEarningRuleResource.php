@@ -20,9 +20,9 @@ class GraciaEarningRuleResource extends Resource
     protected static ?string $model = GraciaEarningRule::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-star';
-    protected static ?string $navigationGroup = 'Settings';
+    protected static ?string $navigationGroup = 'Promotions & Rewards';
     protected static ?string $navigationLabel = 'Gracia Rules';
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 30;
 
     public static function canAccess(): bool
     {

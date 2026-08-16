@@ -10,9 +10,9 @@ class AdminNotifications extends Page
 {
     protected static ?string $navigationIcon = 'heroicon-o-bell';
 
-    protected static ?string $navigationGroup = 'Notifications';
+    protected static ?string $navigationGroup = 'My Account';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 20;
 
     protected static ?string $navigationLabel = 'Notifications';
 

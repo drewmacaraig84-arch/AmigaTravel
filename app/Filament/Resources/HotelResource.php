@@ -24,8 +24,8 @@ class HotelResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-home-modern';
 
-    protected static ?string $navigationGroup = 'Travel';
-    protected static ?int $navigationSort = 1;
+    protected static ?string $navigationGroup = 'Travel & Tours';
+    protected static ?int $navigationSort = 40;
     protected static ?string $label = 'Hotel';
     protected static ?string $pluralLabel = 'Hotels';
 

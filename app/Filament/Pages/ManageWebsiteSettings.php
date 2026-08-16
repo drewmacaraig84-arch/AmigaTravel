@@ -23,7 +23,7 @@ class ManageWebsiteSettings extends Page implements HasForms
 
     protected static ?string $navigationIcon = 'heroicon-o-cog-6-tooth';
     protected static ?string $navigationGroup = 'Settings';
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 10;
     protected static ?string $navigationLabel = 'Website Settings';
     protected static ?string $title = 'Website Settings';
     protected static string $view = 'filament.pages.manage-website-settings';

@@ -32,7 +32,7 @@ class BookingResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     protected static ?string $navigationGroup = 'Bookings';
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 10;
     protected static ?string $navigationLabel = 'Bookings';
 
     public static function canAccess(): bool

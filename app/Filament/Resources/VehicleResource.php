@@ -25,8 +25,8 @@ class VehicleResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-truck';
 
-    protected static ?string $navigationGroup = 'Travel';
-    protected static ?int $navigationSort = 3;
+    protected static ?string $navigationGroup = 'Transport Master Data';
+    protected static ?int $navigationSort = 40;
 
     protected static ?string $navigationLabel = 'Ferry & Airline';
     protected static ?string $modelLabel = 'Vehicle';
