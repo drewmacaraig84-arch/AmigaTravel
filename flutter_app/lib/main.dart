@@ -87,7 +87,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.82+93';
+  static const String appVersion = '1.0.84+95';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -860,15 +860,16 @@ void showTopSnack(
       content: snackBar.content,
       behavior: SnackBarBehavior.floating,
       margin: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 8,
-        left: 16,
-        right: 16,
-        bottom: MediaQuery.of(context).size.height - 160,
+        top: MediaQuery.of(context).padding.top + 12,
+        left: 12,
+        right: 12,
       ),
       duration: snackBar.duration,
       action: snackBar.action,
       backgroundColor: snackBar.backgroundColor,
-      shape: snackBar.shape,
+      shape: snackBar.shape ?? RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       elevation: snackBar.elevation,
       padding: snackBar.padding,
       width: snackBar.width,
@@ -1305,6 +1306,7 @@ class _MainScreenState extends State<MainScreen> {
 
     return Scaffold(
       key: _scaffoldKey,
+      resizeToAvoidBottomInset: false,
       drawer: AppDrawer(
           onLogout: _handleLogout, onProfileUpdated: () => setState(() {})),
       appBar: AppBar(
@@ -5077,6 +5079,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
 
       // ── Login / Register form ────────────────────────────────────────────
       return SingleChildScrollView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -9509,6 +9512,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
     }
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(title: const Text('Review & Submit')),
       body: Column(
         children: [
