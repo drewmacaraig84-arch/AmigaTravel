@@ -10,7 +10,7 @@ class RecentActivityWidget extends Widget
 {
     protected static string $view = 'filament.widgets.recent-activity-widget';
 
-    protected static ?string $pollingInterval = '30s';
+    protected static ?string $pollingInterval = '5m';
 
     protected static ?int $sort = 4;
 

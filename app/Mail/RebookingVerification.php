@@ -17,6 +17,7 @@ class RebookingVerification extends Mailable implements ShouldQueue
     public ?string $ticketUrl;
     public ?string $receiptPath;
     public ?string $receiptDisk;
+    public bool $hasTicketAttachment = false;
 
     public function __construct(Booking $booking, ?string $ticketUrl = null, ?string $receiptPath = null, ?string $receiptDisk = null)
     {
@@ -32,18 +33,60 @@ class RebookingVerification extends Mailable implements ShouldQueue
             ->view('emails.rebooking-verification');
 
         if ($this->receiptPath) {
-            if ($this->receiptDisk && Storage::disk($this->receiptDisk)->exists($this->receiptPath)) {
-                $mail->attachFromStorageDisk($this->receiptDisk, $this->receiptPath, 'rebooking-confirmation.pdf', [
-                    'mime' => 'application/pdf',
-                ]);
-            } elseif (file_exists($this->receiptPath)) {
-                $mail->attach($this->receiptPath, [
-                    'as' => 'rebooking-confirmation.pdf',
-                    'mime' => 'application/pdf',
+            $attachInfo = $this->resolveAttachment($this->receiptPath, $this->receiptDisk);
+            if ($attachInfo) {
+                [$resolvedPath, $attachAsDisk, $resolvedDisk] = $attachInfo;
+                if ($attachAsDisk) {
+                    $mail->attachFromStorageDisk($resolvedDisk, $resolvedPath, 'rebooking-confirmation.pdf', [
+                        'mime' => 'application/pdf',
+                    ]);
+                } else {
+                    $mail->attach($resolvedPath, [
+                        'as' => 'rebooking-confirmation.pdf',
+                        'mime' => 'application/pdf',
+                    ]);
+                }
+                $this->hasTicketAttachment = true;
+            } else {
+                \Illuminate\Support\Facades\Log::warning('RebookingVerification: ticket PDF could not be located on disk.', [
+                    'booking_id' => $this->booking->id ?? null,
+                    'receiptPath' => $this->receiptPath,
+                    'receiptDisk' => $this->receiptDisk,
                 ]);
             }
         }
 
         return $mail;
+    }
+
+    /**
+     * Resolve a receipt path + disk hint similarly to BookingConfirmation.
+     */
+    private function resolveAttachment(string $path, ?string $disk): ?array
+    {
+        if (str_starts_with($path, DIRECTORY_SEPARATOR) ||
+            (strlen($path) > 2 && ctype_alpha($path[0]) && $path[1] === ':')) {
+            if (file_exists($path)) {
+                return [$path, false, null];
+            }
+            return null;
+        }
+
+        $disks = array_values(array_unique(array_filter([$disk, 'public'])));
+        foreach ($disks as $d) {
+            try {
+                if (Storage::disk($d)->exists($path)) {
+                    return [$path, true, $d];
+                }
+            } catch (\Throwable $e) {
+                // skip misconfigured disks
+            }
+        }
+
+        if (file_exists($path)) {
+            return [$path, false, null];
+        }
+
+        return null;
     }
 }

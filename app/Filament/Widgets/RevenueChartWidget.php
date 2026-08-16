@@ -9,7 +9,7 @@ class RevenueChartWidget extends Widget
 {
     protected static string $view = 'filament.widgets.revenue-chart';
 
-    protected static ?string $pollingInterval = '30s';
+    protected static ?string $pollingInterval = '10m';
 
     protected static ?int $sort = 2;
 

@@ -9,7 +9,7 @@ class BookingStatusChart extends Widget
 {
     protected static string $view = 'filament.widgets.booking-status-chart';
 
-    protected static ?string $pollingInterval = '30s';
+    protected static ?string $pollingInterval = '10m';
 
     protected static ?int $sort = 3;
 

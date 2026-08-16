@@ -20,12 +20,23 @@
             <li><strong>Infants:</strong> {{ $booking->passengers->where('type', 'infant')->count() }}</li>
         </ul>
         <p>
-            Your booking has been confirmed. Please find the attached confirmation document or use the link provided by the system.
+            Your booking has been confirmed. Please find the attached confirmation document or use the link below:
         </p>
         @if(! empty($ticketUrl))
-            <p>
-                Confirmation link:
-                <a href="{{ $ticketUrl }}">{{ $ticketUrl }}</a>
+            <p style="text-align:center; margin: 24px 0;">
+                <a href="{{ $ticketUrl }}"
+                   style="display:inline-block; padding:14px 32px; background:#216417; color:#ffffff;
+                          text-decoration:none; border-radius:12px; font-weight:bold; font-size:16px;">
+                    View / Download Your Ticket
+                </a>
+            </p>
+            <p style="font-size:12px; color:#64748b; text-align:center;">
+                Or copy this link: <span style="word-break: break-all;">{{ $ticketUrl }}</span>
+            </p>
+        @endif
+        @if(! empty($hasTicketAttachment))
+            <p style="color:#1e293b; font-weight:600;">
+                📎 Ticket_Confirmation.pdf is attached to this email.
             </p>
         @endif
     </body>

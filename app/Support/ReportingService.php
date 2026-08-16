@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\DB;
 
 class ReportingService
 {
-    private const CACHE_TTL = 5;
+    private const CACHE_TTL = 120;
 
     // ─── Period Filter Helper ───────────────────────────────────
 

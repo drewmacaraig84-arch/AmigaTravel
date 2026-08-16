@@ -1,4 +1,4 @@
-// ignore_for_file: use_build_context_synchronously, curly_braces_in_flow_control_structures, unused_local_variable, unnecessary_cast, unused_field, unused_element
+﻿// ignore_for_file: use_build_context_synchronously, curly_braces_in_flow_control_structures, unused_local_variable, unnecessary_cast, unused_field, unused_element
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -87,7 +87,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.77+88';
+  static const String appVersion = '1.0.84+95';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -587,17 +587,16 @@ Future<void> handleNotificationTap(Map<String, dynamic> data) async {
               ),
             );
           } else {
-            ScaffoldMessenger.of(context).showSnackBar(
+            showTopSnack(context,
                 const SnackBar(content: Text('Booking details not found.')));
           }
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
+          showTopSnack(context,
               const SnackBar(content: Text('Failed to load booking details.')));
         }
       } catch (e) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+        showTopSnack(context, SnackBar(content: Text('Error: $e')));
       }
     }
   } else if (type == 'promo') {
@@ -665,9 +664,11 @@ class _GlobalUpdateWrapperState extends State<GlobalUpdateWrapper>
         final data = jsonDecode(response.body);
         final latestVersion = data['version'] as String;
         final forceUpdate = data['force_update'] as bool? ?? true;
-        if (forceUpdate &&
-            UserSession.isUpdateRequired(latestVersion) &&
-            mounted) {
+        final updateRequired = UserSession.isUpdateRequired(latestVersion);
+        if (!updateRequired) {
+          UpdateChecker._apkInstallTriggered = false;
+        }
+        if (forceUpdate && updateRequired && mounted) {
           final context = navigatorKey.currentContext;
           if (context != null) {
             if (!mounted) return;
@@ -688,10 +689,15 @@ class _GlobalUpdateWrapperState extends State<GlobalUpdateWrapper>
 class UpdateChecker {
   static String? _lastPromptedVersion;
   static bool _dialogAlreadyVisible = false;
+  static bool _apkInstallTriggered = false;
 
   static Future<void> showUpdateDialog(
       BuildContext context, String latestVersion) async {
     if (_dialogAlreadyVisible && _lastPromptedVersion == latestVersion) {
+      return;
+    }
+
+    if (_apkInstallTriggered && _lastPromptedVersion == latestVersion) {
       return;
     }
 
@@ -766,15 +772,17 @@ class UpdateChecker {
                         }).asFuture();
                         await sink.close();
 
-                        // Persist the current login/session state before leaving the app for APK install.
                         await UserSession.save();
                         if (BookingData.activeSession != null) {
                           await BookingData.activeSession!.saveToPrefs(
                               BookingData.activeSession!.savedStep);
                         }
 
+                        _apkInstallTriggered = true;
+
                         final result = await OpenFilex.open(file.path);
                         if (result.type != ResultType.done) {
+                          _apkInstallTriggered = false;
                           throw Exception(result.message);
                         }
 
@@ -838,6 +846,42 @@ class MyApp extends StatelessWidget {
   }
 }
 
+// â”€â”€ Top Snackbar Helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+/// Shows a snackbar anchored to the TOP of the screen.
+void showTopSnack(
+  BuildContext context,
+  SnackBar snackBar,
+) {
+  final messenger = ScaffoldMessenger.of(context);
+  messenger.hideCurrentSnackBar();
+  messenger.showSnackBar(
+    SnackBar(
+      content: snackBar.content,
+      behavior: SnackBarBehavior.floating,
+      margin: EdgeInsets.only(
+        top: MediaQuery.of(context).padding.top + 12,
+        left: 12,
+        right: 12,
+      ),
+      duration: snackBar.duration,
+      action: snackBar.action,
+      backgroundColor: snackBar.backgroundColor,
+      shape: snackBar.shape ??
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+      elevation: snackBar.elevation,
+      padding: snackBar.padding,
+      width: snackBar.width,
+      onVisible: snackBar.onVisible,
+      dismissDirection: snackBar.dismissDirection,
+      showCloseIcon: snackBar.showCloseIcon,
+      closeIconColor: snackBar.closeIconColor,
+    ),
+  );
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // ==========================================
 // SPLASH & ONBOARDING
 // ==========================================
@@ -865,10 +909,8 @@ class _SplashLoaderScreenState extends State<SplashLoaderScreen> {
   }
 
   Future<void> _checkVersionAndProceed() async {
-    // 1. Refresh the installed app version before checking for updates.
     await UserSession.refreshInstalledAppVersion();
 
-    // 2. Check for app updates
     try {
       final response = await http
           .get(Uri.parse('${UserSession.getBaseUrl()}/api/app-version'))
@@ -883,15 +925,25 @@ class _SplashLoaderScreenState extends State<SplashLoaderScreen> {
           if (mounted) {
             await UpdateChecker.showUpdateDialog(context, latestVersion);
           }
-          return; // Stop initialization, wait for update
+          await UserSession.refreshInstalledAppVersion();
+          if (!UserSession.isUpdateRequired(latestVersion)) {
+            _navigateForward();
+            return;
+          }
+          _navigationTimer = Timer(const Duration(seconds: 3), () {
+            if (mounted) _checkVersionAndProceed();
+          });
+          return;
         }
       }
     } catch (e) {
       debugPrint('Version check failed: $e');
-      // Proceed if server is unreachable
     }
 
-    // 2. Proceed to app
+    _navigateForward();
+  }
+
+  void _navigateForward() {
     _navigationTimer = Timer(const Duration(seconds: 2), () {
       if (mounted) {
         Navigator.pushReplacement(
@@ -1227,31 +1279,30 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    Widget buildNavItem(int index, IconData iconOutlined, IconData iconActive, String label) {
+    Widget buildNavItem(
+        int index, IconData iconOutlined, IconData iconActive, String label) {
       final isSelected = _selectedIndex == index;
       return InkWell(
         onTap: () => setState(() => _selectedIndex = index),
         customBorder: const CircleBorder(),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 6.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(isSelected ? iconActive : iconOutlined, 
-                   color: isSelected ? kPink : kSlate400, size: 26),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                softWrap: false,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: isSelected ? kPink : kSlate400,
-                  fontSize: 10,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                ),
-              ),
-            ],
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 6.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(isSelected ? iconActive : iconOutlined,
+                    color: isSelected ? kPink : kSlate400, size: 26),
+                const SizedBox(height: 2),
+                Text(label,
+                    style: TextStyle(
+                        color: isSelected ? kPink : kSlate400,
+                        fontSize: 11,
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.normal)),
+              ],
+            ),
           ),
         ),
       );
@@ -1390,7 +1441,8 @@ class _MainScreenState extends State<MainScreen> {
               key: _activityKey, onLoginSuccess: () => setState(() {})),
         ],
       ),
-      floatingActionButtonLocation: const _RaisedCenterDockedFabLocation(riseAboveNotch: 6),
+      floatingActionButtonLocation:
+          const _RaisedCenterDockedFabLocation(riseAboveNotch: -8),
       floatingActionButton: SizedBox(
         width: 60,
         height: 60,
@@ -1404,20 +1456,28 @@ class _MainScreenState extends State<MainScreen> {
       ),
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
-        notchMargin: 6.0,
+        notchMargin: 8.0,
         color: Colors.white,
         elevation: 12,
         shadowColor: Colors.black26,
         child: SizedBox(
           height: 68,
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              buildNavItem(0, Icons.home_outlined, Icons.home, 'Home'),
-              buildNavItem(1, Icons.calendar_month_outlined, Icons.calendar_month, 'Schedules'),
-              const SizedBox(width: 56), // Spacer for the FAB notch
-              buildNavItem(3, Icons.local_activity_outlined, Icons.local_activity, 'Vouchers'),
-              buildNavItem(4, Icons.receipt_long_outlined, Icons.receipt_long, 'Transactions'),
+              Expanded(
+                  child:
+                      buildNavItem(0, Icons.home_outlined, Icons.home, 'Home')),
+              Expanded(
+                  child: buildNavItem(1, Icons.calendar_month_outlined,
+                      Icons.calendar_month, 'Schedules')),
+              const SizedBox(width: 72), // Wider spacer to prevent FAB overlap
+              Expanded(
+                  child: buildNavItem(3, Icons.local_activity_outlined,
+                      Icons.local_activity, 'Vouchers')),
+              Expanded(
+                  child: buildNavItem(4, Icons.receipt_long_outlined,
+                      Icons.receipt_long, 'Transactions')),
             ],
           ),
         ),
@@ -2549,7 +2609,8 @@ class _WelcomeBanner extends StatelessWidget {
               child: SvgPicture.network(
                 '${UserSession.getBaseUrl()}/images/world-map.svg',
                 fit: BoxFit.cover,
-                colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                colorFilter:
+                    const ColorFilter.mode(Colors.white, BlendMode.srcIn),
               ),
             ),
           ),
@@ -2567,7 +2628,8 @@ class _WelcomeBanner extends StatelessWidget {
                         height: 1.2)),
                 const SizedBox(height: 14),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                       color: kPink, borderRadius: BorderRadius.circular(20)),
                   child: const Text(
@@ -2922,7 +2984,8 @@ class _TravelScreenState extends State<TravelScreen>
             _availableReturnDates = [];
           });
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
+            showTopSnack(
+              context,
               const SnackBar(
                 content: Text(
                     'No return schedule exists for this route in Round Trip mode. Please select a different destination.'),
@@ -2992,7 +3055,8 @@ class _TravelScreenState extends State<TravelScreen>
     return '${months[d.month - 1]} ${d.day}, ${d.year}';
   }
 
-  int get _totalPassengers => _adults + _children + (_mode == 'airline' ? _minors + _infants : 0);
+  int get _totalPassengers =>
+      _adults + _children + (_mode == 'airline' ? _minors + _infants : 0);
 
   void _goToSchedule() {
     if (!UserSession.isLoggedIn) {
@@ -3059,7 +3123,8 @@ class _TravelScreenState extends State<TravelScreen>
           _driverFirstNameCtrl.text.trim().isEmpty ||
           _driverLastNameCtrl.text.trim().isEmpty ||
           _driverBirthdayCtrl.text.trim().isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        showTopSnack(
+          context,
           const SnackBar(
             content:
                 Text('Please fill out all required vehicle booking fields.'),
@@ -3371,7 +3436,8 @@ class _TravelScreenState extends State<TravelScreen>
                                   ),
                                   const Divider(height: 20),
                                   _PassengerCounter(
-                                    label: _mode == 'airline' ? 'Child' : 'Minor',
+                                    label:
+                                        _mode == 'airline' ? 'Child' : 'Minor',
                                     subtitle: '2 - 11 years',
                                     count: _children,
                                     onIncrement: _totalPassengers < 8
@@ -3430,7 +3496,8 @@ class _TravelScreenState extends State<TravelScreen>
                                       label: 'Infant',
                                       subtitle: 'Under 2 years',
                                       count: _infants,
-                                      onIncrement: _totalPassengers < 8 && _infants < _adults
+                                      onIncrement: _totalPassengers < 8 &&
+                                              _infants < _adults
                                           ? () => setState(() => _infants++)
                                           : null,
                                       onDecrement: _infants > 0
@@ -3452,13 +3519,13 @@ class _TravelScreenState extends State<TravelScreen>
                                           content: Text(
                                             _mode == 'airline'
                                                 ? 'You can book up to 8 travelers total (Adults, Children, Minors, Infants).\n\n'
-                                                  '1. Adults and minors count towards the 8-person total.\n\n'
-                                                  '2. Infants under 2 years must be accompanied by an adult (max 1 infant per adult).\n\n'
-                                                  '3. Use the buttons to update counts. The form prevents totals above 8.'
+                                                    '1. Adults and minors count towards the 8-person total.\n\n'
+                                                    '2. Infants under 2 years must be accompanied by an adult (max 1 infant per adult).\n\n'
+                                                    '3. Use the buttons to update counts. The form prevents totals above 8.'
                                                 : 'You can book up to 8 travelers total. This includes both adults and minors combined. Any discounts are applied per traveler on the next step.\n\n'
-                                                  '1. Adults are counted separately from minors, but both count toward the same 8-person total.\n\n'
-                                                  '2. Minors aged 2 to 11 are still part of the booking capacity limit.\n\n'
-                                                  '3. Use the buttons to update counts. The form prevents totals above 8.',
+                                                    '1. Adults are counted separately from minors, but both count toward the same 8-person total.\n\n'
+                                                    '2. Minors aged 2 to 11 are still part of the booking capacity limit.\n\n'
+                                                    '3. Use the buttons to update counts. The form prevents totals above 8.',
                                             style: const TextStyle(
                                                 fontSize: 13,
                                                 color: kSlate600,
@@ -4347,7 +4414,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
     final name = _nameCtrl.text.trim();
 
     if (name.isEmpty || email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      showTopSnack(
+        context,
         const SnackBar(
             content: Text('Please fill in your username, email, and password.'),
             backgroundColor: Colors.red),
@@ -4355,7 +4423,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
       return;
     }
     if (password.length < 8) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      showTopSnack(
+        context,
         const SnackBar(
             content: Text('Password must be at least 8 characters.'),
             backgroundColor: Colors.red),
@@ -4363,7 +4432,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
       return;
     }
     if (!_agreeTerms || !_agreePrivacy) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      showTopSnack(
+        context,
         const SnackBar(
           content: Text(
               'You must agree to the Terms & Conditions and Data Privacy Policy to register.'),
@@ -4393,7 +4463,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
           _startOtpTimer();
         });
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        showTopSnack(
+          context,
           SnackBar(
               content: Text(data['message'] ?? 'OTP sent! Check your email.'),
               backgroundColor: kGreen),
@@ -4403,13 +4474,15 @@ class _ActivityScreenState extends State<ActivityScreen> {
             data['errors']?.values?.first?.first ??
             'Could not send OTP.';
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        showTopSnack(
+          context,
           SnackBar(content: Text(msg), backgroundColor: Colors.red),
         );
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      showTopSnack(
+        context,
         SnackBar(
             content: Text('Connection error: $e'), backgroundColor: Colors.red),
       );
@@ -4422,7 +4495,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
   Future<void> _verifyRegisterOtp() async {
     final otp = _otpCtrl.text.trim();
     if (otp.length != 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      showTopSnack(
+        context,
         const SnackBar(
             content: Text('Enter the 6-digit code sent to your email.'),
             backgroundColor: Colors.red),
@@ -4471,7 +4545,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
         widget.onLoginSuccess();
         _fetchBookings();
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        showTopSnack(
+          context,
           SnackBar(
               content:
                   Text(data['message'] ?? 'Welcome, ${UserSession.username}!'),
@@ -4479,7 +4554,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
         );
       } else {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        showTopSnack(
+          context,
           SnackBar(
               content: Text(data['message'] ?? 'Verification failed.'),
               backgroundColor: Colors.red),
@@ -4487,7 +4563,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      showTopSnack(
+        context,
         SnackBar(
             content: Text('Connection error: $e'), backgroundColor: Colors.red),
       );
@@ -4508,7 +4585,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
       final data = jsonDecode(response.body);
       if (response.statusCode == 200 && data['status'] == 'success') {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        showTopSnack(
+          context,
           SnackBar(
               content: Text(data['message'] ?? 'A new code has been sent.'),
               backgroundColor: kGreen),
@@ -4517,7 +4595,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
         _startOtpTimer();
       } else {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        showTopSnack(
+          context,
           SnackBar(
               content: Text(data['message'] ?? 'Could not resend OTP.'),
               backgroundColor: Colors.red),
@@ -4525,7 +4604,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      showTopSnack(
+        context,
         SnackBar(
             content: Text('Connection error: $e'), backgroundColor: Colors.red),
       );
@@ -4539,7 +4619,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
     final password = _passCtrl.text;
 
     if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      showTopSnack(
+        context,
         const SnackBar(
             content: Text('Please fill out all required fields.'),
             backgroundColor: Colors.red),
@@ -4575,7 +4656,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
         widget.onLoginSuccess();
         _fetchBookings();
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        showTopSnack(
+          context,
           SnackBar(
               content: Text('Welcome back, ${data['user']['name']}!'),
               backgroundColor: kGreen),
@@ -4584,13 +4666,15 @@ class _ActivityScreenState extends State<ActivityScreen> {
         final errorMsg = data['message'] ??
             'Authentication failed. Please check your credentials.';
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        showTopSnack(
+          context,
           SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
         );
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      showTopSnack(
+        context,
         SnackBar(
             content: Text('Error connecting to server: $e'),
             backgroundColor: Colors.red),
@@ -4676,7 +4760,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
                             : () async {
                                 final email = emailController.text.trim();
                                 if (email.isEmpty || !email.contains('@')) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  showTopSnack(
+                                    context,
                                     const SnackBar(
                                         content: Text(
                                             'Please enter a valid email address.'),
@@ -4700,7 +4785,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
                                       modalLoading = false;
                                     });
                                     if (!mounted) return;
-                                    ScaffoldMessenger.of(context).showSnackBar(
+                                    showTopSnack(
+                                      context,
                                       SnackBar(
                                           content: Text(data['message'] ??
                                               'Reset code sent! Check your email.'),
@@ -4710,7 +4796,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
                                     final msg = data['message'] ??
                                         'Failed to send verification code.';
                                     if (!mounted) return;
-                                    ScaffoldMessenger.of(context).showSnackBar(
+                                    showTopSnack(
+                                      context,
                                       SnackBar(
                                           content: Text(msg),
                                           backgroundColor: Colors.red),
@@ -4718,7 +4805,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
                                   }
                                 } catch (e) {
                                   if (!mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  showTopSnack(
+                                    context,
                                     SnackBar(
                                         content: Text('Connection error: $e'),
                                         backgroundColor: Colors.red),
@@ -4813,7 +4901,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
                                 final newPass = passController.text;
                                 final confirmPass = confirmPassController.text;
                                 if (otp.length != 6) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  showTopSnack(
+                                    context,
                                     const SnackBar(
                                         content: Text(
                                             'Please enter the 6-digit code.'),
@@ -4822,7 +4911,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
                                   return;
                                 }
                                 if (newPass.length < 8) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  showTopSnack(
+                                    context,
                                     const SnackBar(
                                         content: Text(
                                             'Password must be at least 8 characters.'),
@@ -4831,7 +4921,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
                                   return;
                                 }
                                 if (newPass != confirmPass) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  showTopSnack(
+                                    context,
                                     const SnackBar(
                                         content:
                                             Text('Passwords do not match.'),
@@ -4864,7 +4955,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
                                       _isSignUp = false;
                                     });
                                     if (!mounted) return;
-                                    ScaffoldMessenger.of(context).showSnackBar(
+                                    showTopSnack(
+                                      context,
                                       SnackBar(
                                           content: Text(data['message'] ??
                                               'Password reset successfully! Please log in.'),
@@ -4874,7 +4966,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
                                     final msg = data['message'] ??
                                         'Failed to reset password.';
                                     if (!mounted) return;
-                                    ScaffoldMessenger.of(context).showSnackBar(
+                                    showTopSnack(
+                                      context,
                                       SnackBar(
                                           content: Text(msg),
                                           backgroundColor: Colors.red),
@@ -4882,7 +4975,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
                                   }
                                 } catch (e) {
                                   if (!mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  showTopSnack(
+                                    context,
                                     SnackBar(
                                         content: Text('Connection error: $e'),
                                         backgroundColor: Colors.red),
@@ -4972,14 +5066,20 @@ class _ActivityScreenState extends State<ActivityScreen> {
                   _otpCountdown > 0
                       ? Text(
                           'Code expires in ${_otpCountdown ~/ 60}:${(_otpCountdown % 60).toString().padLeft(2, '0')}',
-                          style: const TextStyle(fontSize: 12, color: kSlate400),
+                          style:
+                              const TextStyle(fontSize: 12, color: kSlate400),
                         )
                       : const Text(
                           'Your code has expired.',
-                          style: TextStyle(fontSize: 12, color: Colors.red, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.red,
+                              fontWeight: FontWeight.bold),
                         ),
                   TextButton(
-                    onPressed: (_otpLoading || _otpCountdown > 0) ? null : _resendRegisterOtp,
+                    onPressed: (_otpLoading || _otpCountdown > 0)
+                        ? null
+                        : _resendRegisterOtp,
                     style: TextButton.styleFrom(
                       padding: EdgeInsets.zero,
                       minimumSize: const Size(50, 30),
@@ -4990,7 +5090,9 @@ class _ActivityScreenState extends State<ActivityScreen> {
                       style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: (_otpLoading || _otpCountdown > 0) ? Colors.grey : kPink),
+                          color: (_otpLoading || _otpCountdown > 0)
+                              ? Colors.grey
+                              : kPink),
                     ),
                   ),
                 ],
@@ -5032,6 +5134,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
 
       // ── Login / Register form ────────────────────────────────────────────
       return SingleChildScrollView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -5603,7 +5706,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               _booking = data['booking'];
               if (_booking['price_breakdown'] is String) {
                 try {
-                  _booking['price_breakdown'] = jsonDecode(_booking['price_breakdown']);
+                  _booking['price_breakdown'] =
+                      jsonDecode(_booking['price_breakdown']);
                 } catch (_) {
                   _booking['price_breakdown'] = [];
                 }
@@ -5638,8 +5742,11 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
 
   void _showMessage(String message, {bool error = false}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(message), backgroundColor: error ? Colors.red : kGreen));
+    showTopSnack(
+        context,
+        SnackBar(
+            content: Text(message),
+            backgroundColor: error ? Colors.red : kGreen));
   }
 
   String _refundDestination() {
@@ -6452,7 +6559,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      showTopSnack(
+        context,
         const SnackBar(
             content: Text('Profile updated'), backgroundColor: kGreen),
       );
@@ -6651,8 +6759,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             modalLoading = false;
                                           });
                                           if (!mounted) return;
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(
+                                          showTopSnack(
+                                            context,
                                             SnackBar(
                                                 content: Text(data['message'] ??
                                                     'OTP sent! Check your email.'),
@@ -6662,8 +6770,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           final msg = data['message'] ??
                                               'Failed to send OTP.';
                                           if (!mounted) return;
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(SnackBar(
+                                          showTopSnack(
+                                              context,
+                                              SnackBar(
                                                   content: Text(msg),
                                                   backgroundColor: Colors.red));
                                           Navigator.pop(ctx);
@@ -6672,8 +6781,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         setModalState(
                                             () => modalLoading = false);
                                         if (!mounted) return;
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(const SnackBar(
+                                        showTopSnack(
+                                            context,
+                                            const SnackBar(
                                                 content: Text('Network error'),
                                                 backgroundColor: Colors.red));
                                       }
@@ -6734,24 +6844,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       if (otp.isEmpty ||
                                           newPassword.isEmpty ||
                                           confirmPassword.isEmpty) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(const SnackBar(
+                                        showTopSnack(
+                                            context,
+                                            const SnackBar(
                                                 content: Text(
                                                     'All fields are required.'),
                                                 backgroundColor: Colors.red));
                                         return;
                                       }
                                       if (newPassword != confirmPassword) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(const SnackBar(
+                                        showTopSnack(
+                                            context,
+                                            const SnackBar(
                                                 content: Text(
                                                     'Passwords do not match.'),
                                                 backgroundColor: Colors.red));
                                         return;
                                       }
                                       if (newPassword.length < 6) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(const SnackBar(
+                                        showTopSnack(
+                                            context,
+                                            const SnackBar(
                                                 content: Text(
                                                     'Password must be at least 6 characters.'),
                                                 backgroundColor: Colors.red));
@@ -6778,8 +6891,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         if (res.statusCode == 200 &&
                                             data['status'] == 'success') {
                                           if (!mounted) return;
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(
+                                          showTopSnack(
+                                            context,
                                             SnackBar(
                                                 content: Text(data['message'] ??
                                                     'Password reset successfully.'),
@@ -6790,8 +6903,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           final msg = data['message'] ??
                                               'Failed to reset password.';
                                           if (!mounted) return;
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(SnackBar(
+                                          showTopSnack(
+                                              context,
+                                              SnackBar(
                                                   content: Text(msg),
                                                   backgroundColor: Colors.red));
                                           setModalState(
@@ -6801,8 +6915,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         setModalState(
                                             () => modalLoading = false);
                                         if (!mounted) return;
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(const SnackBar(
+                                        showTopSnack(
+                                            context,
+                                            const SnackBar(
                                                 content: Text('Network error'),
                                                 backgroundColor: Colors.red));
                                       }
@@ -8422,7 +8537,8 @@ class _DiscountScreenState extends State<DiscountScreen> {
 
         if (discName == 'student') {
           if (_idFrontBase64[i] == null || _idBackBase64[i] == null) {
-            ScaffoldMessenger.of(context).showSnackBar(
+            showTopSnack(
+              context,
               SnackBar(
                 content: Text(
                     'Please upload both Front and Back ID images for Passenger #${i + 1}.'),
@@ -9098,28 +9214,50 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
         'has_vehicle': booking.hasVehicle,
         if (booking.hasVehicle) 'vehicle_price': booking.vehiclePrice,
         // Include accommodation/class IDs so backend calculates correct base amount
-        if (booking.mode == 'ferry' && booking.selectedFerryAccommodationId != null)
+        if (booking.mode == 'ferry' &&
+            booking.selectedFerryAccommodationId != null)
           ...(() {
-            final depClasses = (booking.selectedSchedule?['transport_classes'] as List<dynamic>? ?? []);
+            final depClasses = (booking.selectedSchedule?['transport_classes']
+                    as List<dynamic>? ??
+                []);
             if (depClasses.isNotEmpty) {
-              return {'selected_transport_class_id': booking.selectedFerryAccommodationId};
+              return {
+                'selected_transport_class_id':
+                    booking.selectedFerryAccommodationId
+              };
             } else {
-              return {'selected_schedule_accommodation_id': booking.selectedFerryAccommodationId};
+              return {
+                'selected_schedule_accommodation_id':
+                    booking.selectedFerryAccommodationId
+              };
             }
           }())
-        else if (booking.mode != 'ferry' && booking.selectedAirlineClassId != null)
+        else if (booking.mode != 'ferry' &&
+            booking.selectedAirlineClassId != null)
           'selected_transport_class_id': booking.selectedAirlineClassId,
-        if (booking.tripType == 'round_trip' && booking.selectedReturnFerryAccommodationId != null)
+        if (booking.tripType == 'round_trip' &&
+            booking.selectedReturnFerryAccommodationId != null)
           ...(() {
-            final retClasses = (booking.selectedReturnSchedule?['transport_classes'] as List<dynamic>? ?? []);
+            final retClasses =
+                (booking.selectedReturnSchedule?['transport_classes']
+                        as List<dynamic>? ??
+                    []);
             if (retClasses.isNotEmpty) {
-              return {'return_selected_transport_class_id': booking.selectedReturnFerryAccommodationId};
+              return {
+                'return_selected_transport_class_id':
+                    booking.selectedReturnFerryAccommodationId
+              };
             } else {
-              return {'selected_return_schedule_accommodation_id': booking.selectedReturnFerryAccommodationId};
+              return {
+                'selected_return_schedule_accommodation_id':
+                    booking.selectedReturnFerryAccommodationId
+              };
             }
           }())
-        else if (booking.tripType == 'round_trip' && booking.selectedReturnAirlineClassId != null)
-          'return_selected_transport_class_id': booking.selectedReturnAirlineClassId,
+        else if (booking.tripType == 'round_trip' &&
+            booking.selectedReturnAirlineClassId != null)
+          'return_selected_transport_class_id':
+              booking.selectedReturnAirlineClassId,
       };
       final res = await http.post(
         Uri.parse('${UserSession.getBaseUrl()}/api/vouchers/validate'),
@@ -9147,7 +9285,8 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
               'original_subtotal': d['original_subtotal'],
             };
           });
-          ScaffoldMessenger.of(context).showSnackBar(
+          showTopSnack(
+            context,
             SnackBar(
                 content: Text('Voucher "$code" applied automatically!'),
                 backgroundColor: kGreen),
@@ -9221,7 +9360,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
   Future<void> _submit() async {
     if (_isSubmitting) return;
     if (!_formKey.currentState!.validate()) return;
-    
+
     setState(() => _isSubmitting = true);
 
     final phone = _clientPhoneCtrl.text.trim();
@@ -9385,7 +9524,8 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
         ));
       } else {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        showTopSnack(
+          context,
           SnackBar(
               content: Text(data['message'] ?? 'Booking failed.'),
               backgroundColor: Colors.red),
@@ -9393,7 +9533,8 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      showTopSnack(
+        context,
         SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
       );
     } finally {
@@ -9473,6 +9614,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
     }
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(title: const Text('Review & Submit')),
       body: Column(
         children: [
@@ -10219,8 +10361,8 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error picking image: $e')));
+        showTopSnack(
+            context, SnackBar(content: Text('Error picking image: $e')));
       }
     }
   }
@@ -10228,9 +10370,11 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
   Future<void> _uploadProof() async {
     if (_proofImage == null) return;
     if (_refController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Please enter the reference number.'),
-          backgroundColor: Colors.red));
+      showTopSnack(
+          context,
+          const SnackBar(
+              content: Text('Please enter the reference number.'),
+              backgroundColor: Colors.red));
       return;
     }
     setState(() => _isUploadingProof = true);
@@ -10255,7 +10399,8 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
             _proofUploaded = true;
             _countdownTimer?.cancel();
           });
-          ScaffoldMessenger.of(context).showSnackBar(
+          showTopSnack(
+            context,
             const SnackBar(
                 content: Text(
                     'Proof of payment uploaded! We will verify it shortly.'),
@@ -10264,15 +10409,20 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(data['message'] ?? 'Upload failed.'),
-              backgroundColor: Colors.red));
+          showTopSnack(
+              context,
+              SnackBar(
+                  content: Text(data['message'] ?? 'Upload failed.'),
+                  backgroundColor: Colors.red));
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Upload error: $e'), backgroundColor: Colors.red));
+        showTopSnack(
+            context,
+            SnackBar(
+                content: Text('Upload error: $e'),
+                backgroundColor: Colors.red));
       }
     } finally {
       if (mounted) setState(() => _isUploadingProof = false);
@@ -10608,7 +10758,8 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
             child: ElevatedButton(
               onPressed: () {
                 if (!_proofUploaded && !_isExpired) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  showTopSnack(
+                    context,
                     const SnackBar(
                         content: Text(
                             'Please upload proof of payment before proceeding. Or press back if you wish to do it later.')),
@@ -10952,28 +11103,50 @@ class _VoucherPickerScreenState extends State<VoucherPickerScreen> {
         'has_vehicle': booking.hasVehicle,
         if (booking.hasVehicle) 'vehicle_price': booking.vehiclePrice,
         // Include accommodation/class IDs so backend calculates correct base amount
-        if (booking.mode == 'ferry' && booking.selectedFerryAccommodationId != null)
+        if (booking.mode == 'ferry' &&
+            booking.selectedFerryAccommodationId != null)
           ...(() {
-            final depClasses = (booking.selectedSchedule?['transport_classes'] as List<dynamic>? ?? []);
+            final depClasses = (booking.selectedSchedule?['transport_classes']
+                    as List<dynamic>? ??
+                []);
             if (depClasses.isNotEmpty) {
-              return {'selected_transport_class_id': booking.selectedFerryAccommodationId};
+              return {
+                'selected_transport_class_id':
+                    booking.selectedFerryAccommodationId
+              };
             } else {
-              return {'selected_schedule_accommodation_id': booking.selectedFerryAccommodationId};
+              return {
+                'selected_schedule_accommodation_id':
+                    booking.selectedFerryAccommodationId
+              };
             }
           }())
-        else if (booking.mode != 'ferry' && booking.selectedAirlineClassId != null)
+        else if (booking.mode != 'ferry' &&
+            booking.selectedAirlineClassId != null)
           'selected_transport_class_id': booking.selectedAirlineClassId,
-        if (booking.tripType == 'round_trip' && booking.selectedReturnFerryAccommodationId != null)
+        if (booking.tripType == 'round_trip' &&
+            booking.selectedReturnFerryAccommodationId != null)
           ...(() {
-            final retClasses = (booking.selectedReturnSchedule?['transport_classes'] as List<dynamic>? ?? []);
+            final retClasses =
+                (booking.selectedReturnSchedule?['transport_classes']
+                        as List<dynamic>? ??
+                    []);
             if (retClasses.isNotEmpty) {
-              return {'return_selected_transport_class_id': booking.selectedReturnFerryAccommodationId};
+              return {
+                'return_selected_transport_class_id':
+                    booking.selectedReturnFerryAccommodationId
+              };
             } else {
-              return {'selected_return_schedule_accommodation_id': booking.selectedReturnFerryAccommodationId};
+              return {
+                'selected_return_schedule_accommodation_id':
+                    booking.selectedReturnFerryAccommodationId
+              };
             }
           }())
-        else if (booking.tripType == 'round_trip' && booking.selectedReturnAirlineClassId != null)
-          'return_selected_transport_class_id': booking.selectedReturnAirlineClassId,
+        else if (booking.tripType == 'round_trip' &&
+            booking.selectedReturnAirlineClassId != null)
+          'return_selected_transport_class_id':
+              booking.selectedReturnAirlineClassId,
       };
       final res = await http.post(
         Uri.parse('${UserSession.getBaseUrl()}/api/vouchers/validate'),
@@ -11266,32 +11439,38 @@ class AboutScreen extends StatelessWidget {
                     _AboutFact(
                         number: 'G',
                         title: 'Growth & Innovation',
-                        desc: 'Continuously growing and innovating our services for travelers.'),
+                        desc:
+                            'Continuously growing and innovating our services for travelers.'),
                     SizedBox(height: 10),
                     _AboutFact(
                         number: 'R',
                         title: 'Responsibility & Integrity',
-                        desc: 'Operating with honesty, transparency, and accountability.'),
+                        desc:
+                            'Operating with honesty, transparency, and accountability.'),
                     SizedBox(height: 10),
                     _AboutFact(
                         number: 'A',
                         title: 'Accountability',
-                        desc: 'Taking ownership of every booking, transaction, and commitment.'),
+                        desc:
+                            'Taking ownership of every booking, transaction, and commitment.'),
                     SizedBox(height: 10),
                     _AboutFact(
                         number: 'C',
                         title: 'Customer Excellence',
-                        desc: 'Delivering first-class service that exceeds customer expectations.'),
+                        desc:
+                            'Delivering first-class service that exceeds customer expectations.'),
                     SizedBox(height: 10),
                     _AboutFact(
                         number: 'I',
                         title: 'Inclusivity & Collaboration',
-                        desc: 'Welcoming all travelers and working together as one team.'),
+                        desc:
+                            'Welcoming all travelers and working together as one team.'),
                     SizedBox(height: 10),
                     _AboutFact(
                         number: 'A',
                         title: 'Assurance of Quality & Safety',
-                        desc: 'Ensuring every journey meets the highest safety and quality standards.'),
+                        desc:
+                            'Ensuring every journey meets the highest safety and quality standards.'),
                   ],
                 ),
               ),
@@ -11318,11 +11497,20 @@ class AboutScreen extends StatelessWidget {
                   // Row 1: 2GO, Starlite, Cebu Pacific
                   Row(
                     children: [
-                      _OperatorLogoCard(name: '2GO', logoUrl: '${UserSession.getBaseUrl()}/images/2GO-Logo.png'),
+                      _OperatorLogoCard(
+                          name: '2GO',
+                          logoUrl:
+                              '${UserSession.getBaseUrl()}/images/2GO-Logo.png'),
                       const SizedBox(width: 8),
-                      _OperatorLogoCard(name: 'Starlite', logoUrl: '${UserSession.getBaseUrl()}/images/Starlite_Logo.png'),
+                      _OperatorLogoCard(
+                          name: 'Starlite',
+                          logoUrl:
+                              '${UserSession.getBaseUrl()}/images/Starlite_Logo.png'),
                       const SizedBox(width: 8),
-                      _OperatorLogoCard(name: 'Cebu Pacific', logoUrl: '${UserSession.getBaseUrl()}/images/CebuPecific-Logo.png'),
+                      _OperatorLogoCard(
+                          name: 'Cebu Pacific',
+                          logoUrl:
+                              '${UserSession.getBaseUrl()}/images/CebuPecific-Logo.png'),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -11330,9 +11518,15 @@ class AboutScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      _OperatorLogoCard(name: 'Philippine Airlines', logoUrl: '${UserSession.getBaseUrl()}/images/Pal-Logo.jfif'),
+                      _OperatorLogoCard(
+                          name: 'Philippine Airlines',
+                          logoUrl:
+                              '${UserSession.getBaseUrl()}/images/Pal-Logo.jfif'),
                       const SizedBox(width: 8),
-                      _OperatorLogoCard(name: 'AirAsia', logoUrl: '${UserSession.getBaseUrl()}/images/AirAsia-Logo.png'),
+                      _OperatorLogoCard(
+                          name: 'AirAsia',
+                          logoUrl:
+                              '${UserSession.getBaseUrl()}/images/AirAsia-Logo.png'),
                     ],
                   ),
                 ],
@@ -11592,7 +11786,8 @@ class _ContactScreenState extends State<ContactScreen> {
                             if (_nameCtrl.text.isEmpty ||
                                 _emailCtrl.text.isEmpty ||
                                 _msgCtrl.text.isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              showTopSnack(
+                                  context,
                                   const SnackBar(
                                       content:
                                           Text('Please fill required fields'),
@@ -11991,7 +12186,8 @@ class _PackageList extends StatelessWidget {
       context: context,
       builder: (BuildContext context) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
           insetPadding: const EdgeInsets.all(16),
           child: Stack(
             children: [
@@ -12003,20 +12199,24 @@ class _PackageList extends StatelessWidget {
                     Container(
                       height: 180,
                       decoration: BoxDecoration(
-                        gradient: p['image'].toString().isEmpty ? LinearGradient(
-                            colors: gradient,
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight) : null,
-                        image: p['image'].toString().isNotEmpty ? DecorationImage(
-                          image: NetworkImage('${UserSession.getBaseUrl()}/storage/${p['image']}'),
-                          fit: BoxFit.cover,
-                          colorFilter: ColorFilter.mode(
-                            Colors.black.withValues(alpha: 0.3), 
-                            BlendMode.darken
-                          ),
-                        ) : null,
-                        borderRadius:
-                            const BorderRadius.vertical(top: Radius.circular(18)),
+                        gradient: p['image'].toString().isEmpty
+                            ? LinearGradient(
+                                colors: gradient,
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight)
+                            : null,
+                        image: p['image'].toString().isNotEmpty
+                            ? DecorationImage(
+                                image: NetworkImage(
+                                    '${UserSession.getBaseUrl()}/storage/${p['image']}'),
+                                fit: BoxFit.cover,
+                                colorFilter: ColorFilter.mode(
+                                    Colors.black.withValues(alpha: 0.3),
+                                    BlendMode.darken),
+                              )
+                            : null,
+                        borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(18)),
                       ),
                       child: Padding(
                         padding: const EdgeInsets.all(16),
@@ -12062,39 +12262,76 @@ class _PackageList extends StatelessWidget {
                           if (p['desc'].toString().isNotEmpty) ...[
                             Text(p['desc'] as String,
                                 style: const TextStyle(
-                                    color: kSlate600, fontSize: 14, height: 1.5)),
+                                    color: kSlate600,
+                                    fontSize: 14,
+                                    height: 1.5)),
                             const SizedBox(height: 16),
                           ],
                           if (p['inclusions'].toString().isNotEmpty) ...[
-                            const Text('Inclusions:', style: TextStyle(fontWeight: FontWeight.bold, color: kSlate700)),
+                            const Text('Inclusions:',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: kSlate700)),
                             const SizedBox(height: 4),
-                            Text(p['inclusions'] as String, style: const TextStyle(color: kSlate600, fontSize: 13, height: 1.5)),
+                            Text(p['inclusions'] as String,
+                                style: const TextStyle(
+                                    color: kSlate600,
+                                    fontSize: 13,
+                                    height: 1.5)),
                             const SizedBox(height: 16),
                           ],
                           if (p['exclusions'].toString().isNotEmpty) ...[
-                            const Text('Exclusions:', style: TextStyle(fontWeight: FontWeight.bold, color: kSlate700)),
+                            const Text('Exclusions:',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: kSlate700)),
                             const SizedBox(height: 4),
-                            Text(p['exclusions'] as String, style: const TextStyle(color: kSlate600, fontSize: 13, height: 1.5)),
+                            Text(p['exclusions'] as String,
+                                style: const TextStyle(
+                                    color: kSlate600,
+                                    fontSize: 13,
+                                    height: 1.5)),
                             const SizedBox(height: 16),
                           ],
                           if (p['remarks'].toString().isNotEmpty) ...[
-                            const Text('Remarks:', style: TextStyle(fontWeight: FontWeight.bold, color: kSlate700)),
+                            const Text('Remarks:',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: kSlate700)),
                             const SizedBox(height: 4),
-                            Text(p['remarks'] as String, style: const TextStyle(color: kSlate600, fontSize: 13, height: 1.5)),
+                            Text(p['remarks'] as String,
+                                style: const TextStyle(
+                                    color: kSlate600,
+                                    fontSize: 13,
+                                    height: 1.5)),
                             const SizedBox(height: 16),
                           ],
-                          if (p['raw']['day1'] != null && p['raw']['day1'].toString().isNotEmpty) ...[
-                            const Text('Itinerary:', style: TextStyle(fontWeight: FontWeight.bold, color: kSlate700)),
+                          if (p['raw']['day1'] != null &&
+                              p['raw']['day1'].toString().isNotEmpty) ...[
+                            const Text('Itinerary:',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: kSlate700)),
                             const SizedBox(height: 8),
                             for (int i = 1; i <= 6; i++)
-                              if (p['raw']['day$i'] != null && p['raw']['day$i'].toString().isNotEmpty)
+                              if (p['raw']['day$i'] != null &&
+                                  p['raw']['day$i'].toString().isNotEmpty)
                                 Padding(
                                   padding: const EdgeInsets.only(bottom: 8),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Text('Day $i', style: const TextStyle(fontWeight: FontWeight.bold, color: kPink, fontSize: 13)),
-                                      Text(p['raw']['day$i'].toString(), style: const TextStyle(color: kSlate600, fontSize: 13, height: 1.5)),
+                                      Text('Day $i',
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: kPink,
+                                              fontSize: 13)),
+                                      Text(p['raw']['day$i'].toString(),
+                                          style: const TextStyle(
+                                              color: kSlate600,
+                                              fontSize: 13,
+                                              height: 1.5)),
                                     ],
                                   ),
                                 ),
@@ -12102,8 +12339,7 @@ class _PackageList extends StatelessWidget {
                           ],
                           const SizedBox(height: 8),
                           const Text('Starting from',
-                              style: TextStyle(
-                                  color: kSlate400, fontSize: 12)),
+                              style: TextStyle(color: kSlate400, fontSize: 12)),
                           Text(p['price'] as String,
                               style: const TextStyle(
                                   color: kGreen,
@@ -12136,8 +12372,7 @@ class _PackageList extends StatelessWidget {
                     Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (_) =>
-                                RequestBookingScreen(package: p)));
+                            builder: (_) => RequestBookingScreen(package: p)));
                   },
                   style: ElevatedButton.styleFrom(
                       backgroundColor: kPink,
@@ -12147,8 +12382,8 @@ class _PackageList extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 24, vertical: 12)),
                   child: const Text('Book Now',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 14)),
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                 ),
               ),
             ],
@@ -12206,7 +12441,8 @@ class _PackageList extends StatelessWidget {
                       backgroundColor: Colors.white,
                       foregroundColor: kPink,
                       elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20)),
                     ),
                     child: const Text('View',
                         style: TextStyle(fontWeight: FontWeight.bold)),
@@ -12776,18 +13012,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ),
           );
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
+          showTopSnack(context,
               const SnackBar(content: Text('Booking details not found.')));
         }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
+        showTopSnack(context,
             const SnackBar(content: Text('Failed to load booking details.')));
       }
     } catch (e) {
       if (!mounted) return;
       Navigator.pop(context);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error: $e')));
+      showTopSnack(context, SnackBar(content: Text('Error: $e')));
     }
   }
 
@@ -13145,8 +13380,8 @@ class _GraciaPointsScreenState extends State<GraciaPointsScreen> {
                                         onPressed: () {
                                           Clipboard.setData(ClipboardData(
                                               text: UserSession.referralCode!));
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(
+                                          showTopSnack(
+                                            context,
                                             const SnackBar(
                                                 content: Text(
                                                     'Referral code copied to clipboard!')),
@@ -14079,8 +14314,9 @@ class _VouchersScreenState extends State<VouchersScreen> {
                                                 data['status'] == 'success') {
                                               _promoCtrl.clear();
                                               if (!mounted) return;
-                                              ScaffoldMessenger.of(context)
-                                                  .showSnackBar(SnackBar(
+                                              showTopSnack(
+                                                  context,
+                                                  SnackBar(
                                                       content: Text(data[
                                                               'message'] ??
                                                           'Discount coupon added!'),
@@ -14088,8 +14324,9 @@ class _VouchersScreenState extends State<VouchersScreen> {
                                               _fetchVouchers();
                                             } else {
                                               if (!mounted) return;
-                                              ScaffoldMessenger.of(context)
-                                                  .showSnackBar(SnackBar(
+                                              showTopSnack(
+                                                  context,
+                                                  SnackBar(
                                                       content: Text(data[
                                                               'message'] ??
                                                           'Invalid coupon code.'),
@@ -14098,8 +14335,9 @@ class _VouchersScreenState extends State<VouchersScreen> {
                                             }
                                           } catch (e) {
                                             if (!mounted) return;
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(const SnackBar(
+                                            showTopSnack(
+                                                context,
+                                                const SnackBar(
                                                     content:
                                                         Text('Network error.'),
                                                     backgroundColor:
@@ -14299,13 +14537,11 @@ class _CouponCardClipper extends CustomClipper<Path> {
         ),
       );
     final topNotch = Path()
-      ..addOval(
-          Rect.fromCircle(center: Offset(seamX, 0), radius: notchRadius));
+      ..addOval(Rect.fromCircle(center: Offset(seamX, 0), radius: notchRadius));
     final bottomNotch = Path()
       ..addOval(Rect.fromCircle(
           center: Offset(seamX, size.height), radius: notchRadius));
-    final withTop =
-        Path.combine(PathOperation.difference, outer, topNotch);
+    final withTop = Path.combine(PathOperation.difference, outer, topNotch);
     return Path.combine(PathOperation.difference, withTop, bottomNotch);
   }
 
@@ -14376,12 +14612,14 @@ class _GiftBoxPainter extends CustomPainter {
     final h = size.height;
     // Box body (open top — no bottom lid line to keep it clean)
     canvas.drawRRect(
-        RRect.fromRectAndRadius(Rect.fromLTWH(w * 0.08, h * 0.42, w * 0.84, h * 0.50),
+        RRect.fromRectAndRadius(
+            Rect.fromLTWH(w * 0.08, h * 0.42, w * 0.84, h * 0.50),
             Radius.circular(w * 0.05)),
         paint);
     // Lid
     canvas.drawRRect(
-        RRect.fromRectAndRadius(Rect.fromLTWH(w * 0.01, h * 0.30, w * 0.98, h * 0.15),
+        RRect.fromRectAndRadius(
+            Rect.fromLTWH(w * 0.01, h * 0.30, w * 0.98, h * 0.15),
             Radius.circular(w * 0.04)),
         paint);
     // NOTE: No vertical ribbon line through the body (matches image 2)
@@ -14485,15 +14723,13 @@ class _DiscountCouponCard extends StatelessWidget {
     final double? minVal = voucher?['minimum_spend'] != null
         ? double.tryParse(voucher!['minimum_spend'].toString())
         : null;
-    final String minSpend = minVal != null && minVal > 0
-        ? '₱${minVal.toStringAsFixed(0)}'
-        : '₱0';
+    final String minSpend =
+        minVal != null && minVal > 0 ? '₱${minVal.toStringAsFixed(0)}' : '₱0';
     final double? maxVal = voucher?['max_discount'] != null
         ? double.tryParse(voucher!['max_discount'].toString())
         : null;
-    final String maxOff = maxVal != null && maxVal > 0
-        ? '₱${maxVal.toStringAsFixed(0)}'
-        : '—';
+    final String maxOff =
+        maxVal != null && maxVal > 0 ? '₱${maxVal.toStringAsFixed(0)}' : '—';
 
     return GestureDetector(
       onTap: onTap,
@@ -14517,7 +14753,7 @@ class _DiscountCouponCard extends StatelessWidget {
             final cornerRadius = height * _cornerFraction;
             final notchRadius = height * _notchFraction;
             final leftPad = width * 0.045;
-            final greenContentRight = (width - seamX) + width * 0.025;
+            final greenContentRight = (width - seamX) - width * 0.04;
 
             return SizedBox(
               width: width,
@@ -14535,8 +14771,8 @@ class _DiscountCouponCard extends StatelessWidget {
                     // Pink zigzag right half
                     Positioned.fill(
                       child: CustomPaint(
-                        painter: _ZigzagFillPainter(
-                            seamX: seamX, color: _brandPink),
+                        painter:
+                            _ZigzagFillPainter(seamX: seamX, color: _brandPink),
                       ),
                     ),
 
@@ -14585,17 +14821,16 @@ class _DiscountCouponCard extends StatelessWidget {
                               text: 'DISCOUNT\n',
                               style: _headlineStyle(height)),
                           TextSpan(
-                              text: 'COUPON',
-                              style: _headlineStyle(height)),
+                              text: 'COUPON', style: _headlineStyle(height)),
                         ]),
                       ),
                     ),
 
-                    // Expiry label (small gap below DISCOUNT COUPON)
+                    // Expiry label
                     Positioned(
                       left: leftPad,
                       right: greenContentRight,
-                      top: height * 0.705,
+                      top: height * 0.685,
                       child: Text(
                         expiryLabel,
                         style: TextStyle(
@@ -14609,7 +14844,7 @@ class _DiscountCouponCard extends StatelessWidget {
                     // Discount label + Min/Max (stacked, pushed left to avoid cutoff)
                     Positioned(
                       left: leftPad,
-                      right: greenContentRight + width * 0.01,
+                      right: greenContentRight,
                       bottom: height * 0.06,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -14623,7 +14858,7 @@ class _DiscountCouponCard extends StatelessWidget {
                               fontWeight: FontWeight.w900,
                             ),
                           ),
-                          SizedBox(height: height * 0.06),
+                          SizedBox(height: height * 0.02),
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.end,
@@ -14663,8 +14898,7 @@ class _DiscountCouponCard extends StatelessWidget {
                                     const _GiftBoxPainter(color: Colors.white),
                               ),
                               Padding(
-                                padding:
-                                    EdgeInsets.only(top: height * 0.12),
+                                padding: EdgeInsets.only(top: height * 0.21),
                                 child: FittedBox(
                                   fit: BoxFit.scaleDown,
                                   child: Column(
@@ -14682,7 +14916,7 @@ class _DiscountCouponCard extends StatelessWidget {
                                             color: Colors.white,
                                             fontSize: height * 0.115,
                                             fontWeight: FontWeight.w900,
-                                            height: 0.9,
+                                            height: 0.95,
                                           )),
                                     ],
                                   ),
@@ -15339,7 +15573,8 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
               child: ElevatedButton(
                 onPressed: () {
                   Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => const MainScreen(initialTab: 4)),
+                    MaterialPageRoute(
+                        builder: (_) => const MainScreen(initialTab: 4)),
                     (route) => false,
                   );
                 },
@@ -16149,7 +16384,8 @@ class _RefundScreenState extends State<RefundScreen> {
               ? int.tryParse(data['surcharge_pct'].toString())
               : 0;
           _rebookingSurcharge = _parseDouble(data['rebooking_surcharge']);
-          _rebookingRevalidationFee = _parseDouble(data['rebooking_revalidation_fee']);
+          _rebookingRevalidationFee =
+              _parseDouble(data['rebooking_revalidation_fee']);
           _isLoading = false;
         });
       } else {
@@ -16168,7 +16404,7 @@ class _RefundScreenState extends State<RefundScreen> {
 
   Future<void> _submitRefund() async {
     if (_accountCtrl.text.trim().isEmpty || _nameCtrl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      showTopSnack(context,
           const SnackBar(content: Text('Please fill out all refund details')));
       return;
     }
@@ -16199,12 +16435,14 @@ class _RefundScreenState extends State<RefundScreen> {
             'Refund requested successfully! You will receive an email confirmation shortly.');
       } else {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(data['message'] ?? 'Error submitting refund')));
+        showTopSnack(
+            context,
+            SnackBar(
+                content: Text(data['message'] ?? 'Error submitting refund')));
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      showTopSnack(context,
           const SnackBar(content: Text('Network error. Please try again.')));
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
@@ -16243,7 +16481,10 @@ class _RefundScreenState extends State<RefundScreen> {
   @override
   Widget build(BuildContext context) {
     final baseTicketPrice = (_refundAmount ?? 0) + (_cancellationFee ?? 0);
-    final nonRefundableFees = (_transactionFee ?? 0) + (_webAdminFee ?? 0) + (_rebookingSurcharge ?? 0) + (_rebookingRevalidationFee ?? 0);
+    final nonRefundableFees = (_transactionFee ?? 0) +
+        (_webAdminFee ?? 0) +
+        (_rebookingSurcharge ?? 0) +
+        (_rebookingRevalidationFee ?? 0);
 
     return Scaffold(
         appBar: AppBar(title: const Text('Request Refund')),
@@ -16273,8 +16514,11 @@ class _RefundScreenState extends State<RefundScreen> {
                                   const SizedBox(height: 24),
                                   FilledButton(
                                       onPressed: () {
-                                        Navigator.of(context).pushAndRemoveUntil(
-                                          MaterialPageRoute(builder: (_) => const MainScreen(initialTab: 4)),
+                                        Navigator.of(context)
+                                            .pushAndRemoveUntil(
+                                          MaterialPageRoute(
+                                              builder: (_) => const MainScreen(
+                                                  initialTab: 4)),
                                           (route) => false,
                                         );
                                       },
@@ -16326,8 +16570,10 @@ class _RefundScreenState extends State<RefundScreen> {
                                           _transactionFee!.toStringAsFixed(2),
                                           isSub: true),
                                     if ((_rebookingRevalidationFee ?? 0) > 0)
-                                      _buildBreakdownRow('Revalidation Fee',
-                                          _rebookingRevalidationFee!.toStringAsFixed(2),
+                                      _buildBreakdownRow(
+                                          'Revalidation Fee',
+                                          _rebookingRevalidationFee!
+                                              .toStringAsFixed(2),
                                           isSub: true),
                                   ],
                                   const Padding(
@@ -16620,7 +16866,7 @@ class _RebookScreenState extends State<RebookScreen> {
       final res = await req.send();
       if (res.statusCode == 200) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        showTopSnack(context,
             const SnackBar(content: Text('Rebooking requested successfully')));
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const MainScreen(initialTab: 4)),
@@ -16841,25 +17087,31 @@ class _RebookScreenState extends State<RebookScreen> {
 
               final ticketPrice = _parseDouble(selectedSch['price']);
               final combinedPrice = ticketPrice + _parseDouble(tc['price']);
-              
+
               final isAirline = widget.booking['mode'] == 'airline';
-              
+
               final tcs = widget.booking['transport_classes'] as List? ?? [];
-              final origTcPrice = (tcs.isNotEmpty && isReturn && tcs.length > 1) 
-                  ? _parseDouble(tcs[1]['pivot']['price']) 
-                  : (tcs.isNotEmpty ? _parseDouble(tcs[0]['pivot']['price']) : 0.0);
-              
-              final originalSchPrice = isReturn 
-                  ? _parseDouble(widget.booking['return_schedule_price']) 
+              final origTcPrice = (tcs.isNotEmpty && isReturn && tcs.length > 1)
+                  ? _parseDouble(tcs[1]['pivot']['price'])
+                  : (tcs.isNotEmpty
+                      ? _parseDouble(tcs[0]['pivot']['price'])
+                      : 0.0);
+
+              final originalSchPrice = isReturn
+                  ? _parseDouble(widget.booking['return_schedule_price'])
                   : _parseDouble(widget.booking['schedule_price']);
-              final originalAccPrice = isReturn 
-                  ? _parseDouble(widget.booking['return_schedule_accommodation_price']) 
-                  : _parseDouble(widget.booking['schedule_accommodation_price']);
-                  
-              final originalPerPax = originalSchPrice + origTcPrice + originalAccPrice;
-              
-              final newPerPax = isAirline ? _parseDouble(tc['price']) : combinedPrice;
-              
+              final originalAccPrice = isReturn
+                  ? _parseDouble(
+                      widget.booking['return_schedule_accommodation_price'])
+                  : _parseDouble(
+                      widget.booking['schedule_accommodation_price']);
+
+              final originalPerPax =
+                  originalSchPrice + origTcPrice + originalAccPrice;
+
+              final newPerPax =
+                  isAirline ? _parseDouble(tc['price']) : combinedPrice;
+
               final isTooLow = newPerPax < originalPerPax;
 
               return GestureDetector(
