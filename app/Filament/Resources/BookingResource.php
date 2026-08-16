@@ -35,7 +35,7 @@ class BookingResource extends Resource
     protected static ?int $navigationSort = 10;
     protected static ?string $navigationLabel = 'Bookings';
     
-    protected static ?string $recordTitleAttribute = 'reference_number';
+    protected static ?string $recordTitleAttribute = 'transaction_number';
 
     public static function canAccess(): bool
     {
