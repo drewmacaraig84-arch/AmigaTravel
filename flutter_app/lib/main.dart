@@ -87,7 +87,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.81+92';
+  static const String appVersion = '1.0.82+93';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -1282,20 +1282,22 @@ class _MainScreenState extends State<MainScreen> {
       return InkWell(
         onTap: () => setState(() => _selectedIndex = index),
         customBorder: const CircleBorder(),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(isSelected ? iconActive : iconOutlined, 
-                   color: isSelected ? kPink : kSlate400, size: 26),
-              const SizedBox(height: 2),
-              Text(label, style: TextStyle(
-                   color: isSelected ? kPink : kSlate400,
-                   fontSize: 11,
-                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal)),
-            ],
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 6.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(isSelected ? iconActive : iconOutlined, 
+                     color: isSelected ? kPink : kSlate400, size: 26),
+                const SizedBox(height: 2),
+                Text(label, style: TextStyle(
+                     color: isSelected ? kPink : kSlate400,
+                     fontSize: 11,
+                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal)),
+              ],
+            ),
           ),
         ),
       );
@@ -1447,20 +1449,20 @@ class _MainScreenState extends State<MainScreen> {
       ),
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
-        notchMargin: 6.0,
+        notchMargin: 8.0,
         color: Colors.white,
         elevation: 12,
         shadowColor: Colors.black26,
         child: SizedBox(
           height: 68,
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              buildNavItem(0, Icons.home_outlined, Icons.home, 'Home'),
-              buildNavItem(1, Icons.calendar_month_outlined, Icons.calendar_month, 'Schedules'),
-              const SizedBox(width: 56), // Spacer for the FAB notch
-              buildNavItem(3, Icons.local_activity_outlined, Icons.local_activity, 'Vouchers'),
-              buildNavItem(4, Icons.receipt_long_outlined, Icons.receipt_long, 'Transactions'),
+              Expanded(child: buildNavItem(0, Icons.home_outlined, Icons.home, 'Home')),
+              Expanded(child: buildNavItem(1, Icons.calendar_month_outlined, Icons.calendar_month, 'Schedules')),
+              const SizedBox(width: 72), // Wider spacer to prevent FAB overlap
+              Expanded(child: buildNavItem(3, Icons.local_activity_outlined, Icons.local_activity, 'Vouchers')),
+              Expanded(child: buildNavItem(4, Icons.receipt_long_outlined, Icons.receipt_long, 'Transactions')),
             ],
           ),
         ),
@@ -14559,11 +14561,11 @@ class _DiscountCouponCard extends StatelessWidget {
                       ),
                     ),
 
-                    // Expiry label
+                    // Expiry label — moved UP to avoid overlap with discount section
                     Positioned(
                       left: leftPad,
                       right: greenContentRight,
-                      top: height * 0.685,
+                      top: height * 0.56,
                       child: Text(
                         expiryLabel,
                         style: TextStyle(
@@ -14591,7 +14593,7 @@ class _DiscountCouponCard extends StatelessWidget {
                               fontWeight: FontWeight.w900,
                             ),
                           ),
-                          SizedBox(height: height * 0.02),
+                          SizedBox(height: height * 0.015),
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.end,
@@ -14632,7 +14634,7 @@ class _DiscountCouponCard extends StatelessWidget {
                               ),
                               Padding(
                                 padding:
-                                    EdgeInsets.only(top: height * 0.12),
+                                    EdgeInsets.only(top: height * 0.21),
                                 child: FittedBox(
                                   fit: BoxFit.scaleDown,
                                   child: Column(
@@ -14650,7 +14652,7 @@ class _DiscountCouponCard extends StatelessWidget {
                                             color: Colors.white,
                                             fontSize: height * 0.115,
                                             fontWeight: FontWeight.w900,
-                                            height: 0.9,
+                                            height: 0.95,
                                           )),
                                     ],
                                   ),
