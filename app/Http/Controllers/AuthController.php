@@ -542,6 +542,14 @@ class AuthController extends Controller
                     'idempotency_key' => $refBonusKey
                 ]);
                 $referrer->graciaBalance()->firstOrCreate(['user_id' => $referrer->id])->increment('current_points', $referrerPoints);
+
+                \App\Models\UserNotification::notify(
+                    $referredBy,
+                    'Referral Code Used',
+                    "Someone registered using your referral code! You earned {$referrerPoints} points.",
+                    'reward',
+                    'card_giftcard'
+                );
             }
 
             $refCodeKey = 'ref_code_' . $user->id;

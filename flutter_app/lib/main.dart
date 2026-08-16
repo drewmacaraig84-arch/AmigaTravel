@@ -1350,7 +1350,7 @@ class _MainScreenState extends State<MainScreen> {
               'AMIGA GRACIA',
               style: TextStyle(
                   fontWeight: FontWeight.w900,
-                  fontSize: 16,
+                  fontSize: 14,
                   letterSpacing: 1.2),
             ),
           ],
@@ -1432,6 +1432,7 @@ class _MainScreenState extends State<MainScreen> {
           HomeScreen(
             onBookFerry: () => _navigateToTravel('ferry'),
             onBookAirline: () => _navigateToTravel('airline'),
+            onTrackBooking: () => setState(() => _selectedIndex = 4),
           ),
           const SchedulesScreen(),
           TravelScreen(initialMode: _travelMode),
@@ -1508,11 +1509,13 @@ class _RaisedCenterDockedFabLocation extends FloatingActionButtonLocation {
 class HomeScreen extends StatefulWidget {
   final VoidCallback onBookFerry;
   final VoidCallback onBookAirline;
+  final VoidCallback onTrackBooking;
 
   const HomeScreen({
     super.key,
     required this.onBookFerry,
     required this.onBookAirline,
+    required this.onTrackBooking,
   });
 
   @override
@@ -1748,7 +1751,6 @@ class _HomeScreenState extends State<HomeScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── 1. Immersive Carousel (edge-to-edge, taller) ──────────────────
-          const SizedBox(height: 8),
           SizedBox(
             height: 220,
             child: PageView.builder(
@@ -1832,25 +1834,29 @@ class _HomeScreenState extends State<HomeScreen>
                         color: kGreen, size: 22),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: TextField(
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         hintText: 'Enter booking / tracking number',
                         hintStyle: TextStyle(color: kSlate400, fontSize: 13),
                         border: InputBorder.none,
                         isDense: true,
                       ),
+                      onSubmitted: (_) => widget.onTrackBooking(),
                     ),
                   ),
-                  Container(
-                    margin: const EdgeInsets.only(left: 8),
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: kGreen,
-                      borderRadius: BorderRadius.circular(12),
+                  GestureDetector(
+                    onTap: widget.onTrackBooking,
+                    child: Container(
+                      margin: const EdgeInsets.only(left: 8),
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: kGreen,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.arrow_forward_rounded,
+                          color: Colors.white, size: 18),
                     ),
-                    child: const Icon(Icons.arrow_forward_rounded,
-                        color: Colors.white, size: 18),
                   ),
                 ],
               ),
@@ -12488,6 +12494,7 @@ class _RequestBookingScreenState extends State<RequestBookingScreen> {
   final _passengersCtrl = TextEditingController(text: '1');
   final _notesCtrl = TextEditingController();
   bool _submitted = false;
+  bool _isSubmitting = false;
 
   static const _services = [
     'Ferry Ticket',
@@ -12528,13 +12535,44 @@ class _RequestBookingScreenState extends State<RequestBookingScreen> {
     }
   }
 
-  void _next() {
-    if (_page < 2) {
+  Future<void> _next() async {
+    if (_page < 1) {
       _pageCtrl.nextPage(
           duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
       setState(() => _page++);
     } else {
-      setState(() => _submitted = true);
+      if (_nameCtrl.text.isEmpty || _emailCtrl.text.isEmpty || _notesCtrl.text.isEmpty) {
+        showTopSnack(context, const SnackBar(content: Text('Please fill out Name, Email, and Message.'), backgroundColor: Colors.red));
+        return;
+      }
+      setState(() => _isSubmitting = true);
+      try {
+        final res = await http.post(
+          Uri.parse('${UserSession.getBaseUrl()}/api/inquiries'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': 'Bearer ${UserSession.token}',
+          },
+          body: jsonEncode({
+            'name': _nameCtrl.text,
+            'email': _emailCtrl.text,
+            'subject': 'Booking Inquiry: $_serviceType',
+            'message': _notesCtrl.text,
+          }),
+        );
+        if (res.statusCode == 201 || res.statusCode == 200) {
+          setState(() {
+            _isSubmitting = false;
+            _submitted = true;
+          });
+        } else {
+          throw Exception('Failed to submit');
+        }
+      } catch (e) {
+        setState(() => _isSubmitting = false);
+        showTopSnack(context, const SnackBar(content: Text('Failed to submit request. Please try again.'), backgroundColor: Colors.red));
+      }
     }
   }
 
@@ -12592,7 +12630,7 @@ class _RequestBookingScreenState extends State<RequestBookingScreen> {
                   padding: const EdgeInsets.all(16),
                   child: Row(
                     children: List.generate(
-                        3,
+                        2,
                         (i) => Expanded(
                               child: Row(
                                 children: [
@@ -12605,7 +12643,7 @@ class _RequestBookingScreenState extends State<RequestBookingScreen> {
                                       ),
                                     ),
                                   ),
-                                  if (i < 2) const SizedBox(width: 4),
+                                  if (i < 1) const SizedBox(width: 4),
                                 ],
                               ),
                             )),
@@ -12614,7 +12652,7 @@ class _RequestBookingScreenState extends State<RequestBookingScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Text(
-                    ['Contact Info', 'Trip Details', 'Notes & Submit'][_page],
+                    ['Contact Info', 'Message & Submit'][_page],
                     style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -12644,61 +12682,7 @@ class _RequestBookingScreenState extends State<RequestBookingScreen> {
                             icon: Icons.phone,
                             keyboard: TextInputType.phone),
                       ]),
-                      // Page 2: Trip
-                      _FormPage(children: [
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 14),
-                          child: DropdownButtonFormField<String>(
-                            initialValue: _serviceType,
-                            items: _services
-                                .map((s) =>
-                                    DropdownMenuItem(value: s, child: Text(s)))
-                                .toList(),
-                            onChanged: (v) => setState(() => _serviceType = v!),
-                            decoration: InputDecoration(
-                                labelText: 'Service Type',
-                                prefixIcon:
-                                    const Icon(Icons.category, color: kGreen),
-                                border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10))),
-                          ),
-                        ),
-                        if (_serviceType == 'Ferry Ticket' ||
-                            _serviceType == 'Airline Ticket')
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 14),
-                            child: DropdownButtonFormField<String>(
-                              initialValue: _tripType,
-                              items: _tripTypes
-                                  .map((s) => DropdownMenuItem(
-                                      value: s, child: Text(s)))
-                                  .toList(),
-                              onChanged: (v) => setState(() => _tripType = v!),
-                              decoration: InputDecoration(
-                                  labelText: 'Trip Type',
-                                  prefixIcon: const Icon(Icons.swap_horiz,
-                                      color: kGreen),
-                                  border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10))),
-                            ),
-                          ),
-                        _Field(
-                            ctrl: _fromCtrl,
-                            label: 'From',
-                            icon: Icons.location_on),
-                        _Field(
-                            ctrl: _toCtrl, label: 'To', icon: Icons.navigation),
-                        _Field(
-                            ctrl: _dateCtrl,
-                            label: 'Travel Date (or Date Range)',
-                            icon: Icons.calendar_today),
-                        _Field(
-                            ctrl: _passengersCtrl,
-                            label: 'Number of Passengers',
-                            icon: Icons.people,
-                            keyboard: TextInputType.number),
-                      ]),
-                      // Page 3: Notes
+                      // Page 2: Notes
                       _FormPage(children: [
                         Padding(
                           padding: const EdgeInsets.only(bottom: 14),
@@ -12706,7 +12690,8 @@ class _RequestBookingScreenState extends State<RequestBookingScreen> {
                             controller: _notesCtrl,
                             maxLines: 5,
                             decoration: InputDecoration(
-                              labelText: 'Additional Notes or Requirements',
+                              labelText: 'Travel Details or Message *',
+                              hintText: 'e.g. Origin, Destination, Travel Date, Passengers...',
                               prefixIcon: const Icon(Icons.note, color: kGreen),
                               border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(10)),
@@ -12730,13 +12715,6 @@ class _RequestBookingScreenState extends State<RequestBookingScreen> {
                               _SummaryRow('Name', _nameCtrl.text),
                               _SummaryRow('Email', _emailCtrl.text),
                               _SummaryRow('Service', _serviceType),
-                              if (_serviceType == 'Ferry Ticket' ||
-                                  _serviceType == 'Airline Ticket')
-                                _SummaryRow('Trip Type', _tripType),
-                              _SummaryRow('From → To',
-                                  '${_fromCtrl.text} → ${_toCtrl.text}'),
-                              _SummaryRow('Date', _dateCtrl.text),
-                              _SummaryRow('Passengers', _passengersCtrl.text),
                             ],
                           ),
                         ),
@@ -12768,7 +12746,7 @@ class _RequestBookingScreenState extends State<RequestBookingScreen> {
                       Expanded(
                         flex: 2,
                         child: ElevatedButton(
-                          onPressed: _next,
+                          onPressed: _isSubmitting ? null : _next,
                           style: ElevatedButton.styleFrom(
                               backgroundColor: kPink,
                               foregroundColor: Colors.white,
@@ -12776,9 +12754,11 @@ class _RequestBookingScreenState extends State<RequestBookingScreen> {
                                   borderRadius: BorderRadius.circular(12)),
                               padding:
                                   const EdgeInsets.symmetric(vertical: 14)),
-                          child: Text(_page < 2 ? 'Next' : 'Submit Request',
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 15)),
+                          child: _isSubmitting
+                              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                              : Text(_page < 1 ? 'Next' : 'Submit Request',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold, fontSize: 15)),
                         ),
                       ),
                     ],
@@ -14723,8 +14703,8 @@ class _DiscountCouponCard extends StatelessWidget {
     final String discountLabel = _discountLabel();
     final String expiryLabel =
         _formatVoucherExpiry(voucher?['end_at']?.toString());
-    final double? minVal = voucher?['minimum_spend'] != null
-        ? double.tryParse(voucher!['minimum_spend'].toString())
+    final double? minVal = voucher?['min_booking_amount'] != null
+        ? double.tryParse(voucher!['min_booking_amount'].toString())
         : null;
     final String minSpend =
         minVal != null && minVal > 0 ? '₱${minVal.toStringAsFixed(0)}' : '₱0';
