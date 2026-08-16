@@ -8,7 +8,7 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class DashboardStatsOverview extends BaseWidget
 {
-    protected static ?string $pollingInterval = '30s';
+    protected static ?string $pollingInterval = '5m';
 
     protected static ?int $sort = 1;
 

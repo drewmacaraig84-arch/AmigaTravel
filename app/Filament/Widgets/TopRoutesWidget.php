@@ -10,7 +10,7 @@ class TopRoutesWidget extends Widget
 {
     protected static string $view = 'filament.widgets.top-routes-widget';
 
-    protected static ?string $pollingInterval = '30s';
+    protected static ?string $pollingInterval = '10m';
 
     protected static ?int $sort = 5;
 
