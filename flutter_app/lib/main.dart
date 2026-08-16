@@ -87,7 +87,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.80+91';
+  static const String appVersion = '1.0.81+92';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -664,9 +664,11 @@ class _GlobalUpdateWrapperState extends State<GlobalUpdateWrapper>
         final data = jsonDecode(response.body);
         final latestVersion = data['version'] as String;
         final forceUpdate = data['force_update'] as bool? ?? true;
-        if (forceUpdate &&
-            UserSession.isUpdateRequired(latestVersion) &&
-            mounted) {
+        final updateRequired = UserSession.isUpdateRequired(latestVersion);
+        if (!updateRequired) {
+          UpdateChecker._apkInstallTriggered = false;
+        }
+        if (forceUpdate && updateRequired && mounted) {
           final context = navigatorKey.currentContext;
           if (context != null) {
             if (!mounted) return;
@@ -687,10 +689,15 @@ class _GlobalUpdateWrapperState extends State<GlobalUpdateWrapper>
 class UpdateChecker {
   static String? _lastPromptedVersion;
   static bool _dialogAlreadyVisible = false;
+  static bool _apkInstallTriggered = false;
 
   static Future<void> showUpdateDialog(
       BuildContext context, String latestVersion) async {
     if (_dialogAlreadyVisible && _lastPromptedVersion == latestVersion) {
+      return;
+    }
+
+    if (_apkInstallTriggered && _lastPromptedVersion == latestVersion) {
       return;
     }
 
@@ -765,15 +772,17 @@ class UpdateChecker {
                         }).asFuture();
                         await sink.close();
 
-                        // Persist the current login/session state before leaving the app for APK install.
                         await UserSession.save();
                         if (BookingData.activeSession != null) {
                           await BookingData.activeSession!.saveToPrefs(
                               BookingData.activeSession!.savedStep);
                         }
 
+                        _apkInstallTriggered = true;
+
                         final result = await OpenFilex.open(file.path);
                         if (result.type != ResultType.done) {
+                          _apkInstallTriggered = false;
                           throw Exception(result.message);
                         }
 
@@ -847,15 +856,26 @@ void showTopSnack(
   final messenger = ScaffoldMessenger.of(context);
   messenger.hideCurrentSnackBar();
   messenger.showSnackBar(
-    snackBar.copyWith(
+    SnackBar(
+      content: snackBar.content,
       behavior: SnackBarBehavior.floating,
       margin: EdgeInsets.only(
         top: MediaQuery.of(context).padding.top + 8,
         left: 16,
         right: 16,
-        // Large bottom pushes it to the top in floating mode
         bottom: MediaQuery.of(context).size.height - 160,
       ),
+      duration: snackBar.duration,
+      action: snackBar.action,
+      backgroundColor: snackBar.backgroundColor,
+      shape: snackBar.shape,
+      elevation: snackBar.elevation,
+      padding: snackBar.padding,
+      width: snackBar.width,
+      onVisible: snackBar.onVisible,
+      dismissDirection: snackBar.dismissDirection,
+      showCloseIcon: snackBar.showCloseIcon,
+      closeIconColor: snackBar.closeIconColor,
     ),
   );
 }
@@ -887,10 +907,8 @@ class _SplashLoaderScreenState extends State<SplashLoaderScreen> {
   }
 
   Future<void> _checkVersionAndProceed() async {
-    // 1. Refresh the installed app version before checking for updates.
     await UserSession.refreshInstalledAppVersion();
 
-    // 2. Check for app updates
     try {
       final response = await http
           .get(Uri.parse('${UserSession.getBaseUrl()}/api/app-version'))
@@ -905,15 +923,25 @@ class _SplashLoaderScreenState extends State<SplashLoaderScreen> {
           if (mounted) {
             await UpdateChecker.showUpdateDialog(context, latestVersion);
           }
-          return; // Stop initialization, wait for update
+          await UserSession.refreshInstalledAppVersion();
+          if (!UserSession.isUpdateRequired(latestVersion)) {
+            _navigateForward();
+            return;
+          }
+          _navigationTimer = Timer(const Duration(seconds: 3), () {
+            if (mounted) _checkVersionAndProceed();
+          });
+          return;
         }
       }
     } catch (e) {
       debugPrint('Version check failed: $e');
-      // Proceed if server is unreachable
     }
 
-    // 2. Proceed to app
+    _navigateForward();
+  }
+
+  void _navigateForward() {
     _navigationTimer = Timer(const Duration(seconds: 2), () {
       if (mounted) {
         Navigator.pushReplacement(
