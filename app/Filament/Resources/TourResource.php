@@ -23,6 +23,8 @@ class TourResource extends Resource
     protected static ?string $navigationLabel = 'Tour Packages';
     protected static ?string $pluralModelLabel = 'Tour Packages';
     protected static ?int $navigationSort = 10;
+    
+    protected static ?string $recordTitleAttribute = 'name';
 
     public static function canAccess(): bool
     {
