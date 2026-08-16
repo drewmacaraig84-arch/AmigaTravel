@@ -28,6 +28,12 @@ class ManageWebsiteSettings extends Page implements HasForms
     protected static ?string $title = 'Website Settings';
     protected static string $view = 'filament.pages.manage-website-settings';
 
+    public static function canAccess(): bool
+    {
+        $user = Auth::user();
+        return $user instanceof \App\Models\User && $user->hasAdminPermission('website_settings');
+    }
+
     public ?string $currentPage = 'home';
     public ?array $settingsData = [];
     public bool $editMode = false;
