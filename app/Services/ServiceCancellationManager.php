@@ -479,8 +479,9 @@ class ServiceCancellationManager
 
         if (filled($booking->client_email)) {
             try {
-                $pdfPath = $booking->transaction?->confirmation_pdf ? \Illuminate\Support\Facades\Storage::disk('public')->path($booking->transaction->confirmation_pdf) : null;
-                Mail::to($booking->client_email)->send(new \App\Mail\BookingConfirmation($booking, $booking->transaction?->confirmation_url, $pdfPath, 'public'));
+                $relPdfPath = $booking->transaction?->confirmation_pdf;
+                $diskForPdf = $relPdfPath ? 'public' : null;
+                Mail::to($booking->client_email)->send(new \App\Mail\BookingConfirmation($booking, $booking->transaction?->confirmation_url, $relPdfPath, $diskForPdf));
             } catch (\Exception $e) {
                 Log::error("Failed sending rebooking confirmation mail to {$booking->client_email}: " . $e->getMessage());
             }

@@ -34,7 +34,7 @@
                 Or copy this link: <span style="word-break: break-all;">{{ $ticketUrl }}</span>
             </p>
         @endif
-        @if(! empty($booking->transaction?->confirmation_pdf))
+        @if(! empty($hasTicketAttachment))
             <p style="color:#1e293b; font-weight:600;">
                 📎 Ticket_Confirmation.pdf is attached to this email.
             </p>

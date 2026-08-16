@@ -17,6 +17,7 @@ class BookingConfirmation extends Mailable implements ShouldQueue
     public ?string $ticketUrl;
     public ?string $receiptPath;
     public ?string $receiptDisk;
+    public bool $hasTicketAttachment = false;
 
     public function __construct(Booking $booking, ?string $ticketUrl = null, ?string $receiptPath = null, ?string $receiptDisk = null)
     {
@@ -58,27 +59,69 @@ class BookingConfirmation extends Mailable implements ShouldQueue
         }
 
         if ($this->receiptPath) {
-            if ($this->receiptDisk && Storage::disk($this->receiptDisk)->exists($this->receiptPath)) {
-                $mail->attachFromStorageDisk($this->receiptDisk, $this->receiptPath, 'Ticket_Confirmation.pdf', [
-                    'mime' => 'application/pdf',
-                ]);
-            } else {
-                $publicPath = Storage::disk('public')->path($this->receiptPath);
-                if (file_exists($publicPath)) {
-                    $mail->attach($publicPath, [
-                        'as' => 'Ticket_Confirmation.pdf',
+            $attachInfo = $this->resolveAttachment($this->receiptPath, $this->receiptDisk);
+            if ($attachInfo) {
+                [$resolvedPath, $attachAsDisk, $resolvedDisk] = $attachInfo;
+                if ($attachAsDisk) {
+                    $mail->attachFromStorageDisk($resolvedDisk, $resolvedPath, 'Ticket_Confirmation.pdf', [
                         'mime' => 'application/pdf',
                     ]);
-                } elseif (file_exists($this->receiptPath)) {
-                    $mail->attach($this->receiptPath, [
+                } else {
+                    $mail->attach($resolvedPath, [
                         'as' => 'Ticket_Confirmation.pdf',
                         'mime' => 'application/pdf',
                     ]);
                 }
+                $this->hasTicketAttachment = true;
+            } else {
+                \Illuminate\Support\Facades\Log::warning('BookingConfirmation: ticket PDF could not be located on disk.', [
+                    'booking_id' => $this->booking->id ?? null,
+                    'receiptPath' => $this->receiptPath,
+                    'receiptDisk' => $this->receiptDisk,
+                ]);
             }
         }
 
         return $mail;
     }
 
+    /**
+     * Resolve a receipt path + disk hint into one of:
+     *   - [relativePath, true, diskName]   -> use attachFromStorageDisk
+     *   - [absoluteFsPath, false, null]    -> use attach()
+     * Returns null if file cannot be found.
+     *
+     * Correctly handles callers that accidentally pass an absolute filesystem
+     * path together with a disk (e.g. ServiceCancellationManager).
+     */
+    private function resolveAttachment(string $path, ?string $disk): ?array
+    {
+        // Absolute path on filesystem: always go through attach()
+        if (str_starts_with($path, DIRECTORY_SEPARATOR) ||
+            (strlen($path) > 2 && ctype_alpha($path[0]) && $path[1] === ':')) {
+            if (file_exists($path)) {
+                return [$path, false, null];
+            }
+            return null;
+        }
+
+        // Relative path — try explicit disk first, then 'public' by default
+        $disks = array_values(array_unique(array_filter([$disk, 'public'])));
+        foreach ($disks as $d) {
+            try {
+                if (Storage::disk($d)->exists($path)) {
+                    return [$path, true, $d];
+                }
+            } catch (\Throwable $e) {
+                // Skip misconfigured disks
+            }
+        }
+
+        // Last resort: treat as direct FS path
+        if (file_exists($path)) {
+            return [$path, false, null];
+        }
+
+        return null;
+    }
 }
