@@ -67,7 +67,7 @@
                     {{ $pageContent['welcome_title'] ?? 'Welcome to Amiga Gracia' }}
                 </h1>
                 
-                <p class="mt-4 text-base sm:text-lg text-white/90 max-w-2xl font-medium transition-all duration-300 hover:text-white hover:translate-x-2 cursor-default"
+                <p class="mt-4 text-base sm:text-lg text-white/90 max-w-4xl font-medium transition-all duration-300 hover:text-white hover:translate-x-2 cursor-default"
                    x-show="showSubtitle"
                    x-transition:enter="transition ease-out duration-[800ms] transform"
                    x-transition:enter-start="opacity-0 translate-y-8"
@@ -1737,11 +1737,10 @@
             <a href="{{ url($cardLink) }}" class="group rounded-xl sm:rounded-[2rem] bg-white border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-200 flex flex-col overflow-hidden">
                 @php
                     $isSmallLogo = in_array($cardTitle, ['Cebu Pacific', 'Philippine Airline', 'AirAsia']);
-                    $paddingClass = $isSmallLogo ? 'p-1 sm:p-2' : 'p-2 sm:p-8';
-                    $scaleClass = $isSmallLogo ? 'scale-[1.6] group-hover:scale-[1.7]' : 'scale-100 group-hover:scale-105';
+                    $paddingClass = $isSmallLogo ? 'p-2 sm:p-4' : 'p-2 sm:p-8';
                 @endphp
                 <div class="h-20 sm:h-36 w-full bg-white flex items-center justify-center {{ $paddingClass }} border-b border-slate-100">
-                    <img src="{{ $cardImage }}" alt="{{ $cardTitle }}" class="max-h-full max-w-full object-contain transition-transform duration-300 {{ $scaleClass }}" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80';">
+                    <img src="{{ $cardImage }}" alt="{{ $cardTitle }}" class="max-h-full max-w-full object-contain transition-transform duration-300 scale-100 group-hover:scale-105" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80';">
                 </div>
                 <div class="p-2.5 sm:p-6 flex flex-col flex-grow">
                     <span class="inline-flex items-center gap-1 text-[8px] sm:text-[10px] font-semibold text-[#ee018d] uppercase tracking-wider mb-1 sm:mb-3 leading-tight truncate">
