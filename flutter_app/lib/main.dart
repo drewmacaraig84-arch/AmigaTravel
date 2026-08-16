@@ -1,4 +1,4 @@
-﻿// ignore_for_file: use_build_context_synchronously, curly_braces_in_flow_control_structures, unused_local_variable, unnecessary_cast, unused_field, unused_element
+// ignore_for_file: use_build_context_synchronously, curly_braces_in_flow_control_structures, unused_local_variable, unnecessary_cast, unused_field, unused_element
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -9646,10 +9646,23 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                         widget.booking.tripType == 'one_way'
                             ? 'One-Way'
                             : 'Round Trip'),
-                    _SummaryRow('Schedule',
-                        '${s['service']}  ${s['departure']} – ${s['arrival']}'),
-                    _SummaryRow('Departure Tickets & Class',
-                        '₱${(_parseDouble(s['price']) + (widget.booking.mode == 'ferry' ? (widget.booking.selectedFerryAccommodationPrice ?? 0) : (widget.booking.selectedAirlineClassPrice ?? 0))).toStringAsFixed(2)}'),
+                    if (widget.booking.tripType == 'round_trip') ...[
+                      _SummaryRow('Departure Schedule',
+                          '${s['service']}  ${s['departure']} – ${s['arrival']}'),
+                      _SummaryRow('Departure Ticket & Class',
+                          '₱${(_parseDouble(s['price']) + (widget.booking.mode == 'ferry' ? (widget.booking.selectedFerryAccommodationPrice ?? 0) : (widget.booking.selectedAirlineClassPrice ?? 0))).toStringAsFixed(2)} / pax'),
+                      if (widget.booking.selectedReturnSchedule != null) ...[
+                        _SummaryRow('Return Schedule',
+                            '${widget.booking.selectedReturnSchedule!['service']}  ${widget.booking.selectedReturnSchedule!['departure']} – ${widget.booking.selectedReturnSchedule!['arrival']}'),
+                        _SummaryRow('Return Ticket & Class',
+                            '₱${(_parseDouble(widget.booking.selectedReturnSchedule!['price']) + (widget.booking.mode == 'ferry' ? (widget.booking.selectedReturnFerryAccommodationPrice ?? 0) : (widget.booking.selectedReturnAirlineClassPrice ?? 0))).toStringAsFixed(2)} / pax'),
+                      ],
+                    ] else ...[
+                      _SummaryRow('Schedule',
+                          '${s['service']}  ${s['departure']} – ${s['arrival']}'),
+                      _SummaryRow('Departure Tickets & Class',
+                          '₱${(_parseDouble(s['price']) + (widget.booking.mode == 'ferry' ? (widget.booking.selectedFerryAccommodationPrice ?? 0) : (widget.booking.selectedAirlineClassPrice ?? 0))).toStringAsFixed(2)}'),
+                    ],
                     if (widget.booking.hasExtraBaggage &&
                         widget.booking.mode == 'airline')
                       _SummaryRow('Extra Baggage',
@@ -10049,9 +10062,50 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           _SummarySection(title: 'Payment Summary', children: [
-                            _SummaryRow(
-                                'Departure Tickets & Class (${payingPax}x)',
-                                '₱${(ticketPrice + transportClassCost).toStringAsFixed(2)}'),
+                            if (widget.booking.tripType == 'round_trip') ...[
+                              // Departure leg cost
+                              Builder(builder: (_) {
+                                double depTicket = 0;
+                                double depClass = 0;
+                                if (widget.booking.selectedSchedule != null) {
+                                  final adultP = widget.booking.selectedSchedule!['adult_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0;
+                                  final childP = widget.booking.selectedSchedule!['child_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0;
+                                  depTicket = (payingAdults * (adultP is num ? adultP.toDouble() : double.tryParse(adultP.toString()) ?? 0)) +
+                                      (payingChildren * (childP is num ? childP.toDouble() : double.tryParse(childP.toString()) ?? 0));
+                                }
+                                if (widget.booking.mode == 'ferry') {
+                                  depClass = (widget.booking.selectedFerryAccommodationPrice ?? 0) * payingPax;
+                                } else {
+                                  depClass = (widget.booking.selectedAirlineClassPrice ?? 0) * payingPax;
+                                }
+                                return _SummaryRow(
+                                    'Departure Tickets & Class (${payingPax}x)',
+                                    '₱${(depTicket + depClass).toStringAsFixed(2)}');
+                              }),
+                              // Return leg cost
+                              Builder(builder: (_) {
+                                double retTicket = 0;
+                                double retClass = 0;
+                                if (widget.booking.selectedReturnSchedule != null) {
+                                  final adultP = widget.booking.selectedReturnSchedule!['adult_price'] ?? widget.booking.selectedReturnSchedule!['price'] ?? 0;
+                                  final childP = widget.booking.selectedReturnSchedule!['child_price'] ?? widget.booking.selectedReturnSchedule!['price'] ?? 0;
+                                  retTicket = (payingAdults * (adultP is num ? adultP.toDouble() : double.tryParse(adultP.toString()) ?? 0)) +
+                                      (payingChildren * (childP is num ? childP.toDouble() : double.tryParse(childP.toString()) ?? 0));
+                                }
+                                if (widget.booking.mode == 'ferry') {
+                                  retClass = (widget.booking.selectedReturnFerryAccommodationPrice ?? 0) * payingPax;
+                                } else {
+                                  retClass = (widget.booking.selectedReturnAirlineClassPrice ?? 0) * payingPax;
+                                }
+                                return _SummaryRow(
+                                    'Return Tickets & Class (${payingPax}x)',
+                                    '₱${(retTicket + retClass).toStringAsFixed(2)}');
+                              }),
+                            ] else ...[
+                              _SummaryRow(
+                                  'Departure Tickets & Class (${payingPax}x)',
+                                  '₱${(ticketPrice + transportClassCost).toStringAsFixed(2)}'),
+                            ],
                             if (scheduleAccommodationCost > 0)
                               _SummaryRow('Accommodation',
                                   '₱${scheduleAccommodationCost.toStringAsFixed(2)}'),
@@ -11505,8 +11559,9 @@ class AboutScreen extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                           fontSize: 15)),
                   const SizedBox(height: 14),
-                  // Row 1: 2GO, Starlite, Cebu Pacific
+                  // Row 1: Ferry — 2GO, Starlite
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       _OperatorLogoCard(
                           name: '2GO',
@@ -11517,18 +11572,17 @@ class AboutScreen extends StatelessWidget {
                           name: 'Starlite',
                           logoUrl:
                               '${UserSession.getBaseUrl()}/images/Starlite_Logo.png'),
-                      const SizedBox(width: 8),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // Row 2: Airlines — Cebu Pacific, Philippine Airlines, AirAsia
+                  Row(
+                    children: [
                       _OperatorLogoCard(
                           name: 'Cebu Pacific',
                           logoUrl:
                               '${UserSession.getBaseUrl()}/images/CebuPecific-Logo.png'),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  // Row 2: Philippine Airlines, AirAsia (centered)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
+                      const SizedBox(width: 8),
                       _OperatorLogoCard(
                           name: 'Philippine Airlines',
                           logoUrl:
@@ -12510,6 +12564,11 @@ class _RequestBookingScreenState extends State<RequestBookingScreen> {
   @override
   void initState() {
     super.initState();
+    // Always pre-fill from UserSession
+    _nameCtrl.text = UserSession.username;
+    _emailCtrl.text = UserSession.email;
+    _phoneCtrl.text = UserSession.phone;
+
     final pkg = widget.package;
     if (pkg != null) {
       _serviceType = 'Tour Package';
@@ -12518,9 +12577,6 @@ class _RequestBookingScreenState extends State<RequestBookingScreen> {
       _dateCtrl.text = pkg['available_dates'] ?? '';
       _passengersCtrl.text = '1';
       _notesCtrl.text = pkg['inclusions'] ?? '';
-      _nameCtrl.text = UserSession.username;
-      _emailCtrl.text = UserSession.email;
-      _phoneCtrl.text = UserSession.phone;
     } else if (widget.initialData != null) {
       final init = widget.initialData!;
       _serviceType =
@@ -12531,9 +12587,6 @@ class _RequestBookingScreenState extends State<RequestBookingScreen> {
       if (init['operator'] != null) {
         _notesCtrl.text = 'Preferred Operator: ${init['operator']}';
       }
-      _nameCtrl.text = UserSession.username;
-      _emailCtrl.text = UserSession.email;
-      _phoneCtrl.text = UserSession.phone;
     }
   }
 
@@ -12690,34 +12743,14 @@ class _RequestBookingScreenState extends State<RequestBookingScreen> {
                           padding: const EdgeInsets.only(bottom: 14),
                           child: TextField(
                             controller: _notesCtrl,
-                            maxLines: 5,
+                            maxLines: 7,
                             decoration: InputDecoration(
                               labelText: 'Travel Details or Message *',
-                              hintText: 'e.g. Origin, Destination, Travel Date, Passengers...',
+                              hintText: 'e.g. Origin, Destination, Travel Date, Passengers, Service Type...',
                               prefixIcon: const Icon(Icons.note, color: kGreen),
                               border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(10)),
                             ),
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                              color: kGreen.withValues(alpha: 0.05),
-                              borderRadius: BorderRadius.circular(12)),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Summary',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
-                                      color: kSlate800)),
-                              const Divider(),
-                              _SummaryRow('Name', _nameCtrl.text),
-                              _SummaryRow('Email', _emailCtrl.text),
-                              _SummaryRow('Service', _serviceType),
-                            ],
                           ),
                         ),
                       ]),
@@ -14826,7 +14859,7 @@ class _DiscountCouponCard extends StatelessWidget {
                       ),
                     ),
 
-                    // Discount label + Min/Max (stacked, pushed left to avoid cutoff)
+                    // Discount label + Min/Max inline in one row
                     Positioned(
                       left: leftPad,
                       right: greenContentRight,
@@ -14835,15 +14868,6 @@ class _DiscountCouponCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            '$discountLabel OFF',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: height * 0.078,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          SizedBox(height: height * 0.02),
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.end,
@@ -14856,6 +14880,11 @@ class _DiscountCouponCard extends StatelessWidget {
                               _VoucherMiniStat(
                                   label: 'Max off',
                                   value: maxOff,
+                                  height: height),
+                              SizedBox(width: width * 0.06),
+                              _VoucherMiniStat(
+                                  label: 'Discount',
+                                  value: '$discountLabel OFF',
                                   height: height),
                             ],
                           ),
