@@ -9,6 +9,7 @@
         "php": "^8.3",
         "anhskohbo/no-captcha": "^3.8",
         "barryvdh/laravel-dompdf": "*",
+        "charrafimed/global-search-modal": "^3.7",
         "dompdf/dompdf": "^3.1",
         "filament/filament": "^3.3",
         "filament/support": "^3.3",

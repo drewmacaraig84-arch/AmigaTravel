@@ -112,6 +112,9 @@ class AdminPanelProvider extends PanelProvider
             ->widgets([
                 // Removed AccountWidget
             ])
+            ->plugins([
+                \CharrafiMed\GlobalSearchModal\GlobalSearchModalPlugin::make(),
+            ])
             ->navigationGroups([
                 'Bookings',
                 'Travel & Tours',

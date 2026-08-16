@@ -19,6 +19,7 @@ class TourResource extends Resource
     protected static ?string $model = Tour::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationGroup = 'Travel & Tours';
     protected static ?string $navigationLabel = 'Tour Packages';
     protected static ?string $pluralModelLabel = 'Tour Packages';
     protected static ?int $navigationSort = 10;
