@@ -32,6 +32,11 @@ class ManageTransportAccommodation extends Page implements HasForms, HasTable
     protected static ?int $navigationSort = 1;
     protected static string $view = 'filament.pages.manage-transport-accommodation';
     
+    public static function canAccess(): bool
+    {
+        $user = auth()->user();
+        return $user instanceof \App\Models\User && $user->hasAdminPermission('ferry_airline');
+    }
     public ?string $mode = null; // 'airline' or 'ferry'
     public ?string $selectedOperator = null;
     public array $ferryOperators = ['2GO', 'Starlite'];
