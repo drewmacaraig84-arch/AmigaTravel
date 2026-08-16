@@ -7375,6 +7375,8 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                                       null)
                                 _buildPromoTicketBanner(widget.booking
                                     .selectedSchedule!['promotional_ticket']),
+                              if (widget.booking.selectedSchedule != null)
+                                _buildTransportClassesSelection(isReturn: false),
                               Padding(
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 16.0, vertical: 8.0),
