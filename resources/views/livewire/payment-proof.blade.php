@@ -143,11 +143,18 @@
                     <input type="file" wire:model.live="proof" class="hidden" />
                 </label>
                 @if($proof)
-                    <div class="mt-3 text-sm text-emerald-700 flex items-center gap-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                        </svg>
-                        File selected: {{ $proof->getClientOriginalName() }}
+                    <div class="mt-3 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 shadow-sm">
+                        <img src="{{ $proof->temporaryUrl() }}" alt="Proof preview" class="h-16 w-16 rounded-lg object-cover border border-emerald-200 bg-white" />
+                        <div class="min-w-0 flex-1">
+                            <p class="text-sm font-bold text-emerald-700 truncate">{{ $proof->getClientOriginalName() }}</p>
+                            <p class="text-xs text-emerald-700/80">File selected successfully</p>
+                        </div>
+                        <label class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-emerald-200 bg-white text-emerald-700 hover:bg-emerald-100 cursor-pointer" title="Change image">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                            </svg>
+                            <input type="file" wire:model.live="proof" class="hidden" />
+                        </label>
                     </div>
                 @endif
                 @error('proof')<p class="mt-2 text-sm text-rose-600">{{ $message }}</p>@enderror

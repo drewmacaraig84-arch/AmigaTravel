@@ -929,26 +929,41 @@
                                                     </div>
                                                 </div>
 
-                                                <div class="mt-4 border-2 border-dashed border-blue-200 bg-blue-50/50 rounded-2xl p-6 text-center hover:bg-blue-50 transition">
-                                                    <label class="cursor-pointer">
-                                                        <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 mb-3">
-                                                            <svg class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                                                        </div>
-                                                        <span class="block text-sm font-bold text-blue-900">Upload Proof of Payment</span>
-                                                        <span class="mt-1 block text-xs text-blue-600">Click to browse for GCash or Maya receipt</span>
-                                                        <input type="file" wire:model="rebookingProof" class="hidden" accept="image/*" />
-                                                    </label>
-                                                    <div wire:loading wire:target="rebookingProof" class="mt-3 text-xs font-medium text-blue-500 flex items-center justify-center">
-                                                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                                                        Uploading file...
+                                                <div class="mt-4 space-y-4">
+                                                    <div>
+                                                        <label for="rebooking-reference-number" class="mb-2 block text-sm font-semibold text-slate-700">Reference Number</label>
+                                                        <input id="rebooking-reference-number" type="text" wire:model.defer="rebooking_reference_number" class="block w-full rounded-xl border border-slate-300 bg-white px-4 py-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all" placeholder="e.g., GCash Ref No. / Bank Transfer Ref No." />
+                                                        @error('rebooking_reference_number')<p class="mt-2 text-sm font-bold text-rose-600">{{ $message }}</p>@enderror
                                                     </div>
-                                                    @if($rebookingProof)
-                                                        <p class="mt-3 text-sm font-bold text-emerald-600 flex items-center justify-center gap-1">
-                                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
-                                                            File selected successfully
-                                                        </p>
-                                                    @endif
-                                                    @error('rebookingProof')<p class="mt-3 text-sm font-bold text-rose-600">{{ $message }}</p>@enderror
+
+                                                    <div class="border-2 border-dashed border-blue-200 bg-blue-50/50 rounded-2xl p-6 text-center hover:bg-blue-50 transition">
+                                                        <label class="cursor-pointer">
+                                                            <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 mb-3">
+                                                                <svg class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                                                            </div>
+                                                            <span class="block text-sm font-bold text-blue-900">Upload Proof of Payment</span>
+                                                            <span class="mt-1 block text-xs text-blue-600">Click to browse for GCash or Maya receipt</span>
+                                                            <input type="file" wire:model="rebookingProof" class="hidden" accept="image/*" />
+                                                        </label>
+                                                        <div wire:loading wire:target="rebookingProof" class="mt-3 text-xs font-medium text-blue-500 flex items-center justify-center">
+                                                            <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                                            Uploading file...
+                                                        </div>
+                                                        @if($rebookingProof)
+                                                            <div class="mt-4 flex items-center justify-center gap-3 rounded-xl border border-emerald-200 bg-white p-3 text-left shadow-sm">
+                                                                <img src="{{ $rebookingProof->temporaryUrl() }}" alt="Rebooking proof preview" class="h-16 w-16 rounded-lg object-cover border border-slate-200" />
+                                                                <div class="flex-1 min-w-0">
+                                                                    <p class="text-sm font-bold text-emerald-700 truncate">{{ $rebookingProof->getClientOriginalName() }}</p>
+                                                                    <p class="text-xs text-slate-500">File selected successfully</p>
+                                                                </div>
+                                                                <label class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 cursor-pointer" title="Change image">
+                                                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                                                                    <input type="file" wire:model="rebookingProof" class="hidden" accept="image/*" />
+                                                                </label>
+                                                            </div>
+                                                        @endif
+                                                        @error('rebookingProof')<p class="mt-3 text-sm font-bold text-rose-600">{{ $message }}</p>@enderror
+                                                    </div>
                                                 </div>
 
                                                 <div class="flex flex-wrap gap-3 pt-2">

@@ -34,6 +34,7 @@ class BookingLookup extends Component
     public bool $rebookingRequested = false;
     public bool $rebookingPaid = false;
     public bool $rebooking_is_round_trip = false;
+    public ?string $rebooking_reference_number = null;
     public $rebookingProof;
     public bool $isUploadingRebooking = false;
     public ?string $rebooking_departure_date = null;
@@ -69,6 +70,7 @@ class BookingLookup extends Component
     public array $availableRebookingReturnDates = [];
 
     protected $rules = [
+        'rebooking_reference_number' => 'required|string|max:120',
         'rebookingProof' => 'nullable|image|max:10240',
         'rebooking_departure_date' => 'required|date',
         'rebooking_is_round_trip' => 'boolean',
@@ -812,18 +814,21 @@ class BookingLookup extends Component
     public function submitRebookingProof(): void
     {
         $this->validate([
+            'rebooking_reference_number' => 'required|string|max:120',
             'rebookingProof' => 'required|image|max:10240',
         ]);
 
         $this->isUploadingRebooking = true;
 
         $extension = $this->rebookingProof->extension();
-        $filename = 'rebook_proof_' . $this->booking->transaction_number . '_' . uniqid() . '.' . $extension;
+        $safeReference = preg_replace('/[^A-Za-z0-9_-]/', '', $this->rebooking_reference_number ?? uniqid());
+        $filename = 'rebook_proof_' . $this->booking->transaction_number . '_' . $safeReference . '.' . $extension;
         $path = $this->rebookingProof->storeAs('rebooking_proofs', $filename, 'public');
 
         $this->booking->transaction->update([
             'rebooking_fee' => $this->rebooking_total_to_pay,
             'rebooking_proof_of_payment' => $path,
+            'payment_reference' => $this->rebooking_reference_number,
         ]);
 
         $this->booking->update([
@@ -910,6 +915,7 @@ class BookingLookup extends Component
         $this->rebookingRequested = false;
         $this->rebookingPaid = false;
         $this->rebooking_is_round_trip = false;
+        $this->rebooking_reference_number = null;
         $this->rebookingProof = null;
         $this->isUploadingRebooking = false;
         $this->rebooking_departure_date = null;
