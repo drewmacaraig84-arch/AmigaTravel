@@ -64,7 +64,9 @@ class InquiryResource extends Resource
                 Forms\Components\TextInput::make('subject')
                     ->maxLength(255),
                 Forms\Components\Textarea::make('message')
-                    ->required(),
+                    ->required()
+                    ->rows(10)
+                    ->columnSpanFull(),
             ]);
     }
 
