@@ -113,7 +113,7 @@ class AdminPanelProvider extends PanelProvider
                 // Removed AccountWidget
             ])
             ->plugins([
-                \CharrafiMed\GlobalSearchModal\GlobalSearchModalPlugin::make(),
+                \pxlrbt\FilamentSpotlight\SpotlightPlugin::make(),
             ])
             ->navigationGroups([
                 'Bookings',
