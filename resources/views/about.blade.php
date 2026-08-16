@@ -36,9 +36,9 @@
                 </h2>
                 <div class="text-black font-semibold leading-relaxed space-y-4">
                     {!! data_get($pageContent, 'history_content', "
-                        <p>Amiga Gracia was established in <strong>July 2017</strong>. Its humble beginning was born from the dedication of its founder, <strong>Mrs. MGA-Ting</strong>, whose extensive experience with 2GO laid the foundation for the company's first-class standard of service.</p>
-                        <p>What started in the municipality of Roxas, Oriental Mindoro has expanded. Following the challenges of the pandemic, our main office relocated to the thriving <strong>City of Calapan</strong>, positioned to serve travelers better than ever.</p>
-                        <p>Our core ambition remains unchanged: to be recognized as the premier travel agency providing outstanding travel solutions and apprenticeship programs, both in Oriental Mindoro and nationwide.</p>
+                        <p>Amiga Gracia was established on <strong>July 2017</strong>. It's humble beginning was born from the dedication of its owner <strong>Ms. Mary Grace Antaran - Ting</strong>. The experience she gained from 2GO company laid the foundation of the company's first class service, the Travel Agency was then given a partnership with 2GO and later with Starlite Ferries and Supercat, providing apprenticeship trainings, educational tours and and travel services.</p>
+                        <p>The first location of its founding office operated within the municipality of Roxas, Oriental Mindoro and was later relocated within the City of Calapan after the pandemic. The company's main goal is to be named as one of the top Agency providing Travel Services not just in Oriental Mindoro but outside the province as well.</p>
+                        <p>Backed by top companies, Amiga Gracia defines travel experience with first class service.</p>
                     ") !!}
                 </div>
             </div>
@@ -48,15 +48,18 @@
                 <div class="absolute top-0 right-0 h-40 w-40 bg-emerald-50 rounded-full -mr-16 -mt-16 z-0"></div>
                 <div class="relative z-10 space-y-6">
                     <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
-                        <span class="h-2 w-2 rounded-full bg-emerald-600"></span> {{ data_get($pageContent, 'quick_facts_title', 'Did you know?') }}
+                        <span class="h-2 w-2 rounded-full bg-emerald-600"></span> {{ data_get($pageContent, 'quick_facts_title', 'Core Values') }}
                     </h3>
                     
                     <div class="space-y-4">
                         @php
                             $quickFacts = data_get($pageContent, 'quick_facts', [
-                                ['title' => 'Established', 'desc' => 'July 2017 in Oriental Mindoro', 'color' => 'emerald'],
-                                ['title' => 'Key Partnerships', 'desc' => '2GO and Starlite', 'color' => 'green'],
-                                ['title' => 'Specialty', 'desc' => 'Ferry bookings, Educational tours, Apprenticeship programs', 'color' => 'blue'],
+                                ['title' => 'Growth & Innovation', 'desc' => '', 'letter' => 'G', 'color' => 'emerald'],
+                                ['title' => 'Responsibility & Integrity', 'desc' => '', 'letter' => 'R', 'color' => 'emerald'],
+                                ['title' => 'Accountability', 'desc' => '', 'letter' => 'A', 'color' => 'emerald'],
+                                ['title' => 'Customer Excellence', 'desc' => '', 'letter' => 'C', 'color' => 'emerald'],
+                                ['title' => 'Inclusivity & Collaboration', 'desc' => '', 'letter' => 'I', 'color' => 'emerald'],
+                                ['title' => 'Assurance of quality & Safety', 'desc' => '', 'letter' => 'A', 'color' => 'emerald'],
                             ]);
                         @endphp
                         @foreach($quickFacts as $index => $fact)
@@ -71,13 +74,15 @@
                                 ];
                                 $colorClasses = $colors[$color] ?? $colors['emerald'];
                             @endphp
-                            <div class="flex gap-4">
-                                <div class="flex-shrink-0 h-10 w-10 {{ $colorClasses['bg'] }} rounded-xl flex items-center justify-center {{ $colorClasses['text'] }} font-semibold">
-                                    {{ str_pad($index + 1, 2, '0', STR_PAD_LEFT) }}
+                            <div class="flex gap-4 items-center">
+                                <div class="flex-shrink-0 h-10 w-10 {{ $colorClasses['bg'] }} rounded-xl flex items-center justify-center {{ $colorClasses['text'] }} font-semibold text-lg">
+                                    {{ data_get($fact, 'letter', str_pad($index + 1, 2, '0', STR_PAD_LEFT)) }}
                                 </div>
                                 <div>
                                     <h4 class="font-bold text-slate-900">{{ data_get($fact, 'title') }}</h4>
-                                    <p class="text-sm text-slate-500">{{ data_get($fact, 'desc') }}</p>
+                                    @if(data_get($fact, 'desc'))
+                                        <p class="text-sm text-slate-500">{{ data_get($fact, 'desc') }}</p>
+                                    @endif
                                 </div>
                             </div>
                         @endforeach
