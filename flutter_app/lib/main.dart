@@ -1,4 +1,4 @@
-// ignore_for_file: use_build_context_synchronously, curly_braces_in_flow_control_structures, unused_local_variable, unnecessary_cast, unused_field, unused_element
+﻿// ignore_for_file: use_build_context_synchronously, curly_braces_in_flow_control_structures, unused_local_variable, unnecessary_cast, unused_field, unused_element
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -87,7 +87,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.86+97';
+  static const String appVersion = '1.0.87+98';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
