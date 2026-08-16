@@ -1,4 +1,4 @@
-// ignore_for_file: use_build_context_synchronously, curly_braces_in_flow_control_structures, unused_local_variable, unnecessary_cast, unused_field, unused_element
+﻿// ignore_for_file: use_build_context_synchronously, curly_braces_in_flow_control_structures, unused_local_variable, unnecessary_cast, unused_field, unused_element
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -87,7 +87,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.78+89';
+  static const String appVersion = '1.0.80+91';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -587,17 +587,16 @@ Future<void> handleNotificationTap(Map<String, dynamic> data) async {
               ),
             );
           } else {
-            ScaffoldMessenger.of(context).showSnackBar(
+            showTopSnack(context, 
                 const SnackBar(content: Text('Booking details not found.')));
           }
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
+          showTopSnack(context, 
               const SnackBar(content: Text('Failed to load booking details.')));
         }
       } catch (e) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+        showTopSnack(context, SnackBar(content: Text('Error: $e')));
       }
     }
   } else if (type == 'promo') {
@@ -838,6 +837,29 @@ class MyApp extends StatelessWidget {
   }
 }
 
+
+// â”€â”€ Top Snackbar Helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+/// Shows a snackbar anchored to the TOP of the screen.
+void showTopSnack(
+  BuildContext context,
+  SnackBar snackBar,
+) {
+  final messenger = ScaffoldMessenger.of(context);
+  messenger.hideCurrentSnackBar();
+  messenger.showSnackBar(
+    snackBar.copyWith(
+      behavior: SnackBarBehavior.floating,
+      margin: EdgeInsets.only(
+        top: MediaQuery.of(context).padding.top + 8,
+        left: 16,
+        right: 16,
+        // Large bottom pushes it to the top in floating mode
+        bottom: MediaQuery.of(context).size.height - 160,
+      ),
+    ),
+  );
+}
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // ==========================================
 // SPLASH & ONBOARDING
 // ==========================================
@@ -1383,7 +1405,7 @@ class _MainScreenState extends State<MainScreen> {
               key: _activityKey, onLoginSuccess: () => setState(() {})),
         ],
       ),
-      floatingActionButtonLocation: const _RaisedCenterDockedFabLocation(riseAboveNotch: 6),
+      floatingActionButtonLocation: const _RaisedCenterDockedFabLocation(riseAboveNotch: -8),
       floatingActionButton: SizedBox(
         width: 60,
         height: 60,
@@ -2915,7 +2937,7 @@ class _TravelScreenState extends State<TravelScreen>
             _availableReturnDates = [];
           });
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
+            showTopSnack(context, 
               const SnackBar(
                 content: Text(
                     'No return schedule exists for this route in Round Trip mode. Please select a different destination.'),
@@ -3052,7 +3074,7 @@ class _TravelScreenState extends State<TravelScreen>
           _driverFirstNameCtrl.text.trim().isEmpty ||
           _driverLastNameCtrl.text.trim().isEmpty ||
           _driverBirthdayCtrl.text.trim().isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        showTopSnack(context, 
           const SnackBar(
             content:
                 Text('Please fill out all required vehicle booking fields.'),
@@ -4340,7 +4362,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
     final name = _nameCtrl.text.trim();
 
     if (name.isEmpty || email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      showTopSnack(context, 
         const SnackBar(
             content: Text('Please fill in your username, email, and password.'),
             backgroundColor: Colors.red),
@@ -4348,7 +4370,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
       return;
     }
     if (password.length < 8) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      showTopSnack(context, 
         const SnackBar(
             content: Text('Password must be at least 8 characters.'),
             backgroundColor: Colors.red),
@@ -4356,7 +4378,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
       return;
     }
     if (!_agreeTerms || !_agreePrivacy) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      showTopSnack(context, 
         const SnackBar(
           content: Text(
               'You must agree to the Terms & Conditions and Data Privacy Policy to register.'),
@@ -4386,7 +4408,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
           _startOtpTimer();
         });
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        showTopSnack(context, 
           SnackBar(
               content: Text(data['message'] ?? 'OTP sent! Check your email.'),
               backgroundColor: kGreen),
@@ -4396,13 +4418,13 @@ class _ActivityScreenState extends State<ActivityScreen> {
             data['errors']?.values?.first?.first ??
             'Could not send OTP.';
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        showTopSnack(context, 
           SnackBar(content: Text(msg), backgroundColor: Colors.red),
         );
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      showTopSnack(context, 
         SnackBar(
             content: Text('Connection error: $e'), backgroundColor: Colors.red),
       );
@@ -4415,7 +4437,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
   Future<void> _verifyRegisterOtp() async {
     final otp = _otpCtrl.text.trim();
     if (otp.length != 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      showTopSnack(context, 
         const SnackBar(
             content: Text('Enter the 6-digit code sent to your email.'),
             backgroundColor: Colors.red),
@@ -4464,7 +4486,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
         widget.onLoginSuccess();
         _fetchBookings();
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        showTopSnack(context, 
           SnackBar(
               content:
                   Text(data['message'] ?? 'Welcome, ${UserSession.username}!'),
@@ -4472,7 +4494,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
         );
       } else {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        showTopSnack(context, 
           SnackBar(
               content: Text(data['message'] ?? 'Verification failed.'),
               backgroundColor: Colors.red),
@@ -4480,7 +4502,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      showTopSnack(context, 
         SnackBar(
             content: Text('Connection error: $e'), backgroundColor: Colors.red),
       );
@@ -4501,7 +4523,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
       final data = jsonDecode(response.body);
       if (response.statusCode == 200 && data['status'] == 'success') {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        showTopSnack(context, 
           SnackBar(
               content: Text(data['message'] ?? 'A new code has been sent.'),
               backgroundColor: kGreen),
@@ -4510,7 +4532,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
         _startOtpTimer();
       } else {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        showTopSnack(context, 
           SnackBar(
               content: Text(data['message'] ?? 'Could not resend OTP.'),
               backgroundColor: Colors.red),
@@ -4518,7 +4540,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      showTopSnack(context, 
         SnackBar(
             content: Text('Connection error: $e'), backgroundColor: Colors.red),
       );
@@ -4532,7 +4554,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
     final password = _passCtrl.text;
 
     if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      showTopSnack(context, 
         const SnackBar(
             content: Text('Please fill out all required fields.'),
             backgroundColor: Colors.red),
@@ -4568,7 +4590,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
         widget.onLoginSuccess();
         _fetchBookings();
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        showTopSnack(context, 
           SnackBar(
               content: Text('Welcome back, ${data['user']['name']}!'),
               backgroundColor: kGreen),
@@ -4577,13 +4599,13 @@ class _ActivityScreenState extends State<ActivityScreen> {
         final errorMsg = data['message'] ??
             'Authentication failed. Please check your credentials.';
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        showTopSnack(context, 
           SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
         );
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      showTopSnack(context, 
         SnackBar(
             content: Text('Error connecting to server: $e'),
             backgroundColor: Colors.red),
@@ -4669,7 +4691,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                             : () async {
                                 final email = emailController.text.trim();
                                 if (email.isEmpty || !email.contains('@')) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  showTopSnack(context, 
                                     const SnackBar(
                                         content: Text(
                                             'Please enter a valid email address.'),
@@ -4693,7 +4715,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                                       modalLoading = false;
                                     });
                                     if (!mounted) return;
-                                    ScaffoldMessenger.of(context).showSnackBar(
+                                    showTopSnack(context, 
                                       SnackBar(
                                           content: Text(data['message'] ??
                                               'Reset code sent! Check your email.'),
@@ -4703,7 +4725,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                                     final msg = data['message'] ??
                                         'Failed to send verification code.';
                                     if (!mounted) return;
-                                    ScaffoldMessenger.of(context).showSnackBar(
+                                    showTopSnack(context, 
                                       SnackBar(
                                           content: Text(msg),
                                           backgroundColor: Colors.red),
@@ -4711,7 +4733,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                                   }
                                 } catch (e) {
                                   if (!mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  showTopSnack(context, 
                                     SnackBar(
                                         content: Text('Connection error: $e'),
                                         backgroundColor: Colors.red),
@@ -4806,7 +4828,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                                 final newPass = passController.text;
                                 final confirmPass = confirmPassController.text;
                                 if (otp.length != 6) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  showTopSnack(context, 
                                     const SnackBar(
                                         content: Text(
                                             'Please enter the 6-digit code.'),
@@ -4815,7 +4837,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                                   return;
                                 }
                                 if (newPass.length < 8) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  showTopSnack(context, 
                                     const SnackBar(
                                         content: Text(
                                             'Password must be at least 8 characters.'),
@@ -4824,7 +4846,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                                   return;
                                 }
                                 if (newPass != confirmPass) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  showTopSnack(context, 
                                     const SnackBar(
                                         content:
                                             Text('Passwords do not match.'),
@@ -4857,7 +4879,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                                       _isSignUp = false;
                                     });
                                     if (!mounted) return;
-                                    ScaffoldMessenger.of(context).showSnackBar(
+                                    showTopSnack(context, 
                                       SnackBar(
                                           content: Text(data['message'] ??
                                               'Password reset successfully! Please log in.'),
@@ -4867,7 +4889,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                                     final msg = data['message'] ??
                                         'Failed to reset password.';
                                     if (!mounted) return;
-                                    ScaffoldMessenger.of(context).showSnackBar(
+                                    showTopSnack(context, 
                                       SnackBar(
                                           content: Text(msg),
                                           backgroundColor: Colors.red),
@@ -4875,7 +4897,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                                   }
                                 } catch (e) {
                                   if (!mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  showTopSnack(context, 
                                     SnackBar(
                                         content: Text('Connection error: $e'),
                                         backgroundColor: Colors.red),
@@ -5631,7 +5653,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
 
   void _showMessage(String message, {bool error = false}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+    showTopSnack(context, SnackBar(
         content: Text(message), backgroundColor: error ? Colors.red : kGreen));
   }
 
@@ -6445,7 +6467,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      showTopSnack(context, 
         const SnackBar(
             content: Text('Profile updated'), backgroundColor: kGreen),
       );
@@ -6644,8 +6666,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             modalLoading = false;
                                           });
                                           if (!mounted) return;
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(
+                                          showTopSnack(context, 
                                             SnackBar(
                                                 content: Text(data['message'] ??
                                                     'OTP sent! Check your email.'),
@@ -6655,8 +6676,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           final msg = data['message'] ??
                                               'Failed to send OTP.';
                                           if (!mounted) return;
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(SnackBar(
+                                          showTopSnack(context, SnackBar(
                                                   content: Text(msg),
                                                   backgroundColor: Colors.red));
                                           Navigator.pop(ctx);
@@ -6665,8 +6685,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         setModalState(
                                             () => modalLoading = false);
                                         if (!mounted) return;
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(const SnackBar(
+                                        showTopSnack(context, const SnackBar(
                                                 content: Text('Network error'),
                                                 backgroundColor: Colors.red));
                                       }
@@ -6727,24 +6746,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       if (otp.isEmpty ||
                                           newPassword.isEmpty ||
                                           confirmPassword.isEmpty) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(const SnackBar(
+                                        showTopSnack(context, const SnackBar(
                                                 content: Text(
                                                     'All fields are required.'),
                                                 backgroundColor: Colors.red));
                                         return;
                                       }
                                       if (newPassword != confirmPassword) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(const SnackBar(
+                                        showTopSnack(context, const SnackBar(
                                                 content: Text(
                                                     'Passwords do not match.'),
                                                 backgroundColor: Colors.red));
                                         return;
                                       }
                                       if (newPassword.length < 6) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(const SnackBar(
+                                        showTopSnack(context, const SnackBar(
                                                 content: Text(
                                                     'Password must be at least 6 characters.'),
                                                 backgroundColor: Colors.red));
@@ -6771,8 +6787,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         if (res.statusCode == 200 &&
                                             data['status'] == 'success') {
                                           if (!mounted) return;
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(
+                                          showTopSnack(context, 
                                             SnackBar(
                                                 content: Text(data['message'] ??
                                                     'Password reset successfully.'),
@@ -6783,8 +6798,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           final msg = data['message'] ??
                                               'Failed to reset password.';
                                           if (!mounted) return;
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(SnackBar(
+                                          showTopSnack(context, SnackBar(
                                                   content: Text(msg),
                                                   backgroundColor: Colors.red));
                                           setModalState(
@@ -6794,8 +6808,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         setModalState(
                                             () => modalLoading = false);
                                         if (!mounted) return;
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(const SnackBar(
+                                        showTopSnack(context, const SnackBar(
                                                 content: Text('Network error'),
                                                 backgroundColor: Colors.red));
                                       }
@@ -8415,7 +8428,7 @@ class _DiscountScreenState extends State<DiscountScreen> {
 
         if (discName == 'student') {
           if (_idFrontBase64[i] == null || _idBackBase64[i] == null) {
-            ScaffoldMessenger.of(context).showSnackBar(
+            showTopSnack(context, 
               SnackBar(
                 content: Text(
                     'Please upload both Front and Back ID images for Passenger #${i + 1}.'),
@@ -9140,7 +9153,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
               'original_subtotal': d['original_subtotal'],
             };
           });
-          ScaffoldMessenger.of(context).showSnackBar(
+          showTopSnack(context, 
             SnackBar(
                 content: Text('Voucher "$code" applied automatically!'),
                 backgroundColor: kGreen),
@@ -9378,7 +9391,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
         ));
       } else {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        showTopSnack(context, 
           SnackBar(
               content: Text(data['message'] ?? 'Booking failed.'),
               backgroundColor: Colors.red),
@@ -9386,7 +9399,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      showTopSnack(context, 
         SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
       );
     } finally {
@@ -10212,8 +10225,7 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error picking image: $e')));
+        showTopSnack(context, SnackBar(content: Text('Error picking image: $e')));
       }
     }
   }
@@ -10221,7 +10233,7 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
   Future<void> _uploadProof() async {
     if (_proofImage == null) return;
     if (_refController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      showTopSnack(context, const SnackBar(
           content: Text('Please enter the reference number.'),
           backgroundColor: Colors.red));
       return;
@@ -10248,7 +10260,7 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
             _proofUploaded = true;
             _countdownTimer?.cancel();
           });
-          ScaffoldMessenger.of(context).showSnackBar(
+          showTopSnack(context, 
             const SnackBar(
                 content: Text(
                     'Proof of payment uploaded! We will verify it shortly.'),
@@ -10257,14 +10269,14 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          showTopSnack(context, SnackBar(
               content: Text(data['message'] ?? 'Upload failed.'),
               backgroundColor: Colors.red));
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        showTopSnack(context, SnackBar(
             content: Text('Upload error: $e'), backgroundColor: Colors.red));
       }
     } finally {
@@ -10601,7 +10613,7 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
             child: ElevatedButton(
               onPressed: () {
                 if (!_proofUploaded && !_isExpired) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  showTopSnack(context, 
                     const SnackBar(
                         content: Text(
                             'Please upload proof of payment before proceeding. Or press back if you wish to do it later.')),
@@ -11525,7 +11537,7 @@ class _ContactScreenState extends State<ContactScreen> {
                             if (_nameCtrl.text.isEmpty ||
                                 _emailCtrl.text.isEmpty ||
                                 _msgCtrl.text.isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              showTopSnack(context, 
                                   const SnackBar(
                                       content:
                                           Text('Please fill required fields'),
@@ -12709,18 +12721,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ),
           );
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
+          showTopSnack(context, 
               const SnackBar(content: Text('Booking details not found.')));
         }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
+        showTopSnack(context, 
             const SnackBar(content: Text('Failed to load booking details.')));
       }
     } catch (e) {
       if (!mounted) return;
       Navigator.pop(context);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error: $e')));
+      showTopSnack(context, SnackBar(content: Text('Error: $e')));
     }
   }
 
@@ -13078,8 +13089,7 @@ class _GraciaPointsScreenState extends State<GraciaPointsScreen> {
                                         onPressed: () {
                                           Clipboard.setData(ClipboardData(
                                               text: UserSession.referralCode!));
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(
+                                          showTopSnack(context, 
                                             const SnackBar(
                                                 content: Text(
                                                     'Referral code copied to clipboard!')),
@@ -14012,8 +14022,7 @@ class _VouchersScreenState extends State<VouchersScreen> {
                                                 data['status'] == 'success') {
                                               _promoCtrl.clear();
                                               if (!mounted) return;
-                                              ScaffoldMessenger.of(context)
-                                                  .showSnackBar(SnackBar(
+                                              showTopSnack(context, SnackBar(
                                                       content: Text(data[
                                                               'message'] ??
                                                           'Discount coupon added!'),
@@ -14021,8 +14030,7 @@ class _VouchersScreenState extends State<VouchersScreen> {
                                               _fetchVouchers();
                                             } else {
                                               if (!mounted) return;
-                                              ScaffoldMessenger.of(context)
-                                                  .showSnackBar(SnackBar(
+                                              showTopSnack(context, SnackBar(
                                                       content: Text(data[
                                                               'message'] ??
                                                           'Invalid coupon code.'),
@@ -14031,8 +14039,7 @@ class _VouchersScreenState extends State<VouchersScreen> {
                                             }
                                           } catch (e) {
                                             if (!mounted) return;
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(const SnackBar(
+                                            showTopSnack(context, const SnackBar(
                                                     content:
                                                         Text('Network error.'),
                                                     backgroundColor:
@@ -14450,7 +14457,7 @@ class _DiscountCouponCard extends StatelessWidget {
             final cornerRadius = height * _cornerFraction;
             final notchRadius = height * _notchFraction;
             final leftPad = width * 0.045;
-            final greenContentRight = (width - seamX) + width * 0.025;
+            final greenContentRight = (width - seamX) - width * 0.04;
 
             return SizedBox(
               width: width,
@@ -14542,7 +14549,7 @@ class _DiscountCouponCard extends StatelessWidget {
                     // Discount label + Min/Max (stacked, pushed left to avoid cutoff)
                     Positioned(
                       left: leftPad,
-                      right: greenContentRight + width * 0.01,
+                      right: greenContentRight,
                       bottom: height * 0.06,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -16101,7 +16108,7 @@ class _RefundScreenState extends State<RefundScreen> {
 
   Future<void> _submitRefund() async {
     if (_accountCtrl.text.trim().isEmpty || _nameCtrl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      showTopSnack(context, 
           const SnackBar(content: Text('Please fill out all refund details')));
       return;
     }
@@ -16132,12 +16139,12 @@ class _RefundScreenState extends State<RefundScreen> {
             'Refund requested successfully! You will receive an email confirmation shortly.');
       } else {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        showTopSnack(context, SnackBar(
             content: Text(data['message'] ?? 'Error submitting refund')));
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      showTopSnack(context, 
           const SnackBar(content: Text('Network error. Please try again.')));
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
@@ -16553,7 +16560,7 @@ class _RebookScreenState extends State<RebookScreen> {
       final res = await req.send();
       if (res.statusCode == 200) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        showTopSnack(context, 
             const SnackBar(content: Text('Rebooking requested successfully')));
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const MainScreen(initialTab: 4)),

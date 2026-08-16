@@ -62,11 +62,19 @@ class BookingConfirmation extends Mailable implements ShouldQueue
                 $mail->attachFromStorageDisk($this->receiptDisk, $this->receiptPath, 'Ticket_Confirmation.pdf', [
                     'mime' => 'application/pdf',
                 ]);
-            } elseif (file_exists($this->receiptPath)) {
-                $mail->attach($this->receiptPath, [
-                    'as' => 'Ticket_Confirmation.pdf',
-                    'mime' => 'application/pdf',
-                ]);
+            } else {
+                $publicPath = Storage::disk('public')->path($this->receiptPath);
+                if (file_exists($publicPath)) {
+                    $mail->attach($publicPath, [
+                        'as' => 'Ticket_Confirmation.pdf',
+                        'mime' => 'application/pdf',
+                    ]);
+                } elseif (file_exists($this->receiptPath)) {
+                    $mail->attach($this->receiptPath, [
+                        'as' => 'Ticket_Confirmation.pdf',
+                        'mime' => 'application/pdf',
+                    ]);
+                }
             }
         }
 

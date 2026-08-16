@@ -77,7 +77,7 @@ class _ReplacementBookingScreenState extends State<ReplacementBookingScreen> {
   Future<void> _submitReplacement() async {
     if (_selectedSchedule == null || _selectedAccommodation == null) return;
     if (_priceDiff > 0 && _proofImage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Proof of payment is required'), backgroundColor: Colors.red));
+      showTopSnack(context, const SnackBar(content: Text('Proof of payment is required'), backgroundColor: Colors.red));
       return;
     }
 
@@ -110,15 +110,15 @@ class _ReplacementBookingScreenState extends State<ReplacementBookingScreen> {
       Navigator.pop(context); // pop loading
       
       if (res.statusCode == 200 && data['status'] == 'success') {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data['message']), backgroundColor: kGreen));
+        showTopSnack(context, SnackBar(content: Text(data['message']), backgroundColor: kGreen));
         Navigator.pop(context, true); // pop back to details
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data['message'] ?? 'Error occurred'), backgroundColor: Colors.red));
+        showTopSnack(context, SnackBar(content: Text(data['message'] ?? 'Error occurred'), backgroundColor: Colors.red));
       }
     } catch (e) {
       if (!mounted) return;
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Network error'), backgroundColor: Colors.red));
+      showTopSnack(context, const SnackBar(content: Text('Network error'), backgroundColor: Colors.red));
     }
   }
   
@@ -196,7 +196,7 @@ class _ReplacementBookingScreenState extends State<ReplacementBookingScreen> {
           return GestureDetector(
             onTap: () {
               if (isCheaper) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cannot select a cheaper ticket.'), backgroundColor: Colors.red));
+                showTopSnack(context, const SnackBar(content: Text('Cannot select a cheaper ticket.'), backgroundColor: Colors.red));
                 return;
               }
               setState(() {
