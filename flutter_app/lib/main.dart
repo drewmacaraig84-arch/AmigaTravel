@@ -1233,7 +1233,7 @@ class _MainScreenState extends State<MainScreen> {
         onTap: () => setState(() => _selectedIndex = index),
         customBorder: const CircleBorder(),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
+          padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 6.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
@@ -1241,10 +1241,16 @@ class _MainScreenState extends State<MainScreen> {
               Icon(isSelected ? iconActive : iconOutlined, 
                    color: isSelected ? kPink : kSlate400, size: 26),
               const SizedBox(height: 2),
-              Text(label, style: TextStyle(
-                   color: isSelected ? kPink : kSlate400,
-                   fontSize: 11,
-                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal)),
+              Text(
+                label,
+                softWrap: false,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: isSelected ? kPink : kSlate400,
+                  fontSize: 10,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                ),
+              ),
             ],
           ),
         ),
@@ -1253,6 +1259,7 @@ class _MainScreenState extends State<MainScreen> {
 
     return Scaffold(
       key: _scaffoldKey,
+      resizeToAvoidBottomInset: false,
       drawer: AppDrawer(
           onLogout: _handleLogout, onProfileUpdated: () => setState(() {})),
       appBar: AppBar(
@@ -11250,33 +11257,46 @@ class AboutScreen extends StatelessWidget {
                           color: kSlate600, fontSize: 13, height: 1.6),
                     ),
                     SizedBox(height: 20),
-                    Text('Quick Facts',
+                    Text('Core Values',
                         style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
                             color: kSlate800)),
                     SizedBox(height: 12),
                     _AboutFact(
-                        number: '01',
-                        title: 'Established',
-                        desc: 'July 2017 in Oriental Mindoro'),
+                        number: 'G',
+                        title: 'Growth & Innovation',
+                        desc: 'Continuously growing and innovating our services for travelers.'),
                     SizedBox(height: 10),
                     _AboutFact(
-                        number: '02',
-                        title: 'Key Partnerships',
-                        desc: '2GO, Starlite Ferries, Supercat'),
+                        number: 'R',
+                        title: 'Responsibility & Integrity',
+                        desc: 'Operating with honesty, transparency, and accountability.'),
                     SizedBox(height: 10),
                     _AboutFact(
-                        number: '03',
-                        title: 'Specialty',
-                        desc:
-                            'Ferry bookings, Educational tours, Apprenticeship programs'),
+                        number: 'A',
+                        title: 'Accountability',
+                        desc: 'Taking ownership of every booking, transaction, and commitment.'),
+                    SizedBox(height: 10),
+                    _AboutFact(
+                        number: 'C',
+                        title: 'Customer Excellence',
+                        desc: 'Delivering first-class service that exceeds customer expectations.'),
+                    SizedBox(height: 10),
+                    _AboutFact(
+                        number: 'I',
+                        title: 'Inclusivity & Collaboration',
+                        desc: 'Welcoming all travelers and working together as one team.'),
+                    SizedBox(height: 10),
+                    _AboutFact(
+                        number: 'A',
+                        title: 'Assurance of Quality & Safety',
+                        desc: 'Ensuring every journey meets the highest safety and quality standards.'),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 16),
-            // Partners
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -11289,32 +11309,31 @@ class AboutScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Our Trusted Travel Operators',
+                  const Text('Our Main 5 Operators',
                       style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                           fontSize: 15)),
                   const SizedBox(height: 14),
+                  // Row 1: 2GO, Starlite, Cebu Pacific
                   Row(
-                    children: ['2GO TRAVEL', 'STARLITE', 'SUPERCAT']
-                        .map((name) => Expanded(
-                              child: Container(
-                                margin: const EdgeInsets.only(right: 8),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 10),
-                                decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(12)),
-                                child: Text(name,
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w900,
-                                        fontSize: 11,
-                                        letterSpacing: 0.5)),
-                              ),
-                            ))
-                        .toList(),
+                    children: [
+                      _OperatorLogoCard(name: '2GO', logoUrl: '${UserSession.getBaseUrl()}/images/2GO-Logo.png'),
+                      const SizedBox(width: 8),
+                      _OperatorLogoCard(name: 'Starlite', logoUrl: '${UserSession.getBaseUrl()}/images/Starlite_Logo.png'),
+                      const SizedBox(width: 8),
+                      _OperatorLogoCard(name: 'Cebu Pacific', logoUrl: '${UserSession.getBaseUrl()}/images/CebuPecific-Logo.png'),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // Row 2: Philippine Airlines, AirAsia (centered)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _OperatorLogoCard(name: 'Philippine Airlines', logoUrl: '${UserSession.getBaseUrl()}/images/Pal-Logo.jfif'),
+                      const SizedBox(width: 8),
+                      _OperatorLogoCard(name: 'AirAsia', logoUrl: '${UserSession.getBaseUrl()}/images/AirAsia-Logo.png'),
+                    ],
                   ),
                 ],
               ),
@@ -11373,6 +11392,54 @@ class _AboutFact extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _OperatorLogoCard extends StatelessWidget {
+  final String name;
+  final String logoUrl;
+  const _OperatorLogoCard({required this.name, required this.logoUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.network(
+              logoUrl,
+              height: 36,
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => Text(
+                name,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: kGreen,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 10,
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              name,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: kSlate700,
+                fontWeight: FontWeight.w700,
+                fontSize: 9,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -14507,11 +14574,11 @@ class _DiscountCouponCard extends StatelessWidget {
                       ),
                     ),
 
-                    // DISCOUNT COUPON headline (bigger, starts higher)
+                    // DISCOUNT COUPON headline (centered in green section)
                     Positioned(
                       left: leftPad,
                       right: greenContentRight,
-                      top: height * 0.27,
+                      top: height * 0.30,
                       child: Text.rich(
                         TextSpan(children: [
                           TextSpan(
@@ -14524,11 +14591,11 @@ class _DiscountCouponCard extends StatelessWidget {
                       ),
                     ),
 
-                    // Expiry label
+                    // Expiry label (small gap below DISCOUNT COUPON)
                     Positioned(
                       left: leftPad,
                       right: greenContentRight,
-                      top: height * 0.685,
+                      top: height * 0.705,
                       child: Text(
                         expiryLabel,
                         style: TextStyle(
@@ -14556,7 +14623,7 @@ class _DiscountCouponCard extends StatelessWidget {
                               fontWeight: FontWeight.w900,
                             ),
                           ),
-                          SizedBox(height: height * 0.02),
+                          SizedBox(height: height * 0.06),
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.end,
@@ -14578,12 +14645,12 @@ class _DiscountCouponCard extends StatelessWidget {
 
                     // ── Pink side ──
 
-                    // Gift box with discount label inside (bigger text, no vertical ribbon)
+                    // Gift box with discount label inside (aligned near bottom stats, right gap added)
                     Positioned(
                       left: seamX,
-                      right: 0,
+                      right: width * 0.04,
                       top: height * 0.04,
-                      bottom: height * 0.22,
+                      bottom: height * 0.28,
                       child: Center(
                         child: AspectRatio(
                           aspectRatio: 1,
