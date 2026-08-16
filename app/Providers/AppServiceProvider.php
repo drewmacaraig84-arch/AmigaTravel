@@ -51,7 +51,7 @@ class AppServiceProvider extends ServiceProvider
         FilamentView::registerRenderHook(
             PanelsRenderHook::GLOBAL_SEARCH_BEFORE,
             fn (): string => Blade::render('
-                <div class="fi-global-search flex items-center cursor-pointer" x-on:click="$dispatch(\'open-spotlight\')">
+                <div class="fi-global-search flex items-center cursor-pointer" x-on:click="$dispatch(\'toggle-spotlight\')">
                     <div class="fi-global-search-field">
                         <label class="sr-only">Search</label>
                         <div class="fi-input-wrapper flex rounded-lg shadow-sm ring-1 transition duration-75 bg-white focus-within:ring-2 dark:bg-white/5 ring-gray-950/10 focus-within:ring-primary-600 dark:ring-white/20 dark:focus-within:ring-primary-500">
