@@ -17,7 +17,8 @@ dependencies:
   package_info_plus: any
   path_provider: any
   intl: any
-  flutter_app_badger: any
+  app_badge_plus: any
+  permission_handler: any
   video_player: any
   flutter_local_notifications: any
   flutter_svg: any

@@ -16,7 +16,6 @@ import 'package:intl/intl.dart';
 import 'package:video_player/video_player.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import 'package:flutter_app_badger/flutter_app_badger.dart';
 import 'notification_service.dart';
 import 'forgot_password_screen.dart';
 
@@ -86,9 +85,9 @@ class UserSession {
   static set unreadNotificationsCount(int count) {
     unreadNotificationsNotifier.value = count;
     if (count > 0) {
-      FlutterAppBadger.updateBadgeCount(count);
+      NotificationService.setBadge(count);
     } else {
-      FlutterAppBadger.removeBadge();
+      NotificationService.clearBadge();
     }
   }
 

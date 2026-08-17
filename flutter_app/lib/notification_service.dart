@@ -1,48 +1,70 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:app_badge_plus/app_badge_plus.dart';
 import 'dart:convert';
 
 class NotificationService {
-  static final FlutterLocalNotificationsPlugin _notificationsPlugin =
+  static final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
 
-  static Future<void> requestPermission() async {
-    if (!kIsWeb) {
-      final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
-          _notificationsPlugin.resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
-      await androidImplementation?.requestNotificationsPermission();
-    }
-  }
+  // ─── Initialisation ────────────────────────────────────────────────────────
 
-  static Future<void> initialize({Function(Map<String, dynamic>)? onNotificationTap}) async {
+  static Future<void> initialize({
+    Function(Map<String, dynamic>)? onNotificationTap,
+  }) async {
     if (kIsWeb) return;
 
-    const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+    // Android: reference the monochrome vector drawable
+    const androidInit = AndroidInitializationSettings('ic_notification');
 
-    const InitializationSettings initializationSettings = InitializationSettings(
-      android: initializationSettingsAndroid,
+    // iOS: request badge permission now; alert + sound are requested at runtime
+    const iosInit = DarwinInitializationSettings(
+      requestAlertPermission: false,
+      requestBadgePermission: true,
+      requestSoundPermission: false,
     );
 
-    await _notificationsPlugin.initialize(
-      initializationSettings,
+    const initSettings = InitializationSettings(
+      android: androidInit,
+      iOS: iosInit,
+    );
+
+    await _plugin.initialize(
+      initSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
-        if (onNotificationTap != null) {
-          if (response.payload != null && response.payload!.isNotEmpty) {
-            try {
-              final Map<String, dynamic> data = jsonDecode(response.payload!);
-              onNotificationTap(data);
-            } catch (_) {
-              onNotificationTap({});
-            }
-          } else {
+        if (onNotificationTap == null) return;
+        if (response.payload != null && response.payload!.isNotEmpty) {
+          try {
+            onNotificationTap(jsonDecode(response.payload!));
+          } catch (_) {
             onNotificationTap({});
           }
+        } else {
+          onNotificationTap({});
         }
       },
     );
   }
+
+  // ─── Runtime permission request ────────────────────────────────────────────
+
+  static Future<void> requestPermission() async {
+    if (kIsWeb) return;
+
+    // Android 13+ runtime permission
+    await _plugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.requestNotificationsPermission();
+
+    // iOS runtime permission (alert + badge + sound)
+    await _plugin
+        .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin>()
+        ?.requestPermissions(alert: true, badge: true, sound: true);
+  }
+
+  // ─── Banner notification (Shopee-style heads-up) ───────────────────────────
 
   static Future<void> showNotification({
     required int id,
@@ -52,32 +74,46 @@ class NotificationService {
   }) async {
     if (kIsWeb) return;
 
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'high_importance_channel', // channel id
-      'High Importance Notifications', // channel name
-      channelDescription: 'This channel is used for important notifications.',
+    // Importance.max + Priority.high → Android shows it as a heads-up banner
+    const androidDetails = AndroidNotificationDetails(
+      'amiga_high_importance',
+      'General Notifications',
+      channelDescription: 'Used for booking alerts and general app updates.',
       importance: Importance.max,
       priority: Priority.high,
-      icon: '@mipmap/ic_launcher',
+      icon: 'ic_notification',
+      playSound: true,
+      enableVibration: true,
     );
 
-    const NotificationDetails platformChannelDetails =
-        NotificationDetails(android: androidDetails);
-
-    await _notificationsPlugin.show(
-      id,
-      title,
-      body,
-      platformChannelDetails,
-      payload: payload,
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
     );
+
+    const details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    await _plugin.show(id, title, body, details, payload: payload);
   }
 
-  static Future<void> subscribeToUserTopic(String email) async {
-    // No-op without firebase
+  // ─── App icon badge (red number like Messages / Messenger) ─────────────────
+
+  static Future<void> setBadge(int count) async {
+    if (kIsWeb) return;
+    final supported = await AppBadgePlus.isSupported();
+    if (supported) {
+      await AppBadgePlus.updateBadge(count);
+    }
   }
 
-  static Future<void> unsubscribeFromUserTopic(String email) async {
-    // No-op without firebase
-  }
+  static Future<void> clearBadge() => setBadge(0);
+
+  // ─── Stubs kept for API compatibility ──────────────────────────────────────
+
+  static Future<void> subscribeToUserTopic(String email) async {}
+  static Future<void> unsubscribeFromUserTopic(String email) async {}
 }
