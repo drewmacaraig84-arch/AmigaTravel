@@ -40,9 +40,7 @@ class FirebasePushService
                 'priority' => 'HIGH',
                 'notification' => [
                     'channel_id' => 'amiga_travel_alerts',
-                    'notification_priority' => 'PRIORITY_MAX',
-                    'default_sound' => true,
-                    'default_vibrate_timings' => true,
+                    'sound' => 'default',
                 ],
             ],
         ]);
@@ -64,9 +62,7 @@ class FirebasePushService
                 'priority' => 'HIGH',
                 'notification' => [
                     'channel_id' => 'amiga_travel_alerts',
-                    'notification_priority' => 'PRIORITY_MAX',
-                    'default_sound' => true,
-                    'default_vibrate_timings' => true,
+                    'sound' => 'default',
                 ],
             ],
         ]);
