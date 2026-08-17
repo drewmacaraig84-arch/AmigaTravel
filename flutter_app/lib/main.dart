@@ -87,7 +87,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.90+101';
+  static const String appVersion = '1.0.91+102';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
