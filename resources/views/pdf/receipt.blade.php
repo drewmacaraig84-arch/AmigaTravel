@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>E-Receipt & Travel Itinerary Voucher - {{ $booking->transaction_number }}</title>
+    <title>E-Acknowledgement - {{ $booking->transaction_number }}</title>
     <style>
         @page {
             margin: 12mm 15mm;
@@ -23,18 +23,28 @@
             border-bottom: 2px solid #216417;
             padding-bottom: 12px;
         }
-        .brand-name {
-            font-size: 20px;
-            font-weight: bold;
-            color: #216417;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+        .brand-logo-wrap {
+            display: inline-block;
+            text-align: left;
+        }
+        .brand-logo {
+            display: block;
+            max-width: 180px;
+            height: auto;
+            margin-bottom: 6px;
         }
         .brand-sub {
             font-size: 11px;
             color: #475569;
             font-weight: bold;
             margin-top: 2px;
+        }
+        .brand-sub--ack {
+            color: #216417;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin-top: 0;
         }
         .receipt-title-box {
             text-align: right;
@@ -210,8 +220,10 @@
     <table class="header-table">
         <tr>
             <td>
-                <div class="brand-name">Amiga Gracia</div>
-                <div class="brand-sub">TRAVEL SERVICE & ITINERARY ACKNOWLEDGEMENT</div>
+                <div class="brand-logo-wrap">
+                    <img src="data:image/png;base64,{{ base64_encode(file_get_contents(public_path('images/amiga-logo-transparent.png'))) }}" alt="Amiga Gracia" class="brand-logo" />
+                    <div class="brand-sub brand-sub--ack">E-ACKNOWLEDGEMENT</div>
+                </div>
             </td>
             <td class="receipt-title-box">
                 @php
@@ -450,7 +462,7 @@
 
     <!-- Official Footer -->
     <div class="footer">
-        Amiga Gracia Travel Service &bull; Official Booking Acknowledgement &bull; Ref #{{ $booking->transaction_number }}<br>
+        Amiga Gracia Travel Service &bull; Official E-Acknowledgement &bull; Ref #{{ $booking->transaction_number }}<br>
         Thank you for choosing Amiga Gracia Travel Service. Have a safe and pleasant trip!
         <div style="color: #ef4444; font-weight: bold; font-size: 10px; margin-top: 6px;">Note: This document is not valid for claiming input taxes</div>
     </div>
