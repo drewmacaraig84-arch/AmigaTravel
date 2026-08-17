@@ -3533,7 +3533,12 @@ class _TravelScreenState extends State<TravelScreen>
                                         color: kGreen, size: 20),
                                     const SizedBox(width: 8),
                                     Text(
-                                      '$_adults Adult${_adults > 1 ? 's' : ''}${_children > 0 ? '  $_children Minor${_children > 1 ? 's' : ''}' : ''}',
+                                      _mode == 'airline'
+                                          ? '$_adults Adult${_adults > 1 ? 's' : ''}'
+                                              '${_minors > 0 ? '  $_minors Minor${_minors > 1 ? 's' : ''}' : ''}'
+                                              '${_children > 0 ? '  $_children Child${_children > 1 ? 'ren' : ''}' : ''}'
+                                              '${_infants > 0 ? '  $_infants Infant${_infants > 1 ? 's' : ''}' : ''}'
+                                          : '$_adults Adult${_adults > 1 ? 's' : ''}${_children > 0 ? '  $_children Minor${_children > 1 ? 's' : ''}' : ''}',
                                       style: const TextStyle(
                                           fontSize: 14, color: kSlate800),
                                     ),
@@ -3572,7 +3577,7 @@ class _TravelScreenState extends State<TravelScreen>
                                   const SizedBox(height: 12),
                                   _PassengerCounter(
                                     label: 'Adult',
-                                    subtitle: '12 years and above',
+                                    subtitle: _mode == 'airline' ? '12 years and above' : '11 years and above',
                                     count: _adults,
                                     onIncrement: _totalPassengers < 8
                                         ? () => setState(() => _adults++)
@@ -3581,15 +3586,14 @@ class _TravelScreenState extends State<TravelScreen>
                                         ? () => setState(() => _adults--)
                                         : null,
                                   ),
-                                  const Divider(height: 20),
-                                  _PassengerCounter(
-                                    label:
-                                        _mode == 'airline' ? 'Child' : 'Minor',
-                                    subtitle: '2 - 11 years',
-                                    count: _children,
-                                    onIncrement: _totalPassengers < 8
-                                        ? () {
-                                            if (_mode != 'airline') {
+                                  if (_mode != 'airline') ...[
+                                    const Divider(height: 20),
+                                    _PassengerCounter(
+                                      label: 'Minor',
+                                      subtitle: '2 - 11 years',
+                                      count: _children,
+                                      onIncrement: _totalPassengers < 8
+                                          ? () {
                                               showDialog(
                                                 context: context,
                                                 builder: (c) => AlertDialog(
@@ -3616,26 +3620,35 @@ class _TravelScreenState extends State<TravelScreen>
                                                   ],
                                                 ),
                                               );
-                                            } else {
-                                              setState(() => _children++);
                                             }
-                                          }
-                                        : null,
-                                    onDecrement: _children > 0
-                                        ? () => setState(() => _children--)
-                                        : null,
-                                  ),
-                                  if (_mode == 'airline') ...[
+                                          : null,
+                                      onDecrement: _children > 0
+                                          ? () => setState(() => _children--)
+                                          : null,
+                                    ),
+                                  ] else ...[
                                     const Divider(height: 20),
                                     _PassengerCounter(
                                       label: 'Minor',
-                                      subtitle: '12 - 17 years',
+                                      subtitle: '7 - 11 years',
                                       count: _minors,
                                       onIncrement: _totalPassengers < 8
                                           ? () => setState(() => _minors++)
                                           : null,
                                       onDecrement: _minors > 0
                                           ? () => setState(() => _minors--)
+                                          : null,
+                                    ),
+                                    const Divider(height: 20),
+                                    _PassengerCounter(
+                                      label: 'Child',
+                                      subtitle: '2 - 6 years',
+                                      count: _children,
+                                      onIncrement: _totalPassengers < 8
+                                          ? () => setState(() => _children++)
+                                          : null,
+                                      onDecrement: _children > 0
+                                          ? () => setState(() => _children--)
                                           : null,
                                     ),
                                     const Divider(height: 20),
