@@ -27,6 +27,7 @@ void main() async {
   try {
     await NotificationService.initialize(
         onNotificationTap: handleNotificationTap);
+    await NotificationService.requestPermission();
   } catch (e) {
     debugPrint('Failed to initialize notifications: $e');
   }
@@ -79,6 +80,7 @@ class UserSession {
   static String lookupToken = '';
   static String? referralCode;
   static int graciaPoints = 0;
+  static String? lastNotifiedNotificationId;
   static final ValueNotifier<int> unreadNotificationsNotifier =
       ValueNotifier<int>(0);
   static int get unreadNotificationsCount => unreadNotificationsNotifier.value;
@@ -96,7 +98,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.102+113';
+  static const String appVersion = '1.0.103+114';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -765,6 +767,7 @@ class _GlobalUpdateWrapperState extends State<GlobalUpdateWrapper>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _checkVersionAndPrompt();
+      AppEventBus.emit('fetch_global_data');
     } else if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
       if (BookingData.activeSession != null) {
@@ -1300,7 +1303,6 @@ class _MainScreenState extends State<MainScreen> {
     _selectedIndex = widget.initialTab;
     _fetchGlobalData();
     NotificationService.requestPermission();
-    NotificationService.initialize();
 
     _notificationPollTimer =
         Timer.periodic(const Duration(seconds: 5), (timer) {
@@ -1366,16 +1368,27 @@ class _MainScreenState extends State<MainScreen> {
         final notifData = jsonDecode(notifRes.body);
         if (notifRes.statusCode == 200 && notifData['status'] == 'success') {
           int newUnread = notifData['unread_count'] ?? 0;
+          final notifs = notifData['notifications'] as List?;
 
-          if (newUnread > UserSession.unreadNotificationsCount) {
-            final notifs = notifData['notifications'] as List?;
-            if (notifs != null && notifs.isNotEmpty) {
-              final latest = notifs.first;
-              NotificationService.showNotification(
-                id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-                title: latest['title'] ?? 'New Notification',
-                body: latest['body'] ?? '',
-              );
+          // Check if there is an unread notification that we haven't popped yet
+          if (notifs != null && notifs.isNotEmpty) {
+            final latestUnread = notifs.firstWhere(
+              (n) => n['is_read'] == false || n['is_read'] == 0,
+              orElse: () => null,
+            );
+
+            if (latestUnread != null) {
+              final String notifId = latestUnread['id']?.toString() ?? '';
+              if (notifId.isNotEmpty &&
+                  notifId != UserSession.lastNotifiedNotificationId) {
+                UserSession.lastNotifiedNotificationId = notifId;
+                NotificationService.showNotification(
+                  id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+                  title: latestUnread['title'] ?? 'New Notification',
+                  body: latestUnread['body'] ?? '',
+                  payload: jsonEncode(latestUnread),
+                );
+              }
             }
           }
 
@@ -1387,8 +1400,8 @@ class _MainScreenState extends State<MainScreen> {
                 UserSession.unreadNotificationsCount = newUnread;
               });
             }
-            NotificationService.setBadge(newUnread);
           }
+          NotificationService.setBadge(newUnread);
           AppEventBus.emit('notifications_updated');
         }
       } catch (e) {
