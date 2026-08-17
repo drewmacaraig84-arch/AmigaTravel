@@ -59,6 +59,10 @@ class BookingForm extends Component
         $confirmKey = 'confirmed_operator_' . $this->mode . '_' . ($this->operator ?: 'all');
         session()->forget($confirmKey);
         // Clear the pre-selected values so the user can choose again
+        $this->adults = 1;
+        $this->children = 0;
+        $this->minors = 0;
+        $this->infants = 0;
         $this->mode = '';
         $this->operator = null;
         $this->isModePreselected = false;
@@ -191,7 +195,7 @@ class BookingForm extends Component
 
         // Check if we have tour/package query params first
         $allowed = [
-            'trip_type','mode','operator','origin','destination','departure_date','return_date','duration_days','adults','children','infants',
+            'trip_type','mode','operator','origin','destination','departure_date','return_date','duration_days','adults','children','minors','infants',
             'client_name','client_email','client_phone','hasAcceptedTerms','hasAcceptedPrivacy','selected_hotel','selected_hotel_id','hotel','package_name','price','tour_id','tour_date_id','has_vehicle',
             'vehicle_booking_method','selected_vehicle_rate_id','selected_brand_id','selected_model_id','vehicle_plate_number','driver_first_name','driver_middle_name','driver_last_name','driver_name','driver_birthday'
         ];
@@ -283,7 +287,7 @@ class BookingForm extends Component
             if (in_array($key, $allowed, true) && property_exists($this, $key)) {
                 $hasQueryParamsPrefill = true;
                 // cast ints where appropriate
-                if (in_array($key, ['adults','children','infants','duration_days','selected_vehicle_rate_id','selected_brand_id','selected_model_id'], true)) {
+                if (in_array($key, ['adults','children','minors','infants','duration_days','selected_vehicle_rate_id','selected_brand_id','selected_model_id'], true)) {
                     $this->{$key} = intval($value);
                 } elseif ($key === 'has_vehicle') {
                     $this->{$key} = filter_var($value, FILTER_VALIDATE_BOOLEAN);
@@ -308,6 +312,10 @@ class BookingForm extends Component
 
         // Advance directly to schedule step when the search is fully prefilled from home and step=2 is requested.
         $requestedStep = intval(request()->query('step', 1));
+        if ($this->mode) {
+            $this->mode = strtolower(trim($this->mode));
+        }
+
         if ($requestedStep === 2 && ! $this->tour_id && $this->mode && $this->operator && $this->origin && $this->destination && $this->departure_date) {
             $this->step = 2;
             $this->availableSchedules = $this->getAvailableSchedules();
@@ -785,7 +793,7 @@ public function selectedSchedule(): ?array
 
     protected function resetVehicleData(): void
     {
-        if ($this->mode === 'airline' || ($this->mode === 'ferry' && stripos($this->operator ?? '', 'Starlite') === false)) {
+        if ($thisstrtolower(\->mode) === 'airline' || ($this->mode === 'ferry' && stripos($this->operator ?? '', 'Starlite') === false)) {
             $this->has_vehicle = false;
             $this->selected_vehicle_rate_id = null;
             $this->vehicle_type = '';
@@ -1355,7 +1363,7 @@ public function selectedSchedule(): ?array
         if ($adultCount > 0) {
             $types['adult'] = $adultCount;
         }
-        if ($this->mode === 'airline') {
+        if (strtolower($this->mode) === 'airline') {
             if ($this->minors > 0) {
                 $types['minor'] = $this->minors;
             }
@@ -1855,7 +1863,7 @@ public function selectedSchedule(): ?array
                 $usedPromoTicket = null;
                 $promoTicketCount = 0;
 
-                if ($this->mode === 'airline' && $schedule) {
+                if ($thisstrtolower(\->mode) === 'airline' && $schedule) {
                     $promoPassengerIndices = collect($this->passengers)
                         ->keys()
                         ->filter(fn ($i) => ! empty($this->passengers[$i]['use_promo']))
@@ -1976,7 +1984,7 @@ public function selectedSchedule(): ?array
                 ]);
 
                 foreach ($this->passengers as $passenger) {
-                    $isPromo = $this->mode === 'airline' && ! empty($passenger['use_promo']) && $usedPromoTicket;
+                    $isPromo = $thisstrtolower(\->mode) === 'airline' && ! empty($passenger['use_promo']) && $usedPromoTicket;
 
                     Passenger::create([
                         'booking_id' => $booking->id,
@@ -2311,7 +2319,7 @@ public function selectedSchedule(): ?array
                     'integer',
                     'min:1',
                     function ($attribute, $value, $fail) {
-                        if ($value + $this->children + ($this->mode === 'airline' ? $this->minors + $this->infants : 0) > 8) {
+                        if ($value + $this->children + ($thisstrtolower(\->mode) === 'airline' ? $this->minors + $this->infants : 0) > 8) {
                             $fail('Maximum of 8 passengers per booking.');
                         }
                     },
@@ -2321,7 +2329,7 @@ public function selectedSchedule(): ?array
                     'integer',
                     'min:0',
                     function ($attribute, $value, $fail) {
-                        if ($value + $this->adults + ($this->mode === 'airline' ? $this->minors + $this->infants : 0) > 8) {
+                        if ($value + $this->adults + ($thisstrtolower(\->mode) === 'airline' ? $this->minors + $this->infants : 0) > 8) {
                             $fail('Maximum of 8 passengers per booking.');
                         }
                     },
@@ -2331,7 +2339,7 @@ public function selectedSchedule(): ?array
                     'integer',
                     'min:0',
                     function ($attribute, $value, $fail) {
-                        if ($value + $this->adults + $this->children + ($this->mode === 'airline' ? $this->infants : 0) > 8) {
+                        if ($value + $this->adults + $this->children + ($thisstrtolower(\->mode) === 'airline' ? $this->infants : 0) > 8) {
                             $fail('Maximum of 8 passengers per booking.');
                         }
                     },
@@ -2344,7 +2352,7 @@ public function selectedSchedule(): ?array
                         if ($value > $this->adults) {
                             $fail('Maximum of 1 infant per adult is allowed.');
                         }
-                        if ($value + $this->adults + $this->children + ($this->mode === 'airline' ? $this->minors : 0) > 8) {
+                        if ($value + $this->adults + $this->children + ($thisstrtolower(\->mode) === 'airline' ? $this->minors : 0) > 8) {
                             $fail('Maximum of 8 passengers per booking.');
                         }
                     },
@@ -2405,7 +2413,7 @@ public function selectedSchedule(): ?array
                 'integer',
                 'min:1',
                 function ($attribute, $value, $fail) {
-                    if ($value + $this->children + ($this->mode === 'airline' ? $this->minors + $this->infants : 0) > 8) {
+                    if ($value + $this->children + ($thisstrtolower(\->mode) === 'airline' ? $this->minors + $this->infants : 0) > 8) {
                         $fail('Maximum of 8 passengers per booking.');
                     }
                 },
@@ -2415,7 +2423,7 @@ public function selectedSchedule(): ?array
                 'integer',
                 'min:0',
                 function ($attribute, $value, $fail) {
-                    if ($value + $this->adults + ($this->mode === 'airline' ? $this->minors + $this->infants : 0) > 8) {
+                    if ($value + $this->adults + ($thisstrtolower(\->mode) === 'airline' ? $this->minors + $this->infants : 0) > 8) {
                         $fail('Maximum of 8 passengers per booking.');
                     }
                 },
@@ -2590,7 +2598,7 @@ public function selectedSchedule(): ?array
         $disableDiscounts = $isFerryPromo || $hasPromoClass;
 
         // For airline bookings, fetch the active promo ticket once (if any)
-        $activePromoTicket = ($this->mode === 'airline') ? $this->getActivePromoTicket() : null;
+        $activePromoTicket = ($thisstrtolower(\->mode) === 'airline') ? $this->getActivePromoTicket() : null;
 
         $transportTotal = collect($this->passengers)->sum(function (array $passenger) use (
             $baseSchedulePrice,
@@ -2714,7 +2722,7 @@ public function selectedSchedule(): ?array
             $depTicket = $departureTicketPrice + $departureTransportClassTotal;
             $retTicket = $returnTicketPrice + $returnTransportClassTotal;
             
-            $isAirlinePromoPassenger = ($this->mode === 'airline' && !empty($passenger['use_promo']));
+            $isAirlinePromoPassenger = ($thisstrtolower(\->mode) === 'airline' && !empty($passenger['use_promo']));
 
             if (!empty($passenger['discount_id']) && !$disableDiscounts && !$isAirlinePromoPassenger) {
                 $discount = $discountsById->get($passenger['discount_id']);
@@ -2806,7 +2814,7 @@ public function selectedSchedule(): ?array
 
     public function incrementAdults(): void
     {
-        if ($this->adults + $this->children + ($this->mode === 'airline' ? $this->minors + $this->infants : 0) >= 8) {
+        if ($this->adults + $this->children + ($thisstrtolower(\->mode) === 'airline' ? $this->minors + $this->infants : 0) >= 8) {
             return;
         }
 
@@ -2832,7 +2840,7 @@ public function selectedSchedule(): ?array
 
     public function incrementChildren(): void
     {
-        if ($this->adults + $this->children + ($this->mode === 'airline' ? $this->minors + $this->infants : 0) >= 8) {
+        if ($this->adults + $this->children + ($thisstrtolower(\->mode) === 'airline' ? $this->minors + $this->infants : 0) >= 8) {
             return;
         }
 
@@ -2857,7 +2865,7 @@ public function selectedSchedule(): ?array
     
     public function incrementMinors(): void
     {
-        if ($this->adults + $this->children + ($this->mode === 'airline' ? $this->minors + $this->infants : 0) >= 8) {
+        if ($this->adults + $this->children + ($thisstrtolower(\->mode) === 'airline' ? $this->minors + $this->infants : 0) >= 8) {
             return;
         }
 
@@ -2880,7 +2888,7 @@ public function selectedSchedule(): ?array
         if ($this->infants >= $this->adults) {
             return; // 1 infant per adult limit
         }
-        if ($this->adults + $this->children + ($this->mode === 'airline' ? $this->minors + $this->infants : 0) >= 8) {
+        if ($this->adults + $this->children + ($thisstrtolower(\->mode) === 'airline' ? $this->minors + $this->infants : 0) >= 8) {
             return;
         }
 
