@@ -661,7 +661,7 @@ Future<void> handleNotificationTap(Map<String, dynamic> data) async {
     return;
   }
 
-  if (type == 'booking' || type == 'payment') {
+  if (type == 'booking' || type == 'payment' || type == 'service_cancellation') {
     if (targetId.isNotEmpty) {
       showDialog(
         context: context,
@@ -712,6 +712,23 @@ Future<void> handleNotificationTap(Map<String, dynamic> data) async {
     Navigator.popUntil(context, (route) => route.isFirst);
     final mainState = context.findAncestorStateOfType<_MainScreenState>();
     mainState?.switchTab(3);
+  } else if (type == 'referral') {
+    Navigator.push(
+        context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
+  } else if (type == 'announcement') {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(data['title'] ?? 'Announcement'),
+        content: Text(data['body'] ?? ''),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close', style: TextStyle(color: kGreen)),
+          )
+        ],
+      ),
+    );
   }
 }
 
@@ -13112,7 +13129,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       _markAsRead(notif['id']);
     }
 
-    if (type == 'booking' || type == 'payment') {
+    if (type == 'booking' || type == 'payment' || type == 'service_cancellation') {
       if (targetId.isNotEmpty) {
         _fetchBookingAndNavigate(targetId);
       }
@@ -13126,6 +13143,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       Navigator.popUntil(context, (route) => route.isFirst);
       final mainState = context.findAncestorStateOfType<_MainScreenState>();
       mainState?.switchTab(3);
+    } else if (type == 'referral') {
+      // Navigate to ProfileScreen for referrals
+      Navigator.push(
+          context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
     } else if (type == 'announcement') {
       showDialog(
         context: context,
