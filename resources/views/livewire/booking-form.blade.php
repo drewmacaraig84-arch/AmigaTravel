@@ -1100,7 +1100,12 @@
 
                     @if ($step === 3)
                         <div class="space-y-4">
-                            <p class="text-black font-bold">Each traveler can have their own discount, if eligible. Name is required, discount is optional.</p>
+                            <div class="space-y-2">
+                                <p class="text-black font-bold">Each traveler can have their own discount, if eligible. Name is required, discount is optional.</p>
+                                @if($infants > 0)
+                                    <p class="text-sm text-slate-600 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">✈️ Infants typically travel free and do not require discount information.</p>
+                                @endif
+                            </div>
 
                             @php
                                 $typeLabels = ['adult' => 'Adult', 'child' => 'Child', 'minor' => 'Minor', 'infant' => 'Infant', 'driver' => 'Driver'];
@@ -1111,6 +1116,7 @@
                             @endphp
 
                             @foreach($passengers as $index => $passenger)
+                                @if($passenger['type'] !== 'infant')
                                 @php
                                     $countByType[$passenger['type']] = ($countByType[$passenger['type']] ?? 0) + 1;
                                 @endphp
@@ -1257,6 +1263,7 @@
 
                                     </div>
                                 </div>
+                                @endif
                             @endforeach
                         </div>
                     @endif
