@@ -6,7 +6,7 @@
         <div class="text-center max-w-3xl mx-auto mb-12">
             <span class="px-3 py-1 text-xs font-semibold bg-emerald-500/10 text-emerald-400 rounded-full border border-emerald-500/20">Flutter Integration</span>
             <h1 class="text-4xl font-extrabold tracking-tight text-white mt-4 sm:text-5xl">
-                Amiga Travel <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400">Mobile & Web App</span>
+                Amiga Gracia <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400">Mobile & Web App</span>
             </h1>
             <p class="mt-4 text-slate-400 text-lg">
                 Seamlessly integrated Flutter application within your Laravel system.

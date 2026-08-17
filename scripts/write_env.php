@@ -91,7 +91,7 @@ if ($fbFromEnv !== '') {
 }
 
 $env = [
-    'APP_NAME'             => envv('APP_NAME',           'Amiga Travel', 'name'),
+    'APP_NAME'             => envv('APP_NAME',           'Amiga Gracia', 'name'),
     'APP_ENV'              => envv('APP_ENV',            'production'),
     'APP_DEBUG'            => envv('APP_DEBUG',          'true'),
     'APP_KEY'              => envv('APP_KEY',            '',           'key'),
