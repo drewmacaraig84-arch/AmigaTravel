@@ -87,7 +87,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.89+100';
+  static const String appVersion = '1.0.90+101';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -654,6 +654,16 @@ class _GlobalUpdateWrapperState extends State<GlobalUpdateWrapper>
 
   Future<void> _checkVersionAndPrompt() async {
     if (_isChecking) return;
+    
+    // Skip version check for 10 seconds after an update is triggered
+    if (UpdateChecker._updateInstalledTime != null) {
+      final elapsed = DateTime.now().difference(UpdateChecker._updateInstalledTime!);
+      if (elapsed.inSeconds < 10) {
+        return;
+      }
+      UpdateChecker._updateInstalledTime = null;
+    }
+    
     _isChecking = true;
     try {
       await UserSession.refreshInstalledAppVersion();
@@ -690,6 +700,7 @@ class UpdateChecker {
   static String? _lastPromptedVersion;
   static bool _dialogAlreadyVisible = false;
   static bool _apkInstallTriggered = false;
+  static DateTime? _updateInstalledTime;
 
   static Future<void> showUpdateDialog(
       BuildContext context, String latestVersion) async {
@@ -779,10 +790,12 @@ class UpdateChecker {
                         }
 
                         _apkInstallTriggered = true;
+                        UpdateChecker._updateInstalledTime = DateTime.now();
 
                         final result = await OpenFilex.open(file.path);
                         if (result.type != ResultType.done) {
                           _apkInstallTriggered = false;
+                          UpdateChecker._updateInstalledTime = null;
                           throw Exception(result.message);
                         }
 
@@ -909,6 +922,16 @@ class _SplashLoaderScreenState extends State<SplashLoaderScreen> {
   }
 
   Future<void> _checkVersionAndProceed() async {
+    // Skip version check for 10 seconds after an update is triggered
+    if (UpdateChecker._updateInstalledTime != null) {
+      final elapsed = DateTime.now().difference(UpdateChecker._updateInstalledTime!);
+      if (elapsed.inSeconds < 10) {
+        _navigateForward();
+        return;
+      }
+      UpdateChecker._updateInstalledTime = null;
+    }
+
     await UserSession.refreshInstalledAppVersion();
 
     try {
