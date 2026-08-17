@@ -139,25 +139,60 @@ class FirebasePushService
         $rawJson = env('FIREBASE_CREDENTIALS_JSON');
 
         if (! empty($rawJson)) {
-            // Check if base64 encoded
+            $rawJson = trim($rawJson);
+
+            // Handle base64 encoded strings
             $decoded = base64_decode($rawJson, true);
             if ($decoded && str_contains($decoded, 'private_key')) {
                 $parsed = json_decode($decoded, true);
-                if (is_array($parsed)) return $parsed;
+                if (is_array($parsed) && ! empty($parsed['private_key'])) {
+                    return self::sanitizeCredentials($parsed);
+                }
             }
 
+            // Direct JSON decode
             $parsed = json_decode($rawJson, true);
-            if (is_array($parsed)) return $parsed;
+            if (is_array($parsed) && ! empty($parsed['private_key'])) {
+                return self::sanitizeCredentials($parsed);
+            }
+
+            // Handle if surrounded by outer quotes or has escaped slashes
+            $unquoted = trim($rawJson, "\"'");
+            $parsed = json_decode($unquoted, true);
+            if (is_array($parsed) && ! empty($parsed['private_key'])) {
+                return self::sanitizeCredentials($parsed);
+            }
+
+            $unslashed = stripslashes($unquoted);
+            $parsed = json_decode($unslashed, true);
+            if (is_array($parsed) && ! empty($parsed['private_key'])) {
+                return self::sanitizeCredentials($parsed);
+            }
         }
 
+        // Automatic fallback to repository file
         $filePath = storage_path('app/firebase_credentials.json');
         if (file_exists($filePath)) {
             $content = file_get_contents($filePath);
             $parsed = json_decode($content, true);
-            if (is_array($parsed)) return $parsed;
+            if (is_array($parsed) && ! empty($parsed['private_key'])) {
+                return self::sanitizeCredentials($parsed);
+            }
         }
 
         return null;
+    }
+
+    /**
+     * Ensure private key formatting has valid line breaks.
+     */
+    private static function sanitizeCredentials(array $creds): array
+    {
+        if (! empty($creds['private_key'])) {
+            // Replace literal '\n' characters with actual newlines if needed
+            $creds['private_key'] = str_replace('\\n', "\n", $creds['private_key']);
+        }
+        return $creds;
     }
 
     private static ?string $cachedToken = null;
