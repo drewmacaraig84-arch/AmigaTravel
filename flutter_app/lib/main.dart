@@ -253,6 +253,98 @@ class BookingData {
   String? returnDate;
   int adults = 1;
   int children = 0;
+  int minors = 0;
+  int infants = 0;
+
+  int get totalPassengers => adults + children + minors + infants;
+
+  static String passengerTypeLabel(String type, int index) {
+    switch (type.toLowerCase()) {
+      case 'driver':
+        return 'Driver';
+      case 'adult':
+        return 'Adult $index';
+      case 'minor':
+        return 'Minor $index';
+      case 'child':
+        return 'Child $index';
+      case 'infant':
+        return 'Infant $index';
+      default:
+        return type[0].toUpperCase() + type.substring(1);
+    }
+  }
+
+  static List<Map<String, dynamic>> buildPassengerEntries({
+    required int adults,
+    required int children,
+    required int minors,
+    required int infants,
+    required bool hasVehicle,
+    required String vehicleDriverName,
+    required String vehicleDriverBirthday,
+    required bool isAirline,
+  }) {
+    final entries = <Map<String, dynamic>>[];
+    final driverCount = hasVehicle ? 1 : 0;
+    final adultCount = adults - driverCount;
+
+    for (var i = 0; i < driverCount; i++) {
+      entries.add({
+        'type': 'driver',
+        'name': vehicleDriverName,
+        'birthdate': vehicleDriverBirthday,
+        'discount_id': null,
+      });
+    }
+
+    for (var i = 0; i < adultCount; i++) {
+      entries.add({
+        'type': 'adult',
+        'name': '',
+        'birthdate': '',
+        'discount_id': null,
+      });
+    }
+
+    if (isAirline) {
+      for (var i = 0; i < minors; i++) {
+        entries.add({
+          'type': 'minor',
+          'name': '',
+          'birthdate': '',
+          'discount_id': null,
+        });
+      }
+      for (var i = 0; i < children; i++) {
+        entries.add({
+          'type': 'child',
+          'name': '',
+          'birthdate': '',
+          'discount_id': null,
+        });
+      }
+      for (var i = 0; i < infants; i++) {
+        entries.add({
+          'type': 'infant',
+          'name': '',
+          'birthdate': '',
+          'discount_id': null,
+        });
+      }
+    } else {
+      for (var i = 0; i < children; i++) {
+        entries.add({
+          'type': 'child',
+          'name': '',
+          'birthdate': '',
+          'discount_id': null,
+        });
+      }
+    }
+
+    return entries;
+  }
 
   // Step 2 — Schedule
   bool hasExtraBaggage = false;
@@ -334,6 +426,8 @@ class BookingData {
       'returnDate': returnDate,
       'adults': adults,
       'children': children,
+      'minors': minors,
+      'infants': infants,
       'hasExtraBaggage': hasExtraBaggage,
       'extraBaggageKg': extraBaggageKg,
       'extraBaggagePrice': extraBaggagePrice,
@@ -395,6 +489,8 @@ class BookingData {
     b.returnDate = json['returnDate'];
     b.adults = json['adults'] ?? 1;
     b.children = json['children'] ?? 0;
+    b.minors = json['minors'] ?? 0;
+    b.infants = json['infants'] ?? 0;
     b.hasExtraBaggage = json['hasExtraBaggage'] ?? false;
     b.extraBaggageKg = json['extraBaggageKg'];
     b.extraBaggagePrice = (json['extraBaggagePrice'] ?? 0.0).toDouble();
@@ -3143,7 +3239,9 @@ class _TravelScreenState extends State<TravelScreen>
       ..departureDate = _fmt(_departureDate!)
       ..returnDate = _tripTabController.index == 1 ? _fmt(_returnDate!) : null
       ..adults = _adults
-      ..children = _children;
+      ..children = _children
+      ..minors = _mode == 'airline' ? _minors : 0
+      ..infants = _mode == 'airline' ? _infants : 0;
 
     final bool isStarlite = _mode == 'ferry' &&
         (_operator?.toLowerCase().contains('starlite') ?? false);
@@ -8208,30 +8306,19 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                       final promo = s['promotional_ticket'];
                       widget.booking.promotionalTicketId =
                           promo != null ? promo['id'] as int? : null;
-                      widget.booking.passengers = [
-                        for (int i = 0; i < widget.booking.adults; i++)
-                          {
-                            'type': (widget.booking.hasVehicle && i == 0)
-                                ? 'driver'
-                                : 'adult',
-                            'name': (widget.booking.hasVehicle && i == 0)
-                                ? '${widget.booking.vehicleDriverFirstName} ${widget.booking.vehicleDriverMiddleName} ${widget.booking.vehicleDriverLastName}'
-                                    .replaceAll(RegExp(r'\s+'), ' ')
-                                    .trim()
-                                : '',
-                            'birthdate': (widget.booking.hasVehicle && i == 0)
-                                ? widget.booking.vehicleDriverBirthday
-                                : '',
-                            'discount_id': null
-                          },
-                        for (int i = 0; i < widget.booking.children; i++)
-                          {
-                            'type': 'child',
-                            'name': '',
-                            'birthdate': '',
-                            'discount_id': null
-                          },
-                      ];
+                      widget.booking.passengers = BookingData.buildPassengerEntries(
+                        adults: widget.booking.adults,
+                        children: widget.booking.children,
+                        minors: widget.booking.minors,
+                        infants: widget.booking.infants,
+                        hasVehicle: widget.booking.hasVehicle,
+                        vehicleDriverName:
+                            '${widget.booking.vehicleDriverFirstName} ${widget.booking.vehicleDriverMiddleName} ${widget.booking.vehicleDriverLastName}'
+                                .replaceAll(RegExp(r'\s+'), ' ')
+                                .trim(),
+                        vehicleDriverBirthday: widget.booking.vehicleDriverBirthday,
+                        isAirline: widget.booking.mode == 'airline',
+                      );
 
                       if (widget.booking.mode != 'airline') {
                         final accommodations =
@@ -8656,23 +8743,16 @@ class _DiscountScreenState extends State<DiscountScreen> {
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 10, vertical: 4),
                                   decoration: BoxDecoration(
-                                      color:
-                                          (type == 'adult' || type == 'driver'
-                                                  ? kGreen
-                                                  : kPink)
-                                              .withValues(alpha: 0.1),
+                                      color: ['adult', 'driver'].contains(type)
+                                          ? kGreen.withValues(alpha: 0.1)
+                                          : kPink.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(20)),
                                   child: Text(
-                                    type == 'driver'
-                                        ? 'Driver'
-                                        : (type == 'adult'
-                                            ? 'Adult ${i + 1}'
-                                            : 'Minor ${i + 1}'),
+                                    BookingData.passengerTypeLabel(type, i + 1),
                                     style: TextStyle(
-                                        color:
-                                            type == 'adult' || type == 'driver'
-                                                ? kGreen
-                                                : kPink,
+                                        color: ['adult', 'driver'].contains(type)
+                                            ? kGreen
+                                            : kPink,
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold),
                                   ),
@@ -9706,9 +9786,8 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                     ...List.generate(
                         pax.length,
                         (i) => _SummaryRow(
-                              pax[i]['type'] == 'driver'
-                                  ? 'Driver'
-                                  : '${pax[i]['type'] == 'adult' ? 'Adult' : 'Minor'} ${i + 1}',
+                              BookingData.passengerTypeLabel(
+                                  pax[i]['type']?.toString() ?? 'adult', i + 1),
                               pax[i]['name'] as String? ?? '',
                             )),
                   ]),
@@ -9891,11 +9970,16 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                     try {
                       double ticketPrice = 0.0;
                       double scheduleAccommodationCost = 0.0;
+                      final totalAirlinePassengers = widget.booking.mode == 'airline'
+                          ? widget.booking.adults + widget.booking.children + widget.booking.minors + widget.booking.infants
+                          : widget.booking.adults + widget.booking.children;
                       int payingAdults = widget.booking.hasVehicle
                           ? (widget.booking.adults - 1).clamp(0, 999)
                           : widget.booking.adults;
                       int payingChildren = widget.booking.children;
-                      int payingPax = payingAdults + payingChildren;
+                      int payingMinors = widget.booking.mode == 'airline' ? widget.booking.minors : 0;
+                      int payingInfants = widget.booking.mode == 'airline' ? widget.booking.infants : 0;
+                      int payingPax = payingAdults + payingChildren + payingMinors + payingInfants;
 
                       if (widget.booking.selectedSchedule != null) {
                         final adultP =
@@ -9906,6 +9990,16 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                             (widget.booking.selectedSchedule!['child_price'] ??
                                 widget.booking.selectedSchedule!['price'] ??
                                 0);
+                        final minorP =
+                            (widget.booking.selectedSchedule!['minor_price'] ??
+                                widget.booking.selectedSchedule!['child_price'] ??
+                                widget.booking.selectedSchedule!['price'] ??
+                                0);
+                        final infantP =
+                            (widget.booking.selectedSchedule!['infant_price'] ??
+                                widget.booking.selectedSchedule!['child_price'] ??
+                                widget.booking.selectedSchedule!['price'] ??
+                                0);
                         ticketPrice += (payingAdults *
                                 (adultP is num
                                     ? adultP.toDouble()
@@ -9914,7 +10008,15 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                             (payingChildren *
                                 (childP is num
                                     ? childP.toDouble()
-                                    : double.tryParse(childP.toString()) ?? 0));
+                                    : double.tryParse(childP.toString()) ?? 0)) +
+                            (payingMinors *
+                                (minorP is num
+                                    ? minorP.toDouble()
+                                    : double.tryParse(minorP.toString()) ?? 0)) +
+                            (payingInfants *
+                                (infantP is num
+                                    ? infantP.toDouble()
+                                    : double.tryParse(infantP.toString()) ?? 0));
                         if (widget.booking.selectedScheduleAccommodation !=
                             null) {
                           final accPrice = widget.booking
@@ -9936,6 +10038,16 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                                 .selectedReturnSchedule!['child_price'] ??
                             widget.booking.selectedReturnSchedule!['price'] ??
                             0);
+                        final minorP = (widget.booking
+                                .selectedReturnSchedule!['minor_price'] ??
+                            widget.booking.selectedReturnSchedule!['child_price'] ??
+                            widget.booking.selectedReturnSchedule!['price'] ??
+                            0);
+                        final infantP = (widget.booking
+                                .selectedReturnSchedule!['infant_price'] ??
+                            widget.booking.selectedReturnSchedule!['child_price'] ??
+                            widget.booking.selectedReturnSchedule!['price'] ??
+                            0);
                         ticketPrice += (payingAdults *
                                 (adultP is num
                                     ? adultP.toDouble()
@@ -9944,7 +10056,15 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                             (payingChildren *
                                 (childP is num
                                     ? childP.toDouble()
-                                    : double.tryParse(childP.toString()) ?? 0));
+                                    : double.tryParse(childP.toString()) ?? 0)) +
+                            (payingMinors *
+                                (minorP is num
+                                    ? minorP.toDouble()
+                                    : double.tryParse(minorP.toString()) ?? 0)) +
+                            (payingInfants *
+                                (infantP is num
+                                    ? infantP.toDouble()
+                                    : double.tryParse(infantP.toString()) ?? 0));
                         if (widget
                                 .booking.selectedReturnScheduleAccommodation !=
                             null) {
@@ -10017,8 +10137,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                             (widget.booking.adults + widget.booking.children);
                       }
 
-                      int travelers =
-                          widget.booking.adults + widget.booking.children;
+                      int travelers = totalAirlinePassengers;
                       int multiplier = travelers < 1 ? 1 : travelers;
 
                       double transportClassCost = 0.0;
@@ -10093,8 +10212,12 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                                 if (widget.booking.selectedSchedule != null) {
                                   final adultP = widget.booking.selectedSchedule!['adult_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0;
                                   final childP = widget.booking.selectedSchedule!['child_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0;
+                                  final minorP = widget.booking.selectedSchedule!['minor_price'] ?? widget.booking.selectedSchedule!['child_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0;
+                                  final infantP = widget.booking.selectedSchedule!['infant_price'] ?? widget.booking.selectedSchedule!['child_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0;
                                   depTicket = (payingAdults * (adultP is num ? adultP.toDouble() : double.tryParse(adultP.toString()) ?? 0)) +
-                                      (payingChildren * (childP is num ? childP.toDouble() : double.tryParse(childP.toString()) ?? 0));
+                                      (payingChildren * (childP is num ? childP.toDouble() : double.tryParse(childP.toString()) ?? 0)) +
+                                      (payingMinors * (minorP is num ? minorP.toDouble() : double.tryParse(minorP.toString()) ?? 0)) +
+                                      (payingInfants * (infantP is num ? infantP.toDouble() : double.tryParse(infantP.toString()) ?? 0));
                                 }
                                 if (widget.booking.mode == 'ferry') {
                                   depClass = (widget.booking.selectedFerryAccommodationPrice ?? 0) * payingPax;
@@ -10112,8 +10235,12 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                                 if (widget.booking.selectedReturnSchedule != null) {
                                   final adultP = widget.booking.selectedReturnSchedule!['adult_price'] ?? widget.booking.selectedReturnSchedule!['price'] ?? 0;
                                   final childP = widget.booking.selectedReturnSchedule!['child_price'] ?? widget.booking.selectedReturnSchedule!['price'] ?? 0;
+                                  final minorP = widget.booking.selectedReturnSchedule!['minor_price'] ?? widget.booking.selectedReturnSchedule!['child_price'] ?? widget.booking.selectedReturnSchedule!['price'] ?? 0;
+                                  final infantP = widget.booking.selectedReturnSchedule!['infant_price'] ?? widget.booking.selectedReturnSchedule!['child_price'] ?? widget.booking.selectedReturnSchedule!['price'] ?? 0;
                                   retTicket = (payingAdults * (adultP is num ? adultP.toDouble() : double.tryParse(adultP.toString()) ?? 0)) +
-                                      (payingChildren * (childP is num ? childP.toDouble() : double.tryParse(childP.toString()) ?? 0));
+                                      (payingChildren * (childP is num ? childP.toDouble() : double.tryParse(childP.toString()) ?? 0)) +
+                                      (payingMinors * (minorP is num ? minorP.toDouble() : double.tryParse(minorP.toString()) ?? 0)) +
+                                      (payingInfants * (infantP is num ? infantP.toDouble() : double.tryParse(infantP.toString()) ?? 0));
                                 }
                                 if (widget.booking.mode == 'ferry') {
                                   retClass = (widget.booking.selectedReturnFerryAccommodationPrice ?? 0) * payingPax;
