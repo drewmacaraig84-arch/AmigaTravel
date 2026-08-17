@@ -298,18 +298,21 @@ Route::get('/ticket/download/{transaction_number}', function ($transaction_numbe
     $receiptDir = storage_path('app/receipts');
     $path = $receiptDir . '/receipt-' . $booking->transaction_number . '.pdf';
 
-    if (! file_exists($path)) {
-        try {
-            if (! is_dir($receiptDir)) {
-                mkdir($receiptDir, 0755, true);
-            }
-            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.receipt', ['booking' => $booking]);
-            $pdf->setPaper('a4');
-            $pdf->save($path);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('PDF generation failed: ' . $e->getMessage());
-            return response()->view('pdf.receipt', ['booking' => $booking]);
+    try {
+        if (file_exists($path)) {
+            @unlink($path);
         }
+
+        if (! is_dir($receiptDir)) {
+            mkdir($receiptDir, 0755, true);
+        }
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.receipt', ['booking' => $booking]);
+        $pdf->setPaper('a4');
+        $pdf->save($path);
+    } catch (\Throwable $e) {
+        \Illuminate\Support\Facades\Log::error('PDF generation failed: ' . $e->getMessage());
+        return response()->view('pdf.receipt', ['booking' => $booking]);
     }
 
     return response()->file($path, [
