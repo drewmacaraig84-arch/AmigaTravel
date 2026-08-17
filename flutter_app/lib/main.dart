@@ -9330,7 +9330,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                     []);
             if (retClasses.isNotEmpty) {
               return {
-                'return_selected_transport_class_id':
+                'selected_return_transport_class_id':
                     booking.selectedReturnFerryAccommodationId
               };
             } else {
@@ -9342,7 +9342,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
           }())
         else if (booking.tripType == 'round_trip' &&
             booking.selectedReturnAirlineClassId != null)
-          'return_selected_transport_class_id':
+          'selected_return_transport_class_id':
               booking.selectedReturnAirlineClassId,
       };
       final res = await http.post(
@@ -9550,13 +9550,13 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                       []);
               if (retClasses.isNotEmpty) {
                 return {
-                  'return_selected_transport_class_id':
+                  'selected_return_transport_class_id':
                       widget.booking.selectedReturnFerryAccommodationId,
                   'selected_return_schedule_accommodation_id': null,
                 };
               } else {
                 return {
-                  'return_selected_transport_class_id': null,
+                  'selected_return_transport_class_id': null,
                   'selected_return_schedule_accommodation_id':
                       widget.booking.selectedReturnFerryAccommodationId,
                 };
@@ -9564,7 +9564,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
             }())
           else if (widget.booking.tripType == 'round_trip' &&
               widget.booking.selectedReturnAirlineClassId != null) ...{
-            'return_selected_transport_class_id':
+            'selected_return_transport_class_id':
                 widget.booking.selectedReturnAirlineClassId,
           },
           if (widget.booking.voucherCode != null &&
@@ -11335,7 +11335,7 @@ class _VoucherPickerScreenState extends State<VoucherPickerScreen> {
                     []);
             if (retClasses.isNotEmpty) {
               return {
-                'return_selected_transport_class_id':
+                'selected_return_transport_class_id':
                     booking.selectedReturnFerryAccommodationId
               };
             } else {
@@ -11347,7 +11347,7 @@ class _VoucherPickerScreenState extends State<VoucherPickerScreen> {
           }())
         else if (booking.tripType == 'round_trip' &&
             booking.selectedReturnAirlineClassId != null)
-          'return_selected_transport_class_id':
+          'selected_return_transport_class_id':
               booking.selectedReturnAirlineClassId,
       };
       final res = await http.post(

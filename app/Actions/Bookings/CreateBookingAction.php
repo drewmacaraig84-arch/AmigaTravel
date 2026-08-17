@@ -55,10 +55,10 @@ class CreateBookingAction
                 ->where('transport_class_id', $data['selected_transport_class_id'])
                 ->value('is_promo');
         }
-        if (! empty($data['return_selected_transport_class_id']) && $returnSchedule) {
+        if (! empty($data['selected_return_transport_class_id']) && $returnSchedule) {
             $isPromoBooking = $isPromoBooking || DB::table('schedule_transport_class')
                 ->where('schedule_id', $returnSchedule->id)
-                ->where('transport_class_id', $data['return_selected_transport_class_id'])
+                ->where('transport_class_id', $data['selected_return_transport_class_id'])
                 ->value('is_promo');
         }
 
@@ -153,9 +153,9 @@ class CreateBookingAction
                 }
             }
 
-            if ($returnSchedule && ! empty($data['return_selected_transport_class_id'])) {
+            if ($returnSchedule && ! empty($data['selected_return_transport_class_id'])) {
                 $lockedReturnStc = ScheduleTransportClass::where('schedule_id', $returnSchedule->id)
-                    ->where('transport_class_id', $data['return_selected_transport_class_id'])
+                    ->where('transport_class_id', $data['selected_return_transport_class_id'])
                     ->lockForUpdate()
                     ->first();
 
@@ -181,7 +181,7 @@ class CreateBookingAction
                 $data['vehicle_price'] ?? 0,
                 $returnSchedule,
                 $returnScheduleAccommodation,
-                $data['return_selected_transport_class_id'] ?? null,
+                $data['selected_return_transport_class_id'] ?? null,
             );
 
             $totalPrice = $subtotal;

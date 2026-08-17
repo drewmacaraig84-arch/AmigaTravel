@@ -694,31 +694,7 @@ class Booking extends Model
         $depAccTotal = 0;
         $retTicketTotal = 0;
         $retAccTotal = 0;
-        
-        foreach ($passengers as $p) {
-            if ($p->is_promo) {
-                $depTicketTotal += (float) $p->promo_price;
-            } else {
-                $pDepTicket = (float) ($this->schedule_price ?? 0);
-                $pDepAcc = (float) ($this->schedule_accommodation_price ?? 0);
-                $pRetTicket = (float) ($this->return_schedule_price ?? 0);
-                $pRetAcc = (float) ($this->return_schedule_accommodation_price ?? 0);
-                
-                if ($p->discount) {
-                    $multiplier = 1 - ((float) $p->discount->percentage / 100);
-                    $pDepTicket *= $multiplier;
-                    $pDepAcc *= $multiplier;
-                    $pRetTicket *= $multiplier;
-                    $pRetAcc *= $multiplier;
-                }
-                
-                $depTicketTotal += $pDepTicket;
-                $depAccTotal += $pDepAcc;
-                $retTicketTotal += $pRetTicket;
-                $retAccTotal += $pRetAcc;
-            }
-        }
-        
+
         // Use the is_return pivot flag to unambiguously split TC charges.
         // Falls back to index-based split for legacy rows that pre-date the migration
         // (i.e. rows where both have is_return = false).
@@ -734,11 +710,45 @@ class Booking extends Model
             $retTcs = collect([$depTcsArr[1]]);
         }
 
-        foreach ($depTcs as $tc) {
-            $depTicketTotal += (float) $tc->pivot->price;
-        }
-        foreach ($retTcs as $tc) {
-            $retTicketTotal += (float) $tc->pivot->price;
+        $depTcPrice = $depTcs->sum(fn ($tc) => (float) $tc->pivot->price);
+        $retTcPrice = $retTcs->sum(fn ($tc) => (float) $tc->pivot->price);
+        
+        $payingPaxCount = 0;
+        
+        foreach ($passengers as $p) {
+            // Drivers travel free
+            if ($this->has_vehicle && $p->type === 'driver') {
+                continue;
+            }
+            
+            $payingPaxCount++;
+            
+            if ($p->is_promo) {
+                $depTicketTotal += (float) $p->promo_price;
+            } else {
+                $pDepTicket = (float) ($this->schedule_price ?? 0);
+                $pDepAcc = (float) ($this->schedule_accommodation_price ?? 0);
+                $pDepTc = $depTcPrice;
+                
+                $pRetTicket = (float) ($this->return_schedule_price ?? 0);
+                $pRetAcc = (float) ($this->return_schedule_accommodation_price ?? 0);
+                $pRetTc = $retTcPrice;
+                
+                if ($p->discount) {
+                    $multiplier = 1 - ((float) $p->discount->percentage / 100);
+                    $pDepTicket *= $multiplier;
+                    $pDepAcc *= $multiplier;
+                    $pDepTc *= $multiplier;
+                    $pRetTicket *= $multiplier;
+                    $pRetAcc *= $multiplier;
+                    $pRetTc *= $multiplier;
+                }
+                
+                $depTicketTotal += $pDepTicket + $pDepTc;
+                $depAccTotal += $pDepAcc;
+                $retTicketTotal += $pRetTicket + $pRetTc;
+                $retAccTotal += $pRetAcc;
+            }
         }
         
         // Combine ticket + accommodation/transport class into one line
