@@ -26,6 +26,8 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
 # --- Composer ---
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 ENV COMPOSER_ALLOW_SUPERUSER=1
+ARG GITHUB_TOKEN
+RUN if [ -n "$GITHUB_TOKEN" ]; then composer config -g github-oauth.github.com "$GITHUB_TOKEN"; fi
 
 # --- Opcache tuning for production ---
 RUN echo "opcache.enable=1" >> /usr/local/etc/php/conf.d/opcache.ini \
@@ -45,7 +47,15 @@ WORKDIR /var/www/html
 COPY . .
 
 # --- Install PHP & Node dependencies, build frontend assets ---
-RUN composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader \
+RUN for i in 1 2 3; do \
+      echo "composer install attempt $i"; \
+      if composer install --no-dev --prefer-install=auto --no-interaction --optimize-autoloader; then \
+        break; \
+      fi; \
+      if [ $i -eq 3 ]; then exit 1; fi; \
+      echo "Composer failed, retrying in 30s..."; \
+      sleep 30; \
+    done \
     && npm install --legacy-peer-deps \
     && npm run build
 
