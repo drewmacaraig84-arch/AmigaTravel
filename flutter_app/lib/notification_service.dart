@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:app_badge_plus/app_badge_plus.dart';
+import 'package:flutter_app_badger/flutter_app_badger.dart';
 import 'dart:convert';
 
 class NotificationService {
@@ -14,10 +14,10 @@ class NotificationService {
   }) async {
     if (kIsWeb) return;
 
-    // Android: reference the monochrome vector drawable
+    // Android: reference the monochrome vector drawable in res/drawable/
     const androidInit = AndroidInitializationSettings('ic_notification');
 
-    // iOS: request badge permission now; alert + sound are requested at runtime
+    // iOS: request badge permission silently at init; alert/sound asked at runtime
     const iosInit = DarwinInitializationSettings(
       requestAlertPermission: false,
       requestBadgePermission: true,
@@ -74,7 +74,7 @@ class NotificationService {
   }) async {
     if (kIsWeb) return;
 
-    // Importance.max + Priority.high → Android shows it as a heads-up banner
+    // Importance.max + Priority.high → Android shows heads-up banner on screen
     const androidDetails = AndroidNotificationDetails(
       'amiga_high_importance',
       'General Notifications',
@@ -100,14 +100,17 @@ class NotificationService {
     await _plugin.show(id, title, body, details, payload: payload);
   }
 
-  // ─── App icon badge (red number like Messages / Messenger) ─────────────────
+  // ─── App icon badge (red number on launcher icon) ──────────────────────────
 
   static Future<void> setBadge(int count) async {
     if (kIsWeb) return;
-    final supported = await AppBadgePlus.isSupported();
-    if (supported) {
-      await AppBadgePlus.updateBadge(count);
-    }
+    try {
+      if (count > 0) {
+        await FlutterAppBadger.updateBadgeCount(count);
+      } else {
+        await FlutterAppBadger.removeBadge();
+      }
+    } catch (_) {}
   }
 
   static Future<void> clearBadge() => setBadge(0);

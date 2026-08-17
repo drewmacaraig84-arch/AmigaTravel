@@ -96,7 +96,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.100+111';
+  static const String appVersion = '1.0.101+112';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -1370,11 +1370,7 @@ class _MainScreenState extends State<MainScreen> {
                 UserSession.unreadNotificationsCount = newUnread;
               });
             }
-            if (newUnread > 0) {
-              NotificationService.setBadge(newUnread);
-            } else {
-              NotificationService.clearBadge();
-            }
+            NotificationService.setBadge(newUnread);
           }
           AppEventBus.emit('notifications_updated');
         }
