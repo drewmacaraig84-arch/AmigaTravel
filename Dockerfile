@@ -26,8 +26,8 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
 # --- Composer ---
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 ENV COMPOSER_ALLOW_SUPERUSER=1
-ARG GITHUB_TOKEN
-RUN if [ -n "$GITHUB_TOKEN" ]; then composer config -g github-oauth.github.com "$GITHUB_TOKEN"; fi
+RUN composer config -g preferred-install source \
+    && composer config -g store-auths false
 
 # --- Opcache tuning for production ---
 RUN echo "opcache.enable=1" >> /usr/local/etc/php/conf.d/opcache.ini \
@@ -47,14 +47,17 @@ WORKDIR /var/www/html
 COPY . .
 
 # --- Install PHP & Node dependencies, build frontend assets ---
-RUN for i in 1 2 3; do \
+# --prefer-source forces git clone (bypasses GitHub zip download API rate limits).
+# If GITHUB_TOKEN env is set, Composer will auto-use it for authenticated clones
+# via the COMPOSER_AUTH env var that Railway passes at build time.
+RUN for i in 1 2 3 4 5; do \
       echo "composer install attempt $i"; \
-      if composer install --no-dev --prefer-install=auto --no-interaction --optimize-autoloader; then \
+      if composer install --no-dev --prefer-source --no-interaction --optimize-autoloader; then \
         break; \
       fi; \
-      if [ $i -eq 3 ]; then exit 1; fi; \
-      echo "Composer failed, retrying in 30s..."; \
-      sleep 30; \
+      if [ $i -eq 5 ]; then exit 1; fi; \
+      echo "Composer install attempt $i failed, waiting 45s for rate limit..."; \
+      sleep 45; \
     done \
     && npm install --legacy-peer-deps \
     && npm run build
