@@ -1,7 +1,27 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_app_badger/flutter_app_badger.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'dart:convert';
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  try {
+    await Firebase.initializeApp();
+    final notification = message.notification;
+    if (notification != null) {
+      await NotificationService.showNotification(
+        id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        title: notification.title ?? 'Amiga Travel',
+        body: notification.body ?? '',
+        payload: jsonEncode(message.data),
+      );
+    }
+  } catch (e) {
+    debugPrint('FCM background handler error: $e');
+  }
+}
 
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _plugin =
@@ -20,7 +40,12 @@ class NotificationService {
     if (kIsWeb) return;
 
     try {
-      // Use the standard launcher icon as default notification icon
+      // 1. Initialize Firebase
+      await Firebase.initializeApp();
+      FirebaseMessaging.onBackgroundMessage(
+          _firebaseMessagingBackgroundHandler);
+
+      // 2. Initialize Local Notifications Plugin
       const androidInit =
           AndroidInitializationSettings('@mipmap/launcher_icon');
 
@@ -51,7 +76,7 @@ class NotificationService {
         },
       );
 
-      // Explicitly register the high importance channel with Android OS
+      // 3. Register high-importance Android channel with OS
       const AndroidNotificationChannel channel = AndroidNotificationChannel(
         _channelId,
         _channelName,
@@ -68,6 +93,36 @@ class NotificationService {
       if (androidPlugin != null) {
         await androidPlugin.createNotificationChannel(channel);
       }
+
+      // 4. Handle Foreground FCM Messages
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        final notification = message.notification;
+        if (notification != null) {
+          showNotification(
+            id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+            title: notification.title ?? 'Amiga Travel',
+            body: notification.body ?? '',
+            payload: jsonEncode(message.data),
+          );
+        }
+      });
+
+      // 5. Handle Notification tap when app was opened from background via push
+      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+        if (onNotificationTap != null) {
+          onNotificationTap(message.data);
+        }
+      });
+
+      // 6. Check if app was opened directly from a terminated state notification
+      final initialMessage =
+          await FirebaseMessaging.instance.getInitialMessage();
+      if (initialMessage != null && onNotificationTap != null) {
+        onNotificationTap(initialMessage.data);
+      }
+
+      // 7. Subscribe to global announcements topic
+      await FirebaseMessaging.instance.subscribeToTopic('all_users');
     } catch (e) {
       debugPrint('NotificationService initialize error: $e');
     }
@@ -87,14 +142,13 @@ class NotificationService {
         await androidPlugin.requestNotificationsPermission();
       }
 
-      // iOS runtime permission (alert + badge + sound)
-      final iosPlugin = _plugin
-          .resolvePlatformSpecificImplementation<
-              IOSFlutterLocalNotificationsPlugin>();
-      if (iosPlugin != null) {
-        await iosPlugin.requestPermissions(
-            alert: true, badge: true, sound: true);
-      }
+      // Firebase iOS permission
+      await FirebaseMessaging.instance.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+        provisional: false,
+      );
     } catch (e) {
       debugPrint('NotificationService requestPermission error: $e');
     }
@@ -111,7 +165,6 @@ class NotificationService {
     if (kIsWeb) return;
 
     try {
-      // Importance.max + Priority.high + channel settings → Heads-up banner
       const androidDetails = AndroidNotificationDetails(
         _channelId,
         _channelName,
@@ -162,8 +215,43 @@ class NotificationService {
 
   static Future<void> clearBadge() => setBadge(0);
 
-  // ─── Stubs kept for API compatibility ──────────────────────────────────────
+  // ─── User-specific FCM Topic Subscription ──────────────────────────────────
 
-  static Future<void> subscribeToUserTopic(String email) async {}
-  static Future<void> unsubscribeFromUserTopic(String email) async {}
+  static Future<void> subscribeToUserTopic(dynamic userIdOrEmail) async {
+    if (kIsWeb) return;
+    try {
+      final topic = _sanitizeTopic(userIdOrEmail.toString());
+      if (topic.isNotEmpty) {
+        await FirebaseMessaging.instance.subscribeToTopic(topic);
+        debugPrint('Subscribed to FCM topic: $topic');
+      }
+    } catch (e) {
+      debugPrint('Failed to subscribe to FCM topic: $e');
+    }
+  }
+
+  static Future<void> unsubscribeFromUserTopic(dynamic userIdOrEmail) async {
+    if (kIsWeb) return;
+    try {
+      final topic = _sanitizeTopic(userIdOrEmail.toString());
+      if (topic.isNotEmpty) {
+        await FirebaseMessaging.instance.unsubscribeFromTopic(topic);
+        debugPrint('Unsubscribed from FCM topic: $topic');
+      }
+    } catch (e) {
+      debugPrint('Failed to unsubscribe from FCM topic: $e');
+    }
+  }
+
+  static String _sanitizeTopic(String input) {
+    if (input.isEmpty) return '';
+    if (int.tryParse(input) != null) {
+      return 'user_$input';
+    }
+    if (input.startsWith('user_')) {
+      return input.replaceAll(RegExp(r'[^a-zA-Z0-9-_.~%+]'), '_');
+    }
+    return 'user_${input.replaceAll(RegExp(r'[^a-zA-Z0-9-_.~%+]'), '_')}';
+  }
 }
+

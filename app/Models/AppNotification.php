@@ -19,8 +19,15 @@ class AppNotification extends Model
     protected static function booted()
     {
         static::created(function ($model) {
-            // Firebase has been removed from the flutter app
-            // Push notifications are no longer sent via FCM
+            try {
+                \App\Services\FirebasePushService::sendToAll(
+                    $model->title,
+                    $model->body,
+                    ['type' => 'announcement', 'id' => 'app_' . $model->id]
+                );
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('FCM broadcast failed for AppNotification: ' . $e->getMessage());
+            }
         });
     }
 }

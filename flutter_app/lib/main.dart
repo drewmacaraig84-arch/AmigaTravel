@@ -73,6 +73,7 @@ class AppEventBus {
 class UserSession {
   static bool isLoggedIn = false;
   static bool isEmailVerified = false;
+  static int userId = 0;
   static String username = 'Traveler';
   static String email = 'user@amigagracia.com';
   static String phone = '';
@@ -98,13 +99,14 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.103+114';
+  static const String appVersion = '1.0.104+115';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
     isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
     isEmailVerified = prefs.getBool('isEmailVerified') ?? false;
+    userId = prefs.getInt('userId') ?? 0;
     username = prefs.getString('username') ?? 'Traveler';
     email = prefs.getString('email') ?? 'user@amigagracia.com';
     phone = prefs.getString('phone') ?? '';
@@ -114,6 +116,15 @@ class UserSession {
     graciaPoints = prefs.getInt('graciaPoints') ?? 0;
     pointsAwarded = prefs.getInt('pointsAwarded') ?? 0;
     spendThreshold = prefs.getInt('spendThreshold') ?? 0;
+
+    if (isLoggedIn) {
+      if (userId > 0) {
+        NotificationService.subscribeToUserTopic(userId);
+      }
+      if (email.isNotEmpty) {
+        NotificationService.subscribeToUserTopic(email);
+      }
+    }
 
     try {
       final packageInfo = await PackageInfo.fromPlatform();
@@ -160,6 +171,7 @@ class UserSession {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isLoggedIn', isLoggedIn);
     await prefs.setBool('isEmailVerified', isEmailVerified);
+    await prefs.setInt('userId', userId);
     await prefs.setString('username', username);
     await prefs.setString('email', email);
     await prefs.setString('phone', phone);
@@ -177,6 +189,7 @@ class UserSession {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('isLoggedIn');
     await prefs.remove('isEmailVerified');
+    await prefs.remove('userId');
     await prefs.remove('username');
     await prefs.remove('email');
     await prefs.remove('token');
@@ -187,6 +200,7 @@ class UserSession {
     await prefs.remove('spendThreshold');
     isLoggedIn = false;
     isEmailVerified = false;
+    userId = 0;
     username = 'Traveler';
     email = 'user@amigagracia.com';
     token = '';
@@ -1425,8 +1439,13 @@ class _MainScreenState extends State<MainScreen> {
 
   void _handleLogout() async {
     // Unsubscribe from user-specific FCM topic before clearing session
-    if (UserSession.isLoggedIn && UserSession.email.isNotEmpty) {
-      await NotificationService.unsubscribeFromUserTopic(UserSession.email);
+    if (UserSession.isLoggedIn) {
+      if (UserSession.userId > 0) {
+        await NotificationService.unsubscribeFromUserTopic(UserSession.userId);
+      }
+      if (UserSession.email.isNotEmpty) {
+        await NotificationService.unsubscribeFromUserTopic(UserSession.email);
+      }
     }
     await UserSession.clear();
     setState(() {
@@ -4707,6 +4726,9 @@ class _ActivityScreenState extends State<ActivityScreen> {
       if (response.statusCode == 200 && data['status'] == 'success') {
         setState(() {
           UserSession.isLoggedIn = true;
+          UserSession.userId = data['user']['id'] is int
+              ? data['user']['id']
+              : (int.tryParse(data['user']['id'].toString()) ?? 0);
           UserSession.username = data['user']['name'];
           UserSession.email = data['user']['email'];
           UserSession.phone = data['user']['phone'] ?? '';
@@ -4733,7 +4755,10 @@ class _ActivityScreenState extends State<ActivityScreen> {
           } catch (_) {}
         }
 
-        // Subscribe to user-specific FCM topic for targeted notifications (e.g. booking cancellation)
+        // Subscribe to user-specific FCM topic for targeted notifications (e.g. booking confirmation / cancellation)
+        if (UserSession.userId > 0) {
+          await NotificationService.subscribeToUserTopic(UserSession.userId);
+        }
         await NotificationService.subscribeToUserTopic(UserSession.email);
         widget.onLoginSuccess();
         _fetchBookings();
@@ -4835,6 +4860,9 @@ class _ActivityScreenState extends State<ActivityScreen> {
       if (response.statusCode == 200 && data['status'] == 'success') {
         setState(() {
           UserSession.isLoggedIn = true;
+          UserSession.userId = data['user']['id'] is int
+              ? data['user']['id']
+              : (int.tryParse(data['user']['id'].toString()) ?? 0);
           UserSession.username = data['user']['name'];
           UserSession.email = data['user']['email'];
           UserSession.phone = data['user']['phone'] ?? '';
@@ -4844,7 +4872,10 @@ class _ActivityScreenState extends State<ActivityScreen> {
           UserSession.isEmailVerified = UserSession.lookupToken.isNotEmpty;
         });
         await UserSession.save();
-        // Subscribe to user-specific FCM topic for targeted notifications (e.g. booking cancellation)
+        // Subscribe to user-specific FCM topic for targeted notifications (e.g. booking confirmation / cancellation)
+        if (UserSession.userId > 0) {
+          await NotificationService.subscribeToUserTopic(UserSession.userId);
+        }
         await NotificationService.subscribeToUserTopic(UserSession.email);
         widget.onLoginSuccess();
         _fetchBookings();

@@ -38,7 +38,7 @@ class UserNotification extends Model
         string $icon = 'notifications',
         array $data = []
     ): self {
-        return self::create([
+        $notification = self::create([
             'user_id' => $userId,
             'title'   => $title,
             'body'    => $body,
@@ -47,5 +47,18 @@ class UserNotification extends Model
             'is_read' => false,
             'data'    => $data ?: null,
         ]);
+
+        try {
+            \App\Services\FirebasePushService::sendToUser(
+                $userId,
+                $title,
+                $body,
+                array_merge(['type' => $type, 'id' => (string) $notification->id], $data)
+            );
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Failed to send FCM push for notification: ' . $e->getMessage());
+        }
+
+        return $notification;
     }
 }
