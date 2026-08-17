@@ -5563,79 +5563,30 @@ class _ActivityScreenState extends State<ActivityScreen> {
                           ),
                         ],
                       ),
-                      const Divider(height: 20),
-                      Row(
-                        children: [
-                          const Icon(Icons.location_on, color: kPink, size: 16),
-                          const SizedBox(width: 6),
-                          Text('${b['origin']} → ${b['destination']}',
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 13)),
-                        ],
+                      const Divider(height: 20, color: kSlate200),
+                      _SummaryRow('Route', '${b['origin']} → ${b['destination']}'),
+                      _SummaryRow('Mode', '${b['schedule']?['route']?['mode'] ?? b['mode'] ?? 'ferry'}'.toUpperCase()),
+                      _SummaryRow(
+                        'Departure',
+                        () {
+                          final dtStr = (b['rebooking_departure_date'] ?? b['preferred_replacement_date'] ?? b['departure_date'])?.toString() ?? '';
+                          return dtStr.isNotEmpty ? (DateTime.tryParse(dtStr)?.toLocal().toString().split(' ')[0] ?? dtStr) : '-';
+                        }()
                       ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Icon(Icons.calendar_today,
-                              color: kSlate400, size: 14),
-                          const SizedBox(width: 6),
-                          Text(
-                              (b['rebooking_departure_date'] ??
-                                          b['preferred_replacement_date'] ??
-                                          b['departure_date']) !=
-                                      null
-                                  ? (DateTime.tryParse(
-                                              (b['rebooking_departure_date'] ??
-                                                      b[
-                                                          'preferred_replacement_date'] ??
-                                                      b['departure_date'])
-                                                  .toString())
-                                          ?.toLocal()
-                                          .toString()
-                                          .split(' ')[0] ??
-                                      '')
-                                  : '',
-                              style: const TextStyle(
-                                  fontSize: 12, color: kSlate600)),
-                          if ((b['rebooking_return_date'] ??
-                                  b['return_date']) !=
-                              null) ...[
-                            const Text('  |  Return: ',
-                                style:
-                                    TextStyle(fontSize: 12, color: kSlate400)),
-                            Text(
-                                (DateTime.tryParse(
-                                            (b['rebooking_return_date'] ??
-                                                    b['return_date'])
-                                                .toString())
-                                        ?.toLocal()
-                                        .toString()
-                                        .split(' ')[0] ??
-                                    ''),
-                                style: const TextStyle(
-                                    fontSize: 12, color: kSlate600)),
-                          ],
-                        ],
+                      if ((b['rebooking_return_date'] ?? b['return_date']) != null)
+                        _SummaryRow(
+                          'Return',
+                          () {
+                            final dtStr = (b['rebooking_return_date'] ?? b['return_date'])?.toString() ?? '';
+                            return dtStr.isNotEmpty ? (DateTime.tryParse(dtStr)?.toLocal().toString().split(' ')[0] ?? dtStr) : '-';
+                          }()
+                        ),
+                      _SummaryRow(
+                        'Schedule',
+                        (b['schedule_summary'] ?? b['schedule_service'] ?? '').toString(),
+                        showDivider: false,
                       ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(
-                              b['mode'] == 'airline'
-                                  ? Icons.flight
-                                  : Icons.directions_boat,
-                              color: kSlate400,
-                              size: 14),
-                          const SizedBox(width: 6),
-                          Text(
-                              b['schedule_summary'] ??
-                                  b['schedule_service'] ??
-                                  '',
-                              style: const TextStyle(
-                                  fontSize: 12, color: kSlate600)),
-                        ],
-                      ),
-                      const Divider(height: 20),
+                      const Divider(height: 20, color: kSlate200),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -6015,136 +5966,35 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
 
   Widget _priceBreakdownCard() {
     final breakdown = _booking['price_breakdown'];
+    final total = _parseDouble(_booking['total_price']);
+
     if (breakdown == null || (breakdown as List).isEmpty) {
-      final total = _parseDouble(_booking['total_price']);
-      return Card(
-        margin: const EdgeInsets.only(bottom: 12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Payment',
-                  style:
-                      TextStyle(fontWeight: FontWeight.bold, color: kSlate800)),
-              const SizedBox(height: 8),
-              Text('Status: ${_paymentStatus.toUpperCase()}',
-                  style: const TextStyle(color: kSlate600)),
-              const SizedBox(height: 4),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Total',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                  Text('₱${total.toStringAsFixed(2)}',
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                ],
-              ),
-            ],
-          ),
-        ),
+      return _SummarySection(
+        title: 'Payment Summary',
+        children: [
+          _SummaryRow('Status', _paymentStatus.toUpperCase()),
+          _SummaryRow('Total', '₱${total.toStringAsFixed(2)}', showDivider: false),
+        ],
       );
     }
 
-    final total = _parseDouble(_booking['total_price']);
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Price Breakdown',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: kSlate800,
-                        fontSize: 15)),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: _paymentStatus == 'paid'
-                        ? Colors.green.shade50
-                        : Colors.orange.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                        color: _paymentStatus == 'paid'
-                            ? Colors.green.shade300
-                            : Colors.orange.shade300),
-                  ),
-                  child: Text(
-                    _paymentStatus.toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: _paymentStatus == 'paid'
-                          ? Colors.green.shade700
-                          : Colors.orange.shade700,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const Divider(height: 20),
-            ...(breakdown as List).map<Widget>((item) {
-              final amount = _parseDouble(item['amount']);
-              final label = item['label']?.toString() ?? '';
-              final isDiscount = amount < 0;
-              final isSubtle =
-                  (item['class'] ?? '').toString().contains('slate');
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 3),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        label,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: isDiscount
-                              ? Colors.green.shade700
-                              : (isSubtle ? Colors.grey.shade600 : kSlate700),
-                          fontStyle:
-                              isSubtle ? FontStyle.italic : FontStyle.normal,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      '${isDiscount ? '-' : ''}₱${amount.abs().toStringAsFixed(2)}',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight:
-                            isDiscount ? FontWeight.bold : FontWeight.normal,
-                        color: isDiscount
-                            ? Colors.green.shade700
-                            : (isSubtle ? Colors.grey.shade600 : kSlate700),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }),
-            const Divider(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Total Amount',
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                Text('₱${total.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: kGreen)),
-              ],
-            ),
-          ],
-        ),
-      ),
+    final children = <Widget>[
+      _SummaryRow('Status', _paymentStatus.toUpperCase()),
+    ];
+
+    for (final item in (breakdown as List)) {
+      final amount = _parseDouble(item['amount']);
+      final label = item['label']?.toString() ?? '';
+      final isDiscount = amount < 0;
+      final valStr = '${isDiscount ? '-' : ''}₱${amount.abs().toStringAsFixed(2)}';
+      children.add(_SummaryRow(label, valStr));
+    }
+
+    children.add(_SummaryRow('Total Amount', '₱${total.toStringAsFixed(2)}', showDivider: false));
+
+    return _SummarySection(
+      title: 'Payment Summary',
+      children: children,
     );
   }
 
@@ -6300,46 +6150,42 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             ),
           ),
         const SizedBox(height: 12),
-        _detailSection('Trip', <String>[
-          '${_booking['origin']} → ${_booking['destination']}',
-          () {
-            final rawDep = (_booking['rebooking_departure_date'] ??
-                    _booking['preferred_replacement_date'] ??
-                    _booking['departure_date'] ??
-                    '')
-                .toString();
-            final depTime = _booking['departure_time']?.toString();
-            if (rawDep.isEmpty) return 'Departure: -';
-            final dt = DateTime.tryParse(rawDep)?.toLocal();
-            if (dt == null) return 'Departure: $rawDep';
-            final dateStr =
-                '${dt.year}/${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')}';
-            if (depTime != null && depTime.isNotEmpty) {
-              return 'Departure: $dateStr $depTime';
-            }
-            return 'Departure: $dateStr';
-          }(),
-          if ((_booking['rebooking_return_date'] ?? _booking['return_date']) !=
-              null)
-            () {
-              final rawRet =
-                  (_booking['rebooking_return_date'] ?? _booking['return_date'])
-                      .toString();
-              final retTime = _booking['return_time']?.toString();
-              final dt = DateTime.tryParse(rawRet)?.toLocal();
-              if (dt == null) return 'Return: $rawRet';
-              final dateStr =
-                  '${dt.year}/${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')}';
-              if (retTime != null && retTime.isNotEmpty) {
-                return 'Return: $dateStr $retTime';
-              }
-              return 'Return: $dateStr';
-            }(),
-          (_booking['schedule_summary'] ??
-                  _booking['schedule_service'] ??
-                  'Schedule not recorded')
-              .toString(),
-        ]),
+        _SummarySection(
+          title: 'Trip Details',
+          children: [
+            _SummaryRow('Route', '${_booking['origin']} → ${_booking['destination']}'),
+            _SummaryRow('Mode', '${_booking['schedule']?['route']?['mode'] ?? 'ferry'}'.toUpperCase()),
+            _SummaryRow(
+              'Departure',
+              () {
+                final rawDep = (_booking['rebooking_departure_date'] ?? _booking['preferred_replacement_date'] ?? _booking['departure_date'] ?? '').toString();
+                final depTime = _booking['departure_time']?.toString();
+                if (rawDep.isEmpty) return '-';
+                final dt = DateTime.tryParse(rawDep)?.toLocal();
+                if (dt == null) return rawDep;
+                final dateStr = '${dt.year}/${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')}';
+                return (depTime != null && depTime.isNotEmpty) ? '$dateStr $depTime' : dateStr;
+              }()
+            ),
+            if ((_booking['rebooking_return_date'] ?? _booking['return_date']) != null)
+              _SummaryRow(
+                'Return',
+                () {
+                  final rawRet = (_booking['rebooking_return_date'] ?? _booking['return_date']).toString();
+                  final retTime = _booking['return_time']?.toString();
+                  final dt = DateTime.tryParse(rawRet)?.toLocal();
+                  if (dt == null) return rawRet;
+                  final dateStr = '${dt.year}/${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')}';
+                  return (retTime != null && retTime.isNotEmpty) ? '$dateStr $retTime' : dateStr;
+                }()
+              ),
+            _SummaryRow(
+              'Schedule',
+              (_booking['schedule_summary'] ?? _booking['schedule_service'] ?? 'Schedule not recorded').toString(),
+              showDivider: false,
+            ),
+          ],
+        ),
         _priceBreakdownCard(),
         if (_booking['passengers'] != null &&
             _booking['passengers'] is List &&
@@ -10429,32 +10275,42 @@ class _SummarySection extends StatelessWidget {
 class _SummaryRow extends StatelessWidget {
   final String label;
   final String value;
-  const _SummaryRow(this.label, this.value);
+  final bool showDivider;
+  const _SummaryRow(this.label, this.value, {this.showDivider = true});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            flex: 1,
-            child: Text(label,
-                style: const TextStyle(color: kSlate500, fontSize: 13)),
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 1,
+                child: Text(label,
+                    style: const TextStyle(color: kSlate500, fontSize: 13)),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                flex: 2,
+                child: Text(
+                  value,
+                  style: const TextStyle(
+                      color: kSlate800, fontSize: 13, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.end,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            flex: 2,
-            child: Text(
-              value,
-              style: const TextStyle(
-                  color: kSlate800, fontSize: 13, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.end,
-            ),
+        ),
+        if (showDivider)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 2),
+            child: Divider(color: kSlate200, height: 1),
           ),
-        ],
-      ),
+      ],
     );
   }
 }

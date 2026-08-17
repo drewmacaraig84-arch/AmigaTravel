@@ -54,6 +54,7 @@ class BookingController extends Controller
             'voucher_code'                              => 'nullable|string|max:50',
             'return_schedule_id'                        => 'nullable|integer|exists:schedules,id',
             'selected_return_schedule_accommodation_id' => 'nullable|integer|exists:schedule_accommodations,id',
+            'return_selected_transport_class_id'        => 'nullable|integer|exists:transport_classes,id',
             'use_points'                                => 'nullable|boolean',
         ]);
 
