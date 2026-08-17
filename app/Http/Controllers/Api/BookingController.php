@@ -171,11 +171,33 @@ class BookingController extends Controller
             if ($booking->schedule) {
                 $depTime = \Carbon\Carbon::parse($booking->schedule->departure_time)->timezone('Asia/Manila');
                 $data['departure_time'] = $depTime->format('h:i A');
+                $arrTime = $booking->schedule->arrival_time
+                    ? \Carbon\Carbon::parse($booking->schedule->arrival_time)->timezone('Asia/Manila')->format('h:i A')
+                    : null;
+                $data['schedule_arrival_formatted'] = $arrTime;
             }
             if ($booking->returnSchedule) {
                 $retTime = \Carbon\Carbon::parse($booking->returnSchedule->departure_time)->timezone('Asia/Manila');
                 $data['return_time'] = $retTime->format('h:i A');
+                $retArrTime = $booking->returnSchedule->arrival_time
+                    ? \Carbon\Carbon::parse($booking->returnSchedule->arrival_time)->timezone('Asia/Manila')->format('h:i A')
+                    : null;
+                $data['return_schedule_arrival_formatted'] = $retArrTime;
             }
+
+            // Per-pax TC prices for Trip Details display in app
+            $paxCount = max(1, $booking->passengers->count());
+            $allTcs = $booking->transportClasses;
+            $depTcPrice = $allTcs->filter(fn ($tc) => ! (bool) $tc->pivot->is_return)->sum(fn ($tc) => (float) $tc->pivot->price);
+            $retTcPrice = $allTcs->filter(fn ($tc) => (bool) $tc->pivot->is_return)->sum(fn ($tc) => (float) $tc->pivot->price);
+            // Legacy fallback for old bookings (no is_return flag)
+            if ($retTcPrice == 0 && $allTcs->count() >= 2) {
+                $tcArr = $allTcs->values();
+                $depTcPrice = (float) $tcArr[0]->pivot->price;
+                $retTcPrice = (float) $tcArr[1]->pivot->price;
+            }
+            $data['departure_tc_price_per_pax'] = $paxCount > 0 ? round($depTcPrice / $paxCount, 2) : 0;
+            $data['return_tc_price_per_pax']    = $paxCount > 0 ? round($retTcPrice / $paxCount, 2) : 0;
 
             return $data;
         });
@@ -236,11 +258,30 @@ class BookingController extends Controller
         if ($booking->schedule) {
             $depTime = \Carbon\Carbon::parse($booking->schedule->departure_time)->timezone('Asia/Manila');
             $data['departure_time'] = $depTime->format('h:i A');
+            $data['schedule_arrival_formatted'] = $booking->schedule->arrival_time
+                ? \Carbon\Carbon::parse($booking->schedule->arrival_time)->timezone('Asia/Manila')->format('h:i A')
+                : null;
         }
         if ($booking->returnSchedule) {
             $retTime = \Carbon\Carbon::parse($booking->returnSchedule->departure_time)->timezone('Asia/Manila');
             $data['return_time'] = $retTime->format('h:i A');
+            $data['return_schedule_arrival_formatted'] = $booking->returnSchedule->arrival_time
+                ? \Carbon\Carbon::parse($booking->returnSchedule->arrival_time)->timezone('Asia/Manila')->format('h:i A')
+                : null;
         }
+
+        // Per-pax TC prices for Trip Details display in app
+        $paxCount = max(1, $booking->passengers->count());
+        $allTcs = $booking->transportClasses;
+        $depTcPrice = $allTcs->filter(fn ($tc) => ! (bool) $tc->pivot->is_return)->sum(fn ($tc) => (float) $tc->pivot->price);
+        $retTcPrice = $allTcs->filter(fn ($tc) => (bool) $tc->pivot->is_return)->sum(fn ($tc) => (float) $tc->pivot->price);
+        if ($retTcPrice == 0 && $allTcs->count() >= 2) {
+            $tcArr = $allTcs->values();
+            $depTcPrice = (float) $tcArr[0]->pivot->price;
+            $retTcPrice = (float) $tcArr[1]->pivot->price;
+        }
+        $data['departure_tc_price_per_pax'] = $paxCount > 0 ? round($depTcPrice / $paxCount, 2) : 0;
+        $data['return_tc_price_per_pax']    = $paxCount > 0 ? round($retTcPrice / $paxCount, 2) : 0;
 
         return response()->json([
             'status' => 'success',

@@ -299,7 +299,8 @@ class CreateBookingAction
                     $price = $overridePrice !== null ? (float) $overridePrice : $returnTransportClass->effective_price;
 
                     $booking->transportClasses()->attach($returnTransportClass->id, [
-                        'price' => $price,
+                        'price'     => $price,
+                        'is_return' => true,
                     ]);
                 }
             }

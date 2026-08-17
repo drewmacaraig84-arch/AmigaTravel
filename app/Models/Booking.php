@@ -161,7 +161,23 @@ class Booking extends Model
     public function transportClasses(): BelongsToMany
     {
         return $this->belongsToMany(TransportClass::class, 'booking_transport_class')
-            ->withPivot('price', 'is_promo', 'rate_code')
+            ->withPivot('price', 'is_promo', 'rate_code', 'is_return')
+            ->withTimestamps();
+    }
+
+    public function departureTransportClasses(): BelongsToMany
+    {
+        return $this->belongsToMany(TransportClass::class, 'booking_transport_class')
+            ->withPivot('price', 'is_promo', 'rate_code', 'is_return')
+            ->wherePivot('is_return', false)
+            ->withTimestamps();
+    }
+
+    public function returnTransportClasses(): BelongsToMany
+    {
+        return $this->belongsToMany(TransportClass::class, 'booking_transport_class')
+            ->withPivot('price', 'is_promo', 'rate_code', 'is_return')
+            ->wherePivot('is_return', true)
             ->withTimestamps();
     }
 
@@ -703,13 +719,26 @@ class Booking extends Model
             }
         }
         
-        foreach ($this->transportClasses as $index => $tc) {
-            $price = (float) $tc->pivot->price;
-            if ($index === 0) {
-                $depTicketTotal += $price;
-            } elseif ($index === 1) {
-                $retTicketTotal += $price;
-            }
+        // Use the is_return pivot flag to unambiguously split TC charges.
+        // Falls back to index-based split for legacy rows that pre-date the migration
+        // (i.e. rows where both have is_return = false).
+        $allTcs = $this->transportClasses;
+        $depTcs = $allTcs->filter(fn ($tc) => ! (bool) $tc->pivot->is_return);
+        $retTcs = $allTcs->filter(fn ($tc) => (bool) $tc->pivot->is_return);
+
+        // Legacy fallback: if no rows have is_return = true but we have 2+ rows,
+        // the second entry is the return TC (old index-based behaviour).
+        if ($retTcs->isEmpty() && $depTcs->count() >= 2) {
+            $depTcsArr = $depTcs->values();
+            $depTcs = collect([$depTcsArr[0]]);
+            $retTcs = collect([$depTcsArr[1]]);
+        }
+
+        foreach ($depTcs as $tc) {
+            $depTicketTotal += (float) $tc->pivot->price;
+        }
+        foreach ($retTcs as $tc) {
+            $retTicketTotal += (float) $tc->pivot->price;
         }
         
         // Combine ticket + accommodation/transport class into one line

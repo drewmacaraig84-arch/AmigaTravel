@@ -97,7 +97,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.96+107';
+  static const String appVersion = '1.0.97+108';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -5592,30 +5592,73 @@ class _ActivityScreenState extends State<ActivityScreen> {
                           ),
                         ],
                       ),
-                      const Divider(height: 20, color: kSlate200),
-                      _SummaryRow('Route', '${b['origin']} → ${b['destination']}'),
-                      _SummaryRow('Mode', '${b['schedule']?['route']?['mode'] ?? b['mode'] ?? 'ferry'}'.toUpperCase()),
-                      _SummaryRow(
-                        'Departure',
-                        () {
-                          final dtStr = (b['rebooking_departure_date'] ?? b['preferred_replacement_date'] ?? b['departure_date'])?.toString() ?? '';
-                          return dtStr.isNotEmpty ? (DateTime.tryParse(dtStr)?.toLocal().toString().split(' ')[0] ?? dtStr) : '-';
-                        }()
+                      const SizedBox(height: 8),
+                      // Route
+                      Row(
+                        children: [
+                          const Icon(Icons.location_pin, size: 14, color: kGreen),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${b['origin'] ?? ''} → ${b['destination'] ?? ''}',
+                            style: const TextStyle(fontSize: 13, color: kSlate700, fontWeight: FontWeight.w600),
+                          ),
+                        ],
                       ),
-                      if ((b['rebooking_return_date'] ?? b['return_date']) != null)
-                        _SummaryRow(
-                          'Return',
-                          () {
-                            final dtStr = (b['rebooking_return_date'] ?? b['return_date'])?.toString() ?? '';
-                            return dtStr.isNotEmpty ? (DateTime.tryParse(dtStr)?.toLocal().toString().split(' ')[0] ?? dtStr) : '-';
-                          }()
-                        ),
-                      _SummaryRow(
-                        'Schedule',
-                        (b['schedule_summary'] ?? b['schedule_service'] ?? '').toString(),
-                        showDivider: false,
+                      const SizedBox(height: 4),
+                      // Date
+                      Row(
+                        children: [
+                          const Icon(Icons.calendar_today_outlined, size: 13, color: kSlate400),
+                          const SizedBox(width: 6),
+                          Text(
+                            () {
+                              final dtStr = (b['rebooking_departure_date'] ?? b['preferred_replacement_date'] ?? b['departure_date'])?.toString() ?? '';
+                              if (dtStr.isEmpty) return '-';
+                              final dt = DateTime.tryParse(dtStr)?.toLocal();
+                              if (dt == null) return dtStr;
+                              return '${dt.year}-${dt.month.toString().padLeft(2,'0')}-${dt.day.toString().padLeft(2,'0')}';
+                            }(),
+                            style: const TextStyle(fontSize: 12, color: kSlate500),
+                          ),
+                          if ((b['rebooking_return_date'] ?? b['return_date']) != null) ...[
+                            const Text('  →  ', style: TextStyle(fontSize: 12, color: kSlate400)),
+                            Text(
+                              () {
+                                final dtStr = (b['rebooking_return_date'] ?? b['return_date'])?.toString() ?? '';
+                                if (dtStr.isEmpty) return '';
+                                final dt = DateTime.tryParse(dtStr)?.toLocal();
+                                if (dt == null) return dtStr;
+                                return '${dt.year}-${dt.month.toString().padLeft(2,'0')}-${dt.day.toString().padLeft(2,'0')}';
+                              }(),
+                              style: const TextStyle(fontSize: 12, color: kSlate500),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      // Vessel / schedule name
+                      Row(
+                        children: [
+                          Icon(
+                            () {
+                              final mode = (b['schedule']?['route']?['mode'] ?? b['mode'] ?? 'ferry').toString().toLowerCase();
+                              return mode == 'airline' ? Icons.flight : Icons.directions_boat_outlined;
+                            }(),
+                            size: 13,
+                            color: kSlate400,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              (b['schedule_summary'] ?? b['schedule_service'] ?? '').toString(),
+                              style: const TextStyle(fontSize: 12, color: kSlate500),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
                       const Divider(height: 20, color: kSlate200),
+
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -6182,39 +6225,84 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         _SummarySection(
           title: 'Trip Details',
           children: [
-            _SummaryRow('Route', '${_booking['origin']} → ${_booking['destination']}'),
-            _SummaryRow('Mode', '${_booking['schedule']?['route']?['mode'] ?? 'ferry'}'.toUpperCase()),
+            _SummaryRow('Route', '${_booking['origin'] ?? ''} → ${_booking['destination'] ?? ''}'),
+            _SummaryRow('Mode', (_booking['mode'] ?? _booking['schedule']?['route']?['mode'] ?? 'ferry').toString().toUpperCase()),
             _SummaryRow(
-              'Departure',
+              'Date',
               () {
                 final rawDep = (_booking['rebooking_departure_date'] ?? _booking['preferred_replacement_date'] ?? _booking['departure_date'] ?? '').toString();
-                final depTime = _booking['departure_time']?.toString();
                 if (rawDep.isEmpty) return '-';
                 final dt = DateTime.tryParse(rawDep)?.toLocal();
                 if (dt == null) return rawDep;
-                final dateStr = '${dt.year}/${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')}';
-                return (depTime != null && depTime.isNotEmpty) ? '$dateStr $depTime' : dateStr;
+                return '${dt.year}-${dt.month.toString().padLeft(2,'0')}-${dt.day.toString().padLeft(2,'0')}';
               }()
             ),
-            if ((_booking['rebooking_return_date'] ?? _booking['return_date']) != null)
+            _SummaryRow(
+              'Trip Type',
+              (_booking['return_date'] != null || _booking['rebooking_return_date'] != null)
+                  ? 'Round Trip'
+                  : 'One Way',
+            ),
+            // Departure schedule row: "ServiceName  dep_time – arr_time"
+            _SummaryRow(
+              'Departure Schedule',
+              () {
+                final svc = (_booking['schedule_service'] ?? _booking['schedule_summary'] ?? '').toString();
+                final depT = _booking['departure_time']?.toString() ?? _booking['schedule_departure_time']?.toString() ?? '';
+                final arrT = _booking['schedule_arrival_formatted']?.toString() ?? _booking['schedule_arrival_time']?.toString() ?? '';
+                if (depT.isEmpty) return svc.isEmpty ? 'Not recorded' : svc;
+                final rawDep = (_booking['rebooking_departure_date'] ?? _booking['preferred_replacement_date'] ?? _booking['departure_date'] ?? '').toString();
+                final dt = DateTime.tryParse(rawDep)?.toLocal();
+                final monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                final dateLabel = dt != null ? '${monthNames[dt.month - 1]} ${dt.day}, ${dt.year}' : rawDep;
+                final timeRange = arrT.isNotEmpty ? '$depT – $arrT' : depT;
+                return svc.isNotEmpty ? '$svc  $dateLabel $timeRange' : '$dateLabel $timeRange';
+              }()
+            ),
+            // Departure ticket + class price per pax
+            _SummaryRow(
+              'Departure Ticket & Class',
+              () {
+                final basePrice = _parseDouble(_booking['schedule_price']);
+                final tcPrice   = _parseDouble(_booking['departure_tc_price_per_pax']);
+                final accPrice  = _parseDouble(_booking['schedule_accommodation_price']);
+                final total = basePrice + tcPrice + accPrice;
+                return total > 0 ? '₱${total.toStringAsFixed(2)} / pax' : '-';
+              }(),
+              showDivider: (_booking['return_date'] == null && _booking['rebooking_return_date'] == null),
+            ),
+            // Return trip rows (only for round trips)
+            if (_booking['return_date'] != null || _booking['rebooking_return_date'] != null) ...[
               _SummaryRow(
-                'Return',
+                'Return Schedule',
                 () {
-                  final rawRet = (_booking['rebooking_return_date'] ?? _booking['return_date']).toString();
-                  final retTime = _booking['return_time']?.toString();
+                  final svc = (_booking['return_schedule_service'] ?? '').toString();
+                  final depT = _booking['return_time']?.toString() ?? _booking['return_schedule_departure_time']?.toString() ?? '';
+                  final arrT = _booking['return_schedule_arrival_formatted']?.toString() ?? _booking['return_schedule_arrival_time']?.toString() ?? '';
+                  if (depT.isEmpty) return svc.isEmpty ? 'Not recorded' : svc;
+                  final rawRet = (_booking['rebooking_return_date'] ?? _booking['return_date'] ?? '').toString();
                   final dt = DateTime.tryParse(rawRet)?.toLocal();
-                  if (dt == null) return rawRet;
-                  final dateStr = '${dt.year}/${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')}';
-                  return (retTime != null && retTime.isNotEmpty) ? '$dateStr $retTime' : dateStr;
+                  final monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                  final dateLabel = dt != null ? '${monthNames[dt.month - 1]} ${dt.day}, ${dt.year}' : rawRet;
+                  final timeRange = arrT.isNotEmpty ? '$depT – $arrT' : depT;
+                  return svc.isNotEmpty ? '$svc  $dateLabel $timeRange' : '$dateLabel $timeRange';
                 }()
               ),
-            _SummaryRow(
-              'Schedule',
-              (_booking['schedule_summary'] ?? _booking['schedule_service'] ?? 'Schedule not recorded').toString(),
-              showDivider: false,
-            ),
+              _SummaryRow(
+                'Return Ticket & Class',
+                () {
+                  final basePrice = _parseDouble(_booking['return_schedule_price']);
+                  final tcPrice   = _parseDouble(_booking['return_tc_price_per_pax']);
+                  final accPrice  = _parseDouble(_booking['return_schedule_accommodation_price']);
+                  final total = basePrice + tcPrice + accPrice;
+                  return total > 0 ? '₱${total.toStringAsFixed(2)} / pax' : '-';
+                }(),
+                showDivider: false,
+              ),
+            ],
           ],
         ),
+
         _priceBreakdownCard(),
         if (_booking['passengers'] != null &&
             _booking['passengers'] is List &&
