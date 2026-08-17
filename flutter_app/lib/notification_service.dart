@@ -26,7 +26,7 @@ class NotificationService {
     );
 
     await _notificationsPlugin.initialize(
-      settings: initializationSettings,
+      initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
         if (onNotificationTap != null) {
           if (response.payload != null && response.payload!.isNotEmpty) {
@@ -65,10 +65,10 @@ class NotificationService {
         NotificationDetails(android: androidDetails);
 
     await _notificationsPlugin.show(
-      id: id,
-      title: title,
-      body: body,
-      notificationDetails: platformChannelDetails,
+      id,
+      title,
+      body,
+      platformChannelDetails,
       payload: payload,
     );
   }

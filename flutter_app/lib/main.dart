@@ -87,7 +87,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.91+102';
+  static const String appVersion = '1.0.93+104';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -346,7 +346,7 @@ class BookingData {
     return entries;
   }
 
-  // Step 2 — Schedule
+  // Step 2 â€” Schedule
   bool hasExtraBaggage = false;
   int? extraBaggageKg; // selected kg (e.g. 10, 20, 25, 30)
   double extraBaggagePrice = 0.0; // price per pax for the selected kg
@@ -387,15 +387,15 @@ class BookingData {
   String vehicleDriverLastName = '';
   String vehicleDriverBirthday = '';
 
-  // Step 3 — Passengers with discounts
+  // Step 3 â€” Passengers with discounts
   // Each passenger: {'type': 'adult'|'child', 'name': '', 'discount_id': int?}
   List<Map<String, dynamic>> passengers = [];
 
-  // Step 4 — Stay (accommodations)
+  // Step 4 â€” Stay (accommodations)
   List<int> selectedAccommodationIds = [];
   List<Map<String, dynamic>> availableAccommodations = [];
 
-  // Step 5 — Contact
+  // Step 5 â€” Contact
   String clientName = '';
   String clientEmail = '';
   String clientPhone = '';
@@ -955,7 +955,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// â”€â”€ Top Snackbar Helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬ Top Snackbar Helper Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 /// Shows a snackbar anchored to the TOP of the screen.
 void showTopSnack(
   BuildContext context,
@@ -990,7 +990,7 @@ void showTopSnack(
   );
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 // ==========================================
 // SPLASH & ONBOARDING
 // ==========================================
@@ -1090,7 +1090,7 @@ class _SplashLoaderScreenState extends State<SplashLoaderScreen> {
             const SizedBox(height: 24),
             const CircularProgressIndicator(color: kGreen),
             const SizedBox(height: 16),
-            const Text('Connecting to Amiga Travel...',
+            const Text('Connecting to Amiga Gracia...',
                 style: TextStyle(
                     color: kGreen, fontSize: 16, fontWeight: FontWeight.bold)),
           ],
@@ -1466,7 +1466,7 @@ class _MainScreenState extends State<MainScreen> {
             ),
             const SizedBox(width: 10),
             const Text(
-              'AMIGA GRACIA',
+              'Amiga Gracia',
               style: TextStyle(
                   fontWeight: FontWeight.w900,
                   fontSize: 14,
@@ -1606,10 +1606,10 @@ class _MainScreenState extends State<MainScreen> {
   }
 }
 
-// ── Custom FAB Location: sits flush inside the bar notch ─────────────────────
+// -- Custom FAB Location: sits flush inside the bar notch ---------------------
 /// Behaves like [FloatingActionButtonLocation.centerDocked] but lets you
 /// nudge the button up/down by [riseAboveNotch] pixels.
-/// riseAboveNotch: 6  → circle sits nearly flush with the bar surface.
+/// riseAboveNotch: 6  ? circle sits nearly flush with the bar surface.
 class _RaisedCenterDockedFabLocation extends FloatingActionButtonLocation {
   const _RaisedCenterDockedFabLocation({this.riseAboveNotch = 6});
   final double riseAboveNotch;
@@ -1759,7 +1759,7 @@ class _HomeScreenState extends State<HomeScreen>
             'name': t['tour_name'] ?? t['package_name'] ?? 'Tour',
             'desc': t['destinations'] ?? '${t['duration'] ?? ''}',
             'price': t['price_per_pax'] != null
-                ? '₱${t['price_per_pax']}'
+                ? '?${t['price_per_pax']}'
                 : 'Contact us',
             'tag': t['country'] ?? 'Tour',
             'tagColor': isDomestic ? kGreen : kPink,
@@ -1869,7 +1869,7 @@ class _HomeScreenState extends State<HomeScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── 1. Immersive Carousel (edge-to-edge, taller) ──────────────────
+          // -- 1. Immersive Carousel (edge-to-edge, taller) ------------------
           SizedBox(
             height: 220,
             child: PageView.builder(
@@ -1925,7 +1925,7 @@ class _HomeScreenState extends State<HomeScreen>
 
           const SizedBox(height: 24),
 
-          // ── 2. Track Booking ──────────────────────────────────────────────
+          // -- 2. Track Booking ----------------------------------------------
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Container(
@@ -1935,7 +1935,7 @@ class _HomeScreenState extends State<HomeScreen>
                 borderRadius: BorderRadius.circular(18),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
+                    color: Colors.black.withOpacity(0.06),
                     blurRadius: 14,
                     offset: const Offset(0, 5),
                   )
@@ -1946,7 +1946,7 @@ class _HomeScreenState extends State<HomeScreen>
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: kGreen.withValues(alpha: 0.10),
+                      color: kGreen.withOpacity(0.10),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(Icons.my_location_rounded,
@@ -1984,7 +1984,7 @@ class _HomeScreenState extends State<HomeScreen>
 
           const SizedBox(height: 20),
 
-          // ── 3. Quick-Book Grid ────────────────────────────────────────────
+          // -- 3. Quick-Book Grid --------------------------------------------
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
@@ -1992,7 +1992,7 @@ class _HomeScreenState extends State<HomeScreen>
                 Expanded(
                   child: _ModernBookCard(
                     label: 'Book Ferry',
-                    subtitle: 'Starlite · 2GO · FastCat',
+                    subtitle: 'Starlite Â· 2GO Â· FastCat',
                     icon: Icons.directions_boat_rounded,
                     gradient: const LinearGradient(
                       colors: [kGreen, Color(0xFF1B5E20)],
@@ -2006,7 +2006,7 @@ class _HomeScreenState extends State<HomeScreen>
                 Expanded(
                   child: _ModernBookCard(
                     label: 'Book Airline',
-                    subtitle: 'PAL · CebuPac · AirAsia',
+                    subtitle: 'PAL Â· CebuPac Â· AirAsia',
                     icon: Icons.flight_takeoff_rounded,
                     gradient: const LinearGradient(
                       colors: [kPink, Color(0xFF880E4F)],
@@ -2022,7 +2022,7 @@ class _HomeScreenState extends State<HomeScreen>
 
           const SizedBox(height: 20),
 
-          // ── 4. Points & Vouchers (gradient cards) ─────────────────────────
+          // -- 4. Points & Vouchers (gradient cards) -------------------------
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
@@ -2045,7 +2045,7 @@ class _HomeScreenState extends State<HomeScreen>
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                              color: kPink.withValues(alpha: 0.30),
+                              color: kPink.withOpacity(0.30),
                               blurRadius: 10,
                               offset: const Offset(0, 4))
                         ],
@@ -2092,7 +2092,7 @@ class _HomeScreenState extends State<HomeScreen>
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                              color: kGreen.withValues(alpha: 0.30),
+                              color: kGreen.withOpacity(0.30),
                               blurRadius: 10,
                               offset: const Offset(0, 4))
                         ],
@@ -2123,7 +2123,7 @@ class _HomeScreenState extends State<HomeScreen>
 
           const SizedBox(height: 20),
 
-          // ── 5. Request Travel Booking (dark banner) ───────────────────────
+          // -- 5. Request Travel Booking (dark banner) -----------------------
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: GestureDetector(
@@ -2139,7 +2139,7 @@ class _HomeScreenState extends State<HomeScreen>
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.25),
+                        color: Colors.black.withOpacity(0.25),
                         blurRadius: 14,
                         offset: const Offset(0, 6))
                   ],
@@ -2149,7 +2149,7 @@ class _HomeScreenState extends State<HomeScreen>
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.10),
+                        color: Colors.white.withOpacity(0.10),
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: const Icon(Icons.map_rounded,
@@ -2182,7 +2182,7 @@ class _HomeScreenState extends State<HomeScreen>
 
           const SizedBox(height: 24),
 
-          // ── 6. Our Services ───────────────────────────────────────────────
+          // -- 6. Our Services -----------------------------------------------
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
@@ -2201,7 +2201,7 @@ class _HomeScreenState extends State<HomeScreen>
                           context,
                           MaterialPageRoute(
                               builder: (_) => const ServicesScreen())),
-                      child: const Text('See all →',
+                      child: const Text('See all ?',
                           style: TextStyle(
                               color: kPink,
                               fontSize: 12,
@@ -2243,7 +2243,7 @@ class _HomeScreenState extends State<HomeScreen>
                                       boxShadow: [
                                         BoxShadow(
                                             color: Colors.black
-                                                .withValues(alpha: 0.04),
+                                                .withOpacity(0.04),
                                             blurRadius: 6,
                                             offset: const Offset(0, 2))
                                       ],
@@ -2258,7 +2258,7 @@ class _HomeScreenState extends State<HomeScreen>
                                           padding: const EdgeInsets.all(8),
                                           decoration: BoxDecoration(
                                             color: (s['color'] as Color)
-                                                .withValues(alpha: 0.1),
+                                                .withOpacity(0.1),
                                             borderRadius:
                                                 BorderRadius.circular(10),
                                           ),
@@ -2288,7 +2288,7 @@ class _HomeScreenState extends State<HomeScreen>
 
           const SizedBox(height: 24),
 
-          // ── 7. Tour Packages ──────────────────────────────────────────────
+          // -- 7. Tour Packages ----------------------------------------------
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
@@ -2307,7 +2307,7 @@ class _HomeScreenState extends State<HomeScreen>
                           context,
                           MaterialPageRoute(
                               builder: (_) => const TourPackagesScreen())),
-                      child: const Text('See all →',
+                      child: const Text('See all ?',
                           style: TextStyle(
                               color: kPink,
                               fontSize: 12,
@@ -2456,12 +2456,12 @@ class _HomeScreenState extends State<HomeScreen>
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
+                        color: Colors.black.withOpacity(0.04),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       )
                     ],
-                    border: Border.all(color: color.withValues(alpha: 0.1)),
+                    border: Border.all(color: color.withOpacity(0.1)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
@@ -2470,7 +2470,7 @@ class _HomeScreenState extends State<HomeScreen>
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.1),
+                          color: color.withOpacity(0.1),
                           shape: BoxShape.circle,
                         ),
                         child:
@@ -2530,7 +2530,7 @@ class _PackageHorizontalList extends StatelessWidget {
                   end: Alignment.bottomRight),
               boxShadow: [
                 BoxShadow(
-                    color: gradient.first.withValues(alpha: 0.4),
+                    color: gradient.first.withOpacity(0.4),
                     blurRadius: 10,
                     offset: const Offset(0, 4))
               ],
@@ -2544,7 +2544,7 @@ class _PackageHorizontalList extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
+                        color: Colors.white.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(10)),
                     child: Text(p['tag'] as String,
                         style: const TextStyle(
@@ -2580,7 +2580,7 @@ class _PackageHorizontalList extends StatelessWidget {
   }
 }
 
-// ── Modern gradient book card used in HomeScreen quick-book grid ──────────
+// -- Modern gradient book card used in HomeScreen quick-book grid ----------
 class _ModernBookCard extends StatelessWidget {
   final String label;
   final String subtitle;
@@ -2607,7 +2607,7 @@ class _ModernBookCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: gradient.colors.first.withValues(alpha: 0.30),
+              color: gradient.colors.first.withOpacity(0.30),
               blurRadius: 12,
               offset: const Offset(0, 5),
             )
@@ -2619,7 +2619,7 @@ class _ModernBookCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
+                color: Colors.white.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: Colors.white, size: 24),
@@ -2670,7 +2670,7 @@ class _ServiceCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
+                color: Colors.black.withOpacity(0.04),
                 blurRadius: 12,
                 offset: const Offset(0, 4))
           ],
@@ -3374,7 +3374,7 @@ class _TravelScreenState extends State<TravelScreen>
                           _label('Operator'),
                           const SizedBox(height: 6),
                           DropdownButtonFormField<String>(
-                            initialValue: _operators.contains(_operator)
+                            value: _operators.contains(_operator)
                                 ? _operator
                                 : null,
                             hint: const Text('Choose an operator'),
@@ -3404,7 +3404,7 @@ class _TravelScreenState extends State<TravelScreen>
                           _label('Origin'),
                           const SizedBox(height: 6),
                           DropdownButtonFormField<String>(
-                            initialValue:
+                            value:
                                 _origins.contains(_origin) ? _origin : null,
                             hint: const Text('Select Origin'),
                             items: _origins
@@ -3442,7 +3442,7 @@ class _TravelScreenState extends State<TravelScreen>
                                       child: CircularProgressIndicator(
                                           color: kGreen)))
                               : DropdownButtonFormField<String>(
-                                  initialValue:
+                                  value:
                                       _destinations.contains(_destination)
                                           ? _destination
                                           : null,
@@ -3538,7 +3538,7 @@ class _TravelScreenState extends State<TravelScreen>
                                 boxShadow: [
                                   BoxShadow(
                                       color:
-                                          Colors.black.withValues(alpha: 0.06),
+                                          Colors.black.withOpacity(0.06),
                                       blurRadius: 10,
                                       offset: const Offset(0, 4))
                                 ],
@@ -3730,7 +3730,7 @@ class _TravelScreenState extends State<TravelScreen>
                                       ),
                                       Switch(
                                         value: _isVehicleBookingEnabled,
-                                        activeThumbColor: kGreen,
+                                        activeColor: kGreen,
                                         onChanged: (val) {
                                           setState(() {
                                             _isVehicleBookingEnabled = val;
@@ -3808,8 +3808,7 @@ class _TravelScreenState extends State<TravelScreen>
                                                       vertical: 12),
                                               decoration: BoxDecoration(
                                                 color: selected
-                                                    ? kGreen.withValues(
-                                                        alpha: 0.05)
+                                                    ? kGreen.withOpacity(0.05)
                                                     : kSlate50,
                                                 border: Border.all(
                                                     color: selected
@@ -3836,7 +3835,7 @@ class _TravelScreenState extends State<TravelScreen>
                                                               color: selected
                                                                   ? kGreen
                                                                   : kSlate800))),
-                                                  Text('₱${rate['price']}',
+                                                  Text('?${rate['price']}',
                                                       style: TextStyle(
                                                           color: selected
                                                               ? kGreen
@@ -4091,7 +4090,7 @@ class _ModeTab extends StatelessWidget {
           boxShadow: selected
               ? [
                   BoxShadow(
-                      color: kGreen.withValues(alpha: 0.3),
+                      color: kGreen.withOpacity(0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 3))
                 ]
@@ -4236,10 +4235,10 @@ void showTermsModal(BuildContext context) {
                   ),
                   SizedBox(height: 4),
                   Text(
-                    '• One printed copy of the eTicket Itinerary Receipt.\n'
-                    '• Presentation of each passenger\'s valid ID.\n'
-                    '• Passengers must arrive at the terminal 3–4 hours before departure. Boarding gates close 1 hour before departure.\n'
-                    '• The operating ferry carrier reserves the right to refuse boarding if a passenger cannot present the required documents upon request.',
+                    'â€¢ One printed copy of the eTicket Itinerary Receipt.\n'
+                    'â€¢ Presentation of each passenger\'s valid ID.\n'
+                    'â€¢ Passengers must arrive at the terminal 3â€“4 hours before departure. Boarding gates close 1 hour before departure.\n'
+                    'â€¢ The operating ferry carrier reserves the right to refuse boarding if a passenger cannot present the required documents upon request.',
                     style:
                         TextStyle(fontSize: 13, color: kSlate600, height: 1.4),
                   ),
@@ -4267,8 +4266,8 @@ void showTermsModal(BuildContext context) {
                   ),
                   SizedBox(height: 4),
                   Text(
-                    '• Senior Citizens: Applicable to passengers aged 60 or above with valid OSCA or government-issued ID. A 20% discount applies to the base rate.\n'
-                    '• Infants: Infants below 2 years old and below 1 meter in height may be allowed to board. A fixed rate of ₱500.00 applies per infant regardless of destination or accommodation.',
+                    'â€¢ Senior Citizens: Applicable to passengers aged 60 or above with valid OSCA or government-issued ID. A 20% discount applies to the base rate.\n'
+                    'â€¢ Infants: Infants below 2 years old and below 1 meter in height may be allowed to board. A fixed rate of ?500.00 applies per infant regardless of destination or accommodation.',
                     style:
                         TextStyle(fontSize: 13, color: kSlate600, height: 1.4),
                   ),
@@ -4316,7 +4315,7 @@ void showPrivacyModal(BuildContext context) {
             children: [
               const Expanded(
                 child: Text(
-                  'Amiga Travel Agency Data Privacy Policy',
+                  'Amiga Gracia Agency Data Privacy Policy',
                   style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -5145,7 +5144,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
   @override
   Widget build(BuildContext context) {
     if (!UserSession.isLoggedIn && !UserSession.isEmailVerified) {
-      // ── OTP verification screen (after sign-up form submitted) ──────────
+      // -- OTP verification screen (after sign-up form submitted) ----------
       if (_pendingRegisterEmail != null) {
         return SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
@@ -5251,7 +5250,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
               const SizedBox(height: 12),
               TextButton(
                 onPressed: () => setState(() => _pendingRegisterEmail = null),
-                child: const Text('← Back to sign up',
+                child: const Text('? Back to sign up',
                     style: TextStyle(color: kSlate500)),
               ),
             ],
@@ -5259,7 +5258,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
         );
       }
 
-      // ── Login / Register form ────────────────────────────────────────────
+      // -- Login / Register form --------------------------------------------
       return SingleChildScrollView(
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
@@ -5291,7 +5290,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
             ),
             const SizedBox(height: 36),
 
-            // ── Sign-up extra field: Username ──────────────────────────────
+            // -- Sign-up extra field: Username ------------------------------
             if (_isSignUp) ...[
               TextField(
                 controller: _nameCtrl,
@@ -5549,7 +5548,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: statusColor.withValues(alpha: 0.1),
+                              color: statusColor.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
@@ -5569,7 +5568,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                         children: [
                           const Icon(Icons.location_on, color: kPink, size: 16),
                           const SizedBox(width: 6),
-                          Text('${b['origin']} → ${b['destination']}',
+                          Text('${b['origin']} ? ${b['destination']}',
                               style: const TextStyle(
                                   fontWeight: FontWeight.bold, fontSize: 13)),
                         ],
@@ -5641,7 +5640,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            '₱${b['total_price']}',
+                            '?${b['total_price']}',
                             style: const TextStyle(
                                 fontWeight: FontWeight.w900,
                                 fontSize: 15,
@@ -5915,7 +5914,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             _feeRow('Estimated Refund', displayRefund,
                 color: Colors.green.shade700, bold: true),
             const SizedBox(height: 12),
-            const Text('Refund will be processed in 3–5 business days.',
+            const Text('Refund will be processed in 3â€“5 business days.',
                 style: TextStyle(fontSize: 12, color: Colors.grey)),
           ],
         ),
@@ -5949,7 +5948,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         _booking['cancellation_fee'] = data['cancellation_fee'];
         _booking['refund_amount'] = data['refund_amount'];
         setState(() => _cancellationStarted = false);
-        _showMessage('Booking cancelled. Refund: ₱${data['refund_amount']}');
+        _showMessage('Booking cancelled. Refund: ?${data['refund_amount']}');
       } else {
         _showMessage(data['message'] ?? 'Cancellation failed.', error: true);
       }
@@ -6003,7 +6002,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                   color: color,
                   fontWeight: bold ? FontWeight.bold : FontWeight.normal)),
           Text(
-            '${amount < 0 ? '-' : ''}₱${amount.abs().toStringAsFixed(2)}',
+            '${amount < 0 ? '-' : ''}?${amount.abs().toStringAsFixed(2)}',
             style: TextStyle(
                 fontSize: 13,
                 color: color,
@@ -6037,7 +6036,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 children: [
                   const Text('Total',
                       style: TextStyle(fontWeight: FontWeight.bold)),
-                  Text('₱${total.toStringAsFixed(2)}',
+                  Text('?${total.toStringAsFixed(2)}',
                       style: const TextStyle(fontWeight: FontWeight.bold)),
                 ],
               ),
@@ -6115,7 +6114,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                       ),
                     ),
                     Text(
-                      '${isDiscount ? '-' : ''}₱${amount.abs().toStringAsFixed(2)}',
+                      '${isDiscount ? '-' : ''}?${amount.abs().toStringAsFixed(2)}',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight:
@@ -6136,7 +6135,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 const Text('Total Amount',
                     style:
                         TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                Text('₱${total.toStringAsFixed(2)}',
+                Text('?${total.toStringAsFixed(2)}',
                     style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
@@ -6302,7 +6301,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
           ),
         const SizedBox(height: 12),
         _detailSection('Trip', <String>[
-          '${_booking['origin']} → ${_booking['destination']}',
+          '${_booking['origin']} ? ${_booking['destination']}',
           () {
             final rawDep = (_booking['rebooking_departure_date'] ??
                     _booking['preferred_replacement_date'] ??
@@ -6355,12 +6354,12 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               final idNum = p['id_number'];
               final front = p['id_image_front_url'] ?? p['id_image_front'];
               final back = p['id_image_back_url'] ?? p['id_image_back'];
-              String str = '$name ($type) • Bday: $bday';
+              String str = '$name ($type) â€¢ Bday: $bday';
               if (idNum != null && idNum.toString().isNotEmpty) {
-                str += ' • ID: $idNum';
+                str += ' â€¢ ID: $idNum';
               }
-              if (front != null) str += ' • Front ID: Attached';
-              if (back != null) str += ' • Back ID: Attached';
+              if (front != null) str += ' â€¢ Front ID: Attached';
+              if (back != null) str += ' â€¢ Back ID: Attached';
               return str;
             }).toList(),
           ),
@@ -6533,7 +6532,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             ),
           ),
           DropdownButtonFormField<String>(
-              initialValue: _refundMethod,
+              value: _refundMethod,
               decoration: const InputDecoration(labelText: 'Refund method'),
               items: const [
                 DropdownMenuItem(value: 'GCash', child: Text('GCash')),
@@ -7189,7 +7188,7 @@ class AppDrawer extends StatelessWidget {
                 ),
                 SizedBox(height: 4),
                 Text(
-                  '© 2025 Amiga Gracia Travel Services',
+                  'Â© 2025 Amiga Gracia Travel Services',
                   style: TextStyle(color: kSlate400, fontSize: 11),
                   textAlign: TextAlign.center,
                 ),
@@ -7408,7 +7407,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
             margin: const EdgeInsets.all(16),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
-                color: kGreen.withValues(alpha: 0.07),
+                color: kGreen.withOpacity(0.07),
                 borderRadius: BorderRadius.circular(12)),
             child: Row(
               children: [
@@ -7421,7 +7420,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    '${widget.booking.origin} → ${widget.booking.destination}  ·  ${widget.booking.departureDate}',
+                    '${widget.booking.origin} ? ${widget.booking.destination}  Â·  ${widget.booking.departureDate}',
                     style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         color: kGreen,
@@ -7479,7 +7478,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                                           borderRadius:
                                               BorderRadius.circular(8)),
                                       child: Text(
-                                          'From ${widget.booking.origin} • To ${widget.booking.destination}',
+                                          'From ${widget.booking.origin} â€¢ To ${widget.booking.destination}',
                                           style: const TextStyle(
                                               color: Color(0xFF5C1C85),
                                               fontWeight: FontWeight.bold,
@@ -7518,7 +7517,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                                           borderRadius:
                                               BorderRadius.circular(8)),
                                       child: Text(
-                                          'From ${widget.booking.destination} • To ${widget.booking.origin}',
+                                          'From ${widget.booking.destination} â€¢ To ${widget.booking.origin}',
                                           style: const TextStyle(
                                               color: Color(0xFF5C1C85),
                                               fontWeight: FontWeight.bold,
@@ -7605,7 +7604,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                                           borderRadius:
                                               BorderRadius.circular(8)),
                                       child: Text(
-                                          'From ${widget.booking.origin} • To ${widget.booking.destination}',
+                                          'From ${widget.booking.origin} â€¢ To ${widget.booking.destination}',
                                           style: const TextStyle(
                                               color: Color(0xFF5C1C85),
                                               fontWeight: FontWeight.bold,
@@ -7678,7 +7677,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFdb2777).withValues(alpha: 0.06),
+        color: const Color(0xFFdb2777).withOpacity(0.06),
         border: Border.all(color: const Color(0xFFdb2777), width: 2),
         borderRadius: BorderRadius.circular(16),
       ),
@@ -7687,7 +7686,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
         children: [
           Row(
             children: [
-              const Text('✨ ', style: TextStyle(fontSize: 18)),
+              const Text('? ', style: TextStyle(fontSize: 18)),
               Expanded(
                 child: Text(
                   isReturn
@@ -7701,7 +7700,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
               ),
               Switch(
                 value: widget.booking.usePromoTicket,
-                activeThumbColor: const Color(0xFFdb2777),
+                activeColor: const Color(0xFFdb2777),
                 onChanged: (val) {
                   setState(() {
                     widget.booking.usePromoTicket = val;
@@ -7714,7 +7713,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            'Promo price: ₱${promo['promo_price']}   •   Remaining: ${promo['quantity_remaining']} tickets',
+            'Promo price: ?${promo['promo_price']}   â€¢   Remaining: ${promo['quantity_remaining']} tickets',
             style: const TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
@@ -7723,7 +7722,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
           const SizedBox(height: 4),
           Text(
             widget.booking.usePromoTicket
-                ? 'Using promotional fare (₱${promo['promo_price']} / pax)'
+                ? 'Using promotional fare (?${promo['promo_price']} / pax)'
                 : 'Using regular ticket fare',
             style: const TextStyle(fontSize: 12, color: kSlate600),
           ),
@@ -7882,7 +7881,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                     color: isPromo
                         ? const Color(0xFFFFF7E6)
                         : (isSelected
-                            ? kPink.withValues(alpha: 0.05)
+                            ? kPink.withOpacity(0.05)
                             : Colors.white),
                     border: Border.all(
                         color: isPromo
@@ -7894,7 +7893,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                         ? [
                             BoxShadow(
                                 color: const Color(0xFFF59E0B)
-                                    .withValues(alpha: 0.1),
+                                    .withOpacity(0.1),
                                 blurRadius: 4,
                                 spreadRadius: 1)
                           ]
@@ -7966,7 +7965,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                           Row(
                             children: [
                               Text(
-                                '₱${(_parseDouble(c['price']) + schedulePrice).toStringAsFixed(2)}',
+                                '?${(_parseDouble(c['price']) + schedulePrice).toStringAsFixed(2)}',
                                 style: TextStyle(
                                     color: isPromo
                                         ? const Color(0xFFEA580C)
@@ -7977,7 +7976,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                               if (isPromo && c['sale_price'] != null) ...[
                                 const SizedBox(width: 4),
                                 Text(
-                                  '₱${(_parseDouble(c['price']) + _parseDouble(c['sale_price']) + schedulePrice).toStringAsFixed(2)}',
+                                  '?${(_parseDouble(c['price']) + _parseDouble(c['sale_price']) + schedulePrice).toStringAsFixed(2)}',
                                   style: const TextStyle(
                                       color: Colors.grey,
                                       decoration: TextDecoration.lineThrough,
@@ -8055,7 +8054,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? kPink.withValues(alpha: 0.05)
+                        ? kPink.withOpacity(0.05)
                         : Colors.white,
                     border: Border.all(
                         color: isSelected ? kPink : Colors.grey.shade300,
@@ -8082,7 +8081,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '₱${(_parseDouble(c['price']) + schedulePrice).toStringAsFixed(2)}',
+                        '?${(_parseDouble(c['price']) + schedulePrice).toStringAsFixed(2)}',
                         style: const TextStyle(
                             color: kPink,
                             fontWeight: FontWeight.bold,
@@ -8164,7 +8163,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                 style: TextStyle(fontSize: 12, color: kSlate500)),
             const SizedBox(height: 12),
             DropdownButtonFormField<int?>(
-              initialValue: widget.booking.hasExtraBaggage
+              value: widget.booking.hasExtraBaggage
                   ? widget.booking.extraBaggageKg
                   : null,
               decoration: const InputDecoration(
@@ -8187,7 +8186,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                       0;
                   return DropdownMenuItem<int?>(
                     value: kg,
-                    child: Text('${opt['weight']} (+ ₱${opt['price']})',
+                    child: Text('${opt['weight']} (+ ?${opt['price']})',
                         style: const TextStyle(fontSize: 14)),
                   );
                 }),
@@ -8244,10 +8243,10 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
               ],
             ),
             SizedBox(height: 8),
-            Text('• Standard ticket includes 1 hand carry bag (up to 7kg).',
+            Text('â€¢ Standard ticket includes 1 hand carry bag (up to 7kg).',
                 style: TextStyle(fontSize: 12, color: Color(0xFF9A3412))),
             SizedBox(height: 4),
-            Text('• Ensure valuables are kept with you at all times.',
+            Text('â€¢ Ensure valuables are kept with you at all times.',
                 style: TextStyle(fontSize: 12, color: Color(0xFF9A3412))),
           ],
         ),
@@ -8407,7 +8406,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                                       decoration: BoxDecoration(
                                           color: isSelected
                                               ? Colors.white24
-                                              : kGreen.withValues(alpha: 0.08),
+                                              : kGreen.withOpacity(0.08),
                                           borderRadius:
                                               BorderRadius.circular(8)),
                                       child: Text(
@@ -8445,7 +8444,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                                 fontSize: 12)),
                       ],
                       const Spacer(),
-                      Text('${s['departure']} → ${s['arrival']}',
+                      Text('${s['departure']} ? ${s['arrival']}',
                           style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
@@ -8569,7 +8568,7 @@ class _DiscountScreenState extends State<DiscountScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         decoration: BoxDecoration(
-          color: hasImg ? kGreen.withValues(alpha: 0.08) : Colors.grey.shade50,
+          color: hasImg ? kGreen.withOpacity(0.08) : Colors.grey.shade50,
           border: Border.all(
               color: hasImg ? kGreen : Colors.grey.shade300,
               width: hasImg ? 1.5 : 1),
@@ -8602,11 +8601,11 @@ class _DiscountScreenState extends State<DiscountScreen> {
                   const SizedBox(height: 2),
                   Text(
                     hasImg
-                        ? 'Image attached • Tap to change'
+                        ? 'Image attached â€¢ Tap to change'
                         : 'Tap to upload picture',
                     style: TextStyle(
                       fontSize: 11,
-                      color: hasImg ? kGreen.withValues(alpha: 0.8) : kSlate400,
+                      color: hasImg ? kGreen.withOpacity(0.8) : kSlate400,
                     ),
                   ),
                 ],
@@ -8713,10 +8712,10 @@ class _DiscountScreenState extends State<DiscountScreen> {
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                        color: kGreen.withValues(alpha: 0.06),
+                        color: kGreen.withOpacity(0.06),
                         borderRadius: BorderRadius.circular(12)),
                     child: Text(
-                      '${widget.booking.origin} → ${widget.booking.destination}  ·  ${s['service']}  ·  ₱${(_parseDouble(s['price']) + (widget.booking.mode == 'ferry' ? (widget.booking.selectedFerryAccommodationPrice ?? 0) : (widget.booking.selectedAirlineClassPrice ?? 0))).toStringAsFixed(2)} / person',
+                      '${widget.booking.origin} ? ${widget.booking.destination}  Â·  ${s['service']}  Â·  ?${(_parseDouble(s['price']) + (widget.booking.mode == 'ferry' ? (widget.booking.selectedFerryAccommodationPrice ?? 0) : (widget.booking.selectedAirlineClassPrice ?? 0))).toStringAsFixed(2)} / person',
                       style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           color: kGreen,
@@ -8744,8 +8743,8 @@ class _DiscountScreenState extends State<DiscountScreen> {
                                       horizontal: 10, vertical: 4),
                                   decoration: BoxDecoration(
                                       color: ['adult', 'driver'].contains(type)
-                                          ? kGreen.withValues(alpha: 0.1)
-                                          : kPink.withValues(alpha: 0.1),
+                                          ? kGreen.withOpacity(0.1)
+                                          : kPink.withOpacity(0.1),
                                       borderRadius: BorderRadius.circular(20)),
                                   child: Text(
                                     BookingData.passengerTypeLabel(type, i + 1),
@@ -8858,7 +8857,7 @@ class _DiscountScreenState extends State<DiscountScreen> {
                                     SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
-                                        'Promotional ticket applied — passenger discounts are not applicable.',
+                                        'Promotional ticket applied â€” passenger discounts are not applicable.',
                                         style: TextStyle(
                                             fontSize: 12,
                                             color: Color(0xFF7B5800),
@@ -8871,7 +8870,7 @@ class _DiscountScreenState extends State<DiscountScreen> {
                             ] else if (_discounts.isNotEmpty) ...[
                               const SizedBox(height: 10),
                               DropdownButtonFormField<int?>(
-                                initialValue: pax[i]['discount_id'],
+                                value: pax[i]['discount_id'],
                                 hint: const Text('No Discount'),
                                 items: [
                                   const DropdownMenuItem<int?>(
@@ -9056,7 +9055,7 @@ class _StayScreenState extends State<StayScreen> {
                 : ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
-                      // ── Hotel / Accommodation Add-ons ──
+                      // -- Hotel / Accommodation Add-ons --
                       const Text(
                         'Hotels',
                         style: TextStyle(
@@ -9087,7 +9086,7 @@ class _StayScreenState extends State<StayScreen> {
                               .contains(id);
                           return Card(
                             color: selected
-                                ? kGreen.withValues(alpha: 0.05)
+                                ? kGreen.withOpacity(0.05)
                                 : Colors.white,
                             margin: const EdgeInsets.only(bottom: 12),
                             shape: RoundedRectangleBorder(
@@ -9162,7 +9161,7 @@ class _StayScreenState extends State<StayScreen> {
                                           const SizedBox(height: 4),
                                           Row(
                                             children: [
-                                              Text('₱${a['price']}',
+                                              Text('?${a['price']}',
                                                   style: const TextStyle(
                                                       color: kPink,
                                                       fontWeight:
@@ -9532,8 +9531,8 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
             'driver_birthday': widget.booking.vehicleDriverBirthday,
           },
           // Determine which API field to use for the ferry class:
-          // - schedules that have transport_classes → send as selected_transport_class_id
-          // - schedules that have accommodations    → send as selected_schedule_accommodation_id
+          // - schedules that have transport_classes ? send as selected_transport_class_id
+          // - schedules that have accommodations    ? send as selected_schedule_accommodation_id
           if (widget.booking.mode == 'ferry' &&
               widget.booking.selectedFerryAccommodationId != null)
             ...(() {
@@ -9655,7 +9654,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // ── STEP A: Review form before submitting ──
+    // -- STEP A: Review form before submitting --
     final s = widget.booking.selectedSchedule!;
     final pax = widget.booking.passengers;
 
@@ -9740,7 +9739,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                   // Trip Summary
                   _SummarySection(title: 'Trip Details', children: [
                     _SummaryRow('Route',
-                        '${widget.booking.origin} → ${widget.booking.destination}'),
+                        '${widget.booking.origin} ? ${widget.booking.destination}'),
                     _SummaryRow('Mode',
                         widget.booking.mode == 'ferry' ? 'Ferry' : 'Airline'),
                     _SummaryRow('Date', widget.booking.departureDate),
@@ -9751,25 +9750,25 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                             : 'Round Trip'),
                     if (widget.booking.tripType == 'round_trip') ...[
                       _SummaryRow('Departure Schedule',
-                          '${s['service']}  ${s['departure']} – ${s['arrival']}'),
+                          '${s['service']}  ${s['departure']} â€“ ${s['arrival']}'),
                       _SummaryRow('Departure Ticket & Class',
-                          '₱${(_parseDouble(s['price']) + (widget.booking.mode == 'ferry' ? (widget.booking.selectedFerryAccommodationPrice ?? 0) : (widget.booking.selectedAirlineClassPrice ?? 0))).toStringAsFixed(2)} / pax'),
+                          '?${(_parseDouble(s['price']) + (widget.booking.mode == 'ferry' ? (widget.booking.selectedFerryAccommodationPrice ?? 0) : (widget.booking.selectedAirlineClassPrice ?? 0))).toStringAsFixed(2)} / pax'),
                       if (widget.booking.selectedReturnSchedule != null) ...[
                         _SummaryRow('Return Schedule',
-                            '${widget.booking.selectedReturnSchedule!['service']}  ${widget.booking.selectedReturnSchedule!['departure']} – ${widget.booking.selectedReturnSchedule!['arrival']}'),
+                            '${widget.booking.selectedReturnSchedule!['service']}  ${widget.booking.selectedReturnSchedule!['departure']} â€“ ${widget.booking.selectedReturnSchedule!['arrival']}'),
                         _SummaryRow('Return Ticket & Class',
-                            '₱${(_parseDouble(widget.booking.selectedReturnSchedule!['price']) + (widget.booking.mode == 'ferry' ? (widget.booking.selectedReturnFerryAccommodationPrice ?? 0) : (widget.booking.selectedReturnAirlineClassPrice ?? 0))).toStringAsFixed(2)} / pax'),
+                            '?${(_parseDouble(widget.booking.selectedReturnSchedule!['price']) + (widget.booking.mode == 'ferry' ? (widget.booking.selectedReturnFerryAccommodationPrice ?? 0) : (widget.booking.selectedReturnAirlineClassPrice ?? 0))).toStringAsFixed(2)} / pax'),
                       ],
                     ] else ...[
                       _SummaryRow('Schedule',
-                          '${s['service']}  ${s['departure']} – ${s['arrival']}'),
+                          '${s['service']}  ${s['departure']} â€“ ${s['arrival']}'),
                       _SummaryRow('Departure Tickets & Class',
-                          '₱${(_parseDouble(s['price']) + (widget.booking.mode == 'ferry' ? (widget.booking.selectedFerryAccommodationPrice ?? 0) : (widget.booking.selectedAirlineClassPrice ?? 0))).toStringAsFixed(2)}'),
+                          '?${(_parseDouble(s['price']) + (widget.booking.mode == 'ferry' ? (widget.booking.selectedFerryAccommodationPrice ?? 0) : (widget.booking.selectedAirlineClassPrice ?? 0))).toStringAsFixed(2)}'),
                     ],
                     if (widget.booking.hasExtraBaggage &&
                         widget.booking.mode == 'airline')
                       _SummaryRow('Extra Baggage',
-                          '${widget.booking.extraBaggageKg ?? 20} kg (₱${widget.booking.extraBaggagePrice.toStringAsFixed(0)}/pax)'),
+                          '${widget.booking.extraBaggageKg ?? 20} kg (?${widget.booking.extraBaggagePrice.toStringAsFixed(0)}/pax)'),
                     if (widget.booking.hasExtraBaggage &&
                         widget.booking.mode == 'ferry') ...[
                       _SummaryRow('Extra Baggage Category',
@@ -9805,7 +9804,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                         );
                         final p = double.tryParse(acc['price'].toString()) ?? 0;
                         return _SummaryRow(
-                            acc['name'] as String, '₱${p.toStringAsFixed(2)}');
+                            acc['name'] as String, '?${p.toStringAsFixed(2)}');
                       }),
                     ]),
                     const SizedBox(height: 16),
@@ -9817,19 +9816,19 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                       _SummaryRow(
                           'Vehicle Type',
                           widget.booking.vehicleType.isEmpty
-                              ? '—'
+                              ? 'â€”'
                               : widget.booking.vehicleType),
                       _SummaryRow(
                           'Plate Number',
                           widget.booking.vehiclePlateNumber.isEmpty
-                              ? '—'
+                              ? 'â€”'
                               : widget.booking.vehiclePlateNumber),
                       _SummaryRow('Vehicle Fee', () {
                         final p = widget.booking.vehiclePrice;
                         final pts = UserSession.calculateEarnedPoints(p);
                         return pts > 0
-                            ? '₱${p.toStringAsFixed(2)}  (+${pts}pts)'
-                            : '₱${p.toStringAsFixed(2)}';
+                            ? '?${p.toStringAsFixed(2)}  (+${pts}pts)'
+                            : '?${p.toStringAsFixed(2)}';
                       }()),
                     ]),
                     const SizedBox(height: 16),
@@ -9959,7 +9958,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                           onChanged: _availablePoints > 0
                               ? (val) => setState(() => _usePoints = val)
                               : null,
-                          activeThumbColor: kGreen,
+                          activeColor: kGreen,
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -10128,7 +10127,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                         }
                       }
 
-                      // Extra baggage cost (airline only — prepaid per pax)
+                      // Extra baggage cost (airline only â€” prepaid per pax)
                       double extraBaggageCost = 0.0;
                       if (widget.booking.hasExtraBaggage &&
                           widget.booking.mode == 'airline' &&
@@ -10226,7 +10225,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                                 }
                                 return _SummaryRow(
                                     'Departure Tickets & Class (${payingPax}x)',
-                                    '₱${(depTicket + depClass).toStringAsFixed(2)}');
+                                    '?${(depTicket + depClass).toStringAsFixed(2)}');
                               }),
                               // Return leg cost
                               Builder(builder: (_) {
@@ -10249,29 +10248,29 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                                 }
                                 return _SummaryRow(
                                     'Return Tickets & Class (${payingPax}x)',
-                                    '₱${(retTicket + retClass).toStringAsFixed(2)}');
+                                    '?${(retTicket + retClass).toStringAsFixed(2)}');
                               }),
                             ] else ...[
                               _SummaryRow(
                                   'Departure Tickets & Class (${payingPax}x)',
-                                  '₱${(ticketPrice + transportClassCost).toStringAsFixed(2)}'),
+                                  '?${(ticketPrice + transportClassCost).toStringAsFixed(2)}'),
                             ],
                             if (scheduleAccommodationCost > 0)
                               _SummaryRow('Accommodation',
-                                  '₱${scheduleAccommodationCost.toStringAsFixed(2)}'),
+                                  '?${scheduleAccommodationCost.toStringAsFixed(2)}'),
                             if (passengerDiscount > 0)
                               _SummaryRow('Passenger Discount',
-                                  '-₱${passengerDiscount.toStringAsFixed(2)}'),
+                                  '-?${passengerDiscount.toStringAsFixed(2)}'),
                             if (vehicleCost > 0)
                               _SummaryRow('Vehicle Freight',
-                                  '₱${vehicleCost.toStringAsFixed(2)}'),
+                                  '?${vehicleCost.toStringAsFixed(2)}'),
                             if (accommodationCost > 0)
                               _SummaryRow('Stay',
-                                  '₱${accommodationCost.toStringAsFixed(2)}'),
+                                  '?${accommodationCost.toStringAsFixed(2)}'),
                             if (extraBaggageCost > 0)
                               _SummaryRow(
                                   'Extra Baggage (${widget.booking.extraBaggageKg} kg)',
-                                  '₱${extraBaggageCost.toStringAsFixed(2)}'),
+                                  '?${extraBaggageCost.toStringAsFixed(2)}'),
                             if (widget.booking.hasExtraBaggage &&
                                 widget.booking.mode == 'ferry')
                               _SummaryRow(
@@ -10279,20 +10278,20 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                                   'Settled at Terminal'),
                             if (calculationFee > 0)
                               _SummaryRow('Web Admin Fee',
-                                  '₱${calculationFee.toStringAsFixed(2)}'),
+                                  '?${calculationFee.toStringAsFixed(2)}'),
                             if (transactionFeeTotal > 0)
                               _SummaryRow('Transaction Fee',
-                                  '₱${transactionFeeTotal.toStringAsFixed(2)}'),
+                                  '?${transactionFeeTotal.toStringAsFixed(2)}'),
                             const Divider(height: 16),
                             _SummaryRow(
-                                'Subtotal', '₱${subtotal.toStringAsFixed(2)}'),
+                                'Subtotal', '?${subtotal.toStringAsFixed(2)}'),
                             if (discount > 0)
                               _SummaryRow('Voucher Discount',
-                                  '-₱${discount.toStringAsFixed(2)}'),
+                                  '-?${discount.toStringAsFixed(2)}'),
                             if (pointsDiscount > 0)
                               _SummaryRow(
                                   'Points Discount (${pointsDiscount.toInt()} pts)',
-                                  '-₱${pointsDiscount.toStringAsFixed(2)}'),
+                                  '-?${pointsDiscount.toStringAsFixed(2)}'),
                             const Divider(height: 16),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -10302,7 +10301,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                                         fontWeight: FontWeight.bold,
                                         fontSize: 16,
                                         color: kSlate800)),
-                                Text('₱${finalTotal.toStringAsFixed(2)}',
+                                Text('?${finalTotal.toStringAsFixed(2)}',
                                     style: const TextStyle(
                                         fontWeight: FontWeight.w900,
                                         color: kPink,
@@ -10320,10 +10319,10 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                                 child: Container(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: kPink.withValues(alpha: 0.08),
+                                    color: kPink.withOpacity(0.08),
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(
-                                        color: kPink.withValues(alpha: 0.3)),
+                                        color: kPink.withOpacity(0.3)),
                                   ),
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
@@ -10653,9 +10652,9 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-                color: kGreen.withValues(alpha: 0.08),
+                color: kGreen.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: kGreen.withValues(alpha: 0.3))),
+                border: Border.all(color: kGreen.withOpacity(0.3))),
             child: Column(
               children: [
                 const Icon(Icons.check_circle, color: kGreen, size: 48),
@@ -10669,7 +10668,7 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
                 Text('Transaction #: ${widget.transactionNumber}',
                     style: const TextStyle(color: kSlate600, fontSize: 13)),
                 const SizedBox(height: 4),
-                Text('Total: ₱${widget.totalPrice.toStringAsFixed(2)}',
+                Text('Total: ?${widget.totalPrice.toStringAsFixed(2)}',
                     style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -10821,7 +10820,7 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                          color: Colors.green.withValues(alpha: 0.08),
+                          color: Colors.green.withOpacity(0.08),
                           borderRadius: BorderRadius.circular(10)),
                       child: const Row(
                         children: [
@@ -10839,7 +10838,7 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                          color: Colors.red.withValues(alpha: 0.08),
+                          color: Colors.red.withOpacity(0.08),
                           borderRadius: BorderRadius.circular(10)),
                       child: const Row(
                         children: [
@@ -11068,7 +11067,7 @@ class BookingSuccessScreen extends StatelessWidget {
                       children: [
                         const Text('Total Amount',
                             style: TextStyle(color: kSlate600)),
-                        Text('₱${totalPrice.toStringAsFixed(2)}',
+                        Text('?${totalPrice.toStringAsFixed(2)}',
                             style: const TextStyle(
                                 fontWeight: FontWeight.w900,
                                 color: kPink,
@@ -11470,17 +11469,17 @@ class _VoucherPickerScreenState extends State<VoucherPickerScreen> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                        color: kGreen.withValues(alpha: 0.08),
+                        color: kGreen.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(8),
                         border:
-                            Border.all(color: kGreen.withValues(alpha: 0.3))),
+                            Border.all(color: kGreen.withOpacity(0.3))),
                     child: Row(
                       children: [
                         const Icon(Icons.check_circle, color: kGreen, size: 18),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Applied: $currentCode — Saves ₱${_parseDouble(widget.booking.voucherData!['discount_amount']).toStringAsFixed(2)}',
+                            'Applied: $currentCode â€” Saves ?${_parseDouble(widget.booking.voucherData!['discount_amount']).toStringAsFixed(2)}',
                             style: const TextStyle(
                                 color: kGreen,
                                 fontWeight: FontWeight.bold,
@@ -11709,7 +11708,7 @@ class AboutScreen extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                           fontSize: 15)),
                   const SizedBox(height: 14),
-                  // Row 1: Ferry — 2GO, Starlite
+                  // Row 1: Ferry â€” 2GO, Starlite
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -11725,7 +11724,7 @@ class AboutScreen extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  // Row 2: Airlines — Cebu Pacific, Philippine Airlines, AirAsia
+                  // Row 2: Airlines â€” Cebu Pacific, Philippine Airlines, AirAsia
                   Row(
                     children: [
                       _OperatorLogoCard(
@@ -11776,7 +11775,7 @@ class _AboutFact extends StatelessWidget {
           width: 38,
           height: 38,
           decoration: BoxDecoration(
-              color: kGreen.withValues(alpha: 0.1),
+              color: kGreen.withOpacity(0.1),
               borderRadius: BorderRadius.circular(10)),
           child: Center(
               child: Text(number,
@@ -11924,9 +11923,9 @@ class _ContactScreenState extends State<ContactScreen> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                    color: kGreen.withValues(alpha: 0.08),
+                    color: kGreen.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: kGreen.withValues(alpha: 0.2))),
+                    border: Border.all(color: kGreen.withOpacity(0.2))),
                 child: Column(
                   children: [
                     const Icon(Icons.check_circle, color: kGreen, size: 48),
@@ -12056,7 +12055,7 @@ class _ContactInfoCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
+                color: color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12)),
             child: Icon(icon, color: color, size: 22),
           ),
@@ -12201,7 +12200,7 @@ class ServicesScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                            color: (s['color'] as Color).withValues(alpha: 0.1),
+                            color: (s['color'] as Color).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(14)),
                         child: Icon(s['icon'] as IconData,
                             color: s['color'] as Color, size: 26),
@@ -12426,7 +12425,7 @@ class _PackageList extends StatelessWidget {
                                     '${UserSession.getBaseUrl()}/storage/${p['image']}'),
                                 fit: BoxFit.cover,
                                 colorFilter: ColorFilter.mode(
-                                    Colors.black.withValues(alpha: 0.3),
+                                    Colors.black.withOpacity(0.3),
                                     BlendMode.darken),
                               )
                             : null,
@@ -12442,7 +12441,7 @@ class _PackageList extends StatelessWidget {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.2),
+                                  color: Colors.white.withOpacity(0.2),
                                   borderRadius: BorderRadius.circular(20)),
                               child: Text(p['tag'] as String,
                                   style: const TextStyle(
@@ -12574,7 +12573,7 @@ class _PackageList extends StatelessWidget {
                   icon: const Icon(Icons.close, color: Colors.white),
                   onPressed: () => Navigator.of(context).pop(),
                   style: IconButton.styleFrom(
-                    backgroundColor: Colors.black.withValues(alpha: 0.3),
+                    backgroundColor: Colors.black.withOpacity(0.3),
                   ),
                 ),
               ),
@@ -12693,7 +12692,7 @@ class _RequestBookingScreenState extends State<RequestBookingScreen> {
   final _emailCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   String _serviceType = 'Ferry Ticket';
-  String _tripType = 'One Way';
+  final String _tripType = 'One Way';
   final _fromCtrl = TextEditingController();
   final _toCtrl = TextEditingController();
   final _dateCtrl = TextEditingController();
@@ -13275,9 +13274,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               notif['is_read'] == 1 || notif['is_read'] == true;
                           return ListTile(
                             tileColor:
-                                isRead ? null : kGreen.withValues(alpha: 0.05),
+                                isRead ? null : kGreen.withOpacity(0.05),
                             leading: CircleAvatar(
-                              backgroundColor: kGreen.withValues(alpha: 0.2),
+                              backgroundColor: kGreen.withOpacity(0.2),
                               child: const Icon(Icons.notifications_active,
                                   color: kGreen),
                             ),
@@ -13473,12 +13472,12 @@ class _GraciaPointsScreenState extends State<GraciaPointsScreen> {
                               const SizedBox(height: 16),
                               if (_activeRule != null) ...[
                                 Text(
-                                    'Unconverted Spend: ₱${(_unconvertedSpend / 100).toStringAsFixed(2)}',
+                                    'Unconverted Spend: ?${(_unconvertedSpend / 100).toStringAsFixed(2)}',
                                     style:
                                         const TextStyle(color: Colors.white)),
                                 const SizedBox(height: 4),
                                 Text(
-                                    'Earn ${_activeRule!['points_awarded']} pts for every ₱${(_activeRule!['spend_threshold_centavos'] / 100).toStringAsFixed(0)}',
+                                    'Earn ${_activeRule!['points_awarded']} pts for every ?${(_activeRule!['spend_threshold_centavos'] / 100).toStringAsFixed(0)}',
                                     style: const TextStyle(
                                         color: Colors.white70, fontSize: 12)),
                                 const SizedBox(height: 12),
@@ -13585,19 +13584,19 @@ class _GraciaPointsScreenState extends State<GraciaPointsScreen> {
                                   Text('Gracia coins Guidelines'),
                                   SizedBox(height: 8),
                                   Text(
-                                      '• Book your ferry or flight and earn points along the way.'),
+                                      'â€¢ Book your ferry or flight and earn points along the way.'),
                                   SizedBox(height: 8),
                                   Text(
-                                      '• For every ₱1,000 spent, you will earn 5 Gracia coins.'),
+                                      'â€¢ For every ?1,000 spent, you will earn 5 Gracia coins.'),
                                   SizedBox(height: 8),
                                   Text(
-                                      '• Web Admin Fee and Transaction Fee are excluded from the eligible spend. If a discount voucher is applied, points are calculated based on the discounted amount.'),
+                                      'â€¢ Web Admin Fee and Transaction Fee are excluded from the eligible spend. If a discount voucher is applied, points are calculated based on the discounted amount.'),
                                   SizedBox(height: 8),
                                   Text(
-                                      '• Points will be automatically credited once your booking has been paid and verified.'),
+                                      'â€¢ Points will be automatically credited once your booking has been paid and verified.'),
                                   SizedBox(height: 8),
                                   Text(
-                                      '• Redeem your Gracia coins to enjoy exciting rewards and discounts on your future travels.'),
+                                      'â€¢ Redeem your Gracia coins to enjoy exciting rewards and discounts on your future travels.'),
                                 ],
                               ),
                               actions: [
@@ -13787,7 +13786,7 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
+                      color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Row(
@@ -13838,7 +13837,7 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      initialValue: allOrigins.contains(_originFilter)
+                      value: allOrigins.contains(_originFilter)
                           ? _originFilter
                           : null,
                       hint:
@@ -13865,7 +13864,7 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      initialValue: allDestinations.contains(_destinationFilter)
+                      value: allDestinations.contains(_destinationFilter)
                           ? _destinationFilter
                           : null,
                       hint: const Text('Destination',
@@ -13960,9 +13959,9 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
                                       errorBuilder: (ctx, err, stack) =>
                                           CircleAvatar(
                                         backgroundColor: isFerry
-                                            ? Colors.blue.withValues(alpha: 0.1)
+                                            ? Colors.blue.withOpacity(0.1)
                                             : Colors.amber
-                                                .withValues(alpha: 0.1),
+                                                .withOpacity(0.1),
                                         child: Icon(
                                             isFerry
                                                 ? Icons.directions_boat
@@ -13976,8 +13975,8 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
                                 else
                                   CircleAvatar(
                                     backgroundColor: isFerry
-                                        ? Colors.blue.withValues(alpha: 0.1)
-                                        : Colors.amber.withValues(alpha: 0.1),
+                                        ? Colors.blue.withOpacity(0.1)
+                                        : Colors.amber.withOpacity(0.1),
                                     child: Icon(
                                         isFerry
                                             ? Icons.directions_boat
@@ -14385,7 +14384,7 @@ class _VouchersScreenState extends State<VouchersScreen> {
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: kPink.withValues(alpha: 0.1),
+                        color: kPink.withOpacity(0.1),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(Icons.card_giftcard,
@@ -14630,7 +14629,7 @@ String _getVoucherLabel(dynamic v) {
   if (v['discount_type'] != 'percentage' && v['discount_value'] != null) {
     final val = double.tryParse(v['discount_value'].toString());
     if (val != null && val > 0) {
-      return '₱${val.toStringAsFixed(0)} OFF';
+      return '?${val.toStringAsFixed(0)} OFF';
     }
   }
 
@@ -14683,7 +14682,7 @@ String _formatVoucherExpiry(String? dateStr) {
   }
 }
 
-// ── Ticket Outline Clipper ───────────────────────────────────────────────
+// -- Ticket Outline Clipper -----------------------------------------------
 class _CouponCardClipper extends CustomClipper<Path> {
   const _CouponCardClipper({
     required this.seamX,
@@ -14720,7 +14719,7 @@ class _CouponCardClipper extends CustomClipper<Path> {
       old.notchRadius != notchRadius;
 }
 
-// ── Zigzag Fill Painter ──────────────────────────────────────────────────
+// -- Zigzag Fill Painter --------------------------------------------------
 class _ZigzagFillPainter extends CustomPainter {
   const _ZigzagFillPainter({
     required this.seamX,
@@ -14762,7 +14761,7 @@ class _ZigzagFillPainter extends CustomPainter {
       old.seamX != seamX || old.color != color;
 }
 
-// ── Gift Box Painter ─────────────────────────────────────────────────────
+// -- Gift Box Painter -----------------------------------------------------
 class _GiftBoxPainter extends CustomPainter {
   const _GiftBoxPainter({required this.color});
   final Color color;
@@ -14778,7 +14777,7 @@ class _GiftBoxPainter extends CustomPainter {
       ..strokeJoin = StrokeJoin.round;
     final w = size.width;
     final h = size.height;
-    // Box body (open top — no bottom lid line to keep it clean)
+    // Box body (open top â€” no bottom lid line to keep it clean)
     canvas.drawRRect(
         RRect.fromRectAndRadius(
             Rect.fromLTWH(w * 0.08, h * 0.42, w * 0.84, h * 0.50),
@@ -14813,7 +14812,7 @@ class _GiftBoxPainter extends CustomPainter {
   bool shouldRepaint(covariant _GiftBoxPainter old) => old.color != color;
 }
 
-// ── Mini Stat (Min. Spend / Max off) ─────────────────────────────────────
+// -- Mini Stat (Min. Spend / Max off) -------------------------------------
 class _VoucherMiniStat extends StatelessWidget {
   const _VoucherMiniStat({
     required this.label,
@@ -14845,7 +14844,7 @@ class _VoucherMiniStat extends StatelessWidget {
   }
 }
 
-// ── Main Coupon Card ─────────────────────────────────────────────────────
+// -- Main Coupon Card -----------------------------------------------------
 class _DiscountCouponCard extends StatelessWidget {
   final Map<String, dynamic>? voucher;
   final bool isSelected;
@@ -14863,7 +14862,7 @@ class _DiscountCouponCard extends StatelessWidget {
   static const double _cornerFraction = 0.12;
   static const double _notchFraction = 0.085;
 
-  /// Returns the display label for the discount, e.g. "20%" or "₱100"
+  /// Returns the display label for the discount, e.g. "20%" or "?100"
   String _discountLabel() {
     if (voucher == null) return '30%';
     final type = voucher!['discount_type']?.toString() ?? '';
@@ -14873,10 +14872,10 @@ class _DiscountCouponCard extends StatelessWidget {
       if (val != null && val > 0) {
         if (type == 'percentage') {
           final isWhole = val == val.roundToDouble();
-          return isWhole ? '${val.toInt()}%' : '${val}%';
+          return isWhole ? '${val.toInt()}%' : '$val%';
         } else {
           // flat discount
-          return '₱${val.toStringAsFixed(0)}';
+          return '?${val.toStringAsFixed(0)}';
         }
       }
     }
@@ -14892,12 +14891,12 @@ class _DiscountCouponCard extends StatelessWidget {
         ? double.tryParse(voucher!['min_booking_amount'].toString())
         : null;
     final String minSpend =
-        minVal != null && minVal > 0 ? '₱${minVal.toStringAsFixed(0)}' : '₱0';
+        minVal != null && minVal > 0 ? '?${minVal.toStringAsFixed(0)}' : '?0';
     final double? maxVal = voucher?['max_discount'] != null
         ? double.tryParse(voucher!['max_discount'].toString())
         : null;
     final String maxOff =
-        maxVal != null && maxVal > 0 ? '₱${maxVal.toStringAsFixed(0)}' : '—';
+        maxVal != null && maxVal > 0 ? '?${maxVal.toStringAsFixed(0)}' : 'â€”';
 
     return GestureDetector(
       onTap: onTap,
@@ -14907,7 +14906,7 @@ class _DiscountCouponCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.14),
+              color: Colors.black.withOpacity(0.14),
               blurRadius: 14,
               offset: const Offset(0, 6),
             ),
@@ -14944,7 +14943,7 @@ class _DiscountCouponCard extends StatelessWidget {
                       ),
                     ),
 
-                    // ── Green side ──
+                    // -- Green side --
 
                     // Logo top-left (smaller)
                     Positioned(
@@ -14962,16 +14961,16 @@ class _DiscountCouponCard extends StatelessWidget {
                             width: height * 0.20,
                             height: height * 0.20,
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.14),
+                              color: Colors.white.withOpacity(0.14),
                               borderRadius:
                                   BorderRadius.circular(height * 0.04),
                               border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.65),
+                                  color: Colors.white.withOpacity(0.65),
                                   width: 1.4),
                             ),
                             alignment: Alignment.center,
                             child: Icon(Icons.image_outlined,
-                                color: Colors.white.withValues(alpha: 0.85),
+                                color: Colors.white.withOpacity(0.85),
                                 size: height * 0.10),
                           ),
                         ),
@@ -15042,7 +15041,7 @@ class _DiscountCouponCard extends StatelessWidget {
                       ),
                     ),
 
-                    // ── Pink side ──
+                    // -- Pink side --
 
                     // Gift box with discount label inside (aligned near bottom stats, right gap added)
                     Positioned(
@@ -15056,10 +15055,10 @@ class _DiscountCouponCard extends StatelessWidget {
                           child: Stack(
                             alignment: Alignment.center,
                             children: [
-                              CustomPaint(
+                              const CustomPaint(
                                 size: Size.infinite,
                                 painter:
-                                    const _GiftBoxPainter(color: Colors.white),
+                                    _GiftBoxPainter(color: Colors.white),
                               ),
                               Padding(
                                 padding: EdgeInsets.only(top: height * 0.21),
@@ -15100,7 +15099,7 @@ class _DiscountCouponCard extends StatelessWidget {
                       child: Column(
                         children: [
                           Text(
-                            'AMIGA GRACIA TRAVEL SERVICES',
+                            'Amiga Gracia TRAVEL SERVICES',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: Colors.white,
@@ -15553,7 +15552,7 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // ── Disruption Banner ──
+          // -- Disruption Banner --
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -15594,7 +15593,7 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
                         color: kSlate800)),
                 const SizedBox(height: 6),
                 Text(
-                  'Your original voyage on ${widget.booking['departure_date'] ?? '—'} was cancelled by $carrier due to ${reason.toString().replaceAll('_', ' ')}.',
+                  'Your original voyage on ${widget.booking['departure_date'] ?? 'â€”'} was cancelled by $carrier due to ${reason.toString().replaceAll('_', ' ')}.',
                   style: const TextStyle(fontSize: 13, color: kSlate700),
                 ),
                 if (customerMsg != null) ...[
@@ -15602,7 +15601,7 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.8),
+                        color: Colors.white.withOpacity(0.8),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(color: Colors.amber.shade200)),
                     child: Text.rich(
@@ -15639,7 +15638,7 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
                                     color: kSlate400,
                                     letterSpacing: 1)),
                             const SizedBox(height: 4),
-                            Text(widget.booking['transaction_number'] ?? '—',
+                            Text(widget.booking['transaction_number'] ?? 'â€”',
                                 style: const TextStyle(
                                     fontWeight: FontWeight.w900,
                                     color: kSlate800)),
@@ -15684,19 +15683,19 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
           ),
           const SizedBox(height: 16),
 
-          // ── Feedback ──
+          // -- Feedback --
           if (_feedback.isNotEmpty)
             Container(
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: _submitted
-                    ? kGreen.withValues(alpha: 0.08)
+                    ? kGreen.withOpacity(0.08)
                     : Colors.red.shade50,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                     color: _submitted
-                        ? kGreen.withValues(alpha: 0.3)
+                        ? kGreen.withOpacity(0.3)
                         : Colors.red.shade200),
               ),
               child: Text(_feedback,
@@ -15752,7 +15751,7 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
               ),
             ),
           ] else ...[
-            // ── Refund Form ──
+            // -- Refund Form --
             if (_showRefundForm) ...[
               Card(
                 color: Colors.white,
@@ -15779,7 +15778,7 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
                         ],
                       ),
                       Text(
-                        'Since this cancellation was caused by the operator, you are entitled to a full refund of ₱${totalPrice?.toString() ?? '—'}.',
+                        'Since this cancellation was caused by the operator, you are entitled to a full refund of ?${totalPrice?.toString() ?? 'â€”'}.',
                         style: const TextStyle(fontSize: 13, color: kSlate600),
                       ),
                       const SizedBox(height: 16),
@@ -15791,7 +15790,7 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
                               color: kSlate500)),
                       const SizedBox(height: 6),
                       DropdownButtonFormField<String>(
-                        initialValue: _refundMethod,
+                        value: _refundMethod,
                         decoration: InputDecoration(
                             border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10)),
@@ -15903,7 +15902,7 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
               const SizedBox(height: 16),
             ],
 
-            // ── Reschedule header ──
+            // -- Reschedule header --
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -15925,7 +15924,7 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
             ),
             const SizedBox(height: 12),
 
-            // ── Date pickers ──
+            // -- Date pickers --
             Card(
               color: Colors.white,
               shape: RoundedRectangleBorder(
@@ -16037,7 +16036,7 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
             ),
             const SizedBox(height: 12),
 
-            // ── Departure schedule list ──
+            // -- Departure schedule list --
             if (_depDate.isNotEmpty) ...[
               Card(
                 color: Colors.white,
@@ -16087,7 +16086,7 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
                               padding: const EdgeInsets.all(14),
                               decoration: BoxDecoration(
                                 color: isSelected
-                                    ? kGreen.withValues(alpha: 0.06)
+                                    ? kGreen.withOpacity(0.06)
                                     : Colors.white,
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
@@ -16110,7 +16109,7 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
                                                 color: kSlate800)),
                                         const SizedBox(height: 4),
                                         Text(
-                                            '${s['departure'] ?? s['formatted_departure'] ?? '—'} → ${s['arrival'] ?? s['formatted_arrival'] ?? '—'}',
+                                            '${s['departure'] ?? s['formatted_departure'] ?? 'â€”'} ? ${s['arrival'] ?? s['formatted_arrival'] ?? 'â€”'}',
                                             style: const TextStyle(
                                                 color: kSlate600,
                                                 fontSize: 13)),
@@ -16168,7 +16167,7 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? kGreen.withValues(alpha: 0.06)
+                                  ? kGreen.withOpacity(0.06)
                                   : Colors.white,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
@@ -16196,7 +16195,7 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
                                     ],
                                   ),
                                 ),
-                                Text('+₱${price.toStringAsFixed(2)}',
+                                Text('+?${price.toStringAsFixed(2)}',
                                     style: const TextStyle(
                                         fontWeight: FontWeight.bold,
                                         color: kPink)),
@@ -16262,7 +16261,7 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
                               padding: const EdgeInsets.all(14),
                               decoration: BoxDecoration(
                                 color: isSelected
-                                    ? kGreen.withValues(alpha: 0.06)
+                                    ? kGreen.withOpacity(0.06)
                                     : Colors.white,
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
@@ -16285,7 +16284,7 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
                                                 color: kSlate800)),
                                         const SizedBox(height: 4),
                                         Text(
-                                            '${s['departure'] ?? s['formatted_departure'] ?? '—'} → ${s['arrival'] ?? s['formatted_arrival'] ?? '—'}',
+                                            '${s['departure'] ?? s['formatted_departure'] ?? 'â€”'} ? ${s['arrival'] ?? s['formatted_arrival'] ?? 'â€”'}',
                                             style: const TextStyle(
                                                 color: kSlate600,
                                                 fontSize: 13)),
@@ -16344,7 +16343,7 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? kGreen.withValues(alpha: 0.06)
+                                  ? kGreen.withOpacity(0.06)
                                   : Colors.white,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
@@ -16372,7 +16371,7 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
                                     ],
                                   ),
                                 ),
-                                Text('+₱${price.toStringAsFixed(2)}',
+                                Text('+?${price.toStringAsFixed(2)}',
                                     style: const TextStyle(
                                         fontWeight: FontWeight.bold,
                                         color: kPink)),
@@ -16405,12 +16404,12 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
                               color: kSlate800)),
                       const SizedBox(height: 12),
                       _SummaryRow('Original booking total',
-                          '₱${_oldTotalPrice.toStringAsFixed(2)}'),
+                          '?${_oldTotalPrice.toStringAsFixed(2)}'),
                       _SummaryRow('New total estimate',
-                          '₱${_newTotalPrice.toStringAsFixed(2)}'),
+                          '?${_newTotalPrice.toStringAsFixed(2)}'),
                       if (_priceDiff > 0)
                         _SummaryRow('Price difference',
-                            '₱${_priceDiff.toStringAsFixed(2)}'),
+                            '?${_priceDiff.toStringAsFixed(2)}'),
                       if (_priceDiff == 0)
                         const _SummaryRow(
                             'Price difference', 'No extra payment required'),
@@ -16450,7 +16449,7 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
               const SizedBox(height: 16),
             ],
 
-            // ── Submit Reschedule Button ──
+            // -- Submit Reschedule Button --
             if (_selectedScheduleId != null &&
                 (!_isReturnTrip || _selectedReturnScheduleId != null))
               SizedBox(
@@ -16631,7 +16630,7 @@ class _RefundScreenState extends State<RefundScreen> {
                     : (color ?? Colors.grey.shade800),
                 fontSize: isSub ? 12 : 14,
               )),
-          Text('${isNegative ? '-' : ''}₱$amount',
+          Text('${isNegative ? '-' : ''}?$amount',
               style: TextStyle(
                 fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
                 color: color ?? Colors.grey.shade800,
@@ -16760,7 +16759,7 @@ class _RefundScreenState extends State<RefundScreen> {
                                   color: Colors.blueGrey)),
                           const SizedBox(height: 8),
                           DropdownButtonFormField<String>(
-                            initialValue: _refundMethod,
+                            value: _refundMethod,
                             decoration: const InputDecoration(
                                 border: OutlineInputBorder()),
                             items: const [
@@ -17307,7 +17306,7 @@ class _RebookScreenState extends State<RebookScreen> {
                     color: isTooLow
                         ? Colors.grey.shade100
                         : (isAccSel
-                            ? const Color(0xFFdb2777).withValues(alpha: 0.05)
+                            ? const Color(0xFFdb2777).withOpacity(0.05)
                             : Colors.white),
                     border: Border.all(
                         color: isAccSel
@@ -17332,7 +17331,7 @@ class _RebookScreenState extends State<RebookScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '₱${combinedPrice.toStringAsFixed(2)}',
+                        '?${combinedPrice.toStringAsFixed(2)}',
                         style: TextStyle(
                             color: isTooLow
                                 ? Colors.grey
@@ -17435,7 +17434,7 @@ class _RebookScreenState extends State<RebookScreen> {
                     const Text('Total to Pay',
                         style: TextStyle(
                             fontWeight: FontWeight.bold, fontSize: 16)),
-                    Text('₱${_breakdown!['total_to_pay']}',
+                    Text('?${_breakdown!['total_to_pay']}',
                         style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 20,
@@ -17494,7 +17493,7 @@ class _RebookScreenState extends State<RebookScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label, style: TextStyle(color: Colors.grey.shade700)),
-        Text('₱$amount', style: const TextStyle(fontWeight: FontWeight.w500)),
+        Text('?$amount', style: const TextStyle(fontWeight: FontWeight.w500)),
       ],
     );
   }
