@@ -58,6 +58,16 @@ const kSlate100 = Color(0xFFF1F5F9);
 const kSlate50 = Color(0xFFF8FAFC);
 
 // ==========================================
+// GLOBAL EVENT BUS
+// ==========================================
+class AppEventBus {
+  static final StreamController<String> _controller =
+      StreamController<String>.broadcast();
+  static Stream<String> get stream => _controller.stream;
+  static void emit(String event) => _controller.add(event);
+}
+
+// ==========================================
 // GLOBAL SESSION
 // ==========================================
 class UserSession {
@@ -1266,6 +1276,7 @@ class _MainScreenState extends State<MainScreen> {
   Key _activityKey = UniqueKey();
 
   Timer? _notificationPollTimer;
+  StreamSubscription<String>? _eventSub;
 
   @override
   void initState() {
@@ -1289,10 +1300,17 @@ class _MainScreenState extends State<MainScreen> {
         handleNotificationTap(data);
       }
     });
+
+    _eventSub = AppEventBus.stream.listen((event) {
+      if (event == 'fetch_global_data') {
+        _fetchGlobalData(isBackground: true);
+      }
+    });
   }
 
   @override
   void dispose() {
+    _eventSub?.cancel();
     _notificationPollTimer?.cancel();
     super.dispose();
   }
@@ -1319,6 +1337,7 @@ class _MainScreenState extends State<MainScreen> {
             }
           });
           UserSession.save();
+          AppEventBus.emit('points_updated');
         }
 
         final notifRes = await http.get(
@@ -1358,6 +1377,7 @@ class _MainScreenState extends State<MainScreen> {
               FlutterAppBadger.removeBadge();
             }
           }
+          AppEventBus.emit('notifications_updated');
         }
       } catch (e) {
         debugPrint('Failed to fetch global data: $e');
@@ -4467,6 +4487,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
 
   List<dynamic> _bookings = [];
   bool _loadingBookings = false;
+  StreamSubscription<String>? _eventSub;
 
   @override
   void initState() {
@@ -4476,10 +4497,18 @@ class _ActivityScreenState extends State<ActivityScreen> {
     } else {
       _loadVerifiedEmail();
     }
+    _eventSub = AppEventBus.stream.listen((event) {
+      if (event == 'booking_created' || event == 'booking_cancelled') {
+        if (UserSession.isLoggedIn || UserSession.isEmailVerified) {
+          _fetchBookings();
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
+    _eventSub?.cancel();
     _emailCtrl.dispose();
     _passCtrl.dispose();
     _nameCtrl.dispose();
@@ -9465,6 +9494,8 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
       if (res.statusCode == 200 && data['status'] == 'success') {
         BookingData.clearPrefs();
         BookingData.activeSession = null;
+        AppEventBus.emit('booking_created');
+        AppEventBus.emit('fetch_global_data');
 
         if (!mounted) return;
         Navigator.of(context).pushReplacement(MaterialPageRoute(
@@ -12865,11 +12896,23 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   bool _isLoading = true;
   List<dynamic> _notifications = [];
   String _error = '';
+  StreamSubscription<String>? _eventSub;
 
   @override
   void initState() {
     super.initState();
     _fetchNotifications();
+    _eventSub = AppEventBus.stream.listen((event) {
+      if (event == 'notifications_updated') {
+        _fetchNotifications();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _eventSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _fetchNotifications() async {
@@ -13203,11 +13246,23 @@ class _GraciaPointsScreenState extends State<GraciaPointsScreen> {
   int _unconvertedSpend = 0;
   Map<String, dynamic>? _activeRule;
   List<dynamic> _history = [];
+  StreamSubscription<String>? _eventSub;
 
   @override
   void initState() {
     super.initState();
     _fetchPoints();
+    _eventSub = AppEventBus.stream.listen((event) {
+      if (event == 'points_updated' || event == 'booking_created') {
+        _fetchPoints();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _eventSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _fetchPoints() async {
@@ -13569,11 +13624,23 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
   String _filterMode = 'all'; // all, ferry, airline
   String? _originFilter;
   String? _destinationFilter;
+  StreamSubscription<String>? _eventSub;
 
   @override
   void initState() {
     super.initState();
     _fetchSchedules();
+    _eventSub = AppEventBus.stream.listen((event) {
+      if (event == 'booking_created' || event == 'booking_cancelled') {
+        _fetchSchedules();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _eventSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _fetchSchedules() async {
@@ -14168,6 +14235,7 @@ class _VouchersScreenState extends State<VouchersScreen> {
   String _error = '';
   List<dynamic> _vouchers = [];
   final TextEditingController _promoCtrl = TextEditingController();
+  StreamSubscription<String>? _eventSub;
 
   @override
   void initState() {
@@ -14177,10 +14245,18 @@ class _VouchersScreenState extends State<VouchersScreen> {
     } else {
       setState(() => _isLoading = false);
     }
+    _eventSub = AppEventBus.stream.listen((event) {
+      if (event == 'booking_created') {
+        if (UserSession.isLoggedIn) {
+          _fetchVouchers();
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
+    _eventSub?.cancel();
     _promoCtrl.dispose();
     super.dispose();
   }
