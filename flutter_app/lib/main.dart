@@ -1371,9 +1371,9 @@ class _MainScreenState extends State<MainScreen> {
               });
             }
             if (newUnread > 0) {
-              FlutterAppBadger.updateBadgeCount(newUnread);
+              NotificationService.setBadge(newUnread);
             } else {
-              FlutterAppBadger.removeBadge();
+              NotificationService.clearBadge();
             }
           }
           AppEventBus.emit('notifications_updated');
