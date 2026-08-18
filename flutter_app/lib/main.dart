@@ -99,7 +99,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.108+119';
+  static const String appVersion = '1.0.109+120';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -6485,10 +6485,11 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               icon: const Icon(Icons.upload_file),
               label: const Text('Upload payment proof')),
         ],
-        if (_booking['rebooking_status'] == 'pending')
+        if (_booking['rebooking_status'] == 'pending' ||
+            _booking['status'] == 'pending_rebooking')
           _detailSection('Rebooking', <String>[
             'Request pending verification',
-            'New dates will appear after approval.'
+            'New dates and ticket will appear after admin approval.'
           ]),
         if (_booking['status'] != 'cancelled' &&
             _booking['status'] != 'operator_cancelled') ...[
@@ -6517,10 +6518,15 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             ),
         ],
         const SizedBox(height: 12),
-        if (_canManage && !_cancellationStarted) ...[
-          // Show rebook/refund/cancel when payment is uploaded (pending) OR verified (paid).
-          // Pre-84ab183 behavior: not restricted to admin-verified bookings only.
-          if (_paymentStatus == 'paid' && _booking['can_rebook'] == true)
+        if (_canManage &&
+            !_cancellationStarted &&
+            _booking['status'] != 'pending_rebooking' &&
+            _booking['rebooking_status'] != 'pending') ...[
+          // Show rebook only if paid, not already rebooked, and rebooking is permitted
+          if (_paymentStatus == 'paid' &&
+              _booking['can_rebook'] == true &&
+              _booking['is_rebooked'] != true &&
+              _booking['rebooking_status'] != 'verified')
             OutlinedButton.icon(
                 onPressed: _busy
                     ? null

@@ -170,6 +170,7 @@ class ManageRebookings extends Page implements HasTable
                     ->label('Booking status')
                     ->options([
                         'pending' => 'Pending',
+                        'pending_rebooking' => 'Pending Rebooking',
                         'confirmed' => 'Confirmed',
                         'cancelled' => 'Cancelled',
                         'operator_cancelled' => 'Cancelled by Operator',
@@ -228,14 +229,14 @@ class ManageRebookings extends Page implements HasTable
                                 $record->transaction->save();
                             }
 
-                            app(ServiceCancellationManager::class)->processAutomaticRebookingApproval(
-                                $record,
-                                auth()->user()
-                            );
+                            $receiptPath  = $confirmationPdfPath ?: ($record->transaction?->confirmation_pdf ?? null);
+                            $receiptDisk  = $receiptPath ? 'public' : null;
+
+                            $record->verifyRebooking($ticketUrl, $receiptPath, $receiptDisk);
 
                             Notification::make()
                                 ->title('Rebooking Verified & Approved')
-                                ->body("Rebooking for #{$record->transaction_number} has been verified and schedule assigned.")
+                                ->body("Rebooking for #{$record->transaction_number} has been verified, schedule assigned, and confirmation email sent.")
                                 ->success()
                                 ->send();
                         } catch (\Exception $e) {
@@ -246,7 +247,7 @@ class ManageRebookings extends Page implements HasTable
                                 ->send();
                         }
                     })
-                    ->visible(fn (Booking $record): bool => $record->status === 'confirmed' && $record->rebooking_status === 'pending'),
+                    ->visible(fn (Booking $record): bool => in_array($record->status, ['confirmed', 'pending_rebooking', 'pending']) && $record->rebooking_status === 'pending'),
 
                 Tables\Actions\Action::make('approveReschedule')
                     ->label('Approve Reschedule')

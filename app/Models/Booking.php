@@ -16,6 +16,7 @@ use Throwable;
 class Booking extends Model
 {
     public const STATUS_PENDING = 'pending';
+    public const STATUS_PENDING_REBOOKING = 'pending_rebooking';
     public const STATUS_CONFIRMED = 'confirmed';
     public const STATUS_CANCELLED = 'cancelled';
     public const STATUS_OPERATOR_CANCELLED = 'operator_cancelled';
@@ -300,6 +301,10 @@ class Booking extends Model
 
     public function canCancel(): bool
     {
+        if ($this->status === self::STATUS_PENDING_REBOOKING) {
+            return false;
+        }
+
         $isWithin5Mins = $this->created_at && $this->created_at->addMinutes(5)->isFuture();
 
         if ($this->hasPromoTicket() && !$isWithin5Mins) {
@@ -325,7 +330,7 @@ class Booking extends Model
             return false;
         }
 
-        if ($this->hasBeenRebooked() || !empty($this->rebooking_status)) {
+        if ($this->is_rebooked || $this->hasBeenRebooked() || !empty($this->rebooking_status) || $this->status === self::STATUS_PENDING_REBOOKING) {
             return false;
         }
 
@@ -680,22 +685,52 @@ class Booking extends Model
 
     public function verifyRebooking(?string $ticketUrl = null, ?string $receiptPath = null, ?string $receiptDisk = null): void
     {
-        if (! $this->rebooking_departure_date || ! $this->rebooking_status) {
-            return;
-        }
-
         $staffId = $this->verified_by_user_id ?? \Illuminate\Support\Facades\Auth::id();
         $now = $this->verified_at ?? now();
 
-        $this->update([
-            'departure_date' => $this->rebooking_departure_date,
-            'return_date' => $this->rebooking_return_date,
-            'status' => 'confirmed',
-            'is_rebooked' => true,
-            'rebooking_status' => 'verified',
+        $updateData = [
+            'status'              => self::STATUS_CONFIRMED,
+            'is_rebooked'         => true,
+            'rebooking_status'    => 'verified',
             'verified_by_user_id' => $staffId,
-            'verified_at' => $now,
-        ]);
+            'verified_at'         => $now,
+        ];
+
+        if ($this->rebooking_departure_date) {
+            $updateData['departure_date'] = $this->rebooking_departure_date;
+        }
+        if ($this->rebooking_return_date) {
+            $updateData['return_date'] = $this->rebooking_return_date;
+        }
+
+        // Apply replacement departure/return schedule if present
+        $depScheduleId = null;
+        if (!empty($this->disruption_notes)) {
+            $notes = is_array($this->disruption_notes) ? $this->disruption_notes : json_decode($this->disruption_notes, true);
+            $depScheduleId = $notes['dep_schedule_id'] ?? null;
+            $retScheduleId = $notes['ret_schedule_id'] ?? null;
+            if ($retScheduleId) {
+                $retSchedule = \App\Models\Schedule::find($retScheduleId);
+                if ($retSchedule) {
+                    $updateData['return_schedule_id'] = $retSchedule->id;
+                    $updateData['return_schedule_service'] = $retSchedule->service_name;
+                    $updateData['return_schedule_departure_time'] = $retSchedule->formatted_departure;
+                    $updateData['return_schedule_arrival_time'] = $retSchedule->formatted_arrival;
+                }
+            }
+        }
+        $depScheduleId = $depScheduleId ?: $this->preferred_replacement_schedule_id;
+        if ($depScheduleId) {
+            $depSchedule = \App\Models\Schedule::find($depScheduleId);
+            if ($depSchedule) {
+                $updateData['schedule_id'] = $depSchedule->id;
+                $updateData['schedule_service'] = $depSchedule->service_name;
+                $updateData['schedule_departure_time'] = $depSchedule->formatted_departure;
+                $updateData['schedule_arrival_time'] = $depSchedule->formatted_arrival;
+            }
+        }
+
+        $this->update($updateData);
 
         app(\App\Services\GraciaPointsService::class)->awardPointsForBooking($this, \App\Models\User::find($staffId));
         
@@ -705,9 +740,11 @@ class Booking extends Model
 
         if ($this->transaction) {
             $this->transaction->update([
-                'payment_status' => 'paid',
+                'payment_status'      => 'paid',
+                'confirmation_url'    => $ticketUrl ?: $this->transaction->confirmation_url,
+                'confirmation_pdf'    => $receiptPath ?: $this->transaction->confirmation_pdf,
                 'verified_by_user_id' => $staffId,
-                'verified_at' => $now,
+                'verified_at'         => $now,
             ]);
         }
 
@@ -716,8 +753,8 @@ class Booking extends Model
         } catch (Throwable $e) {
             Log::error('Failed sending rebooking verification email', [
                 'booking_id' => $this->id ?? null,
-                'email' => $this->client_email ?? null,
-                'error' => $e->getMessage(),
+                'email'      => $this->client_email ?? null,
+                'error'      => $e->getMessage(),
             ]);
         }
     }

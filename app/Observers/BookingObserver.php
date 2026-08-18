@@ -45,7 +45,11 @@ class BookingObserver
             $user = User::where('email', $booking->client_email)->first();
             if ($user) {
                 if ($newStatus === Booking::STATUS_CONFIRMED && $oldStatus !== Booking::STATUS_CONFIRMED) {
-                    UserNotification::notify($user->id, "Booking Confirmed", "Your booking {$booking->transaction_number} is confirmed! You can now view and download your tickets.", 'booking', 'check_circle', ['transaction_number' => $booking->transaction_number]);
+                    if ($booking->is_rebooked || in_array($booking->rebooking_status, ['verified', 'approved'], true) || $oldStatus === Booking::STATUS_PENDING_REBOOKING) {
+                        UserNotification::notify($user->id, "Rebooking Confirmed", "Your rebooking for {$booking->transaction_number} is confirmed! You can now view and download your updated tickets.", 'rebooking', 'check_circle', ['transaction_number' => $booking->transaction_number]);
+                    } else {
+                        UserNotification::notify($user->id, "Booking Confirmed", "Your booking {$booking->transaction_number} is confirmed! You can now view and download your tickets.", 'booking', 'check_circle', ['transaction_number' => $booking->transaction_number]);
+                    }
                     
                     // Award Gracia Points on confirmation
                     app(\App\Services\GraciaPointsService::class)->awardPointsForBooking($booking);
@@ -60,13 +64,13 @@ class BookingObserver
         if ($booking->wasChanged('rebooking_status')) {
             $newRebookingStatus = $booking->rebooking_status;
             $user = User::where('email', $booking->client_email)->first();
-            if ($user && in_array($newRebookingStatus, ['approved', 'rejected'])) {
+            if ($user && in_array($newRebookingStatus, ['rejected', 'declined'])) {
                 UserNotification::notify(
                     $user->id,
-                    "Rebooking " . ucfirst($newRebookingStatus),
-                    "Your rebooking request for {$booking->transaction_number} has been {$newRebookingStatus}.",
+                    "Rebooking Rejected",
+                    "Your rebooking request for {$booking->transaction_number} has been rejected.",
                     'rebooking',
-                    $newRebookingStatus === 'approved' ? 'check_circle' : 'cancel'
+                    'cancel'
                 );
             }
         }

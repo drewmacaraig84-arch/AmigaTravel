@@ -158,7 +158,7 @@ class BookingController extends Controller
             }
             $data['confirmation_url'] = $transaction?->confirmation_url;
             // Always allow download for confirmed/paid bookings — PDF is generated on-demand
-            $data['ticket_url'] = in_array($booking->status, ['confirmed', 'pending'])
+            $data['ticket_url'] = in_array($booking->status, ['confirmed', 'pending', Booking::STATUS_PENDING_REBOOKING])
                 ? route('ticket.download', ['transaction_number' => $booking->transaction_number])
                 : null;
             $data['mode'] = $booking->getMode();
@@ -255,7 +255,7 @@ class BookingController extends Controller
             $data['confirmation_pdf_url'] = route('ticket.admin-pdf', ['transaction_number' => $booking->transaction_number]);
         }
         $data['confirmation_url'] = $transaction?->confirmation_url;
-        $data['ticket_url'] = in_array($booking->status, ['confirmed', 'pending'])
+        $data['ticket_url'] = in_array($booking->status, ['confirmed', 'pending', Booking::STATUS_PENDING_REBOOKING])
             ? route('ticket.download', ['transaction_number' => $booking->transaction_number])
             : null;
         $data['mode'] = $booking->getMode();
@@ -541,6 +541,7 @@ class BookingController extends Controller
             'proof_submitted_at' => now(),
         ]);
         $booking->update([
+            'status' => Booking::STATUS_PENDING_REBOOKING,
             'is_rebooked' => true,
             'rebooking_status' => 'pending',
             'preferred_replacement_schedule_id' => $request->input('dep_schedule_id'),

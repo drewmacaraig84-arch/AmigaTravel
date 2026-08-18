@@ -2,18 +2,18 @@
 <html lang="en">
     <head>
         <meta charset="utf-8" />
-        <title>Rebooking Verified</title>
+        <title>Rebooking Confirmed</title>
     </head>
     <body style="font-family:Arial,sans-serif;line-height:1.6;color:#1f2937; margin:0; padding:24px; background:#f8fafc;">
         <div style="max-width:700px; margin:0 auto; background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:24px 28px;">
             <div style="text-align:left; margin-bottom:18px;">
                 <img src="{{ isset($message) && file_exists(public_path('images/amiga-logo-transparent.png')) ? $message->embed(public_path('images/amiga-logo-transparent.png')) : 'https://www.amigagracia.com/images/amiga-logo-transparent.png' }}" alt="Amiga Gracia" style="display:block; max-width:220px; height:auto; margin:0 0 8px 0;" />
-                <div style="font-size:20px; font-weight:bold; letter-spacing:0.5px; color:#216417; text-transform:uppercase;">Rebooking Verified</div>
+                <div style="font-size:20px; font-weight:bold; letter-spacing:0.5px; color:#216417; text-transform:uppercase;">Rebooking Confirmed</div>
             </div>
 
-            <h1 style="margin:0 0 12px 0; font-size:28px; color:#0f172a;">Rebooking Verified</h1>
+            <h1 style="margin:0 0 12px 0; font-size:28px; color:#0f172a;">Rebooking Confirmed</h1>
             <p style="margin:0 0 8px 0;">Hi {{ $booking->client_name }},</p>
-            <p style="margin:0 0 18px 0;">Your rebooking request has been verified successfully.</p>
+            <p style="margin:0 0 18px 0;">Your rebooking request has been verified and confirmed successfully.</p>
             <ul style="margin:0 0 18px 18px; padding:0;">
                 <li><strong>Transaction:</strong> {{ $booking->transaction_number }}</li>
                 <li><strong>Origin:</strong> {{ $booking->origin }}</li>

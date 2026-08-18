@@ -29,7 +29,7 @@ class RebookingVerification extends Mailable implements ShouldQueue
 
     public function build()
     {
-        $mail = $this->subject('Amiga Gracia Travel Rebooking Verified')
+        $mail = $this->subject('Amiga Gracia Travel Rebooking Confirmed')
             ->view('emails.rebooking-verification');
 
         // Generate the official payment acknowledgement PDF (same as BookingConfirmation)
