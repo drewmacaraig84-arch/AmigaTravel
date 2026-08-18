@@ -32,29 +32,29 @@ class BookingConfirmation extends Mailable implements ShouldQueue
         $mail = $this->subject('Amiga Gracia Travel Booking Confirmation')
             ->view('emails.booking-confirmation');
 
-        // Generate the official receipt PDF now that they have paid
+        // Generate the official payment acknowledgement PDF
         try {
-            $receiptDir  = storage_path('app/receipts');
-            $autoReceiptPath = $receiptDir . '/receipt-' . $this->booking->transaction_number . '.pdf';
+            $ackDir = storage_path('app/acknowledgements');
+            $autoAckPath = $ackDir . '/acknowledgement-' . $this->booking->transaction_number . '.pdf';
 
-            if (! is_dir($receiptDir)) {
-                mkdir($receiptDir, 0755, true);
+            if (! is_dir($ackDir)) {
+                mkdir($ackDir, 0755, true);
             }
 
-            if (file_exists($autoReceiptPath)) {
-                @unlink($autoReceiptPath);
+            if (file_exists($autoAckPath)) {
+                @unlink($autoAckPath);
             }
 
             \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.receipt', ['booking' => $this->booking])
                 ->setPaper('a4')
-                ->save($autoReceiptPath);
+                ->save($autoAckPath);
 
-            $mail->attach($autoReceiptPath, [
+            $mail->attach($autoAckPath, [
                 'as' => 'Payment_Acknowledgement.pdf',
                 'mime' => 'application/pdf',
             ]);
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('BookingConfirmation: Failed to generate receipt PDF', [
+            \Illuminate\Support\Facades\Log::error('BookingConfirmation: Failed to generate payment acknowledgement PDF', [
                 'booking_id' => $this->booking->id ?? null,
                 'transaction_number' => $this->booking->transaction_number ?? null,
                 'error' => $e->getMessage(),
@@ -62,7 +62,8 @@ class BookingConfirmation extends Mailable implements ShouldQueue
             // Email will still send, just without the auto-generated PDF
         }
 
-        $receiptToAttach = $this->receiptPath ?: ($this->booking->transaction?->confirmation_pdf ?? null);
+        $transaction = $this->booking->transaction ?? \App\Models\Transaction::where('booking_id', $this->booking->id)->first();
+        $receiptToAttach = $this->receiptPath ?: ($transaction?->confirmation_pdf ?? null);
         $diskToUse = $this->receiptDisk ?: 'public';
 
         if ($receiptToAttach) {
@@ -127,6 +128,10 @@ class BookingConfirmation extends Mailable implements ShouldQueue
             storage_path('app/public/' . $path),
             storage_path('app/' . $path),
             public_path('storage/' . $path),
+            storage_path('app/public/tickets/' . basename($path)),
+            storage_path('app/tickets/' . basename($path)),
+            public_path('tickets/' . basename($path)),
+            storage_path('app/public/receipts/' . basename($path)),
             storage_path('app/receipts/' . basename($path)),
             public_path('receipts/' . basename($path)),
         ];

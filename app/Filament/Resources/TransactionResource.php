@@ -404,7 +404,7 @@ class TransactionResource extends Resource
                             ->placeholder('https://example.com/ticket/ABC123'),
                         FileUpload::make('confirmation_pdf')
                             ->label('Confirmation PDF')
-                            ->directory('receipts')
+                            ->directory('tickets')
                             ->disk('public')
                             ->acceptedFileTypes(['application/pdf'])
                             ->maxSize(10240),
@@ -424,7 +424,7 @@ class TransactionResource extends Resource
                         if (! empty($data['confirmation_pdf'])) {
                             $pdfPath = is_string($data['confirmation_pdf'])
                                 ? $data['confirmation_pdf']
-                                : $data['confirmation_pdf']->storeAs('receipts', 'receipt-'.$record->booking->transaction_number.'.pdf', 'public');
+                                : $data['confirmation_pdf']->storeAs('tickets', 'ticket-'.$record->booking->transaction_number.'.pdf', 'public');
                             $confirmationPdfPath = $pdfPath;
                             $receiptPath = $pdfPath;
                             $receiptDisk = 'public';
@@ -441,38 +441,42 @@ class TransactionResource extends Resource
                             'verified_at' => $now,
                         ]);
 
-                        $record->booking->update([
-                            'status' => 'confirmed',
-                            'verified_by_user_id' => $staffUserId,
-                            'verified_at' => $now,
-                        ]);
-
-                        app(\App\Services\GraciaPointsService::class)->awardPointsForBooking($record->booking, Auth::user());
-
-                        try {
-                            Mail::to($record->booking->client_email)->send(new BookingConfirmation($record->booking, $ticketUrl, $receiptPath, $receiptDisk));
-                            Notification::make()
-                                ->title('Payment verified')
-                                ->body('Payment verified and confirmation email sent.')
-                                ->success()
-                                ->send();
-                        } catch (Throwable $e) {
-                            Log::error('Failed sending booking confirmation email (transaction verify)', [
-                                'transaction_id' => $record->id ?? null,
-                                'booking_id' => $record->booking->id ?? null,
-                                'email' => $record->booking->client_email ?? null,
-                                'error' => $e->getMessage(),
+                        if ($record->booking) {
+                            $record->booking->update([
+                                'status' => 'confirmed',
+                                'verified_by_user_id' => $staffUserId,
+                                'verified_at' => $now,
                             ]);
-                            Notification::make()
-                                ->title('Payment verified with warning')
-                                ->body('Payment was verified, but the confirmation email failed to send.')
-                                ->warning()
-                                ->send();
+                            $record->booking->setRelation('transaction', $record);
+
+                            app(\App\Services\GraciaPointsService::class)->awardPointsForBooking($record->booking, Auth::user());
+
+                            try {
+                                Mail::to($record->booking->client_email)->send(new BookingConfirmation($record->booking, $ticketUrl, $receiptPath, $receiptDisk));
+
+                                Notification::make()
+                                    ->title('Payment verified')
+                                    ->body('Payment verified and confirmation email sent.')
+                                    ->success()
+                                    ->send();
+                            } catch (Throwable $e) {
+                                Log::error('Failed sending booking confirmation email (transaction verify)', [
+                                    'transaction_id' => $record->id ?? null,
+                                    'booking_id' => $record->booking->id ?? null,
+                                    'email' => $record->booking->client_email ?? null,
+                                    'error' => $e->getMessage(),
+                                ]);
+                                Notification::make()
+                                    ->title('Payment verified with warning')
+                                    ->body('Payment was verified, but the confirmation email failed to send.')
+                                    ->warning()
+                                    ->send();
+                            }
                         }
                     })
                     ->requiresConfirmation()
                     ->color('success')
-                    ->visible(fn (Transaction $record): bool => $record->payment_status !== 'paid' && $record->booking->status !== 'cancelled'),
+                    ->visible(fn (Transaction $record): bool => $record->payment_status !== 'paid' && $record->booking?->status !== 'cancelled'),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

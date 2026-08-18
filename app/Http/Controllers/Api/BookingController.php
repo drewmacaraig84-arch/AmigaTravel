@@ -151,9 +151,9 @@ class BookingController extends Controller
         $bookings = $bookings->map(function (Booking $booking) {
             $data = $booking->toArray();
             $transaction = $booking->transaction;
-            if ($transaction?->confirmation_pdf) {
+            if ($transaction?->confirmation_pdf || $transaction?->confirmation_url) {
                 // Route through server-side route so the file is served directly
-                // from the persistent volume, not via an ephemeral storage URL
+                // from the persistent volume, or redirected to the confirmation URL
                 $data['confirmation_pdf_url'] = route('ticket.admin-pdf', ['transaction_number' => $booking->transaction_number]);
             }
             $data['confirmation_url'] = $transaction?->confirmation_url;
@@ -249,9 +249,9 @@ class BookingController extends Controller
         // Apply same formatting as index
         $data = $booking->toArray();
         $transaction = $booking->transaction;
-        if ($transaction?->confirmation_pdf) {
+        if ($transaction?->confirmation_pdf || $transaction?->confirmation_url) {
             // Route through server-side route so the file is served directly
-            // from the persistent volume, not via an ephemeral storage URL
+            // from the persistent volume, or redirected to the confirmation URL
             $data['confirmation_pdf_url'] = route('ticket.admin-pdf', ['transaction_number' => $booking->transaction_number]);
         }
         $data['confirmation_url'] = $transaction?->confirmation_url;

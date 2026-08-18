@@ -199,7 +199,7 @@ class ManageRebookings extends Page implements HasTable
                         Forms\Components\FileUpload::make('confirmation_pdf')
                             ->label('Upload Itinerary/Ticket PDF')
                             ->disk('public')
-                            ->directory('receipts')
+                            ->directory('tickets')
                             ->acceptedFileTypes(['application/pdf'])
                             ->maxSize(5120)
                             ->columnSpanFull(),
@@ -280,7 +280,7 @@ class ManageRebookings extends Page implements HasTable
                         Forms\Components\FileUpload::make('confirmation_pdf')
                             ->label('Upload Itinerary/Ticket PDF')
                             ->disk('public')
-                            ->directory('receipts')
+                            ->directory('tickets')
                             ->acceptedFileTypes(['application/pdf'])
                             ->maxSize(5120)
                             ->columnSpanFull(),

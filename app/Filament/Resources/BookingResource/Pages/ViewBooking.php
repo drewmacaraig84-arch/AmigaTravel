@@ -498,7 +498,7 @@ class ViewBooking extends ViewRecord
                         ->placeholder('https://example.com/ticket/ABC123'),
                     Forms\Components\FileUpload::make('confirmation_pdf')
                         ->label('Confirmation PDF')
-                        ->directory('receipts')
+                        ->directory('tickets')
                         ->disk('public')
                         ->acceptedFileTypes(['application/pdf'])
                         ->maxSize(10240),
@@ -522,28 +522,30 @@ class ViewBooking extends ViewRecord
                     if (! empty($data['confirmation_pdf'])) {
                         $confirmationPdfPath = is_string($data['confirmation_pdf'])
                             ? $data['confirmation_pdf']
-                            : $data['confirmation_pdf']->storeAs('receipts', 'receipt-' . $booking->transaction_number . '.pdf', 'public');
+                            : $data['confirmation_pdf']->storeAs('tickets', 'ticket-' . $booking->transaction_number . '.pdf', 'public');
 
                         $receiptDisk = 'public';
-                        // Pass the relative path (not absolute) so BookingConfirmation
-                        // uses attachFromStorageDisk() which works on any filesystem driver
                         $receiptPath = $confirmationPdfPath;
                     }
 
+                    $staffUserId = auth()->id();
+                    $now = now();
 
                     $booking->update([
-                        'verified_by_user_id' => auth()->id(),
-                        'verified_at'         => now(),
+                        'verified_by_user_id' => $staffUserId,
+                        'verified_at'         => $now,
                     ]);
 
-                    if ($booking->transaction) {
-                        $booking->transaction->update([
+                    $transaction = $booking->transaction ?? \App\Models\Transaction::where('booking_id', $booking->id)->first();
+                    if ($transaction) {
+                        $transaction->update([
                             'payment_status'      => 'paid',
                             'confirmation_url'    => $ticketUrl,
                             'confirmation_pdf'    => $confirmationPdfPath,
-                            'verified_by_user_id' => auth()->id(),
-                            'verified_at'         => now(),
+                            'verified_by_user_id' => $staffUserId,
+                            'verified_at'         => $now,
                         ]);
+                        $booking->setRelation('transaction', $transaction);
                     }
 
                     if ($booking->rebooking_status === 'pending') {

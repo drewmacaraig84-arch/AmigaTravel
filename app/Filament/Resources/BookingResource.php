@@ -225,7 +225,7 @@ class BookingResource extends Resource
                             ->placeholder('https://example.com/ticket/ABC123'),
                         Forms\Components\FileUpload::make('confirmation_pdf')
                             ->label('Confirmation PDF')
-                            ->directory('receipts')
+                            ->directory('tickets')
                             ->disk('public')
                             ->acceptedFileTypes(['application/pdf'])
                             ->maxSize(10240),
@@ -249,7 +249,7 @@ class BookingResource extends Resource
                         if (! empty($data['confirmation_pdf'])) {
                             $pdfPath = is_string($data['confirmation_pdf'])
                                 ? $data['confirmation_pdf']
-                                : $data['confirmation_pdf']->storeAs('receipts', 'receipt-' . $record->transaction_number . '.pdf', 'public');
+                                : $data['confirmation_pdf']->storeAs('tickets', 'ticket-' . $record->transaction_number . '.pdf', 'public');
                             $confirmationPdfPath = $pdfPath;
                             $receiptDisk = 'public';
                             $receiptPath = $pdfPath;
@@ -258,13 +258,17 @@ class BookingResource extends Resource
                         $staffUserId = Auth::id();
                         $now = now();
 
-                        $record->transaction?->update([
-                            'payment_status' => 'paid',
-                            'confirmation_url' => $ticketUrl,
-                            'confirmation_pdf' => $confirmationPdfPath,
-                            'verified_by_user_id' => $staffUserId,
-                            'verified_at' => $now,
-                        ]);
+                        $transaction = $record->transaction ?? \App\Models\Transaction::where('booking_id', $record->id)->first();
+                        if ($transaction) {
+                            $transaction->update([
+                                'payment_status' => 'paid',
+                                'confirmation_url' => $ticketUrl,
+                                'confirmation_pdf' => $confirmationPdfPath,
+                                'verified_by_user_id' => $staffUserId,
+                                'verified_at' => $now,
+                            ]);
+                            $record->setRelation('transaction', $transaction);
+                        }
 
                         $record->update([
                             'verified_by_user_id' => $staffUserId,
