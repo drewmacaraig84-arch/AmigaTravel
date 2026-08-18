@@ -17501,8 +17501,18 @@ class _RebookScreenState extends State<RebookScreen> {
                       _breakdown!['new_ticket_price']?.toString() ?? '0.00'),
                   const SizedBox(height: 8),
                 ],
+                if (_breakdown!['rate_diff'] != null) ...[
+                  _buildBreakdownRow('Fare Difference',
+                      _breakdown!['rate_diff']?.toString() ?? '0.00'),
+                  const SizedBox(height: 8),
+                ],
+                if (_breakdown!['surcharge'] != null) ...[
+                  _buildBreakdownRow('Rebooking Surcharge',
+                      _breakdown!['surcharge']?.toString() ?? '0.00'),
+                  const SizedBox(height: 8),
+                ],
                 _buildBreakdownRow('Revalidation Fee',
-                    _breakdown!['total_to_pay']?.toString() ?? '0.00'),
+                    _breakdown!['revalidation_fee']?.toString() ?? '0.00'),
                 if (_breakdown!['transaction_fee'] != null) ...[
                   const SizedBox(height: 8),
                   _buildBreakdownRow('Transaction Fee',
