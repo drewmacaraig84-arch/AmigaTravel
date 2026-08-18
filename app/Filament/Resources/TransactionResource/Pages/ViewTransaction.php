@@ -44,18 +44,22 @@ class ViewTransaction extends ViewRecord
                         throw new \Exception('Please provide either a confirmation URL or upload a PDF before verifying.');
                     }
 
-                    $ticketUrl = $data['confirmation_url'] ?? null;
-                    $pdfPath = null;
-                    $receiptPath = null;
-                    $receiptDisk = null;
-
-                    if (! empty($data['confirmation_pdf'])) {
-                        $pdfPath = is_string($data['confirmation_pdf'])
-                            ? $data['confirmation_pdf']
-                            : $data['confirmation_pdf']->storeAs('tickets', 'ticket-' . $record->booking->transaction_number . '.pdf', 'public');
-                        $receiptPath = $pdfPath;
-                        $receiptDisk = 'public';
+                    $ticketUrl = !empty($data['confirmation_url']) ? trim($data['confirmation_url']) : null;
+                    $rawPdf = $data['confirmation_pdf'] ?? null;
+                    if (is_array($rawPdf)) {
+                        $rawPdf = reset($rawPdf);
                     }
+
+                    $confirmationPdfPath = null;
+                    if ($rawPdf instanceof \Illuminate\Http\UploadedFile || (is_object($rawPdf) && method_exists($rawPdf, 'storeAs'))) {
+                        $confirmationPdfPath = $rawPdf->storeAs('tickets', 'ticket-' . $record->booking->transaction_number . '.pdf', 'public');
+                    } elseif (is_string($rawPdf) && filled($rawPdf)) {
+                        $confirmationPdfPath = $rawPdf;
+                    }
+
+                    $pdfPath = $confirmationPdfPath;
+                    $receiptPath = $confirmationPdfPath;
+                    $receiptDisk = $confirmationPdfPath ? 'public' : null;
 
                     $staffUserId = Auth::id();
                     $now = now();

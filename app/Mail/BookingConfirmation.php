@@ -67,26 +67,33 @@ class BookingConfirmation extends Mailable implements ShouldQueue
         $diskToUse = $this->receiptDisk ?: 'public';
 
         if ($receiptToAttach) {
-            $attachInfo = $this->resolveAttachment($receiptToAttach, $diskToUse);
-            if ($attachInfo) {
-                [$resolvedPath, $attachAsDisk, $resolvedDisk] = $attachInfo;
-                if ($attachAsDisk) {
-                    $mail->attachFromStorageDisk($resolvedDisk, $resolvedPath, 'Ticket_Confirmation.pdf', [
-                        'mime' => 'application/pdf',
-                    ]);
-                } else {
-                    $mail->attach($resolvedPath, [
-                        'as' => 'Ticket_Confirmation.pdf',
-                        'mime' => 'application/pdf',
-                    ]);
-                }
+            $resolvedFullPath = $this->resolveAttachmentPath($receiptToAttach, $diskToUse);
+            if ($resolvedFullPath) {
+                $mail->attach($resolvedFullPath, [
+                    'as' => 'Ticket_Confirmation.pdf',
+                    'mime' => 'application/pdf',
+                ]);
                 $this->hasTicketAttachment = true;
             } else {
-                \Illuminate\Support\Facades\Log::warning('BookingConfirmation: ticket PDF could not be located on disk.', [
-                    'booking_id' => $this->booking->id ?? null,
-                    'receiptPath' => $receiptToAttach,
-                    'receiptDisk' => $diskToUse,
-                ]);
+                // Cloud / virtual disk fallback via attachData
+                try {
+                    if (Storage::disk($diskToUse)->exists($receiptToAttach)) {
+                        $fileData = Storage::disk($diskToUse)->get($receiptToAttach);
+                        if ($fileData) {
+                            $mail->attachData($fileData, 'Ticket_Confirmation.pdf', [
+                                'mime' => 'application/pdf',
+                            ]);
+                            $this->hasTicketAttachment = true;
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('BookingConfirmation: ticket PDF could not be located on disk or storage.', [
+                        'booking_id' => $this->booking->id ?? null,
+                        'receiptPath' => $receiptToAttach,
+                        'receiptDisk' => $diskToUse,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
             }
         }
 
@@ -94,51 +101,50 @@ class BookingConfirmation extends Mailable implements ShouldQueue
     }
 
     /**
-     * Resolve a receipt path + disk hint into one of:
-     *   - [relativePath, true, diskName]   -> use attachFromStorageDisk
-     *   - [absoluteFsPath, false, null]    -> use attach()
-     * Returns null if file cannot be found.
+     * Resolve a ticket/receipt path into a concrete filesystem path.
+     * Returns null if file cannot be found on local filesystem.
      */
-    private function resolveAttachment(string $path, ?string $disk): ?array
+    private function resolveAttachmentPath(string $path, ?string $disk = 'public'): ?string
     {
-        // Absolute path on filesystem: always go through attach()
-        if (str_starts_with($path, DIRECTORY_SEPARATOR) ||
-            (strlen($path) > 2 && ctype_alpha($path[0]) && $path[1] === ':')) {
-            if (file_exists($path)) {
-                return [$path, false, null];
-            }
-            return null;
+        $cleanPath = ltrim($path, '/\\');
+        $baseName = basename($path);
+
+        // 1. Direct filesystem check
+        if (file_exists($path) && is_file($path)) {
+            return $path;
         }
 
-        // Relative path — try explicit disk first, then 'public' by default
-        $disks = array_values(array_unique(array_filter([$disk, 'public'])));
+        // 2. Storage disk 'public' path
+        $disks = array_values(array_unique(array_filter([$disk, 'public', 'local'])));
         foreach ($disks as $d) {
             try {
                 if (Storage::disk($d)->exists($path)) {
-                    return [$path, true, $d];
+                    $p = Storage::disk($d)->path($path);
+                    if (file_exists($p) && is_file($p)) {
+                        return $p;
+                    }
                 }
             } catch (\Throwable $e) {
-                // Skip misconfigured disks
+                // ignore
             }
         }
 
-        // Check common storage filesystem locations directly
+        // 3. Common filesystem candidates
         $candidates = [
-            $path,
-            storage_path('app/public/' . $path),
-            storage_path('app/' . $path),
-            public_path('storage/' . $path),
-            storage_path('app/public/tickets/' . basename($path)),
-            storage_path('app/tickets/' . basename($path)),
-            public_path('tickets/' . basename($path)),
-            storage_path('app/public/receipts/' . basename($path)),
-            storage_path('app/receipts/' . basename($path)),
-            public_path('receipts/' . basename($path)),
+            storage_path('app/public/' . $cleanPath),
+            storage_path('app/' . $cleanPath),
+            public_path('storage/' . $cleanPath),
+            storage_path('app/public/tickets/' . $baseName),
+            storage_path('app/tickets/' . $baseName),
+            public_path('tickets/' . $baseName),
+            storage_path('app/public/receipts/' . $baseName),
+            storage_path('app/receipts/' . $baseName),
+            public_path('receipts/' . $baseName),
         ];
 
         foreach ($candidates as $candidate) {
             if (file_exists($candidate) && is_file($candidate)) {
-                return [$candidate, false, null];
+                return $candidate;
             }
         }
 

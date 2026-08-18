@@ -206,12 +206,24 @@ class ManageRebookings extends Page implements HasTable
                     ])
                     ->action(function (Booking $record, array $data): void {
                         try {
+                            $ticketUrl = !empty($data['confirmation_url']) ? trim($data['confirmation_url']) : null;
+                            $rawPdf = $data['confirmation_pdf'] ?? null;
+                            if (is_array($rawPdf)) {
+                                $rawPdf = reset($rawPdf);
+                            }
+                            $confirmationPdfPath = null;
+                            if ($rawPdf instanceof \Illuminate\Http\UploadedFile || (is_object($rawPdf) && method_exists($rawPdf, 'storeAs'))) {
+                                $confirmationPdfPath = $rawPdf->storeAs('tickets', 'ticket-' . $record->transaction_number . '.pdf', 'public');
+                            } elseif (is_string($rawPdf) && filled($rawPdf)) {
+                                $confirmationPdfPath = $rawPdf;
+                            }
+
                             if ($record->transaction) {
-                                if (!empty($data['confirmation_url'])) {
-                                    $record->transaction->confirmation_url = $data['confirmation_url'];
+                                if (!empty($ticketUrl)) {
+                                    $record->transaction->confirmation_url = $ticketUrl;
                                 }
-                                if (!empty($data['confirmation_pdf'])) {
-                                    $record->transaction->confirmation_pdf = $data['confirmation_pdf'];
+                                if (!empty($confirmationPdfPath)) {
+                                    $record->transaction->confirmation_pdf = $confirmationPdfPath;
                                 }
                                 $record->transaction->save();
                             }
@@ -286,18 +298,29 @@ class ManageRebookings extends Page implements HasTable
                             ->columnSpanFull(),
                     ])
                     ->action(function (Booking $record, array $data): void {
+                        $ticketUrl = !empty($data['confirmation_url']) ? trim($data['confirmation_url']) : null;
+                        $rawPdf = $data['confirmation_pdf'] ?? null;
+                        if (is_array($rawPdf)) {
+                            $rawPdf = reset($rawPdf);
+                        }
+                        $confirmationPdfPath = null;
+                        if ($rawPdf instanceof \Illuminate\Http\UploadedFile || (is_object($rawPdf) && method_exists($rawPdf, 'storeAs'))) {
+                            $confirmationPdfPath = $rawPdf->storeAs('tickets', 'ticket-' . $record->transaction_number . '.pdf', 'public');
+                        } elseif (is_string($rawPdf) && filled($rawPdf)) {
+                            $confirmationPdfPath = $rawPdf;
+                        }
+
                         if ($record->transaction) {
-                            if (!empty($data['confirmation_url'])) {
-                                $record->transaction->confirmation_url = $data['confirmation_url'];
+                            if (!empty($ticketUrl)) {
+                                $record->transaction->confirmation_url = $ticketUrl;
                             }
-                            if (!empty($data['confirmation_pdf'])) {
-                                $record->transaction->confirmation_pdf = $data['confirmation_pdf'];
+                            if (!empty($confirmationPdfPath)) {
+                                $record->transaction->confirmation_pdf = $confirmationPdfPath;
                             }
                             $record->transaction->save();
                         }
 
-                        $ticketUrl    = $record->transaction?->confirmation_url;
-                        $receiptPath  = $record->transaction?->confirmation_pdf ?? null;
+                        $receiptPath  = $confirmationPdfPath ?: ($record->transaction?->confirmation_pdf ?? null);
                         $receiptDisk  = $receiptPath ? 'public' : null;
 
                         try {
