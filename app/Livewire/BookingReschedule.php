@@ -545,8 +545,15 @@ class BookingReschedule extends Component
         $acc = (float) ($this->booking->schedule_accommodation_price ?? 0);
         
         if ($acc == 0 && $this->booking->transportClasses->count() > 0) {
-            // Assume first transport class is for departure if no accommodation is set
-            $acc = (float) ($this->booking->transportClasses->first()->pivot->price ?? 0);
+            $tcs = $this->booking->transportClasses;
+            $depTcs = $tcs->filter(fn ($tc) => ! (bool) $tc->pivot->is_return);
+            $retTcs = $tcs->filter(fn ($tc) => (bool) $tc->pivot->is_return);
+            // Bidirectional fallback: split by index order if one bucket is empty
+            if ($tcs->count() === 2 && ($depTcs->isEmpty() || $retTcs->isEmpty())) {
+                $arr = $tcs->values();
+                $depTcs = collect([$arr[0]]);
+            }
+            $acc = (float) $depTcs->sum(fn ($tc) => $tc->pivot->price);
         }
         
         return $base + $acc;
@@ -558,6 +565,18 @@ class BookingReschedule extends Component
         
         $base = (float) ($this->booking->return_schedule_price ?? 0);
         $acc = (float) ($this->booking->return_schedule_accommodation_price ?? 0);
+        
+        if ($acc == 0 && $this->booking->transportClasses->count() > 0) {
+            $tcs = $this->booking->transportClasses;
+            $depTcs = $tcs->filter(fn ($tc) => ! (bool) $tc->pivot->is_return);
+            $retTcs = $tcs->filter(fn ($tc) => (bool) $tc->pivot->is_return);
+            // Bidirectional fallback: split by index order if one bucket is empty
+            if ($tcs->count() === 2 && ($depTcs->isEmpty() || $retTcs->isEmpty())) {
+                $arr = $tcs->values();
+                $retTcs = collect([$arr[1]]);
+            }
+            $acc = (float) $retTcs->sum(fn ($tc) => $tc->pivot->price);
+        }
         
         return $base + $acc;
     }

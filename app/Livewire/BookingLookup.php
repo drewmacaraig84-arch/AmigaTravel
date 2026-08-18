@@ -744,8 +744,18 @@ class BookingLookup extends Component
             $isAirline = $this->booking->getMode() === 'airline';
 
             $tcs = $this->booking->transportClasses->values();
-            $depTCPerPax = (float) optional($tcs->get(0))->pivot?->price;
-            $retTCPerPax = (float) optional($tcs->get(1))->pivot?->price;
+            // Filter by is_return flag with bidirectional fallback: handle both
+            // (a) old bookings where both TCs defaulted is_return=false, and
+            // (b) bugged bookings where both TCs got is_return=true.
+            $depTcs = $tcs->filter(fn ($tc) => ! (bool) $tc->pivot->is_return);
+            $retTcs = $tcs->filter(fn ($tc) => (bool) $tc->pivot->is_return);
+            if ($tcs->count() === 2 && ($depTcs->isEmpty() || $retTcs->isEmpty())) {
+                $arr = $tcs->values();
+                $depTcs = collect([$arr[0]]);
+                $retTcs = collect([$arr[1]]);
+            }
+            $depTCPerPax = (float) $depTcs->sum(fn ($tc) => $tc->pivot->price);
+            $retTCPerPax = (float) $retTcs->sum(fn ($tc) => $tc->pivot->price);
 
             $origDepPerPax = (float)($this->booking->schedule_price ?? 0)
                         + $depTCPerPax

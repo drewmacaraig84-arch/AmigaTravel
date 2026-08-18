@@ -699,10 +699,15 @@ class Booking extends Model
         $depTcs = $allTcs->filter(fn ($tc) => ! (bool) $tc->pivot->is_return);
         $retTcs = $allTcs->filter(fn ($tc) => (bool) $tc->pivot->is_return);
 
-        if ($retTcs->isEmpty() && $depTcs->count() >= 2) {
-            $depTcsArr = $depTcs->values();
-            $depTcs = collect([$depTcsArr[0]]);
-            $retTcs = collect([$depTcsArr[1]]);
+        // Bidirectional fallback: if one bucket is empty AND we have exactly 2 TCs
+        // total, split them by collection index order regardless of which bucket failed.
+        // This handles:
+        //   1. Old bookings with no is_return flag (both default to false → both in depTcs)
+        //   2. Bugged bookings where both TCs got is_return=true (both in retTcs)
+        if ($allTcs->count() === 2 && ($depTcs->isEmpty() || $retTcs->isEmpty())) {
+            $tcArr = $allTcs->values();
+            $depTcs = collect([$tcArr[0]]);
+            $retTcs = collect([$tcArr[1]]);
         }
 
         $depTcPrice = $depTcs->sum(fn ($tc) => (float) $tc->pivot->price);

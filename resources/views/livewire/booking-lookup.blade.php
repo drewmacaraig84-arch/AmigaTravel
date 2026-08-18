@@ -852,18 +852,26 @@
                                                                 $paxCount = $booking->passengers()->count() ?: 1;
                                                                 $booking->loadMissing('transportClasses');
                                                                 $_tcs       = $booking->transportClasses->values();
-                                                                
+
+                                                                // Filter TCs by is_return flag, with bidirectional fallback by index
+                                                                $_depTcs = $_tcs->filter(fn ($tc) => ! (bool) $tc->pivot->is_return);
+                                                                $_retTcs = $_tcs->filter(fn ($tc) => (bool) $tc->pivot->is_return);
+                                                                if ($_tcs->count() === 2 && ($_depTcs->isEmpty() || $_retTcs->isEmpty())) {
+                                                                    $_depTcs = collect([$_tcs->get(0)]);
+                                                                    $_retTcs = collect([$_tcs->get(1)]);
+                                                                }
+
                                                                 $mode = $booking->getMode();
-                                                                $origDepTCPerPax = (float)optional($_tcs->get(0))->pivot?->price;
+                                                                $origDepTCPerPax = (float)$_depTcs->sum(fn ($tc) => $tc->pivot->price);
                                                                 $accPrice = (float)($booking->schedule_accommodation_price ?? 0);
                                                                 $classPrice = ($mode === 'airline') ? $origDepTCPerPax : ($accPrice > 0 ? $accPrice : $origDepTCPerPax);
                                                                 $origDep = (float)($booking->schedule_price ?? 0) + $classPrice;
 
-                                                                $origRetTCPerPax = (float)optional($_tcs->get(1))->pivot?->price;
+                                                                $origRetTCPerPax = (float)$_retTcs->sum(fn ($tc) => $tc->pivot->price);
                                                                 $retAccPrice = (float)($booking->return_schedule_accommodation_price ?? 0);
                                                                 $retClassPrice = ($mode === 'airline') ? $origRetTCPerPax : ($retAccPrice > 0 ? $retAccPrice : $origRetTCPerPax);
                                                                 $origRet = (float)($booking->return_schedule_price ?? 0) + $retClassPrice;
-                                                                
+
                                                                 $displayOrigFare = ($origDep + $origRet) * $paxCount;
                                                             @endphp
                                                             <span class="font-medium">₱{{ number_format($displayOrigFare, 2) }}</span>

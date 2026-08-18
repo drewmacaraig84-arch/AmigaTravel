@@ -191,8 +191,9 @@ class BookingController extends Controller
             $allTcs = $booking->transportClasses;
             $depTcPrice = $allTcs->filter(fn ($tc) => ! (bool) $tc->pivot->is_return)->sum(fn ($tc) => (float) $tc->pivot->price);
             $retTcPrice = $allTcs->filter(fn ($tc) => (bool) $tc->pivot->is_return)->sum(fn ($tc) => (float) $tc->pivot->price);
-            // Legacy fallback for old bookings (no is_return flag)
-            if ($retTcPrice == 0 && $allTcs->count() >= 2) {
+            // Bidirectional fallback: split by index if one bucket is empty AND we have exactly 2 TCs
+            // Handles: (a) old bookings with no is_return flag (both false) and (b) bugged bookings (both true)
+            if ($allTcs->count() === 2 && ($depTcPrice == 0 || $retTcPrice == 0)) {
                 $tcArr = $allTcs->values();
                 $depTcPrice = (float) $tcArr[0]->pivot->price;
                 $retTcPrice = (float) $tcArr[1]->pivot->price;
@@ -277,7 +278,8 @@ class BookingController extends Controller
         $allTcs = $booking->transportClasses;
         $depTcPrice = $allTcs->filter(fn ($tc) => ! (bool) $tc->pivot->is_return)->sum(fn ($tc) => (float) $tc->pivot->price);
         $retTcPrice = $allTcs->filter(fn ($tc) => (bool) $tc->pivot->is_return)->sum(fn ($tc) => (float) $tc->pivot->price);
-        if ($retTcPrice == 0 && $allTcs->count() >= 2) {
+        // Bidirectional fallback: split by index if one bucket is empty AND we have exactly 2 TCs
+        if ($allTcs->count() === 2 && ($depTcPrice == 0 || $retTcPrice == 0)) {
             $tcArr = $allTcs->values();
             $depTcPrice = (float) $tcArr[0]->pivot->price;
             $retTcPrice = (float) $tcArr[1]->pivot->price;
@@ -576,8 +578,18 @@ class BookingController extends Controller
 
         $booking->loadMissing('transportClasses');
         $tcs = $booking->transportClasses->values();
-        $depTCPerPax = (float) optional($tcs->get(0))->pivot?->price;
-        $retTCPerPax = (float) optional($tcs->get(1))->pivot?->price;
+        // Filter by is_return flag with bidirectional fallback: handle both
+        // (a) old bookings where both TCs defaulted is_return=false, and
+        // (b) bugged bookings where both TCs got is_return=true.
+        $depTcs = $tcs->filter(fn ($tc) => ! (bool) $tc->pivot->is_return);
+        $retTcs = $tcs->filter(fn ($tc) => (bool) $tc->pivot->is_return);
+        if ($tcs->count() === 2 && ($depTcs->isEmpty() || $retTcs->isEmpty())) {
+            $arr = $tcs->values();
+            $depTcs = collect([$arr[0]]);
+            $retTcs = collect([$arr[1]]);
+        }
+        $depTCPerPax = (float) $depTcs->sum(fn ($tc) => $tc->pivot->price);
+        $retTCPerPax = (float) $retTcs->sum(fn ($tc) => $tc->pivot->price);
 
         $origDepPerPax = (float)($booking->schedule_price ?? 0)
                        + $depTCPerPax
