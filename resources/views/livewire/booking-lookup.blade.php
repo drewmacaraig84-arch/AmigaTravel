@@ -880,9 +880,17 @@
                                                             <span>New Schedule Total</span>
                                                             <span>₱{{ number_format($rebooking_new_total, 2) }}</span>
                                                         </div>
-                                                        <div class="flex justify-between text-slate-600 pt-2 border-t border-slate-100">
+                                                        <div class="flex justify-between pt-2 mt-2 border-t border-slate-100 text-slate-600">
+                                                            <span>Rate Difference</span>
+                                                            <span class="font-medium">₱{{ number_format($rebooking_rate_diff, 2) }}</span>
+                                                        </div>
+                                                        <div class="flex justify-between text-slate-600">
+                                                            <span>Rebooking Surcharge</span>
+                                                            <span class="font-medium">₱{{ number_format($rebooking_surcharge, 2) }}</span>
+                                                        </div>
+                                                        <div class="flex justify-between text-slate-600">
                                                             <span>Revalidation Fee</span>
-                                                            <span class="font-medium">₱{{ number_format($rebooking_total_to_pay, 2) }}</span>
+                                                            <span class="font-medium">₱{{ number_format($rebooking_revalidation_fee, 2) }}</span>
                                                         </div>
                                                         <div class="border-t border-slate-200 pt-3 flex justify-between text-base font-bold text-blue-900">
                                                             <span>Total Rebooking Fee</span>
