@@ -11342,8 +11342,14 @@ class _VoucherPickerScreenState extends State<VoucherPickerScreen> {
 
   Future<void> _fetchVouchers() async {
     try {
+      final email = UserSession.email.isNotEmpty ? UserSession.email : (widget.booking?.clientEmail ?? '');
+      final uri = Uri.parse('${UserSession.getBaseUrl()}/api/vouchers').replace(
+        queryParameters: {
+          if (email.isNotEmpty) 'email': email,
+        },
+      );
       final res = await http.get(
-        Uri.parse('${UserSession.getBaseUrl()}/api/vouchers'),
+        uri,
         headers: {
           'Accept': 'application/json',
           if (UserSession.token.isNotEmpty)
@@ -14512,8 +14518,13 @@ class _VouchersScreenState extends State<VouchersScreen> {
 
   Future<void> _fetchVouchers() async {
     try {
+      final uri = Uri.parse('${UserSession.getBaseUrl()}/api/vouchers').replace(
+        queryParameters: {
+          if (UserSession.email.isNotEmpty) 'email': UserSession.email,
+        },
+      );
       final res = await http.get(
-        Uri.parse('${UserSession.getBaseUrl()}/api/vouchers'),
+        uri,
         headers: {
           'Accept': 'application/json',
           if (UserSession.token.isNotEmpty)

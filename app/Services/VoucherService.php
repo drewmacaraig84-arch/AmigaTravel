@@ -80,13 +80,30 @@ class VoucherService
             $email = strtolower(trim($bookingData['client_email'] ?? ''));
             $userId = $bookingData['user_id'] ?? null;
             
-            $query = $voucher->redemptions()->where('normalized_email', $email);
-            if ($userId) {
-                $query->orWhere('user_id', $userId);
-            }
-            
-            if ($query->exists()) {
-                return $this->error('You have already used this voucher');
+            if (!empty($email) || !empty($userId)) {
+                $query = $voucher->redemptions()
+                    ->where(function ($q) use ($email, $userId) {
+                        if (!empty($email)) {
+                            $q->where('normalized_email', $email);
+                        }
+                        if (!empty($userId)) {
+                            $q->orWhere('user_id', $userId);
+                        }
+                    })
+                    ->whereHas('booking', function ($q) {
+                        $q->whereNotIn('status', ['cancelled', 'operator_cancelled'])
+                          ->where(function ($sub) {
+                              $sub->where('status', 'confirmed')
+                                  ->orWhereHas('transaction', function ($t) {
+                                      $t->where('payment_status', 'paid')
+                                        ->orWhere('payment_deadline_at', '>=', now());
+                                  });
+                          });
+                    });
+                
+                if ($query->exists()) {
+                    return $this->error('You have already used this voucher');
+                }
             }
         }
         
@@ -240,13 +257,30 @@ class VoucherService
                 $email = strtolower(trim($booking->client_email));
                 $userId = $booking->user_id;
                 
-                $query = $lockedVoucher->redemptions()->where('normalized_email', $email);
-                if ($userId) {
-                    $query->orWhere('user_id', $userId);
-                }
-                
-                if ($query->exists()) {
-                    throw new \Exception('You have already used this voucher');
+                if (!empty($email) || !empty($userId)) {
+                    $query = $lockedVoucher->redemptions()
+                        ->where(function ($q) use ($email, $userId) {
+                            if (!empty($email)) {
+                                $q->where('normalized_email', $email);
+                            }
+                            if (!empty($userId)) {
+                                $q->orWhere('user_id', $userId);
+                            }
+                        })
+                        ->whereHas('booking', function ($q) {
+                            $q->whereNotIn('status', ['cancelled', 'operator_cancelled'])
+                              ->where(function ($sub) {
+                                  $sub->where('status', 'confirmed')
+                                      ->orWhereHas('transaction', function ($t) {
+                                          $t->where('payment_status', 'paid')
+                                            ->orWhere('payment_deadline_at', '>=', now());
+                                      });
+                              });
+                        });
+                    
+                    if ($query->exists()) {
+                        throw new \Exception('You have already used this voucher');
+                    }
                 }
             }
             
