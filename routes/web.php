@@ -295,8 +295,8 @@ Route::get('/ticket/download/{transaction_number}', function ($transaction_numbe
 
     // Always generate the Travel Itinerary & Acknowledgement PDF on-demand.
     // The admin-uploaded confirmation PDF is served separately via /ticket/admin-pdf/{transaction_number}
-    $receiptDir = storage_path('app/receipts');
-    $path = $receiptDir . '/receipt-' . $booking->transaction_number . '.pdf';
+    $receiptDir = storage_path('app/acknowledgements');
+    $path = $receiptDir . '/acknowledgement-' . $booking->transaction_number . '.pdf';
 
     try {
         if (file_exists($path)) {
