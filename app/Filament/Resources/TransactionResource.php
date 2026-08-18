@@ -366,34 +366,18 @@ class TransactionResource extends Resource
                             throw new \Exception('Please provide either a confirmation URL or upload a PDF before verifying.');
                         }
 
+                        $ticketUrl = $data['confirmation_url'] ?? null;
                         $confirmationPdfPath = null;
+                        $receiptPath = null;
+                        $receiptDisk = null;
 
                         if (! empty($data['confirmation_pdf'])) {
                             $pdfPath = is_string($data['confirmation_pdf'])
                                 ? $data['confirmation_pdf']
                                 : $data['confirmation_pdf']->storeAs('receipts', 'receipt-'.$record->booking->transaction_number.'.pdf', 'public');
                             $confirmationPdfPath = $pdfPath;
-                            $ticketUrl = null;
-                            $record->update([
-                                'confirmation_url' => null,
-                                'confirmation_pdf' => $confirmationPdfPath,
-                            ]);
-
-                            if (Storage::disk('public')->exists($pdfPath)) {
-                                $receiptPath = Storage::disk('public')->path($pdfPath);
-                            } else {
-                                $receiptPath = storage_path('app/public/'.$pdfPath);
-                            }
-
+                            $receiptPath = $pdfPath;
                             $receiptDisk = 'public';
-                        } else {
-                            $ticketUrl = $data['confirmation_url'];
-                            $record->update([
-                                'confirmation_url' => $data['confirmation_url'],
-                                'confirmation_pdf' => null,
-                            ]);
-                            $receiptPath = null;
-                            $receiptDisk = null;
                         }
 
                         $staffUserId = Auth::id();

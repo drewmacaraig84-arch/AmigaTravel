@@ -62,8 +62,11 @@ class BookingConfirmation extends Mailable implements ShouldQueue
             // Email will still send, just without the auto-generated PDF
         }
 
-        if ($this->receiptPath) {
-            $attachInfo = $this->resolveAttachment($this->receiptPath, $this->receiptDisk);
+        $receiptToAttach = $this->receiptPath ?: ($this->booking->transaction?->confirmation_pdf ?? null);
+        $diskToUse = $this->receiptDisk ?: 'public';
+
+        if ($receiptToAttach) {
+            $attachInfo = $this->resolveAttachment($receiptToAttach, $diskToUse);
             if ($attachInfo) {
                 [$resolvedPath, $attachAsDisk, $resolvedDisk] = $attachInfo;
                 if ($attachAsDisk) {
@@ -80,8 +83,8 @@ class BookingConfirmation extends Mailable implements ShouldQueue
             } else {
                 \Illuminate\Support\Facades\Log::warning('BookingConfirmation: ticket PDF could not be located on disk.', [
                     'booking_id' => $this->booking->id ?? null,
-                    'receiptPath' => $this->receiptPath,
-                    'receiptDisk' => $this->receiptDisk,
+                    'receiptPath' => $receiptToAttach,
+                    'receiptDisk' => $diskToUse,
                 ]);
             }
         }
@@ -94,9 +97,6 @@ class BookingConfirmation extends Mailable implements ShouldQueue
      *   - [relativePath, true, diskName]   -> use attachFromStorageDisk
      *   - [absoluteFsPath, false, null]    -> use attach()
      * Returns null if file cannot be found.
-     *
-     * Correctly handles callers that accidentally pass an absolute filesystem
-     * path together with a disk (e.g. ServiceCancellationManager).
      */
     private function resolveAttachment(string $path, ?string $disk): ?array
     {
@@ -121,9 +121,20 @@ class BookingConfirmation extends Mailable implements ShouldQueue
             }
         }
 
-        // Last resort: treat as direct FS path
-        if (file_exists($path)) {
-            return [$path, false, null];
+        // Check common storage filesystem locations directly
+        $candidates = [
+            $path,
+            storage_path('app/public/' . $path),
+            storage_path('app/' . $path),
+            public_path('storage/' . $path),
+            storage_path('app/receipts/' . basename($path)),
+            public_path('receipts/' . basename($path)),
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (file_exists($candidate) && is_file($candidate)) {
+                return [$candidate, false, null];
+            }
         }
 
         return null;

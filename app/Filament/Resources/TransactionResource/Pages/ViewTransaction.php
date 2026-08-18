@@ -42,20 +42,17 @@ class ViewTransaction extends ViewRecord
                         throw new \Exception('Please provide either a confirmation URL or upload a PDF before verifying.');
                     }
 
-                    $record = $this->record;
+                    $ticketUrl = $data['confirmation_url'] ?? null;
+                    $pdfPath = null;
+                    $receiptPath = null;
+                    $receiptDisk = null;
 
                     if (! empty($data['confirmation_pdf'])) {
                         $pdfPath = is_string($data['confirmation_pdf'])
                             ? $data['confirmation_pdf']
                             : $data['confirmation_pdf']->storeAs('receipts', 'receipt-' . $record->booking->transaction_number . '.pdf', 'public');
-                        $ticketUrl = null;
-                        $receiptPath = $pdfPath; // relative path — BookingConfirmation uses attachFromStorageDisk
+                        $receiptPath = $pdfPath;
                         $receiptDisk = 'public';
-                    } else {
-                        $pdfPath = null;
-                        $ticketUrl = $data['confirmation_url'];
-                        $receiptPath = null;
-                        $receiptDisk = null;
                     }
 
                     $staffUserId = Auth::id();

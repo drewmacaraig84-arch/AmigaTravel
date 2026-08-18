@@ -329,14 +329,37 @@ Route::get('/ticket/admin-pdf/{transaction_number}', function ($transaction_numb
 
     $pdfPath = $booking->transaction?->confirmation_pdf;
 
-    if ($pdfPath && \Illuminate\Support\Facades\Storage::disk('public')->exists($pdfPath)) {
-        return response()->file(
-            \Illuminate\Support\Facades\Storage::disk('public')->path($pdfPath),
-            [
-                'Content-Type' => 'application/pdf',
-                'Content-Disposition' => 'inline; filename="Ticket_Confirmation.pdf"',
-            ]
-        );
+    if ($pdfPath) {
+        if (\Illuminate\Support\Facades\Storage::disk('public')->exists($pdfPath)) {
+            return response()->file(
+                \Illuminate\Support\Facades\Storage::disk('public')->path($pdfPath),
+                [
+                    'Content-Type' => 'application/pdf',
+                    'Content-Disposition' => 'inline; filename="Ticket_Confirmation_' . $booking->transaction_number . '.pdf"',
+                ]
+            );
+        }
+
+        $candidates = [
+            storage_path('app/public/' . $pdfPath),
+            storage_path('app/' . $pdfPath),
+            public_path('storage/' . $pdfPath),
+            storage_path('app/receipts/' . basename($pdfPath)),
+            public_path('receipts/' . basename($pdfPath)),
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (file_exists($candidate) && is_file($candidate)) {
+                return response()->file($candidate, [
+                    'Content-Type' => 'application/pdf',
+                    'Content-Disposition' => 'inline; filename="Ticket_Confirmation_' . $booking->transaction_number . '.pdf"',
+                ]);
+            }
+        }
+    }
+
+    if (! empty($booking->transaction?->confirmation_url)) {
+        return redirect()->away($booking->transaction->confirmation_url);
     }
 
     // Fallback: redirect to the itinerary acknowledgement if no admin PDF exists

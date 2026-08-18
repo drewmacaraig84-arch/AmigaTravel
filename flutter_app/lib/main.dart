@@ -6497,17 +6497,17 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               onPressed: () =>
                   launchUrl(Uri.parse(_booking['ticket_url'].toString())),
               icon: const Icon(Icons.receipt_long),
-              label: const Text('Payment Acknowledgement'),
+              label: const Text('E-acknowledgement'),
             ),
-          if ((transaction['confirmation_url'] != null ||
-                  _booking['confirmation_url'] != null ||
-                  _booking['confirmation_pdf_url'] != null) &&
+          if ((_booking['confirmation_pdf_url'] != null ||
+                  transaction['confirmation_url'] != null ||
+                  _booking['confirmation_url'] != null) &&
               _paymentStatus == 'paid')
             FilledButton.icon(
               onPressed: () {
-                final url = transaction['confirmation_url'] ??
-                    _booking['confirmation_url'] ??
-                    _booking['confirmation_pdf_url'];
+                final url = _booking['confirmation_pdf_url'] ??
+                    transaction['confirmation_url'] ??
+                    _booking['confirmation_url'];
                 launchUrl(Uri.parse(url.toString()));
               },
               icon: const Icon(Icons.download),

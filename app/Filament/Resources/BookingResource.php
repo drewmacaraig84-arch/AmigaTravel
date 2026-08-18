@@ -226,6 +226,7 @@ class BookingResource extends Resource
                         Forms\Components\FileUpload::make('confirmation_pdf')
                             ->label('Confirmation PDF')
                             ->directory('receipts')
+                            ->disk('public')
                             ->acceptedFileTypes(['application/pdf'])
                             ->maxSize(10240),
                     ])
@@ -248,37 +249,35 @@ class BookingResource extends Resource
                         if (! empty($data['confirmation_pdf'])) {
                             $pdfPath = is_string($data['confirmation_pdf'])
                                 ? $data['confirmation_pdf']
-                                : $data['confirmation_pdf']->storeAs('receipts', 'rebooking-' . $record->transaction_number . '.pdf', 'public');
+                                : $data['confirmation_pdf']->storeAs('receipts', 'receipt-' . $record->transaction_number . '.pdf', 'public');
                             $confirmationPdfPath = $pdfPath;
-
                             $receiptDisk = 'public';
-                            // Use relative path; BookingConfirmation uses attachFromStorageDisk
                             $receiptPath = $pdfPath;
-
-                            $record->transaction?->update(['confirmation_pdf' => $pdfPath]);
                         }
 
-                        $record->transaction?->update(['confirmation_url' => $ticketUrl]);
+                        $staffUserId = Auth::id();
+                        $now = now();
+
+                        $record->transaction?->update([
+                            'payment_status' => 'paid',
+                            'confirmation_url' => $ticketUrl,
+                            'confirmation_pdf' => $confirmationPdfPath,
+                            'verified_by_user_id' => $staffUserId,
+                            'verified_at' => $now,
+                        ]);
 
                         $record->update([
-                            'verified_by_user_id' => Auth::id(),
-                            'verified_at' => now(),
+                            'verified_by_user_id' => $staffUserId,
+                            'verified_at' => $now,
                         ]);
 
                         if ($record->rebooking_status === 'pending') {
                             $record->verifyRebooking($ticketUrl, $receiptPath, $receiptDisk);
                         } else {
                             $record->update(['status' => 'confirmed']);
-                            $record->transaction?->update([
-                                'payment_status' => 'paid',
-                                'confirmation_url' => $ticketUrl,
-                                'confirmation_pdf' => $confirmationPdfPath,
-                                'verified_by_user_id' => Auth::id(),
-                                'verified_at' => now(),
-                            ]);
                             app(\App\Services\GraciaPointsService::class)->awardPointsForBooking($record, auth()->user());
 
-                            // Send confirmation email — mirrors TransactionResource verify logic
+                            // Send confirmation email — exactly 1 email with both attachments
                             try {
                                 Mail::to($record->client_email)->send(
                                     new BookingConfirmation($record, $ticketUrl, $receiptPath, $receiptDisk)

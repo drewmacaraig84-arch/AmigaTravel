@@ -49,31 +49,6 @@ class BookingObserver
                     
                     // Award Gracia Points on confirmation
                     app(\App\Services\GraciaPointsService::class)->awardPointsForBooking($booking);
-
-                    try {
-                        $booking->loadMissing('transaction');
-                        $transaction = $booking->transaction;
-                        if ($transaction) {
-                            $ticketUrl   = $transaction->confirmation_url;
-                            $receiptPath = $transaction->confirmation_pdf;
-                            $receiptDisk = $receiptPath ? 'public' : null;
-
-                            if (! empty($ticketUrl) || ! empty($receiptPath)) {
-                                \Illuminate\Support\Facades\Mail::to($booking->client_email)
-                                    ->send(new \App\Mail\BookingConfirmation(
-                                        booking: $booking,
-                                        ticketUrl: $ticketUrl,
-                                        receiptPath: $receiptPath,
-                                        receiptDisk: $receiptDisk,
-                                    ));
-                            }
-                        }
-                    } catch (\Throwable $e) {
-                        Log::error(
-                            'BookingObserver: Failed to dispatch confirmation email',
-                            ['booking_id' => $booking->id, 'error' => $e->getMessage()]
-                        );
-                    }
                 } elseif ($newStatus === Booking::STATUS_CANCELLED && $oldStatus !== Booking::STATUS_CANCELLED) {
                     UserNotification::notify($user->id, "Booking Cancelled", "Your booking {$booking->transaction_number} was automatically cancelled.", 'booking', 'cancel', ['transaction_number' => $booking->transaction_number]);
                 } elseif ($newStatus === Booking::STATUS_OPERATOR_CANCELLED && $oldStatus !== Booking::STATUS_OPERATOR_CANCELLED) {
