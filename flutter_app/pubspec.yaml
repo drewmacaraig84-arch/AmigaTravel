@@ -1,6 +1,6 @@
 name: amiga_gracia
 description: Amiga Gracia Travel Services — Book ferry, airline, and tour packages.
-version: 1.0.106+117
+version: 1.0.107+118
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
