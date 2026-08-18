@@ -99,7 +99,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.110+121';
+  static const String appVersion = '1.0.111+122';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -17136,6 +17136,7 @@ class _RebookScreenState extends State<RebookScreen> {
     });
     try {
       final baseUrl = UserSession.getBaseUrl();
+      final depOperator = (widget.booking['operator_name'] ?? widget.booking['schedule']?['route']?['operator'] ?? '').toString().trim();
       final res = await http.post(
         Uri.parse('$baseUrl/api/schedules'),
         headers: {
@@ -17147,12 +17148,21 @@ class _RebookScreenState extends State<RebookScreen> {
           'destination': widget.booking['destination'] ?? '',
           'date': _depDate!.toIso8601String().split('T')[0],
           'mode': widget.booking['mode'],
+          if (depOperator.isNotEmpty) 'operator': depOperator,
         }),
       );
       final data = jsonDecode(res.body);
       if (res.statusCode == 200) {
+        final List<dynamic> allFetched = data['schedules'] ?? [];
+        final filtered = depOperator.isEmpty
+            ? allFetched
+            : allFetched.where((s) {
+                final sOp = (s['operator'] ?? s['route']?['operator'] ?? '').toString().toLowerCase();
+                final depOpNorm = depOperator.toLowerCase();
+                return sOp.isEmpty || sOp.contains(depOpNorm) || depOpNorm.contains(sOp);
+              }).toList();
         setState(() {
-          _depSchedules = data['schedules'] ?? [];
+          _depSchedules = filtered;
           _step = 1;
         });
       } else {
@@ -17172,6 +17182,7 @@ class _RebookScreenState extends State<RebookScreen> {
     });
     try {
       final baseUrl = UserSession.getBaseUrl();
+      final retOperator = (widget.booking['return_operator_name'] ?? widget.booking['operator_name'] ?? widget.booking['return_schedule']?['route']?['operator'] ?? '').toString().trim();
       final res = await http.post(
         Uri.parse('$baseUrl/api/schedules'),
         headers: {
@@ -17183,12 +17194,21 @@ class _RebookScreenState extends State<RebookScreen> {
           'destination': widget.booking['origin'] ?? '',
           'date': _retDate!.toIso8601String().split('T')[0],
           'mode': widget.booking['mode'],
+          if (retOperator.isNotEmpty) 'operator': retOperator,
         }),
       );
       final data = jsonDecode(res.body);
       if (res.statusCode == 200) {
+        final List<dynamic> allFetched = data['schedules'] ?? [];
+        final filtered = retOperator.isEmpty
+            ? allFetched
+            : allFetched.where((s) {
+                final sOp = (s['operator'] ?? s['route']?['operator'] ?? '').toString().toLowerCase();
+                final retOpNorm = retOperator.toLowerCase();
+                return sOp.isEmpty || sOp.contains(retOpNorm) || retOpNorm.contains(sOp);
+              }).toList();
         setState(() {
-          _retSchedules = data['schedules'] ?? [];
+          _retSchedules = filtered;
           _step = 2;
         });
       } else {
@@ -17306,11 +17326,35 @@ class _RebookScreenState extends State<RebookScreen> {
   }
 
   Widget _buildDateStep() {
+    final op = (widget.booking['operator_name'] ?? widget.booking['schedule']?['route']?['operator'] ?? '').toString().trim();
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         const Text('Select New Travel Dates',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        if (op.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF6FF),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFBFDBFE)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, size: 16, color: Color(0xFF1D4ED8)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Operator: $op (Rebooking is only permitted with the same operator)',
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF1E40AF), fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
         const SizedBox(height: 16),
         ListTile(
           title: const Text('New Departure Date'),

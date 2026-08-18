@@ -525,6 +525,26 @@ class BookingController extends Controller
             ], 400);
         }
 
+        $depSchedule = \App\Models\Schedule::with('ferryRoute.operatorRecord')->findOrFail($request->input('dep_schedule_id'));
+        if (! $booking->matchesOperator($depSchedule, false)) {
+            $expectedOp = $booking->getOperatorName() ?? 'original operator';
+            return response()->json([
+                'status' => 'error',
+                'message' => "Rebooking is only permitted with the same operator ({$expectedOp}).",
+            ], 422);
+        }
+
+        if ($request->input('ret_schedule_id')) {
+            $retSchedule = \App\Models\Schedule::with('ferryRoute.operatorRecord')->findOrFail($request->input('ret_schedule_id'));
+            if (! $booking->matchesOperator($retSchedule, true)) {
+                $expectedOp = $booking->getReturnOperatorName() ?: $booking->getOperatorName();
+                return response()->json([
+                    'status' => 'error',
+                    'message' => "Return rebooking is only permitted with the same operator ({$expectedOp}).",
+                ], 422);
+            }
+        }
+
         $transaction = $booking->transaction ?: Transaction::create([
             'booking_id' => $booking->id,
             'payment_status' => 'unpaid',
@@ -618,7 +638,24 @@ class BookingController extends Controller
 
         $newTotal = 0.0;
         
-        $depSchedule = \App\Models\Schedule::find($request->input('dep_schedule_id'));
+        $depSchedule = \App\Models\Schedule::with('ferryRoute.operatorRecord')->findOrFail($request->input('dep_schedule_id'));
+        if (! $booking->matchesOperator($depSchedule, false)) {
+            $expectedOp = $booking->getOperatorName() ?? 'original operator';
+            return response()->json([
+                'status' => 'error',
+                'message' => "Rebooking is only permitted with the same operator ({$expectedOp}).",
+            ], 422);
+        }
+
+        $retSchedule = $request->input('ret_schedule_id') ? \App\Models\Schedule::with('ferryRoute.operatorRecord')->find($request->input('ret_schedule_id')) : null;
+        if ($retSchedule && ! $booking->matchesOperator($retSchedule, true)) {
+            $expectedOp = $booking->getReturnOperatorName() ?: $booking->getOperatorName();
+            return response()->json([
+                'status' => 'error',
+                'message' => "Return rebooking is only permitted with the same operator ({$expectedOp}).",
+            ], 422);
+        }
+        
         $depAccPrice = 0;
         if ($request->input('dep_accommodation_id') && $depSchedule) {
             if ($isAirline) {
@@ -635,7 +672,6 @@ class BookingController extends Controller
             }
         }
 
-        $retSchedule = $request->input('ret_schedule_id') ? \App\Models\Schedule::find($request->input('ret_schedule_id')) : null;
         $retAccPrice = 0;
         if ($request->input('ret_accommodation_id') && $retSchedule) {
             if ($isAirline) {

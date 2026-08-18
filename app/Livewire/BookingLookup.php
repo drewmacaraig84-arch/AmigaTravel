@@ -568,9 +568,11 @@ class BookingLookup extends Component
     public function getAvailableRebookingDepartureSchedulesProperty()
     {
         if (!$this->booking || !$this->rebooking_departure_date) return collect();
-        $schedules = Schedule::forRouteAndDate($this->booking->origin, $this->booking->destination, $this->rebooking_departure_date)
-            ->with(['ferryRoute', 'vehicle', 'scheduleAccommodations', 'transportClasses'])
-            ->get();
+        $operator = $this->booking->getOperatorName();
+        $schedules = Schedule::forRouteAndDate($this->booking->origin, $this->booking->destination, $this->rebooking_departure_date, $this->booking->getMode(), $operator)
+            ->with(['ferryRoute.operatorRecord', 'vehicle', 'scheduleAccommodations', 'transportClasses'])
+            ->get()
+            ->filter(fn ($sch) => $this->booking->matchesOperator($sch, false));
 
         $isAirline = $this->booking->getMode() === 'airline';
         $this->booking->loadMissing('transportClasses');
@@ -604,9 +606,11 @@ class BookingLookup extends Component
     public function getAvailableRebookingReturnSchedulesProperty()
     {
         if (!$this->booking || !$this->rebooking_return_date) return collect();
-        $schedules = Schedule::forRouteAndDate($this->booking->destination, $this->booking->origin, $this->rebooking_return_date)
-            ->with(['ferryRoute', 'vehicle', 'scheduleAccommodations', 'transportClasses'])
-            ->get();
+        $operator = $this->booking->getReturnOperatorName() ?: $this->booking->getOperatorName();
+        $schedules = Schedule::forRouteAndDate($this->booking->destination, $this->booking->origin, $this->rebooking_return_date, $this->booking->getMode(), $operator)
+            ->with(['ferryRoute.operatorRecord', 'vehicle', 'scheduleAccommodations', 'transportClasses'])
+            ->get()
+            ->filter(fn ($sch) => $this->booking->matchesOperator($sch, true));
 
         $isAirline = $this->booking->getMode() === 'airline';
         $this->booking->loadMissing('transportClasses');
@@ -827,6 +831,21 @@ class BookingLookup extends Component
             'rebooking_reference_number' => 'required|string|max:120',
             'rebookingProof' => 'required|image|max:10240',
         ]);
+
+        if ($this->rebooking_dep_schedule_id) {
+            $depSch = Schedule::with('ferryRoute.operatorRecord')->find($this->rebooking_dep_schedule_id);
+            if ($depSch && ! $this->booking->matchesOperator($depSch, false)) {
+                $this->feedback = "Rebooking is only permitted with the same operator (" . ($this->booking->getOperatorName() ?? 'original operator') . ").";
+                return;
+            }
+        }
+        if ($this->rebooking_ret_schedule_id) {
+            $retSch = Schedule::with('ferryRoute.operatorRecord')->find($this->rebooking_ret_schedule_id);
+            if ($retSch && ! $this->booking->matchesOperator($retSch, true)) {
+                $this->feedback = "Return rebooking is only permitted with the same operator (" . ($this->booking->getReturnOperatorName() ?: $this->booking->getOperatorName()) . ").";
+                return;
+            }
+        }
 
         $this->isUploadingRebooking = true;
 

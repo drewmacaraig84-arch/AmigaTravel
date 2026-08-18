@@ -585,6 +585,57 @@ class Booking extends Model
     }
 
     /**
+     * Check if a given Schedule belongs to the same operator as this booking's service.
+     */
+    public function matchesOperator(Schedule $schedule, bool $isReturn = false): bool
+    {
+        $origOperator = $isReturn ? ($this->getReturnOperatorName() ?: $this->getOperatorName()) : $this->getOperatorName();
+        if (blank($origOperator)) {
+            return true;
+        }
+
+        $scheduleOperator = $schedule->ferryRoute?->operatorRecord?->name 
+            ?? $schedule->ferryRoute?->operator 
+            ?? null;
+
+        if (blank($scheduleOperator)) {
+            $svc = strtoupper(trim((string) $schedule->service_name));
+            if (str_starts_with($svc, '5J') || str_contains($svc, 'CEBU PACIFIC')) {
+                $scheduleOperator = 'Cebu Pacific';
+            } elseif (str_starts_with($svc, 'PR') || str_contains($svc, 'PHILIPPINE AIRLINES') || str_contains($svc, 'PAL')) {
+                $scheduleOperator = 'Philippine Airlines';
+            } elseif (str_starts_with($svc, 'Z2') || str_contains($svc, 'AIRASIA')) {
+                $scheduleOperator = 'AirAsia';
+            } elseif (str_starts_with($svc, 'DG')) {
+                $scheduleOperator = 'Cebgo';
+            } elseif (str_starts_with($svc, 'GAP') || str_contains($svc, 'AIR SWIFT') || str_contains($svc, 'AIRSWIFT')) {
+                $scheduleOperator = 'AirSWIFT';
+            } elseif (str_contains($svc, 'FASTCAT')) {
+                $scheduleOperator = 'FastCat';
+            } elseif (str_contains($svc, 'STARLITE')) {
+                $scheduleOperator = 'Starlite Ferries';
+            } elseif (str_contains($svc, 'MONTENEGRO')) {
+                $scheduleOperator = 'Montenegro Shipping Lines';
+            } elseif (str_contains($svc, '2GO')) {
+                $scheduleOperator = '2GO Travel';
+            } elseif (str_contains($svc, 'OCEANJET')) {
+                $scheduleOperator = 'OceanJet';
+            } elseif (str_contains($svc, 'SUPER CAT') || str_contains($svc, 'SUPERCAT')) {
+                $scheduleOperator = 'SuperCat';
+            }
+        }
+
+        if (blank($scheduleOperator)) {
+            return true;
+        }
+
+        $normOrig = strtolower(preg_replace('/[^a-z0-9]/', '', (string)$origOperator));
+        $normSch = strtolower(preg_replace('/[^a-z0-9]/', '', (string)$scheduleOperator));
+
+        return str_contains($normOrig, $normSch) || str_contains($normSch, $normOrig);
+    }
+
+    /**
      * True if the booking's departure service is Starlite.
      */
     public function isStarlite(): bool
