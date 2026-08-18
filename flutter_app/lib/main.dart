@@ -99,7 +99,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.114+125';
+  static const String appVersion = '1.0.115+126';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -1182,29 +1182,98 @@ class OnboardingScreen extends StatefulWidget {
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
+class _OnboardingSlideModel {
+  final String tag;
+  final Color tagColor;
+  final String title;
+  final String desc;
+  final List<String> chips;
+  final IconData heroIcon;
+  final String floatingBadgeTop;
+  final IconData floatingIconTop;
+  final String floatingBadgeBottom;
+  final IconData floatingIconBottom;
+  final Color gradientStart;
+  final Color gradientEnd;
+
+  const _OnboardingSlideModel({
+    required this.tag,
+    required this.tagColor,
+    required this.title,
+    required this.desc,
+    required this.chips,
+    required this.heroIcon,
+    required this.floatingBadgeTop,
+    required this.floatingIconTop,
+    required this.floatingBadgeBottom,
+    required this.floatingIconBottom,
+    required this.gradientStart,
+    required this.gradientEnd,
+  });
+}
+
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  final List<Map<String, String>> _slides = [
-    {
-      'title': 'Welcome to Amiga Gracia',
-      'desc':
-          'The fastest way to book your ferry, flight, and tour packages online.',
-      'icon': 'explore',
-    },
-    {
-      'title': 'Hassle-Free Travel',
-      'desc':
-          'Skip the lines at the terminal. Pay securely via GCash or Bank Transfer directly in the app.',
-      'icon': 'payments',
-    },
-    {
-      'title': 'Exclusive Promos & Discounts',
-      'desc':
-          'Get access to special rates for students, seniors, PWDs, and early bookings.',
-      'icon': 'local_offer',
-    },
+  final List<_OnboardingSlideModel> _slides = const [
+    _OnboardingSlideModel(
+      tag: 'ALL-IN-ONE TRAVEL',
+      tagColor: kGreen,
+      title: 'Seamless Ferry, Flight & Tour Bookings',
+      desc:
+          'Explore live schedules, seat classes, and nationwide routes across top maritime ferry carriers, domestic airlines, and curated tour packages.',
+      chips: [
+        'FastCat, 2GO & Ferry Lines',
+        'Domestic Airline Flights',
+        'Curated Tour Packages',
+      ],
+      heroIcon: Icons.travel_explore_rounded,
+      floatingBadgeTop: '🚢 Maritime Ferries',
+      floatingIconTop: Icons.directions_boat_filled_rounded,
+      floatingBadgeBottom: '✈️ Domestic Flights',
+      floatingIconBottom: Icons.flight_takeoff_rounded,
+      gradientStart: Color(0xFF14532D),
+      gradientEnd: Color(0xFF1A5319),
+    ),
+    _OnboardingSlideModel(
+      tag: 'FAST & CONVENIENT',
+      tagColor: kPink,
+      title: 'Effortless Online Ticketing & Verification',
+      desc:
+          'Reserve your trips in just a few taps. Enjoy smooth digital verification, live trip status updates, and paperless e-tickets stored directly on your phone.',
+      chips: [
+        'Quick Online Reservation',
+        'Instant E-Ticket & Itinerary',
+        'Live Updates & Easy Rebooking',
+      ],
+      heroIcon: Icons.confirmation_number_rounded,
+      floatingBadgeTop: '⚡ Fast Verification',
+      floatingIconTop: Icons.verified_rounded,
+      floatingBadgeBottom: '📱 Digital Boarding Pass',
+      floatingIconBottom: Icons.qr_code_2_rounded,
+      gradientStart: Color(0xFF9D174D),
+      gradientEnd: Color(0xFFE91E63),
+    ),
+    _OnboardingSlideModel(
+      tag: 'EXCLUSIVE REWARDS',
+      tagColor: kGreen,
+      title: 'Vouchers, Promos & Gracia Points',
+      desc:
+          'Unlock exclusive promo fares, apply voucher codes for instant checkout discounts, and earn Gracia Points on every trip to save on future adventures.',
+      chips: [
+        'Redeemable Voucher Codes',
+        'Earn & Spend Gracia Points',
+        'Special Promos & Referral Perks',
+      ],
+      heroIcon: Icons.card_giftcard_rounded,
+      floatingBadgeTop: '🎟️ Promo Vouchers',
+      floatingIconTop: Icons.local_offer_rounded,
+      floatingBadgeBottom: '⭐ Gracia Points Rewards',
+      floatingIconBottom: Icons.stars_rounded,
+      gradientStart: Color(0xFF064E3B),
+      gradientEnd: Color(0xFF059669),
+    ),
   ];
 
   void _finishOnboarding() async {
@@ -1222,100 +1291,481 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.dispose();
   }
 
+  Widget _buildHeroIllustration(_OnboardingSlideModel slide) {
+    return SizedBox(
+      height: 210,
+      width: double.infinity,
+      child: Stack(
+        alignment: Alignment.center,
+        clipBehavior: Clip.none,
+        children: [
+          // Ambient soft glowing background card
+          Container(
+            width: 240,
+            height: 180,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  slide.gradientStart.withOpacity(0.12),
+                  slide.gradientEnd.withOpacity(0.06),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(32),
+              border: Border.all(
+                color: slide.tagColor.withOpacity(0.2),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: slide.tagColor.withOpacity(0.08),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+          ),
+          // Central Hero Icon Orb
+          Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [slide.gradientStart, slide.gradientEnd],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: slide.tagColor.withOpacity(0.35),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Center(
+              child: Icon(
+                slide.heroIcon,
+                size: 50,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          // Floating Top Badge
+          Positioned(
+            top: 6,
+            left: 20,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: slide.tagColor.withOpacity(0.2)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(slide.floatingIconTop, size: 14, color: slide.tagColor),
+                  const SizedBox(width: 6),
+                  Text(
+                    slide.floatingBadgeTop,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.bold,
+                      color: kSlate800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Floating Bottom Badge
+          Positioned(
+            bottom: 6,
+            right: 20,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: slide.tagColor.withOpacity(0.2)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(slide.floatingIconBottom, size: 14, color: kPink),
+                  const SizedBox(width: 6),
+                  Text(
+                    slide.floatingBadgeBottom,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.bold,
+                      color: kSlate800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isLastSlide = _currentPage == _slides.length - 1;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFFAFAFC),
       body: SafeArea(
         child: Column(
           children: [
+            // Top Bar with Logo and Skip button
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: kGreen,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Image.asset(
+                          'assets/icon/amiga_logo_white_outline.png',
+                          height: 22,
+                          width: 22,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'AMIGA GRACIA',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w900,
+                              color: kGreen,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          Text(
+                            'Travel Services',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: kSlate500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  if (!isLastSlide)
+                    TextButton(
+                      onPressed: _finishOnboarding,
+                      style: TextButton.styleFrom(
+                        foregroundColor: kSlate500,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Skip',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          SizedBox(width: 2),
+                          Icon(Icons.chevron_right_rounded, size: 16),
+                        ],
+                      ),
+                    )
+                  else
+                    const SizedBox(width: 48),
+                ],
+              ),
+            ),
+
+            // Slidable PageView
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
                 onPageChanged: (i) => setState(() => _currentPage = i),
                 itemCount: _slides.length,
                 itemBuilder: (context, i) {
-                  return Padding(
-                    padding: const EdgeInsets.all(40),
+                  final slide = _slides[i];
+                  return SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Icon(
-                          i == 0
-                              ? Icons.explore
-                              : i == 1
-                                  ? Icons.payments
-                                  : Icons.local_offer,
-                          size: 100,
-                          color: kGreen,
+                        const SizedBox(height: 12),
+                        _buildHeroIllustration(slide),
+                        const SizedBox(height: 28),
+                        // Category Tag
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: slide.tagColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: slide.tagColor.withOpacity(0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            slide.tag,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: slide.tagColor,
+                              letterSpacing: 1.1,
+                            ),
+                          ),
                         ),
-                        const SizedBox(height: 40),
+                        const SizedBox(height: 14),
+                        // Title
                         Text(
-                          _slides[i]['title']!,
+                          slide.title,
                           textAlign: TextAlign.center,
                           style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w900,
-                              color: kSlate800),
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: kSlate800,
+                            height: 1.25,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        // Description
+                        Text(
+                          slide.desc,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: kSlate600,
+                            height: 1.45,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        // Feature Chips
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          alignment: WrapAlignment.center,
+                          children: slide.chips.map((chipText) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: kSlate200,
+                                  width: 1,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.02),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: slide.tagColor,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    chipText,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: kSlate700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
                         ),
                         const SizedBox(height: 16),
-                        Text(
-                          _slides[i]['desc']!,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                              fontSize: 16, color: kSlate600, height: 1.5),
-                        ),
                       ],
                     ),
                   );
                 },
               ),
             ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(_slides.length, (i) {
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  height: 8,
-                  width: _currentPage == i ? 24 : 8,
-                  decoration: BoxDecoration(
-                      color: _currentPage == i ? kGreen : kSlate200,
-                      borderRadius: BorderRadius.circular(4)),
-                );
-              }),
-            ),
-            const SizedBox(height: 40),
+
+            // Bottom Navigation & Animated Indicator
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: ElevatedButton(
-                  onPressed: () {
-                    if (_currentPage < _slides.length - 1) {
-                      _pageController.nextPage(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut);
-                    } else {
-                      _finishOnboarding();
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: kPink,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16)),
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+              child: Column(
+                children: [
+                  // Animated Page Indicator (Dual tone green/pink gradient pill)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(_slides.length, (i) {
+                      final isActive = _currentPage == i;
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        height: 7,
+                        width: isActive ? 28 : 7,
+                        decoration: BoxDecoration(
+                          gradient: isActive
+                              ? const LinearGradient(
+                                  colors: [kGreen, kPink],
+                                )
+                              : null,
+                          color: isActive ? null : kSlate300,
+                          borderRadius: BorderRadius.circular(4),
+                          boxShadow: isActive
+                              ? [
+                                  BoxShadow(
+                                    color: kGreen.withOpacity(0.3),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ]
+                              : null,
+                        ),
+                      );
+                    }),
                   ),
-                  child: Text(
-                    _currentPage == _slides.length - 1 ? 'Get Started' : 'Next',
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold),
+                  const SizedBox(height: 20),
+                  // Action Buttons (Back + Next/Get Started)
+                  Row(
+                    children: [
+                      if (_currentPage > 0) ...[
+                        InkWell(
+                          onTap: () {
+                            _pageController.previousPage(
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            width: 52,
+                            height: 52,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: kSlate300),
+                            ),
+                            child: const Icon(
+                              Icons.arrow_back_rounded,
+                              color: kSlate700,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                      ],
+                      Expanded(
+                        child: Container(
+                          height: 52,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFE91E63), Color(0xFFD81B60)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: kPink.withOpacity(0.35),
+                                blurRadius: 14,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: ElevatedButton(
+                            onPressed: () {
+                              if (_currentPage < _slides.length - 1) {
+                                _pageController.nextPage(
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeInOut,
+                                );
+                              } else {
+                                _finishOnboarding();
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              foregroundColor: Colors.white,
+                              shadowColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  isLastSlide ? 'Get Started' : 'Next',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Icon(
+                                  isLastSlide
+                                      ? Icons.flight_takeoff_rounded
+                                      : Icons.arrow_forward_rounded,
+                                  size: 18,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
+                ],
               ),
             ),
-            const SizedBox(height: 32),
           ],
         ),
       ),
