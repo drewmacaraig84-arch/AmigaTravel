@@ -41,6 +41,8 @@ class VoucherService
             'discount_type' => $voucher->discount_type,
             'discount_value' => $voucher->discount_value,
             'eligible_scope' => $voucher->eligible_scope,
+            'min_booking_amount' => $voucher->min_booking_amount,
+            'max_discount' => $voucher->max_discount,
             'end_at' => $voucher->end_at?->toIso8601String(),
             'original_subtotal' => $calculation['base_amount'],
             'discount_amount' => $calculation['discount_amount'],

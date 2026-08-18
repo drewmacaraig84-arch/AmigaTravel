@@ -9453,10 +9453,15 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
           setState(() {
             widget.booking.voucherCode = code.trim().toUpperCase();
             widget.booking.voucherData = {
-              'name': d['voucher_name'],
-              'discount_type': d['discount_type'],
+              'id': d['voucher_id'] ?? d['id'],
+              'code': d['voucher_code'] ?? d['code'] ?? code.trim().toUpperCase(),
+              'name': d['voucher_name'] ?? d['name'] ?? 'Discount Coupon',
+              'discount_type': d['discount_type'] ?? 'percentage',
               'discount_value': d['discount_value'],
               'eligible_scope': d['eligible_scope'],
+              'min_booking_amount': d['min_booking_amount'],
+              'max_discount': d['max_discount'],
+              'end_at': d['end_at'],
               'discount_amount': d['discount_amount'],
               'final_total': d['final_total'],
               'original_subtotal': d['original_subtotal'],
@@ -11454,12 +11459,25 @@ class _VoucherPickerScreenState extends State<VoucherPickerScreen> {
       final data = jsonDecode(res.body);
       if (res.statusCode == 200 && data['status'] == 'success') {
         final d = data['data'];
+        dynamic matchedVoucher;
+        try {
+          matchedVoucher = _vouchers.firstWhere(
+            (v) => (v['code']?.toString().toUpperCase() == code.trim().toUpperCase()),
+            orElse: () => null,
+          );
+        } catch (_) {}
+
         widget.booking.voucherCode = code.trim().toUpperCase();
         widget.booking.voucherData = {
-          'name': d['voucher_name'],
-          'discount_type': d['discount_type'],
-          'discount_value': d['discount_value'],
-          'eligible_scope': d['eligible_scope'],
+          'id': d['voucher_id'] ?? d['id'] ?? matchedVoucher?['id'],
+          'code': d['voucher_code'] ?? d['code'] ?? matchedVoucher?['code'] ?? code.trim().toUpperCase(),
+          'name': d['voucher_name'] ?? d['name'] ?? matchedVoucher?['name'] ?? 'Discount Coupon',
+          'discount_type': d['discount_type'] ?? matchedVoucher?['discount_type'] ?? 'percentage',
+          'discount_value': d['discount_value'] ?? matchedVoucher?['discount_value'],
+          'eligible_scope': d['eligible_scope'] ?? matchedVoucher?['eligible_scope'],
+          'min_booking_amount': d['min_booking_amount'] ?? matchedVoucher?['min_booking_amount'],
+          'max_discount': d['max_discount'] ?? matchedVoucher?['max_discount'],
+          'end_at': d['end_at'] ?? matchedVoucher?['end_at'],
           'discount_amount': d['discount_amount'],
           'final_total': d['final_total'],
           'original_subtotal': d['original_subtotal'],
@@ -14827,21 +14845,25 @@ int _getVoucherPercentage(dynamic v) {
 }
 
 String _formatVoucherExpiry(String? dateStr) {
-  if (dateStr == null || dateStr.isEmpty) return 'Expiring: 0 hour left';
+  if (dateStr == null || dateStr.isEmpty || dateStr == 'null') return 'Ongoing Promo';
   try {
-    final dt = DateTime.parse(dateStr);
+    final dt = DateTime.parse(dateStr).toLocal();
     final now = DateTime.now();
-    if (dt.isBefore(now)) return 'Expiring: 0 hour left';
+    if (dt.isBefore(now)) return 'Expired';
     final diff = dt.difference(now);
     final hours = diff.inHours;
-    if (hours < 1) return 'Expiring: 0 hour left';
+    if (hours < 1) {
+      final minutes = diff.inMinutes;
+      if (minutes < 1) return 'Expiring soon';
+      return 'Expiring: $minutes min${minutes == 1 ? '' : 's'} left';
+    }
     if (hours < 24) return 'Expiring: $hours hour${hours == 1 ? '' : 's'} left';
     final days = diff.inDays;
     if (days < 30) return 'Expiring: $days day${days == 1 ? '' : 's'} left';
     final months = (days / 30).floor();
     return 'Expiring: $months month${months == 1 ? '' : 's'} left';
   } catch (_) {
-    return 'Expiring: 0 hour left';
+    return 'Ongoing Promo';
   }
 }
 
@@ -15048,16 +15070,16 @@ class _DiscountCouponCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String discountLabel = _discountLabel();
-    final String expiryLabel =
-        _formatVoucherExpiry(voucher?['end_at']?.toString());
+    final String expiryDateStr = (voucher?['end_at'] ?? voucher?['expires_at'] ?? voucher?['valid_until'])?.toString() ?? '';
+    final String expiryLabel = _formatVoucherExpiry(expiryDateStr.isNotEmpty ? expiryDateStr : null);
     final double? minVal = voucher?['min_booking_amount'] != null
         ? double.tryParse(voucher!['min_booking_amount'].toString())
-        : null;
+        : (voucher?['min_spend'] != null ? double.tryParse(voucher!['min_spend'].toString()) : null);
     final String minSpend =
         minVal != null && minVal > 0 ? '₱${minVal.toStringAsFixed(0)}' : '₱0';
     final double? maxVal = voucher?['max_discount'] != null
         ? double.tryParse(voucher!['max_discount'].toString())
-        : null;
+        : (voucher?['max_discount_amount'] != null ? double.tryParse(voucher!['max_discount_amount'].toString()) : null);
     final String maxOff =
         maxVal != null && maxVal > 0 ? '₱${maxVal.toStringAsFixed(0)}' : '—';
 
