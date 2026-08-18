@@ -77,10 +77,55 @@ class ViewBooking extends ViewRecord
         return new HtmlString('<a href="' . e($url) . '" target="_blank" class="text-blue-600 underline">View Back ID</a>');
     }
 
+    private function renderPriceBreakdownContent(): HtmlString
+    {
+        $breakdown = $this->record->getPriceBreakdown();
+        $total = (float) $this->record->total_price;
+
+        $html = '<div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">';
+        $html .= '<table class="w-full text-sm text-left text-gray-700 dark:text-gray-200">';
+        $html .= '<thead class="text-xs uppercase bg-gray-50 dark:bg-gray-700/50 text-gray-500 border-b border-gray-200 dark:border-gray-700">';
+        $html .= '<tr><th class="py-2.5 px-3">Item / Description</th><th class="py-2.5 px-3 text-right">Amount</th></tr>';
+        $html .= '</thead>';
+        $html .= '<tbody class="divide-y divide-gray-100 dark:divide-gray-700/50">';
+
+        foreach ($breakdown as $item) {
+            $label = htmlspecialchars($item['label'] ?? '');
+            $amount = (float) ($item['amount'] ?? 0);
+            $isDiscount = $amount < 0;
+            $class = $isDiscount ? 'text-green-600 font-medium' : '';
+            $displayAmount = ($isDiscount ? '-₱' : '₱') . number_format(abs($amount), 2);
+
+            $html .= '<tr class="hover:bg-gray-50/50 dark:hover:bg-gray-700/20">';
+            $html .= '<td class="py-2 px-3">' . $label . '</td>';
+            $html .= '<td class="py-2 px-3 text-right font-medium ' . $class . '">' . $displayAmount . '</td>';
+            $html .= '</tr>';
+        }
+
+        $html .= '</tbody>';
+        $html .= '<tfoot class="border-t-2 border-gray-300 dark:border-gray-600 font-bold">';
+        $html .= '<tr>';
+        $html .= '<td class="py-3 px-3 text-base text-gray-900 dark:text-white">Grand Total</td>';
+        $html .= '<td class="py-3 px-3 text-right text-base text-primary-600 dark:text-primary-400">₱' . number_format($total, 2) . '</td>';
+        $html .= '</tr>';
+        $html .= '</tfoot>';
+        $html .= '</table>';
+        $html .= '</div>';
+
+        return new HtmlString($html);
+    }
+
     public function form(Form $form): Form
     {
         return $form
             ->schema([
+                Section::make('Price Breakdown')
+                    ->schema([
+                        Placeholder::make('price_breakdown')
+                            ->label('')
+                            ->content(fn (): HtmlString => $this->renderPriceBreakdownContent())
+                            ->columnSpanFull(),
+                    ]),
                 Section::make('Booking details')
                     ->schema([
                         TextInput::make('transaction_number')

@@ -24,6 +24,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\HtmlString;
 use Throwable;
 
 class TransactionResource extends Resource
@@ -198,6 +199,55 @@ class TransactionResource extends Resource
                             ->money('PHP'),
                     ])
                     ->columns(3),
+
+                Section::make('Price Breakdown')
+                    ->schema([
+                        TextEntry::make('price_breakdown_table')
+                            ->label('')
+                            ->html()
+                            ->state(function (Transaction $record): HtmlString {
+                                $booking = $record->booking;
+                                if (! $booking) {
+                                    return new HtmlString('<span class="text-gray-500">No booking linked.</span>');
+                                }
+
+                                $breakdown = $booking->getPriceBreakdown();
+                                $total = (float) $booking->total_price;
+
+                                $html = '<div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">';
+                                $html .= '<table class="w-full text-sm text-left text-gray-700 dark:text-gray-200">';
+                                $html .= '<thead class="text-xs uppercase bg-gray-50 dark:bg-gray-700/50 text-gray-500 border-b border-gray-200 dark:border-gray-700">';
+                                $html .= '<tr><th class="py-2.5 px-3">Item / Description</th><th class="py-2.5 px-3 text-right">Amount</th></tr>';
+                                $html .= '</thead>';
+                                $html .= '<tbody class="divide-y divide-gray-100 dark:divide-gray-700/50">';
+
+                                foreach ($breakdown as $item) {
+                                    $label = htmlspecialchars($item['label'] ?? '');
+                                    $amount = (float) ($item['amount'] ?? 0);
+                                    $isDiscount = $amount < 0;
+                                    $class = $isDiscount ? 'text-green-600 font-medium' : '';
+                                    $displayAmount = ($isDiscount ? '-₱' : '₱') . number_format(abs($amount), 2);
+
+                                    $html .= '<tr class="hover:bg-gray-50/50 dark:hover:bg-gray-700/20">';
+                                    $html .= '<td class="py-2 px-3">' . $label . '</td>';
+                                    $html .= '<td class="py-2 px-3 text-right font-medium ' . $class . '">' . $displayAmount . '</td>';
+                                    $html .= '</tr>';
+                                }
+
+                                $html .= '</tbody>';
+                                $html .= '<tfoot class="border-t-2 border-gray-300 dark:border-gray-600 font-bold">';
+                                $html .= '<tr>';
+                                $html .= '<td class="py-3 px-3 text-base text-gray-900 dark:text-white">Grand Total</td>';
+                                $html .= '<td class="py-3 px-3 text-right text-base text-primary-600 dark:text-primary-400">₱' . number_format($total, 2) . '</td>';
+                                $html .= '</tr>';
+                                $html .= '</tfoot>';
+                                $html .= '</table>';
+                                $html .= '</div>';
+
+                                return new HtmlString($html);
+                            })
+                            ->columnSpanFull(),
+                    ]),
 
                 Section::make('Passengers')
                     ->schema([
