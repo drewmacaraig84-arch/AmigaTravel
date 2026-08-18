@@ -340,17 +340,20 @@ Route::get('/ticket/admin-pdf/{transaction_number}', function ($transaction_numb
             );
         }
 
+        $cleanPdfPath = ltrim($pdfPath, '/\\');
+        $baseName = basename($pdfPath);
+
         $candidates = [
             $pdfPath,
-            storage_path('app/public/' . $pdfPath),
-            storage_path('app/' . $pdfPath),
-            public_path('storage/' . $pdfPath),
-            storage_path('app/public/tickets/' . basename($pdfPath)),
-            storage_path('app/tickets/' . basename($pdfPath)),
-            public_path('tickets/' . basename($pdfPath)),
-            storage_path('app/public/receipts/' . basename($pdfPath)),
-            storage_path('app/receipts/' . basename($pdfPath)),
-            public_path('receipts/' . basename($pdfPath)),
+            storage_path('app/public/' . $cleanPdfPath),
+            storage_path('app/' . $cleanPdfPath),
+            public_path('storage/' . $cleanPdfPath),
+            storage_path('app/public/tickets/' . $baseName),
+            storage_path('app/tickets/' . $baseName),
+            public_path('tickets/' . $baseName),
+            storage_path('app/public/receipts/' . $baseName),
+            storage_path('app/receipts/' . $baseName),
+            public_path('receipts/' . $baseName),
         ];
 
         foreach ($candidates as $candidate) {
