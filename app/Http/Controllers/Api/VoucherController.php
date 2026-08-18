@@ -55,23 +55,13 @@ class VoucherController extends Controller
                         $q->orWhere('normalized_email', strtolower(trim($email)));
                     }
                 })
-                ->whereHas('booking', function ($q) {
-                    $q->whereNotIn('status', ['cancelled', 'operator_cancelled'])
-                      ->where(function ($sub) {
-                          $sub->where('status', 'confirmed')
-                              ->orWhereHas('transaction', function ($t) {
-                                  $t->where('payment_status', 'paid')
-                                    ->orWhere('payment_deadline_at', '>=', now());
-                              });
-                      });
-                })
                 ->pluck('voucher_id')
                 ->toArray();
         }
 
         $vouchers = $vouchersQuery->orderBy('created_at', 'desc')->get();
 
-        // Filter out vouchers that have reached their total_usage_limit OR already redeemed by user
+        // Filter out vouchers that have reached their total_usage_limit OR already redeemed by user (even if cancelled)
         $vouchers = $vouchers->filter(function ($voucher) use ($userRedeemedVoucherIds) {
             if (in_array($voucher->id, $userRedeemedVoucherIds)) {
                 return false;

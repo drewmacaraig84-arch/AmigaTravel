@@ -89,16 +89,6 @@ class VoucherService
                         if (!empty($userId)) {
                             $q->orWhere('user_id', $userId);
                         }
-                    })
-                    ->whereHas('booking', function ($q) {
-                        $q->whereNotIn('status', ['cancelled', 'operator_cancelled'])
-                          ->where(function ($sub) {
-                              $sub->where('status', 'confirmed')
-                                  ->orWhereHas('transaction', function ($t) {
-                                      $t->where('payment_status', 'paid')
-                                        ->orWhere('payment_deadline_at', '>=', now());
-                                  });
-                          });
                     });
                 
                 if ($query->exists()) {
@@ -266,16 +256,6 @@ class VoucherService
                             if (!empty($userId)) {
                                 $q->orWhere('user_id', $userId);
                             }
-                        })
-                        ->whereHas('booking', function ($q) {
-                            $q->whereNotIn('status', ['cancelled', 'operator_cancelled'])
-                              ->where(function ($sub) {
-                                  $sub->where('status', 'confirmed')
-                                      ->orWhereHas('transaction', function ($t) {
-                                          $t->where('payment_status', 'paid')
-                                            ->orWhere('payment_deadline_at', '>=', now());
-                                      });
-                              });
                         });
                     
                     if ($query->exists()) {
