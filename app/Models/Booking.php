@@ -695,15 +695,10 @@ class Booking extends Model
         $retTicketTotal = 0;
         $retAccTotal = 0;
 
-        // Use the is_return pivot flag to unambiguously split TC charges.
-        // Falls back to index-based split for legacy rows that pre-date the migration
-        // (i.e. rows where both have is_return = false).
         $allTcs = $this->transportClasses;
         $depTcs = $allTcs->filter(fn ($tc) => ! (bool) $tc->pivot->is_return);
         $retTcs = $allTcs->filter(fn ($tc) => (bool) $tc->pivot->is_return);
 
-        // Legacy fallback: if no rows have is_return = true but we have 2+ rows,
-        // the second entry is the return TC (old index-based behaviour).
         if ($retTcs->isEmpty() && $depTcs->count() >= 2) {
             $depTcsArr = $depTcs->values();
             $depTcs = collect([$depTcsArr[0]]);
@@ -712,42 +707,37 @@ class Booking extends Model
 
         $depTcPrice = $depTcs->sum(fn ($tc) => (float) $tc->pivot->price);
         $retTcPrice = $retTcs->sum(fn ($tc) => (float) $tc->pivot->price);
-        
-        $payingPaxCount = 0;
-        
+
         foreach ($passengers as $p) {
-            // Drivers travel free
             if ($this->has_vehicle && $p->type === 'driver') {
                 continue;
             }
-            
-            $payingPaxCount++;
-            
+
             if ($p->is_promo) {
                 $depTicketTotal += (float) $p->promo_price;
             } else {
                 $pDepTicket = (float) ($this->schedule_price ?? 0);
-                $pDepAcc = (float) ($this->schedule_accommodation_price ?? 0);
-                $pDepTc = $depTcPrice;
-                
+                $pDepAcc    = (float) ($this->schedule_accommodation_price ?? 0);
+                $pDepTc     = $depTcPrice;
+
                 $pRetTicket = (float) ($this->return_schedule_price ?? 0);
-                $pRetAcc = (float) ($this->return_schedule_accommodation_price ?? 0);
-                $pRetTc = $retTcPrice;
-                
+                $pRetAcc    = (float) ($this->return_schedule_accommodation_price ?? 0);
+                $pRetTc     = $retTcPrice;
+
                 if ($p->discount) {
                     $multiplier = 1 - ((float) $p->discount->percentage / 100);
                     $pDepTicket *= $multiplier;
-                    $pDepAcc *= $multiplier;
-                    $pDepTc *= $multiplier;
+                    $pDepAcc    *= $multiplier;
+                    $pDepTc     *= $multiplier;
                     $pRetTicket *= $multiplier;
-                    $pRetAcc *= $multiplier;
-                    $pRetTc *= $multiplier;
+                    $pRetAcc    *= $multiplier;
+                    $pRetTc     *= $multiplier;
                 }
-                
+
                 $depTicketTotal += $pDepTicket + $pDepTc;
-                $depAccTotal += $pDepAcc;
+                $depAccTotal    += $pDepAcc;
                 $retTicketTotal += $pRetTicket + $pRetTc;
-                $retAccTotal += $pRetAcc;
+                $retAccTotal    += $pRetAcc;
             }
         }
         
