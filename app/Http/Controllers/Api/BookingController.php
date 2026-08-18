@@ -215,10 +215,13 @@ class BookingController extends Controller
         $isAuthenticated = auth('sanctum')->check() || auth('api')->check();
         if (auth('sanctum')->check()) {
             $userEmail = auth('sanctum')->user()->email;
+            $userId = auth('sanctum')->id();
         } elseif (auth('api')->check()) {
             $userEmail = auth('api')->user()->email;
+            $userId = auth('api')->id();
         } else {
             $userEmail = null;
+            $userId = null;
         }
         $email = $isAuthenticated ? $userEmail : $request->input('email');
 
@@ -226,17 +229,21 @@ class BookingController extends Controller
             $email = Cache::get('booking_lookup_token:' . hash('sha256', $request->input('lookup_token')));
         }
 
-        if (!$email) {
-            return response()->json(['status' => 'error', 'message' => 'Email verification required.'], 401);
-        }
-
         $booking = Booking::where('transaction_number', $transaction_number)
-            ->where('client_email', strtolower($email))
             ->with(['passengers.discount', 'schedule.route', 'returnSchedule', 'transaction', 'accommodations', 'transportClasses', 'accommodations.transportClass'])
             ->first();
 
         if (!$booking) {
             return response()->json(['status' => 'error', 'message' => 'Booking not found.'], 404);
+        }
+
+        // If email was provided, verify ownership
+        if (!empty($email)) {
+            $matchesEmail = strtolower($booking->client_email) === strtolower($email);
+            $matchesUser = $userId && $booking->user_id === $userId;
+            if (!$matchesEmail && !$matchesUser) {
+                return response()->json(['status' => 'error', 'message' => 'Unauthorized to view this booking.'], 403);
+            }
         }
 
         // Apply same formatting as index

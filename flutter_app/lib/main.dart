@@ -662,40 +662,63 @@ List<dynamic> parseAndFilterSchedules(dynamic raw, [String? selectedDate]) {
   }).toList();
 }
 
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 Map<String, dynamic>? pendingNotificationData;
 
 Future<void> handleNotificationTap(Map<String, dynamic> data) async {
-  final String type = data['type'] ?? 'general';
-  final String targetId = data['target_id']?.toString() ??
-      data['transaction_number']?.toString() ??
-      '';
+  final String type = (data['type'] ?? 'general').toString().toLowerCase();
+  final String targetId = (data['target_id'] ?? data['transaction_number'] ?? '').toString().trim();
 
-  // Check if we have a context
   final context = navigatorKey.currentContext;
   if (context == null) {
     pendingNotificationData = data;
     return;
   }
 
-  if (type == 'booking' || type == 'payment' || type == 'service_cancellation') {
+  // Pop modal dialogs / child screens if any so we start from a clean state
+  navigatorKey.currentState?.popUntil((route) => route.isFirst);
+
+  if (type == 'booking' ||
+      type == 'payment' ||
+      type == 'service_cancellation' ||
+      type == 'cancellation' ||
+      type == 'refund' ||
+      targetId.toUpperCase().startsWith('AGT-')) {
+    // 1. Immediately switch tab to Activity / My Booking (Tab 4)
+    _MainScreenState.activeInstance?.switchTab(4);
+
     if (targetId.isNotEmpty) {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) =>
+        builder: (ctx) =>
             const Center(child: CircularProgressIndicator(color: kGreen)),
       );
 
       try {
-        final response = await http.get(
-          Uri.parse('${UserSession.getBaseUrl()}/api/bookings/$targetId'),
-          headers: {
-            'Authorization': 'Bearer ${UserSession.token}',
-            'Accept': 'application/json',
-          },
-        );
+        final queryParams = <String, String>{};
+        if (UserSession.email.isNotEmpty) {
+          queryParams['email'] = UserSession.email;
+        }
+        if (UserSession.lookupToken.isNotEmpty) {
+          queryParams['lookup_token'] = UserSession.lookupToken;
+        }
 
-        Navigator.pop(context); // hide loading
+        final uri = Uri.parse('${UserSession.getBaseUrl()}/api/bookings/$targetId')
+            .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+
+        final headers = <String, String>{
+          'Accept': 'application/json',
+        };
+        if (UserSession.token.isNotEmpty) {
+          headers['Authorization'] = 'Bearer ${UserSession.token}';
+        }
+
+        final response = await http.get(uri, headers: headers);
+
+        // Hide loading
+        Navigator.of(context, rootNavigator: true).pop();
 
         if (response.statusCode == 200) {
           final resData = jsonDecode(response.body);
@@ -709,46 +732,55 @@ Future<void> handleNotificationTap(Map<String, dynamic> data) async {
             );
           } else {
             showTopSnack(context,
-                const SnackBar(content: Text('Booking details not found.')));
+                const SnackBar(content: Text('Booking details opened in My Bookings.')));
           }
         } else {
           showTopSnack(context,
-              const SnackBar(content: Text('Failed to load booking details.')));
+              const SnackBar(content: Text('Opened My Bookings.')));
         }
       } catch (e) {
-        Navigator.pop(context);
-        showTopSnack(context, SnackBar(content: Text('Error: $e')));
+        Navigator.of(context, rootNavigator: true).pop();
+        showTopSnack(context, const SnackBar(content: Text('Opened My Bookings.')));
       }
     }
-  } else if (type == 'promo') {
-    Navigator.popUntil(context, (route) => route.isFirst);
-    final mainState = context.findAncestorStateOfType<_MainScreenState>();
-    mainState?.switchTab(1);
-  } else if (type == 'voucher') {
-    Navigator.popUntil(context, (route) => route.isFirst);
-    final mainState = context.findAncestorStateOfType<_MainScreenState>();
-    mainState?.switchTab(3);
-  } else if (type == 'referral') {
+  } else if (type == 'voucher' || type == 'vouchers') {
+    _MainScreenState.activeInstance?.switchTab(3);
+  } else if (type == 'promo' || type == 'promotion' || type == 'schedule' || type == 'schedules') {
+    _MainScreenState.activeInstance?.switchTab(1);
+  } else if (type == 'travel' || type == 'booking_start' || type == 'book_ferry' || type == 'book_airline') {
+    _MainScreenState.activeInstance?.switchTab(2);
+  } else if (type == 'points' || type == 'gracia_points') {
+    Navigator.push(
+        context, MaterialPageRoute(builder: (_) => const GraciaPointsScreen()));
+  } else if (type == 'referral' || type == 'profile') {
     Navigator.push(
         context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
   } else if (type == 'announcement') {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(data['title'] ?? 'Announcement'),
-        content: Text(data['body'] ?? ''),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.campaign_rounded, color: kPink, size: 24),
+            const SizedBox(width: 8),
+            Expanded(child: Text(data['title'] ?? 'Announcement', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+          ],
+        ),
+        content: Text(data['body'] ?? data['message'] ?? '', style: const TextStyle(fontSize: 14, height: 1.4)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Close', style: TextStyle(color: kGreen)),
+            child: const Text('Close', style: TextStyle(color: kGreen, fontWeight: FontWeight.bold)),
           )
         ],
       ),
     );
+  } else {
+    Navigator.push(
+        context, MaterialPageRoute(builder: (_) => const NotificationsScreen()));
   }
 }
-
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 class GlobalUpdateWrapper extends StatefulWidget {
   final Widget child;
@@ -1303,6 +1335,7 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
+  static _MainScreenState? activeInstance;
   late int _selectedIndex;
   String? _travelMode;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -1314,6 +1347,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
+    activeInstance = this;
     _selectedIndex = widget.initialTab;
     _fetchGlobalData();
     NotificationService.requestPermission();
@@ -1342,6 +1376,7 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   void dispose() {
+    if (activeInstance == this) activeInstance = null;
     _eventSub?.cancel();
     _notificationPollTimer?.cancel();
     super.dispose();
@@ -2056,7 +2091,7 @@ class _HomeScreenState extends State<HomeScreen>
                 Expanded(
                   child: _ModernBookCard(
                     label: 'Book Ferry',
-                    subtitle: 'Starlite · 2GO · FastCat',
+                    subtitle: 'Starlite · 2GO',
                     icon: Icons.directions_boat_rounded,
                     gradient: const LinearGradient(
                       colors: [kGreen, Color(0xFF1B5E20)],
@@ -13165,42 +13200,58 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   void _handleNotificationTap(Map<String, dynamic> notif) async {
-    final String type = notif['type'] ?? 'general';
-    final String targetId = notif['target_id']?.toString() ?? '';
+    final String type = (notif['type'] ?? 'general').toString().toLowerCase();
+    final String targetId = (notif['target_id'] ?? notif['transaction_number'] ?? '').toString().trim();
 
     // Mark as read immediately when tapped
     if (notif['is_read'] != true && notif['is_read'] != 1) {
       _markAsRead(notif['id']);
     }
 
-    if (type == 'booking' || type == 'payment' || type == 'service_cancellation') {
+    if (type == 'booking' ||
+        type == 'payment' ||
+        type == 'service_cancellation' ||
+        type == 'cancellation' ||
+        type == 'refund' ||
+        targetId.toUpperCase().startsWith('AGT-')) {
       if (targetId.isNotEmpty) {
         _fetchBookingAndNavigate(targetId);
+      } else {
+        Navigator.popUntil(context, (route) => route.isFirst);
+        _MainScreenState.activeInstance?.switchTab(4);
       }
-    } else if (type == 'promo') {
-      // Navigate to Schedules tab (Tab 1)
+    } else if (type == 'promo' || type == 'promotion' || type == 'schedule' || type == 'schedules') {
       Navigator.popUntil(context, (route) => route.isFirst);
-      final mainState = context.findAncestorStateOfType<_MainScreenState>();
-      mainState?.switchTab(1);
-    } else if (type == 'voucher') {
-      // Navigate to Vouchers tab (Tab 3)
+      _MainScreenState.activeInstance?.switchTab(1);
+    } else if (type == 'voucher' || type == 'vouchers') {
       Navigator.popUntil(context, (route) => route.isFirst);
-      final mainState = context.findAncestorStateOfType<_MainScreenState>();
-      mainState?.switchTab(3);
-    } else if (type == 'referral') {
-      // Navigate to ProfileScreen for referrals
+      _MainScreenState.activeInstance?.switchTab(3);
+    } else if (type == 'travel' || type == 'booking_start' || type == 'book_ferry' || type == 'book_airline') {
+      Navigator.popUntil(context, (route) => route.isFirst);
+      _MainScreenState.activeInstance?.switchTab(2);
+    } else if (type == 'points' || type == 'gracia_points') {
+      Navigator.push(
+          context, MaterialPageRoute(builder: (_) => const GraciaPointsScreen()));
+    } else if (type == 'referral' || type == 'profile') {
       Navigator.push(
           context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
     } else if (type == 'announcement') {
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: Text(notif['title'] ?? 'Announcement'),
-          content: Text(notif['body'] ?? ''),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              const Icon(Icons.campaign_rounded, color: kPink, size: 24),
+              const SizedBox(width: 8),
+              Expanded(child: Text(notif['title'] ?? 'Announcement', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+            ],
+          ),
+          content: Text(notif['body'] ?? notif['message'] ?? '', style: const TextStyle(fontSize: 14, height: 1.4)),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Close', style: TextStyle(color: kGreen)),
+              child: const Text('Close', style: TextStyle(color: kGreen, fontWeight: FontWeight.bold)),
             )
           ],
         ),
@@ -13217,17 +13268,29 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
 
     try {
-      final response = await http.get(
-        Uri.parse(
-            '${UserSession.getBaseUrl()}/api/bookings/$transactionNumber'),
-        headers: {
-          'Authorization': 'Bearer ${UserSession.token}',
-          'Accept': 'application/json',
-        },
-      );
+      final queryParams = <String, String>{};
+      if (UserSession.email.isNotEmpty) {
+        queryParams['email'] = UserSession.email;
+      }
+      if (UserSession.lookupToken.isNotEmpty) {
+        queryParams['lookup_token'] = UserSession.lookupToken;
+      }
+
+      final uri = Uri.parse(
+              '${UserSession.getBaseUrl()}/api/bookings/$transactionNumber')
+          .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+
+      final headers = <String, String>{
+        'Accept': 'application/json',
+      };
+      if (UserSession.token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer ${UserSession.token}';
+      }
+
+      final response = await http.get(uri, headers: headers);
 
       if (!mounted) return;
-      Navigator.pop(context); // hide loading
+      Navigator.of(context, rootNavigator: true).pop(); // hide loading
 
       if (response.statusCode == 200) {
         final resData = jsonDecode(response.body);
@@ -13239,17 +13302,23 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ),
           );
         } else {
+          _MainScreenState.activeInstance?.switchTab(4);
+          Navigator.popUntil(context, (route) => route.isFirst);
           showTopSnack(context,
-              const SnackBar(content: Text('Booking details not found.')));
+              const SnackBar(content: Text('Booking details opened in My Bookings.')));
         }
       } else {
+        _MainScreenState.activeInstance?.switchTab(4);
+        Navigator.popUntil(context, (route) => route.isFirst);
         showTopSnack(context,
-            const SnackBar(content: Text('Failed to load booking details.')));
+            const SnackBar(content: Text('Opened My Bookings.')));
       }
     } catch (e) {
       if (!mounted) return;
-      Navigator.pop(context);
-      showTopSnack(context, SnackBar(content: Text('Error: $e')));
+      Navigator.of(context, rootNavigator: true).pop();
+      _MainScreenState.activeInstance?.switchTab(4);
+      Navigator.popUntil(context, (route) => route.isFirst);
+      showTopSnack(context, const SnackBar(content: Text('Opened My Bookings.')));
     }
   }
 
