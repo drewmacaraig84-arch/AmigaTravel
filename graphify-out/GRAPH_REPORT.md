@@ -1,7 +1,7 @@
 # Graph Report - AmigaTravel  (2026-08-18)
 
 ## Corpus Check
-- 665 files · ~2,383,273 words
+- 665 files · ~2,383,466 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `580fb852`
+- Built from commit: `4e8bfb4e`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -323,36 +323,36 @@
 ## Communities (553 total, 42 thin omitted)
 
 ### Community 0 - "BookingForm"
-Cohesion: 0.04
-Nodes (4): BookingForm, BelongsTo, TourDate, Validator
+Cohesion: 0.03
+Nodes (6): BookingForm, PaymentSetting, self, BelongsTo, TourDate, Validator
 
 ### Community 1 - ".saveDraft"
 Cohesion: 0.00
-Nodes (443): $3$crossAxisPosition$mainAxisPosition(), a03(), a0a(), a0d(), a0O(), a0q(), a0S(), a10() (+435 more)
+Nodes (459): $3$crossAxisPosition$mainAxisPosition(), a03(), a0a(), a0O(), a0S(), a10(), a12(), a1i() (+451 more)
 
 ### Community 2 - ".mount"
 Cohesion: 0.02
-Nodes (483): $2$from$to(), $2$priority$scheduler(), $4(), a0(), a13(), a1V(), a2(), a2A() (+475 more)
+Nodes (486): $2$from$to(), $2$priority$scheduler(), $4(), a0(), a13(), a1V(), a2(), a2A() (+478 more)
 
 ### Community 3 - ".processBookingInternal"
-Cohesion: 0.02
-Nodes (125): a08(), a15(), a1z(), a2q(), A3(), a32(), a3L(), a4R() (+117 more)
+Cohesion: 0.03
+Nodes (77): a08(), a15(), a2q(), A3(), a32(), a3L(), a5g(), a70() (+69 more)
 
 ### Community 4 - "manage-website-settings.blade.php"
 Cohesion: 0.14
 Nodes (13): addFaq, addQuickFact, addSocialLink, closePanel, removeFaq({{ $fi }}), removeHeroImage({{ (int)$idx }}), removeQuickFact({{ $fi }}), removeSocialLink({{ $li }}) (+5 more)
 
 ### Community 5 - ".updateAvailableScheduleDates"
-Cohesion: 0.03
-Nodes (28): CreateBookingAction, Table, Accommodation, BelongsToMany, BelongsTo, Builder, HasMany, PromotionalTicket (+20 more)
+Cohesion: 0.05
+Nodes (13): BelongsTo, Builder, HasMany, PromotionalTicket, BelongsTo, BelongsToMany, Builder, HasMany (+5 more)
 
 ### Community 6 - ".updateBaggagePriceFromRates"
-Cohesion: 0.11
-Nodes (23): a(), a(), a(), a(), a(), At(), beforeDraw(), dataset() (+15 more)
+Cohesion: 0.09
+Nodes (26): a(), a(), a(), a(), a(), At(), beforeDraw(), dataset() (+18 more)
 
 ### Community 7 - ".getActivePromoTicket"
-Cohesion: 0.13
-Nodes (21): a07(), a4k(), a54(), aAv(), aH1(), aus(), ga5v(), ga5x() (+13 more)
+Cohesion: 0.09
+Nodes (30): a07(), a4k(), a54(), aaF(), aAv(), aBA(), aH1(), alY() (+22 more)
 
 ### Community 8 - "booking-form.blade.php"
 Cohesion: 0.40
@@ -363,12 +363,12 @@ Cohesion: 0.03
 Nodes (38): BookingController, Request, NotifyAffectedBookerJob, SendBookingConfirmationJob, BookingCancellation, self, BookingConfirmation, BookingCreated (+30 more)
 
 ### Community 10 - "download.blade.php"
-Cohesion: 0.05
-Nodes (20): Form, ViewBooking, Form, Table, TransportClassResource, Passenger, BelongsTo, normalize_operator_name() (+12 more)
+Cohesion: 0.06
+Nodes (19): Form, ViewBooking, Form, Table, Passenger, BelongsTo, normalize_operator_name(), operator_is_ferry() (+11 more)
 
 ### Community 12 - "schedules.blade.php"
 Cohesion: 0.02
-Nodes (237): a04(), a1J(), a1p(), a2r(), a2s(), a4B(), a4C(), a4d() (+229 more)
+Nodes (222): a0j(), a1J(), a1p(), a2r(), a2s(), a4B(), a4C(), a4d() (+214 more)
 
 ### Community 14 - "main.dart"
 Cohesion: 0.00
@@ -376,15 +376,15 @@ Nodes (546): bool get, dart:async, dart:io, DateTime?, double?, double get, 30, 
 
 ### Community 15 - "chart.js"
 Cohesion: 0.01
-Nodes (121): addControllers(), addEventListener(), addPlugins(), addScales(), afterDraw(), beforeDatasetDraw(), beforeDatasetsDraw(), bh() (+113 more)
+Nodes (126): acquireContext(), addControllers(), addEventListener(), addPlugins(), addScales(), afterDraw(), Ag(), beforeDatasetDraw() (+118 more)
 
 ### Community 16 - "static"
 Cohesion: 0.01
-Nodes (65): AccommodationResource, Form, Table, AirlineBaggageRuleResource, Form, Table, ApkUserResource, Builder (+57 more)
+Nodes (73): AccommodationResource, Form, Table, AirlineBaggageRuleResource, Form, Table, ApkUserResource, Builder (+65 more)
 
 ### Community 17 - "rich-editor.js"
 Cohesion: 0.01
-Nodes (132): activateAttributeIfSupported(), appendStringToTextAtIndex(), applyBlockAttribute(), attachmentDidChangeAttributes(), attachmentDidChangeUploadProgress(), attachmentIsManaged(), attributeChangedCallback(), canRedo() (+124 more)
+Nodes (143): activateAttributeIfSupported(), appendStringToTextAtIndex(), applyBlockAttribute(), attachmentDidChangeAttributes(), attachmentDidChangeUploadProgress(), attachmentIsManaged(), attributeChangedCallback(), canRedo() (+135 more)
 
 ### Community 18 - "markdown-editor.js"
 Cohesion: 0.03
@@ -392,7 +392,7 @@ Nodes (239): _a(), Aa(), ad(), Ae(), af(), ai(), al(), An() (+231 more)
 
 ### Community 19 - "chart.js"
 Cohesion: 0.02
-Nodes (111): So(), aa(), active(), addControllers(), addPlugins(), addScales(), an(), _animateOptions() (+103 more)
+Nodes (104): aa(), active(), addControllers(), addPlugins(), addScales(), an(), _animateOptions(), aspectRatio() (+96 more)
 
 ### Community 20 - "Booking"
 Cohesion: 0.22
@@ -400,11 +400,11 @@ Nodes (18): clamp(), computeCoordsFromPlacement(), convertValueToCoords(), evalu
 
 ### Community 21 - "livewire.js"
 Cohesion: 0.02
-Nodes (111): addAssetsToHeadTagOfPage(), addCall(), addDebounceOrThrottle(), addResolver(), _arrayLikeToArray(), _arrayWithoutHoles(), attributeShouldntBePreservedIfFalsy(), bind() (+103 more)
+Nodes (121): addAssetsToHeadTagOfPage(), addCall(), addResolver(), _arrayLikeToArray(), _arrayWithoutHoles(), attributeShouldntBePreservedIfFalsy(), bind(), bindAttribute() (+113 more)
 
 ### Community 22 - "User.php"
 Cohesion: 0.03
-Nodes (42): Action, AdminNotifications, ManagePaymentSettings, Form, ManageRebookings, ManageTransportAccommodation, ViewApkUser, ViewInquiry (+34 more)
+Nodes (43): Action, AdminNotifications, ManagePaymentSettings, Form, ManageRebookings, Table, ManageTransportAccommodation, ViewApkUser (+35 more)
 
 ### Community 23 - "draw"
 Cohesion: 0.05
@@ -412,11 +412,11 @@ Nodes (93): ad(), adjustHitBoxes(), ae(), af(), C(), calculateLabelRotation(), _
 
 ### Community 24 - "b"
 Cohesion: 0.00
-Nodes (336): $2$priority$scheduler(), a0k(), a0O(), a0S(), a0t(), a0U(), a14(), a1B() (+328 more)
+Nodes (315): a02(), a0k(), a0O(), a0S(), a0t(), a0U(), a0W(), a14() (+307 more)
 
 ### Community 25 - "livewire.min.js"
 Cohesion: 0.02
-Nodes (77): Ac(), addResolver(), af(), appendChild(), bl(), ["@blur"](), bt(), cf() (+69 more)
+Nodes (78): Ac(), af(), appendChild(), applyUpdates(), bl(), ["@blur"](), bt(), cf() (+70 more)
 
 ### Community 26 - "k"
 Cohesion: 0.06
@@ -428,51 +428,51 @@ Nodes (70): [g](), [x](), l(), $c(), D(), E(), Ea(), g() (+62 more)
 
 ### Community 28 - "locationFromPosition"
 Cohesion: 0.04
-Nodes (104): addAttribute(), addAttributeAtRange(), addAttributesAtRange(), addHTMLAttribute(), appendText(), applyBlockAttributeAtRange(), box(), canBeGroupedWith() (+96 more)
+Nodes (103): addAttribute(), addAttributeAtRange(), addAttributesAtRange(), addHTMLAttribute(), appendText(), applyBlockAttributeAtRange(), box(), breakFormattedBlock() (+95 more)
 
 ### Community 29 - "_update"
-Cohesion: 0.05
-Nodes (79): addBox(), afterBuildTicks(), afterCalculateLabelRotation(), afterDataLimits(), afterFit(), afterSetDimensions(), afterTickToLabelConversion(), afterUpdate() (+71 more)
+Cohesion: 0.03
+Nodes (116): addBox(), afterBuildTicks(), afterCalculateLabelRotation(), afterDataLimits(), afterDatasetsUpdate(), afterFit(), afterSetDimensions(), afterTickToLabelConversion() (+108 more)
 
 ### Community 30 - "fromObject"
 Cohesion: 0.04
-Nodes (76): abutsStart(), after(), Ag(), before(), daysInMonth(), Di(), difference(), divideEqually() (+68 more)
+Nodes (82): abutsStart(), after(), before(), daysInMonth(), Di(), difference(), divideEqually(), em() (+74 more)
 
 ### Community 31 - "constructor"
-Cohesion: 0.03
-Nodes (86): ar(), Bl(), cf(), chartOptionScopes(), clone(), constructor(), create(), describe() (+78 more)
+Cohesion: 0.04
+Nodes (82): Ac(), Bl(), cf(), chartOptionScopes(), clone(), constructor(), create(), describe() (+74 more)
 
 ### Community 32 - "d"
-Cohesion: 0.01
-Nodes (248): $1$1(), $2(), $5(), a12(), a14(), a1D(), a1f(), a1m() (+240 more)
+Cohesion: 0.02
+Nodes (169): $1$1(), a0d(), a0q(), a1m(), a1N(), a4C(), a4R(), a6Z() (+161 more)
 
 ### Community 33 - "Schedule"
-Cohesion: 0.03
-Nodes (112): a1T(), a2t(), a36(), a4a(), a4u(), a5t(), a5W(), a7D() (+104 more)
+Cohesion: 0.02
+Nodes (161): a1T(), a21(), a2t(), a36(), a4a(), a4d(), a5t(), a7D() (+153 more)
 
 ### Community 34 - "H"
-Cohesion: 0.01
-Nodes (189): $1$1(), $3(), $5(), a13(), a41(), a4u(), a4z(), a5g() (+181 more)
+Cohesion: 0.02
+Nodes (140): $1$1(), a2d(), a4u(), a5h(), a5U(), a6Q(), a73(), a8p() (+132 more)
 
 ### Community 35 - "TransportClass"
-Cohesion: 0.04
-Nodes (71): a0l(), a1k(), a2j(), a4H(), a64(), a6P(), a9Y(), a_7() (+63 more)
+Cohesion: 0.03
+Nodes (99): $1(), a0l(), a3m(), a3r(), a42(), a4H(), a4n(), a5f() (+91 more)
 
 ### Community 36 - "deleteInDirection"
-Cohesion: 0.07
-Nodes (52): buildOrUpdateScales(), C(), cl(), Co(), _computeLabelSizes(), cr(), D(), E() (+44 more)
+Cohesion: 0.10
+Nodes (35): C(), Co(), _computeLabelSizes(), cr(), endOf(), Et(), format(), formats() (+27 more)
 
 ### Community 37 - "livewire.esm.js"
 Cohesion: 0.03
-Nodes (38): addAssetsToHeadTagOfPage(), [attribute](), callAndClearComponentDebounces(), cleanupAlpineElementsOnThePageThatArentInsideAPersistedElement(), cloneScriptTag2(), closestComponent(), componentIsMissingProperty(), disableForm() (+30 more)
+Nodes (43): addAssetsToHeadTagOfPage(), [attribute](), callAndClearComponentDebounces(), cleanupAlpineElementsOnThePageThatArentInsideAPersistedElement(), cloneScriptTag2(), closestComponent(), componentIsMissingProperty(), disableForm() (+35 more)
 
 ### Community 38 - "add"
 Cohesion: 0.06
 Nodes (69): target(), add(), bufferPoolingForFiveMs(), call(), checkIdentityKeys(), clear(), closestComponent(), colocateCommitsByComponent() (+61 more)
 
 ### Community 39 - "User"
-Cohesion: 0.12
-Nodes (22): alpha(), be(), en(), fe(), Fs(), greyscale(), Hi(), Io() (+14 more)
+Cohesion: 0.10
+Nodes (26): So(), alpha(), be(), en(), Fs(), greyscale(), Hi(), ic() (+18 more)
 
 ### Community 40 - "a3"
 Cohesion: 0.07
@@ -480,23 +480,23 @@ Nodes (5): ManageWebsiteSettings, Form, WebsiteSetting, AppServiceProvider, Serv
 
 ### Community 42 - "j_"
 Cohesion: 0.01
-Nodes (335): a00(), a0E(), a0g(), a0h(), a0i(), a0k(), a1G(), a1l() (+327 more)
+Nodes (309): $5(), a00(), a0E(), a0g(), a0h(), a0i(), a0k(), a1G() (+301 more)
 
 ### Community 43 - "gv"
 Cohesion: 0.04
-Nodes (78): addRootSelector(), addScopeToNode(), [attribute](), callAndClearComponentDebounces(), cleanupAttributes(), cleanupElement(), cloneIfObject2(), closestDataStack() (+70 more)
+Nodes (92): addInitSelector(), addRootSelector(), addScopeToNode(), allSelectors(), [attribute](), base64toBlob(), callAndClearComponentDebounces(), cleanupAttributes() (+84 more)
 
 ### Community 44 - "te"
 Cohesion: 0.04
 Nodes (9): Bi(), bn(), ji(), Ri(), te(), Vi(), de, et() (+1 more)
 
 ### Community 45 - ""node_modules/alpinejs/dist/module.cjs.js""
-Cohesion: 0.10
-Nodes (29): cancelUpload(), componentsByName(), dispatch(), dispatch2(), dispatch3(), dispatchEvent(), dispatchEvents(), dispatchGlobal() (+21 more)
+Cohesion: 0.18
+Nodes (17): cancelUpload(), getCsrfToken(), getUploadManager(), handleFileUpload(), handleS3PreSignedUrl(), handleSignedUrl(), makeRequest(), markUploadErrored() (+9 more)
 
 ### Community 46 - "_update"
-Cohesion: 0.06
-Nodes (58): afterBuildTicks(), afterCalculateLabelRotation(), afterDataLimits(), afterDraw(), afterFit(), afterSetDimensions(), afterTickToLabelConversion(), afterUpdate() (+50 more)
+Cohesion: 0.07
+Nodes (47): afterBuildTicks(), afterCalculateLabelRotation(), afterDataLimits(), afterFit(), afterSetDimensions(), afterTickToLabelConversion(), afterUpdate(), beforeBuildTicks() (+39 more)
 
 ### Community 47 - "ListRecords"
 Cohesion: 0.04
@@ -508,7 +508,7 @@ Nodes (68): $a(), ab(), Ac(), Ad(), b(), bb(), bc(), c() (+60 more)
 
 ### Community 49 - "getContext"
 Cohesion: 0.05
-Nodes (55): Ac(), an(), Au(), average(), ba(), beforeDraw(), bu(), dataset() (+47 more)
+Nodes (56): an(), Au(), average(), ba(), beforeDraw(), bu(), dataset(), Dc() (+48 more)
 
 ### Community 50 - "file-upload.js"
 Cohesion: 0.05
@@ -516,23 +516,23 @@ Nodes (55): ba(), bi(), c(), ca(), clickPercent(), constructor(), de(), define()
 
 ### Community 51 - "getSelectedRange"
 Cohesion: 0.05
-Nodes (70): attachmentManagerDidRequestRemovalOfAttachment(), breakFormattedBlock(), breaksOnReturn(), Ca(), canSetCurrentAttribute(), canSetCurrentBlockAttribute(), compositionControllerDidRequestDeselectingAttachment(), compositionControllerDidRequestRemovalOfAttachment() (+62 more)
+Nodes (65): breaksOnReturn(), Ca(), canSetCurrentAttribute(), canSetCurrentBlockAttribute(), compositionControllerDidRequestDeselectingAttachment(), compositionDidStartEditingAttachment(), decreaseBlockAttributeLevel(), decreaseListLevel() (+57 more)
 
 ### Community 52 - "AC"
 Cohesion: 0.06
-Nodes (50): Yn(), _a(), add(), addElements(), al(), ba(), buildOrUpdateElements(), _cachedScopes() (+42 more)
+Nodes (51): Yn(), _a(), acquireContext(), add(), al(), ba(), _cachedScopes(), chartOptionScopes() (+43 more)
 
 ### Community 53 - "push"
-Cohesion: 0.05
-Nodes (77): acquireContext(), adjustHitBoxes(), bc(), Bl(), calculateLabelRotation(), _calculatePadding(), clear(), _computeAngle() (+69 more)
+Cohesion: 0.09
+Nodes (41): adjustHitBoxes(), afterDraw(), bc(), Bl(), clear(), _computeLabelArea(), _computeTitleHeight(), _createItems() (+33 more)
 
 ### Community 54 - "canvaskit.js"
 Cohesion: 0.04
 Nodes (72): $a(), ab(), Ac(), Ad(), b(), bb(), bc(), c() (+64 more)
 
 ### Community 55 - "Voucher"
-Cohesion: 0.08
-Nodes (41): Ao(), applyStack(), ar(), as(), _calculateBarIndexPixels(), _calculateBarValuePixels(), calculateCircumference(), _circumference() (+33 more)
+Cohesion: 0.06
+Nodes (50): Ao(), applyStack(), as(), Bi(), _calculateBarIndexPixels(), _calculateBarValuePixels(), calculateCircumference(), _circumference() (+42 more)
 
 ### Community 57 - "canvaskit.js"
 Cohesion: 0.08
@@ -540,59 +540,59 @@ Nodes (29): A(), Ad(), b(), c(), d(), E(), eb(), f() (+21 more)
 
 ### Community 58 - "dH"
 Cohesion: 0.01
-Nodes (345): $1(), $2$alignmentPolicy(), a0B(), a0D(), a0W(), a0y(), a11(), a1m() (+337 more)
+Nodes (332): $1(), $2$alignmentPolicy(), a0B(), a0D(), a11(), a1m(), a1x(), a2U() (+324 more)
 
 ### Community 59 - "aQ"
-Cohesion: 0.05
-Nodes (61): a0f(), a2b(), a5Y(), a73(), a7y(), aB9(), aG8(), ag9() (+53 more)
+Cohesion: 0.02
+Nodes (147): a0f(), a0n(), a11(), a14(), a15(), a1D(), a1f(), a22() (+139 more)
 
 ### Community 60 - "buildTicks"
-Cohesion: 0.08
-Nodes (45): a00(), a07(), a1l(), a2f(), a2g(), a2h(), a2i(), a5e() (+37 more)
+Cohesion: 0.07
+Nodes (52): a00(), a07(), a1l(), a2f(), a2g(), a2h(), a2i(), a5e() (+44 more)
 
 ### Community 61 - "ManageWebsiteSettings"
 Cohesion: 0.03
-Nodes (47): RetroactiveGraciaPoints, GraciaPointsController, Request, NotificationController, JsonResponse, Request, AirlineBaggageRule, AppNotification (+39 more)
+Nodes (49): GraciaPointsController, Request, NotificationController, JsonResponse, Request, AdminNotificationStatus, BelongsTo, AirlineBaggageRule (+41 more)
 
 ### Community 62 - "support.js"
 Cohesion: 0.04
 Nodes (163): ut(), Qt(), _a(), aa(), Ae(), ai(), apply(), ar() (+155 more)
 
 ### Community 63 - "gO"
-Cohesion: 0.08
-Nodes (44): ad(), aro(), b2B(), fD(), ga21(), ga3r(), ga4c(), gAW() (+36 more)
+Cohesion: 0.13
+Nodes (32): b2B(), fD(), gAW(), gPc(), gzK(), ir(), pD(), sa7K() (+24 more)
 
 ### Community 64 - "RelationManager"
 Cohesion: 0.02
-Nodes (164): a05(), a0x(), a27(), a29(), a36(), a39(), a3a(), a3b() (+156 more)
+Nodes (170): a05(), a0x(), a27(), a29(), a36(), a39(), a3a(), a3b() (+162 more)
 
 ### Community 65 - "I"
-Cohesion: 0.07
-Nodes (45): applyStack(), aspectRatio(), _calculateBarIndexPixels(), _calculateBarValuePixels(), calculateCircumference(), _circumference(), countVisibleElements(), fa() (+37 more)
+Cohesion: 0.05
+Nodes (55): Ah(), applyStack(), aspectRatio(), _calculateBarIndexPixels(), _calculateBarValuePixels(), calculateCircumference(), _circumference(), countVisibleElements() (+47 more)
 
 ### Community 66 - "i"
-Cohesion: 0.10
-Nodes (25): ap(), bd(), Bi(), Br(), eo(), getEncodedSnapshotWithLatestChildrenMergedIn(), ha(), Ko() (+17 more)
+Cohesion: 0.03
+Nodes (97): a1G(), a24(), a5B(), a78(), a7A(), a7m(), a7s(), a9O() (+89 more)
 
 ### Community 67 - "get"
-Cohesion: 0.07
-Nodes (14): DiscountController, JsonResponse, Request, ReferralController, Discount, HasMany, BelongsTo, Referral (+6 more)
+Cohesion: 0.03
+Nodes (94): a0x(), a16(), a1j(), a1o(), a1q(), a48(), a4g(), a4s() (+86 more)
 
 ### Community 68 - "State"
 Cohesion: 0.05
 Nodes (61): ForgotPasswordScreen, _ForgotPasswordScreenState, ActivityScreen, _ActivityScreenState, BookingDetailsScreen, _BookingDetailsScreenState, BookingSubmitScreen, _BookingSubmitScreenState (+53 more)
 
 ### Community 69 - "setAttribute"
-Cohesion: 0.10
-Nodes (36): observer(), add(), applyKeyboardCommand(), attachmentEditorDidRequestRemovalOfAttachment(), canBeGrouped(), checkValidity(), createCaptionElement(), dialogIsVisible() (+28 more)
+Cohesion: 0.09
+Nodes (39): observer(), add(), applyKeyboardCommand(), attachmentEditorDidRequestRemovalOfAttachment(), canBeGrouped(), checkValidity(), createCaptionElement(), dialogIsVisible() (+31 more)
 
 ### Community 70 - "a"
-Cohesion: 0.09
-Nodes (33): afterDatasetsUpdate(), buildOrUpdateControllers(), _d(), _destroyDatasetMeta(), generateLabels(), getDatasetMeta(), getDataVisibility(), getMaxBorderWidth() (+25 more)
+Cohesion: 0.03
+Nodes (84): a0Q(), a1I(), a2a(), a3P(), a4h(), a64(), a69(), a8r() (+76 more)
 
 ### Community 71 - "a5"
-Cohesion: 0.12
-Nodes (22): Bt(), xo(), addEventListener(), bindResponsiveEvents(), cs(), di(), el(), gr() (+14 more)
+Cohesion: 0.06
+Nodes (47): Bt(), xo(), addEventListener(), bindEvents(), bindResponsiveEvents(), bindUserEvents(), cl(), cs() (+39 more)
 
 ### Community 72 - "notifications.js"
 Cohesion: 0.06
@@ -604,43 +604,43 @@ Nodes (45): $e(), Bn(), c(), co(), d(), Di(), Dl(), Dr() (+37 more)
 
 ### Community 74 - "EditRecord"
 Cohesion: 0.05
-Nodes (17): EditAccommodation, EditAirlineBaggageRule, EditAppNotification, EditBooking, EditDiscount, EditFerryRoute, EditGraciaEarningRule, EditHotel (+9 more)
+Nodes (16): EditAccommodation, EditAirlineBaggageRule, EditAppNotification, EditBooking, EditDiscount, EditGraciaEarningRule, EditHotel, EditOperator (+8 more)
 
 ### Community 75 - "Controller"
 Cohesion: 0.01
-Nodes (234): $2$alignmentPolicy(), a(), a09(), a0p(), a0u(), a0x(), a18(), a19() (+226 more)
+Nodes (215): $2$alignmentPolicy(), $3(), a(), a09(), a0p(), a0u(), a19(), a1B() (+207 more)
 
 ### Community 76 - "updateElements"
-Cohesion: 0.10
-Nodes (31): afterDatasetsUpdate(), buildOrUpdateControllers(), cancel(), _createDescriptors(), _descriptors(), _destroyDatasetMeta(), generateLabels(), getController() (+23 more)
+Cohesion: 0.11
+Nodes (26): afterDatasetsUpdate(), generateLabels(), getDatasetMeta(), getDataVisibility(), _getLegendItemAt(), getMaxBorderWidth(), _getSortedDatasetMetas(), getStyle() (+18 more)
 
 ### Community 77 - "sendRequest"
 Cohesion: 0.05
 Nodes (43): a2K(), a63(), a9H(), a_k(), aDm(), aFV(), alD(), anr() (+35 more)
 
 ### Community 78 - "push"
-Cohesion: 0.05
-Nodes (20): CreateUser, EditUser, AuthController, Request, AdminNotificationStatus, BelongsTo, HasMany, HasOne (+12 more)
+Cohesion: 0.06
+Nodes (17): CreateUser, EditUser, AuthController, Request, HasMany, HasOne, Panel, User (+9 more)
 
 ### Community 79 - "o8"
 Cohesion: 0.06
 Nodes (48): aa(), ca(), call(), cancelUpload(), Cc(), Cl(), ec(), Gi() (+40 more)
 
 ### Community 80 - "E"
-Cohesion: 0.07
-Nodes (36): allSelectors(), applyBindingsObject(), attributesOnly(), bind2(), byPriority(), clone(), cloneIfObject(), cloneTree() (+28 more)
+Cohesion: 0.10
+Nodes (27): addDebounceOrThrottle(), applyBindingsObject(), attributesOnly(), bind2(), byPriority(), camelCase2(), debounce(), directives() (+19 more)
 
 ### Community 81 - "wimp.js"
 Cohesion: 0.06
-Nodes (14): x(), ma(), c(), Ka(), La(), ma(), Nc(), p() (+6 more)
+Nodes (15): x(), Ba(), ma(), c(), Ka(), La(), ma(), Nc() (+7 more)
 
 ### Community 82 - "skwasm.js"
 Cohesion: 0.05
 Nodes (65): e(), fe(), Ra(), a(), aa(), ab(), ac(), $b() (+57 more)
 
 ### Community 83 - "$1"
-Cohesion: 0.01
-Nodes (247): $1(), $3(), a0m(), a0n(), a22(), a2P(), a35(), a3G() (+239 more)
+Cohesion: 0.04
+Nodes (61): a0m(), a2P(), a3W(), a4T(), aak(), aCv(), aDA(), afR() (+53 more)
 
 ### Community 84 - "push"
 Cohesion: 0.25
@@ -652,23 +652,23 @@ Nodes (44): autoUpdate(), convertOffsetParentRelativeRectToViewportRelativeRect(
 
 ### Community 86 - "ManageProofs"
 Cohesion: 0.01
-Nodes (442): a0b(), a0Z(), a21(), a2B(), a2D(), a2E(), a2H(), a2I() (+434 more)
+Nodes (425): a0b(), a0Z(), A1(), a1P(), a2D(), a2E(), a2f(), a2G() (+417 more)
 
 ### Community 87 - "Dt"
-Cohesion: 0.05
-Nodes (22): BookingsExport, ListTours, Table, AccommodationController, BookingCalculateController, PromotionController, Request, ScheduleController (+14 more)
+Cohesion: 0.04
+Nodes (30): ListTours, Table, BookingCalculateController, DiscountController, PromotionController, JsonResponse, Request, ReferralController (+22 more)
 
 ### Community 88 - "preload"
-Cohesion: 0.12
-Nodes (22): disabled(), afterAutoSkip(), buildLookupTable(), buildTicks(), diff(), Fi(), _generate(), getAllParsedValues() (+14 more)
+Cohesion: 0.06
+Nodes (57): disabled(), afterAutoSkip(), ar(), buildLookupTable(), buildTicks(), calculateLabelRotation(), _calculatePadding(), _computeAngle() (+49 more)
 
 ### Community 89 - "HasFactory"
-Cohesion: 0.07
-Nodes (35): add(), Bi(), _cachedScopes(), datasetAnimationScopeKeys(), datasetElementScopeKeys(), datasetScopeKeys(), Dl(), ds() (+27 more)
+Cohesion: 0.06
+Nodes (15): CreateBookingAction, Table, AccommodationController, Accommodation, BelongsToMany, BelongsTo, ScheduleTransportClass, BelongsToMany (+7 more)
 
 ### Community 90 - "skwasm_heavy.js"
 Cohesion: 0.05
-Nodes (16): Ba(), d(), Ga(), Ja(), Ka(), La(), n(), Pc() (+8 more)
+Nodes (15): d(), Ga(), Ja(), Ka(), La(), n(), Pc(), q() (+7 more)
 
 ### Community 91 - "b5"
 Cohesion: 0.10
@@ -676,31 +676,31 @@ Nodes (37): e(), i(), Ni(), o(), t(), u(), be(), Ac() (+29 more)
 
 ### Community 92 - "G"
 Cohesion: 0.02
-Nodes (198): a17(), a1A(), a1P(), a1s(), a1y(), a49(), a6(), a6I() (+190 more)
+Nodes (177): a17(), a1A(), a1s(), a6(), a6I(), aC(), aH(), aM() (+169 more)
 
 ### Community 93 - ".$2"
 Cohesion: 0.02
-Nodes (168): $3$color$endFraction$startFraction(), a05(), a2G(), a2o(), a2s(), a2Z(), a3k(), a3l() (+160 more)
+Nodes (196): $2(), $3$color$endFraction$startFraction(), a05(), a2s(), a2Z(), a3B(), a3k(), a3l() (+188 more)
 
 ### Community 94 - "draw"
 Cohesion: 0.02
-Nodes (149): a1c(), a2l(), a32(), a33(), a34(), a4Y(), a50(), a8A() (+141 more)
+Nodes (138): a1c(), a2l(), a32(), a33(), a34(), a4Y(), a50(), a8A() (+130 more)
 
 ### Community 95 - "r"
 Cohesion: 0.12
 Nodes (13): BookingsSheet, Collection, Worksheet, OverallBreakdownSheet, Collection, Worksheet, FromArray, FromCollection (+5 more)
 
 ### Community 96 - ".$1"
-Cohesion: 0.07
-Nodes (43): second(), base64toBlob(), cleanupModal(), contentIsFromDump(), extractDurationFrom(), extractStreamObjects(), find(), fromQueryString() (+35 more)
+Cohesion: 0.14
+Nodes (20): cleanupModal(), contentIsFromDump(), getCsrfToken(), getUpdateUri(), handlePageExpiry(), handleS3PreSignedUrl(), handleSignedUrl(), hideHtmlModal() (+12 more)
 
 ### Community 97 - "$0"
 Cohesion: 0.09
-Nodes (35): addElements(), buildOrUpdateElements(), Ce(), co(), _dataCheck(), formats(), Ft(), ga() (+27 more)
+Nodes (34): addElements(), buildOrUpdateElements(), Ca(), Ce(), co(), _dataCheck(), _destroy(), formats() (+26 more)
 
 ### Community 98 - "jU"
-Cohesion: 0.02
-Nodes (170): a0f(), a0v(), a0w(), a0y(), a11(), a15(), a3s(), a3U() (+162 more)
+Cohesion: 0.03
+Nodes (111): a0v(), a0w(), a0y(), a3s(), a4O(), a5j(), a5M(), a5N() (+103 more)
 
 ### Community 99 - "M"
 Cohesion: 0.05
@@ -715,20 +715,20 @@ Cohesion: 0.09
 Nodes (35): appendChild(), cloneNode(), cloneScriptTag(), createElement(), createMorphContext(), extractUriAndQueryString(), getFirstNode(), getNextSibling() (+27 more)
 
 ### Community 102 - "navigate_default"
-Cohesion: 0.08
-Nodes (34): autofocusElementsWithTheAutofocusAttribute(), createUrlObjectFromString(), extractDestinationFromLink(), fetchHtml(), fetchHtmlOrUsePrefetchedHtml(), getPretchedHtmlOr(), getUriStringFromUrlObject(), history2() (+26 more)
+Cohesion: 0.07
+Nodes (35): autofocusElementsWithTheAutofocusAttribute(), bindClasses(), createUrlObjectFromString(), extractDestinationFromLink(), fetchHtml(), fetchHtmlOrUsePrefetchedHtml(), getPretchedHtmlOr(), getUriStringFromUrlObject() (+27 more)
 
 ### Community 103 - "aG"
 Cohesion: 0.02
-Nodes (130): $0(), $1$allowPlatformDefault(), $2$isClosing(), $2$params(), a01(), a02(), a0r(), A1() (+122 more)
+Nodes (174): $0(), $1$allowPlatformDefault(), $2$isClosing(), $2$params(), a01(), a02(), a0r(), a18() (+166 more)
 
 ### Community 104 - "render"
 Cohesion: 0.05
 Nodes (43): xt(), cacheViewForObject(), canSyncDocumentView(), compositionDidLoadSnapshot(), createAttachmentNodes(), createChildView(), createContainerElement(), createDocumentFragmentForSync() (+35 more)
 
 ### Community 106 - "Vn"
-Cohesion: 0.13
-Nodes (19): average(), fn(), getCenterPoint(), getProps(), hasValue(), hn(), hs(), inRange() (+11 more)
+Cohesion: 0.11
+Nodes (22): average(), fn(), getBasePixel(), getBasePosition(), getBaseValue(), getCenterPoint(), getProps(), hasValue() (+14 more)
 
 ### Community 107 - "add"
 Cohesion: 0.08
@@ -747,28 +747,28 @@ Cohesion: 0.29
 Nodes (7): build, _fetchBookingAndNavigate, _goNext, _goToSchedule, handleNotificationTap, _showPackageDetailsModal, MaterialPageRoute
 
 ### Community 111 - "gaf"
-Cohesion: 0.23
-Nodes (16): ad(), dd(), fn(), id(), Is(), Lr(), od(), Or() (+8 more)
+Cohesion: 0.10
+Nodes (31): ad(), ap(), bd(), Bi(), Br(), dd(), fn(), getEncodedSnapshotWithLatestChildrenMergedIn() (+23 more)
 
 ### Community 112 - "le"
 Cohesion: 0.06
 Nodes (13): d(), Ga(), Ja(), Ka(), La(), n(), Pc(), q() (+5 more)
 
 ### Community 113 - "bi"
-Cohesion: 0.09
-Nodes (29): add(), ai(), Bf(), corraleCommitsIntoPools(), createAndSendNewPool(), delete(), df(), empty() (+21 more)
+Cohesion: 0.08
+Nodes (31): add(), addResolver(), Bf(), cleanup(), corraleCommitsIntoPools(), createAndSendNewPool(), delete(), df() (+23 more)
 
 ### Community 114 - "fn"
 Cohesion: 0.06
-Nodes (9): d(), n(), Pc(), q(), r(), Ra, t(), u() (+1 more)
+Nodes (10): Ba(), d(), n(), Pc(), q(), r(), Ra, t() (+2 more)
 
 ### Community 115 - "Ve"
-Cohesion: 0.15
-Nodes (28): as(), Ce(), cs(), ed(), ei(), Es(), gd(), ge() (+20 more)
+Cohesion: 0.14
+Nodes (30): as(), Ce(), cs(), Ct(), ed(), ei(), Es(), gd() (+22 more)
 
 ### Community 116 - "BookingReschedule"
-Cohesion: 0.08
-Nodes (37): as(), At(), Bs(), Ca(), cc(), cd(), clear(), cn() (+29 more)
+Cohesion: 0.07
+Nodes (39): as(), At(), Bi(), Bs(), cc(), cd(), clear(), cn() (+31 more)
 
 ### Community 117 - "Ra"
 Cohesion: 0.15
@@ -776,27 +776,27 @@ Nodes (14): Ce(), De(), di(), e(), Ht(), Ie(), Me(), Re() (+6 more)
 
 ### Community 118 - "OJ"
 Cohesion: 0.06
-Nodes (14): Ba(), c(), Ha(), Ka(), La(), ma(), Nc(), p() (+6 more)
+Nodes (13): c(), Ha(), Ka(), La(), ma(), Nc(), p(), q() (+5 more)
 
 ### Community 119 - "b"
 Cohesion: 0.06
-Nodes (22): CreateAccommodation, CreateAirlineBaggageRule, CreateAppNotification, CreateBooking, CreateDiscount, CreateFerryRoute, CreateGraciaEarningRule, CreateHotel (+14 more)
+Nodes (21): CreateAccommodation, CreateAirlineBaggageRule, CreateAppNotification, CreateBooking, CreateDiscount, CreateGraciaEarningRule, CreateHotel, CreateInquiry (+13 more)
 
 ### Community 120 - "a1"
 Cohesion: 0.03
-Nodes (83): a06(), a0g(), a0l(), a30(), a3Q(), a4J(), a62(), a6A() (+75 more)
+Nodes (78): a06(), a0l(), a30(), a3Q(), a62(), a6A(), a6c(), a6d() (+70 more)
 
 ### Community 121 - "getDatasetMeta"
-Cohesion: 0.04
-Nodes (68): arr(), addInitSelector(), base64toBlob(), cleanup(), cleanupModal(), contentIsFromDump(), createArrayInstrumentations(), createReactiveEffect() (+60 more)
+Cohesion: 0.06
+Nodes (42): addCleanup(), applyUpdates(), cleanupModal(), constructor(), contentIsFromDump(), dataSet(), deepClone(), diff() (+34 more)
 
 ### Community 122 - "aW_"
-Cohesion: 0.02
-Nodes (202): a0Q(), a1I(), a3O(), a3P(), a4h(), a4m(), a60(), a64() (+194 more)
+Cohesion: 0.01
+Nodes (245): $3$crossAxisPosition$mainAxisPosition(), a0f(), a2b(), a3O(), a41(), a4m(), a5d(), a60() (+237 more)
 
 ### Community 123 - "navigate_default"
-Cohesion: 0.08
-Nodes (32): search(), url(), autofocusElementsWithTheAutofocusAttribute(), createUrlObjectFromString(), extractDestinationFromLink(), fetchHtml(), fetchHtmlOrUsePrefetchedHtml(), getPretchedHtmlOr() (+24 more)
+Cohesion: 0.09
+Nodes (30): search(), url(), autofocusElementsWithTheAutofocusAttribute(), createUrlObjectFromString(), extractDestinationFromLink(), fetchHtml(), fetchHtmlOrUsePrefetchedHtml(), getPretchedHtmlOr() (+22 more)
 
 ### Community 124 - "Win32Window"
 Cohesion: 0.12
@@ -807,12 +807,12 @@ Cohesion: 0.06
 Nodes (27): $, ack(), bdW(), bgH(), bi8(), bhE(), bkA(), bm2() (+19 more)
 
 ### Community 126 - "gN"
-Cohesion: 0.08
-Nodes (37): canAcceptDataTransfer(), canDecreaseNestingLevel(), canIncreaseNestingLevel(), compositionControllerDidFocus(), compositionDidRequestChangingSelectionToLocationRange(), createDOMRangeFromPoint(), createLocationRangeFromDOMRange(), decreaseNestingLevel() (+29 more)
+Cohesion: 0.07
+Nodes (41): canAcceptDataTransfer(), canDecreaseNestingLevel(), canIncreaseNestingLevel(), compositionControllerDidFocus(), compositionDidRequestChangingSelectionToLocationRange(), createDOMRangeFromLocationRange(), createDOMRangeFromPoint(), createLocationRangeFromDOMRange() (+33 more)
 
 ### Community 127 - "bJ"
-Cohesion: 0.01
-Nodes (230): a1G(), a24(), a3y(), a40(), a47(), a5B(), a5v(), a6b() (+222 more)
+Cohesion: 0.02
+Nodes (200): $0(), $2$params(), a0Z(), a19(), a25(), a2E(), a2t(), a33() (+192 more)
 
 ### Community 128 - "start"
 Cohesion: 0.20
@@ -823,8 +823,8 @@ Cohesion: 0.07
 Nodes (26): For /graphify add and --watch, For /graphify query, For the commit hook and native CLAUDE.md integration, For --update and --cluster-only, /graphify, Honesty Rules, Interpreter guard for subcommands, Part A - Structural extraction for code files (+18 more)
 
 ### Community 130 - "C"
-Cohesion: 0.03
-Nodes (22): CancelExpiredPayments, CleanupOldSchedules, DeleteAllUsers, NotifyExpiringVouchers, PurgeExpiredProofs, PurgeExpiredSchedules, RetrofitReferrals, SendPaymentReminders (+14 more)
+Cohesion: 0.04
+Nodes (21): CancelExpiredPayments, CleanupOldSchedules, DeleteAllUsers, NotifyExpiringVouchers, PurgeExpiredProofs, PurgeExpiredSchedules, RetroactiveGraciaPoints, RetrofitReferrals (+13 more)
 
 ### Community 131 - "gt"
 Cohesion: 0.18
@@ -839,12 +839,12 @@ Cohesion: 0.20
 Nodes (24): add(), adjustScroll(), animate(), autoAnimate(), cleanUp(), deletePosition(), forEach(), getCoords() (+16 more)
 
 ### Community 134 - "St"
-Cohesion: 0.11
-Nodes (23): addCleanup(), applyUpdates(), bs(), constructor(), ds(), Ee(), extractTypeModifiersAndValue(), Fr() (+15 more)
+Cohesion: 0.38
+Nodes (7): bs(), ds(), Fr(), ft(), Ii(), ni(), oi()
 
 ### Community 135 - "d4"
 Cohesion: 0.07
-Nodes (47): A(), addCall(), At(), Be(), bp(), bu(), children(), Ct() (+39 more)
+Nodes (43): A(), addCall(), addCleanup(), bp(), bu(), children(), En(), eo() (+35 more)
 
 ### Community 136 - "call"
 Cohesion: 0.17
@@ -852,7 +852,7 @@ Nodes (21): call(), cancelUpload(), getUploadManager(), handleFileUpload(), mark
 
 ### Community 137 - "d4"
 Cohesion: 0.02
-Nodes (400): $2(), $2$from$to(), $4(), a0(), a0A(), a0e(), a0i(), a1A() (+392 more)
+Nodes (404): $2(), $2$from$to(), $2$priority$scheduler(), $3(), $4(), a0(), a0A(), a0e() (+396 more)
 
 ### Community 138 - "What You Must Do When Invoked"
 Cohesion: 0.08
@@ -867,8 +867,8 @@ Cohesion: 0.08
 Nodes (24): For /graphify add and --watch, For /graphify query, For the commit hook and native CLAUDE.md integration, For --update and --cluster-only, /graphify, Honesty Rules, Interpreter guard for subcommands, Part A - Structural extraction for code files (+16 more)
 
 ### Community 141 - "gP"
-Cohesion: 0.07
-Nodes (46): aa(), Al(), bf(), buildTicks(), count(), determineDataLimits(), Dh(), diff() (+38 more)
+Cohesion: 0.05
+Nodes (66): aa(), add(), Al(), ar(), bf(), buildTicks(), _cachedScopes(), count() (+58 more)
 
 ### Community 142 - ".$1"
 Cohesion: 0.07
@@ -883,20 +883,20 @@ Cohesion: 0.09
 Nodes (22): @pragma, _channelDescription, _channelId, _channelName, clearBadge, _firebaseMessagingBackgroundHandler, initialize, NotificationService (+14 more)
 
 ### Community 145 - "V"
-Cohesion: 0.02
-Nodes (136): $0(), $2$params(), a0Z(), a1u(), a2d(), a2t(), a33(), a3D() (+128 more)
+Cohesion: 0.06
+Nodes (40): a48(), a5i(), a_l(), aa(), aCd(), aCu(), adM(), aEc() (+32 more)
 
 ### Community 146 - "$0"
-Cohesion: 0.07
-Nodes (34): a19(), a9V(), a_1(), aad(), aaj(), aG2(), aie(), anw() (+26 more)
+Cohesion: 0.03
+Nodes (108): a04(), a4J(), a4K(), a4o(), a8A(), a9V(), a_Y(), a_Z() (+100 more)
 
 ### Community 147 - "gO"
-Cohesion: 0.08
-Nodes (29): ArrowLeft(), ArrowRight(), createDOMRangeFromLocationRange(), didClickAttachment(), editAttachment(), expandSelectionInDirection(), findAttachmentForElement(), findContainerAndOffsetFromLocation() (+21 more)
+Cohesion: 0.09
+Nodes (28): ArrowLeft(), ArrowRight(), attachmentManagerDidRequestRemovalOfAttachment(), compositionControllerDidRequestRemovalOfAttachment(), didClickAttachment(), editAttachment(), expandSelectionInDirection(), findAttachmentForElement() (+20 more)
 
 ### Community 148 - "has"
-Cohesion: 0.09
-Nodes (31): cleanup(), cloneIfObject(), containsTargets(), customDirectiveHasBeenRegistered(), destroyComponent(), directive(), dirtyTargets(), extractScriptTagContent() (+23 more)
+Cohesion: 0.06
+Nodes (51): second(), base64toBlob(), cleanup(), cloneIfObject(), containsTargets(), customDirectiveHasBeenRegistered(), destroyComponent(), directive() (+43 more)
 
 ### Community 149 - "package.json"
 Cohesion: 0.09
@@ -924,7 +924,7 @@ Nodes (27): addCleanup(), applyUpdates(), children(), constructor(), dataSet(), 
 
 ### Community 155 - "aM_"
 Cohesion: 0.01
-Nodes (345): $2$isClosing(), $3$crossAxisPosition$mainAxisPosition(), a(), a01(), a02(), a03(), a0c(), a0h() (+337 more)
+Nodes (352): $2$isClosing(), a(), a01(), a03(), a0c(), a0h(), a0N(), a0V() (+344 more)
 
 ### Community 156 - "dD"
 Cohesion: 0.38
@@ -932,19 +932,19 @@ Nodes (10): HWND, LPARAM, LRESULT, UINT, WPARAM, EnableFullDpiSupportIfAvailable
 
 ### Community 157 - "bw"
 Cohesion: 0.07
-Nodes (34): al(), ba(), bc(), ci(), cr(), dc(), fe(), Fs() (+26 more)
+Nodes (39): ai(), al(), ba(), bc(), ci(), cr(), dc(), Fi() (+31 more)
 
 ### Community 158 - "b6"
 Cohesion: 0.02
-Nodes (101): a10(), a1s(), a2_(), a2E(), a2Z(), a3w(), a46(), a4t() (+93 more)
+Nodes (127): $5(), a0g(), a13(), a1s(), a1t(), a1z(), a2_(), a2Z() (+119 more)
 
 ### Community 159 - "StatelessWidget"
 Cohesion: 0.08
 Nodes (25): _AboutFact, AboutScreen, AppDrawer, BookingSuccessScreen, _ContactInfoCard, _CounterButton, _DiscountCouponCard, _Field (+17 more)
 
 ### Community 160 - "aJ"
-Cohesion: 0.14
-Nodes (20): ac(), Ai(), ca(), ec(), Fc(), G(), getIndexAngle(), getPointPosition() (+12 more)
+Cohesion: 0.12
+Nodes (25): ac(), Ai(), ca(), drawGrid(), ec(), Fc(), G(), getDistanceFromCenterForValue() (+17 more)
 
 ### Community 161 - "gbq"
 Cohesion: 0.20
@@ -955,8 +955,8 @@ Cohesion: 0.17
 Nodes (20): Fc(), ii(), oi(), oo(), Sa(), A(), connectedCallback(), constructor() (+12 more)
 
 ### Community 163 - "bn"
-Cohesion: 0.14
-Nodes (18): addCleanup(), applyUpdates(), constructor(), dataSet(), deepClone(), diff(), extractData(), generateWireObject() (+10 more)
+Cohesion: 0.08
+Nodes (29): componentsByName(), dispatch(), dispatch2(), dispatch3(), dispatchEvent(), dispatchEvents(), dispatchGlobal(), dispatchSelf() (+21 more)
 
 ### Community 164 - "_each"
 Cohesion: 0.23
@@ -971,8 +971,8 @@ Cohesion: 0.18
 Nodes (13): wchar_t, Scale(), Create, Destroy, Win32Window::Win32Window(), WindowClassRegistrar, class_registered_, GetWindowClass (+5 more)
 
 ### Community 168 - "_a"
-Cohesion: 0.09
-Nodes (25): _a(), acquireContext(), afterAutoSkip(), Ai(), buildLookupTable(), data(), daysInYear(), getDecimalForPixel() (+17 more)
+Cohesion: 0.13
+Nodes (19): _a(), afterAutoSkip(), Ai(), buildLookupTable(), daysInYear(), getDecimalForPixel(), getDecimalForValue(), getValueForPixel() (+11 more)
 
 ### Community 169 - "add"
 Cohesion: 0.15
@@ -987,8 +987,8 @@ Cohesion: 0.09
 Nodes (23): require, anhskohbo/no-captcha, barryvdh/laravel-dompdf, dompdf/dompdf, filament/filament, filament/support, intervention/image, kreait/laravel-firebase (+15 more)
 
 ### Community 172 - "bZ"
-Cohesion: 0.13
-Nodes (19): Ah(), _computeLabelSizes(), De(), Ea(), ed(), getAllParsedValues(), getMatchingVisibleMetas(), hc() (+11 more)
+Cohesion: 0.15
+Nodes (17): _computeLabelSizes(), De(), Ea(), ed(), getMatchingVisibleMetas(), hc(), label(), Od() (+9 more)
 
 ### Community 173 - "d5"
 Cohesion: 0.18
@@ -999,12 +999,12 @@ Cohesion: 0.20
 Nodes (8): Any, AppDelegate, Bool, AppDelegate, Bool, FlutterAppDelegate, NSApplication, UIApplication
 
 ### Community 176 - "BookingResource"
-Cohesion: 0.13
-Nodes (5): Table, BookingResource, Builder, Form, Table
+Cohesion: 0.14
+Nodes (20): At(), Be(), cu(), De(), Do(), du(), Et(), fe() (+12 more)
 
 ### Community 177 - "aP"
-Cohesion: 0.15
-Nodes (15): findIndexAndOffsetAtPosition(), getObjectAtIndex(), getObjectAtPosition(), getSplittableListInRange(), insertObjectAtIndex(), insertSplittableListAtIndex(), insertSplittableListAtPosition(), removeObjectAtIndex() (+7 more)
+Cohesion: 0.18
+Nodes (16): addElements(), buildOrUpdateControllers(), buildOrUpdateElements(), _dataCheck(), _destroy(), _destroyDatasetMeta(), Ei(), getController() (+8 more)
 
 ### Community 178 - "AdminNotificationController"
 Cohesion: 0.16
@@ -1023,12 +1023,12 @@ Cohesion: 0.27
 Nodes (5): MyPage, AdminPanelProvider, Panel, Color, PanelProvider
 
 ### Community 182 - "ho"
-Cohesion: 0.50
-Nodes (4): post-autoload-dump, Illuminate\\Foundation\\ComposerScripts::postAutoloadDump, @php artisan filament:upgrade, @php artisan package:discover --ansi
+Cohesion: 0.22
+Nodes (5): BookingsExport, BookingExportController, Response, Exportable, WithMultipleSheets
 
 ### Community 183 - "aNl"
-Cohesion: 0.50
-Nodes (4): post-create-project-cmd, @php artisan key:generate --ansi, @php artisan migrate --graceful --ansi, @php -r \"file_exists('database/database.sqlite') || touch('database/database.sqlite');\
+Cohesion: 0.18
+Nodes (11): arr(), cleanup(), createArrayInstrumentations(), createReactiveEffect(), destroyComponent(), effect2(), enableTracking(), isEffect() (+3 more)
 
 ### Community 185 - "Widget"
 Cohesion: 0.50
@@ -1039,12 +1039,12 @@ Cohesion: 0.12
 Nodes (16): autoload-dev, psr-4, description, extra, laravel, keywords, dont-discover, license (+8 more)
 
 ### Community 187 - "d7"
-Cohesion: 0.10
-Nodes (25): Bi(), Ct(), data(), determineDataLimits(), fl(), _getLabelBounds(), getMinMax(), _getOtherScale() (+17 more)
+Cohesion: 0.25
+Nodes (8): post-root-package-install, setup, composer install, npm install --ignore-scripts, npm run build, @php artisan key:generate, @php artisan migrate --force, @php -r \"file_exists('.env') || copy('.env.example', '.env');\
 
 ### Community 188 - "bY"
 Cohesion: 0.02
-Nodes (184): a1O(), a4e(), a8u(), a9N(), a_6(), a_7(), a_d(), a_n() (+176 more)
+Nodes (186): a1O(), a4e(), a8u(), a9N(), a_6(), a_7(), a_d(), a_n() (+178 more)
 
 ### Community 189 - "gaR"
 Cohesion: 0.33
@@ -1060,7 +1060,7 @@ Nodes (15): API routes and auth, Current deployment files, Deployment, Security,
 
 ### Community 201 - "scripts"
 Cohesion: 0.11
-Nodes (19): scripts, dev, post-root-package-install, post-update-cmd, pre-package-uninstall, setup, test, Composer\\Config::disableProcessTimeout (+11 more)
+Nodes (19): scripts, dev, post-autoload-dump, post-create-project-cmd, post-update-cmd, pre-package-uninstall, test, Composer\\Config::disableProcessTimeout (+11 more)
 
 ### Community 214 - "manifest.json"
 Cohesion: 0.13
@@ -1112,7 +1112,7 @@ Nodes (3): Form, Table, TransportClassesRelationManager
 
 ### Community 239 - "aYd"
 Cohesion: 0.04
-Nodes (78): attachFiles(), backspace(), beforeinput(), canApplyToDocument(), compositionend(), compositionstart(), compositionupdate(), copy() (+70 more)
+Nodes (82): attachFiles(), backspace(), beforeinput(), canApplyToDocument(), compositionend(), compositionstart(), compositionupdate(), copy() (+74 more)
 
 ### Community 240 - "FerryRoutesRelationManager.php"
 Cohesion: 0.47
@@ -1270,11 +1270,11 @@ Nodes (3): switchMode(, updateOperator(, updateOperator(null)
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `$` connect `dO` to `.mount`, `d4`, `schedules.blade.php`, `.$1`, `markdown-editor.js`, `draw`, `b`, `aM_`, `locationFromPosition`, `select.js`, `te`, `file-upload.js`, `getSelectedRange`, `dH`, `buildTicks`, `support.js`, `i`, `setAttribute`, `Controller`, `$1`, `G`, `aG`, `render`, `gN`?**
+- **Why does `$` connect `dO` to `.mount`, `d4`, `d4`, `schedules.blade.php`, `.$1`, `$0`, `markdown-editor.js`, `draw`, `aM_`, `locationFromPosition`, `select.js`, `d`, `H`, `TransportClass`, `te`, `file-upload.js`, `getSelectedRange`, `dH`, `buildTicks`, `support.js`, `setAttribute`, `Controller`, `$1`, `ManageProofs`, `G`, `render`, `gN`?**
   _High betweenness centrality (0.043) - this node is a cross-community bridge._
-- **Why does `H()` connect `dH` to `RelationManager`, `H`, `.processBookingInternal`, `.mount`, `aG`, `d4`, `aQ`, `schedules.blade.php`, `V`, `skwasm.js`, `$0`, `bY`, `b`, `aW_`, `aM_`, `a1`, `b6`, `bJ`?**
+- **Why does `H()` connect `dH` to `.mount`, `.processBookingInternal`, `d4`, `schedules.blade.php`, `V`, `$0`, `b`, `aM_`, `b6`, `H`, `bY`, `RelationManager`, `i`, `a`, `skwasm.js`, `aG`, `a1`, `aW_`, `bJ`?**
   _High betweenness centrality (0.029) - this node is a cross-community bridge._
-- **Why does `a2()` connect `.mount` to `.saveDraft`, `d4`, `schedules.blade.php`, `aM_`, `d`, `Schedule`, `H`, `TransportClass`, `j_`, `dH`, `bY`, `buildTicks`, `RelationManager`, `Controller`, `sendRequest`, `$1`, `ManageProofs`, `G`, `.$2`, `draw`, `jU`, `aG`, `a1`?**
+- **Why does `a2()` connect `.mount` to `.saveDraft`, `d4`, `schedules.blade.php`, `$0`, `b6`, `d`, `Schedule`, `TransportClass`, `j_`, `dH`, `aQ`, `bY`, `buildTicks`, `RelationManager`, `Controller`, `sendRequest`, `ManageProofs`, `.$2`, `draw`, `jU`, `aG`, `a1`, `aW_`?**
   _High betweenness centrality (0.028) - this node is a cross-community bridge._
 - **Are the 246 inferred relationships involving `a()` (e.g. with `loadEntrypoint()` and `_loadJSEntrypoint()`) actually correct?**
   _`a()` has 246 INFERRED edges - model-reasoned connections that need verification._
