@@ -42,8 +42,10 @@ class ManagePaymentSettings extends Page implements HasForms
 
         $this->form->fill([
             'web_admin_fee'                         => $settings->web_admin_fee,
+            'short_haul_web_admin_fee'              => $settings->short_haul_web_admin_fee,
             'fee_per_accommodation'                 => $settings->fee_per_accommodation,
             'transaction_fee'                       => $settings->transaction_fee,
+            'short_haul_transaction_fee'            => $settings->short_haul_transaction_fee,
             'revalidation_fee'                      => $settings->revalidation_fee,
             'qr_code_path'                          => $settings->qr_code_path,
             'ferry_before_departure_surcharge_pct'  => $settings->ferry_before_departure_surcharge_pct,
@@ -60,11 +62,32 @@ class ManagePaymentSettings extends Page implements HasForms
         return $form
             ->schema([
                 Section::make('Service Fee')
-                    ->description('Added to every booking\'s total on the final review page, before payment. Not shown to clients while they\'re still browsing schedules and accommodations.')
+                    ->description('Added to every booking\'s total on the final review page, before payment. Short haul applies to trips < 5 hours; Long haul applies to trips ≥ 5 hours.')
                     ->schema([
                         TextInput::make('web_admin_fee')
-                            ->label('Web Admin Fee (₱)')
-                            ->helperText('Charged for every adult and child. Infants are not charged.')
+                            ->label('Web Admin Fee (Long Haul ≥ 5h) (₱)')
+                            ->helperText('Charged for every adult and child on trips 5 hours or longer. Default: ₱175.00.')
+                            ->numeric()
+                            ->prefix('₱')
+                            ->minValue(0)
+                            ->required(),
+                        TextInput::make('short_haul_web_admin_fee')
+                            ->label('Web Admin Fee (Short Haul < 5h) (₱)')
+                            ->helperText('Charged for every adult and child on trips under 5 hours. Default: ₱30.00.')
+                            ->numeric()
+                            ->prefix('₱')
+                            ->minValue(0)
+                            ->required(),
+                        TextInput::make('transaction_fee')
+                            ->label('Transaction Fee (Long Haul ≥ 5h) (₱)')
+                            ->helperText('Charged per booking transaction on trips 5 hours or longer. Default: ₱345.00.')
+                            ->numeric()
+                            ->prefix('₱')
+                            ->minValue(0)
+                            ->required(),
+                        TextInput::make('short_haul_transaction_fee')
+                            ->label('Transaction Fee (Short Haul < 5h) (₱)')
+                            ->helperText('Charged per booking transaction on trips under 5 hours. Default: ₱70.00.')
                             ->numeric()
                             ->prefix('₱')
                             ->minValue(0)
@@ -72,13 +95,6 @@ class ManagePaymentSettings extends Page implements HasForms
                         TextInput::make('fee_per_accommodation')
                             ->label('Fee per hotel (₱)')
                             ->helperText('Charged for each hotel the client selects.')
-                            ->numeric()
-                            ->prefix('₱')
-                            ->minValue(0)
-                            ->required(),
-                        TextInput::make('transaction_fee')
-                            ->label('Transaction Fee (₱)')
-                            ->helperText('Charged per booking transaction.')
                             ->numeric()
                             ->prefix('₱')
                             ->minValue(0)
@@ -176,8 +192,10 @@ class ManagePaymentSettings extends Page implements HasForms
 
         PaymentSetting::current()->update([
             'web_admin_fee'                         => $state['web_admin_fee'],
+            'short_haul_web_admin_fee'              => $state['short_haul_web_admin_fee'],
             'fee_per_accommodation'                 => $state['fee_per_accommodation'],
             'transaction_fee'                       => $state['transaction_fee'],
+            'short_haul_transaction_fee'            => $state['short_haul_transaction_fee'],
             'revalidation_fee'                      => $state['revalidation_fee'],
             'qr_code_path'                          => $state['qr_code_path'],
             'ferry_before_departure_surcharge_pct'  => $state['ferry_before_departure_surcharge_pct'],

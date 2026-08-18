@@ -10,8 +10,10 @@ class PaymentSetting extends Model
 {
     protected $fillable = [
         'web_admin_fee',
+        'short_haul_web_admin_fee',
         'fee_per_accommodation',
         'transaction_fee',
+        'short_haul_transaction_fee',
         'revalidation_fee',
         'qr_code_path',
         'proof_retention_days',
@@ -25,8 +27,10 @@ class PaymentSetting extends Model
 
     protected $casts = [
         'web_admin_fee' => 'decimal:2',
+        'short_haul_web_admin_fee' => 'decimal:2',
         'fee_per_accommodation' => 'decimal:2',
         'transaction_fee' => 'decimal:2',
+        'short_haul_transaction_fee' => 'decimal:2',
         'revalidation_fee' => 'decimal:2',
         'proof_retention_days' => 'integer',
         'ferry_before_departure_surcharge_pct' => 'decimal:2',
@@ -38,18 +42,40 @@ class PaymentSetting extends Model
     ];
 
     /**
+     * Get the web admin fee based on trip haul duration (< 5h is short haul).
+     */
+    public function getWebAdminFee(bool $isShortHaul = false): float
+    {
+        return (float) ($isShortHaul
+            ? ($this->short_haul_web_admin_fee ?? 30)
+            : ($this->web_admin_fee ?? 175));
+    }
+
+    /**
+     * Get the transaction fee based on trip haul duration (< 5h is short haul).
+     */
+    public function getTransactionFee(bool $isShortHaul = false): float
+    {
+        return (float) ($isShortHaul
+            ? ($this->short_haul_transaction_fee ?? 70)
+            : ($this->transaction_fee ?? 345));
+    }
+
+    /**
      * There is always exactly one settings row. Fetch it (or create with
      * defaults), caching the result in Redis for 6 hours.
      *
-     * Cache is invalidated any time the row is updated via bust().\
+     * Cache is invalidated any time the row is updated via bust().
      */
     public static function current(): self
     {
         $attributes = Cache::remember('payment_settings:current', now()->addHours(6), function () {
             $model = static::query()->firstOrCreate(['id' => 1], [
                 'web_admin_fee'                      => 175,
+                'short_haul_web_admin_fee'           => 30,
                 'fee_per_accommodation'              => 5000,
                 'transaction_fee'                    => 345,
+                'short_haul_transaction_fee'         => 70,
                 'revalidation_fee'                   => 250,
                 'proof_retention_days'               => 30,
                 'ferry_before_departure_surcharge_pct'  => 25,

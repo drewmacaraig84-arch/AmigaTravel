@@ -115,7 +115,8 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
             $paxCount = max(1, $booking->passengers->count());
             $multiplier = $paxCount + ($isFerry ? $paxCount : 0);
             
-            $calcTxFee = $multiplier * (float) $settings->transaction_fee;
+            $isShortHaul = $booking->isShortHaul();
+            $calcTxFee = $multiplier * $settings->getTransactionFee($isShortHaul);
             $calcHotelFee = $booking->accommodations->count() > 0 ? (float) $settings->fee_per_accommodation : 0;
             
             if ($fees >= $calcTxFee && $calcTxFee > 0) {

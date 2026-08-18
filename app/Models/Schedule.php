@@ -172,11 +172,37 @@ class Schedule extends Model
         return Carbon::parse($this->arrival_time)->format('F j, Y g:i a');
     }
 
+    public function getDurationMinutesAttribute(): int
+    {
+        if (!empty($this->attributes['duration_minutes'])) {
+            return (int) $this->attributes['duration_minutes'];
+        }
+
+        if (!empty($this->departure_time) && !empty($this->arrival_time)) {
+            $departure = Carbon::parse($this->departure_time);
+            $arrival = Carbon::parse($this->arrival_time);
+
+            if ($arrival->lessThan($departure)) {
+                $arrival->addDay();
+            }
+
+            return (int) $departure->diffInMinutes($arrival);
+        }
+
+        return 0;
+    }
+
+    public function isShortHaul(): bool
+    {
+        return $this->duration_minutes < 300;
+    }
+
     public function getDurationLabelAttribute(): string
     {
-        if ($this->duration_minutes) {
-            $hours = intdiv($this->duration_minutes, 60);
-            $minutes = $this->duration_minutes % 60;
+        $totalMinutes = $this->duration_minutes;
+        if ($totalMinutes > 0) {
+            $hours = intdiv($totalMinutes, 60);
+            $minutes = $totalMinutes % 60;
 
             if ($hours > 0 && $minutes > 0) {
                 return "{$hours}h {$minutes}m";
@@ -483,6 +509,8 @@ class Schedule extends Model
             'departure' => $this->formatted_departure,
             'arrival' => $this->formatted_arrival,
             'duration' => $this->duration_label,
+            'duration_minutes' => $this->duration_minutes,
+            'is_short_haul' => $this->isShortHaul(),
             'price' => floatval($this->price),
             'service' => $this->service_name,
             'vehicle_name' => $this->vehicle_name,

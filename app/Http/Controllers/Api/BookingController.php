@@ -357,11 +357,13 @@ class BookingController extends Controller
             $qrCodeUrl = storage_asset_path($settings->qr_code_path);
 
             return [
-                'qr_code_url'            => $qrCodeUrl,
-                'web_admin_fee'          => floatval($settings->web_admin_fee),
-                'fee_per_accommodation'  => floatval($settings->fee_per_accommodation),
-                'transaction_fee'        => floatval($settings->transaction_fee),
-                'revalidation_fee'       => floatval($settings->revalidation_fee),
+                'qr_code_url'                => $qrCodeUrl,
+                'web_admin_fee'              => floatval($settings->web_admin_fee),
+                'short_haul_web_admin_fee'   => floatval($settings->short_haul_web_admin_fee ?? 30),
+                'fee_per_accommodation'      => floatval($settings->fee_per_accommodation),
+                'transaction_fee'            => floatval($settings->transaction_fee),
+                'short_haul_transaction_fee' => floatval($settings->short_haul_transaction_fee ?? 70),
+                'revalidation_fee'           => floatval($settings->revalidation_fee),
             ];
         });
 

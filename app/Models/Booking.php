@@ -452,6 +452,30 @@ class Booking extends Model
     }
 
     /**
+     * Determine if this booking is short haul (< 5 hours / 300 minutes).
+     */
+    public function isShortHaul(): bool
+    {
+        if (!empty($this->duration_days) && $this->duration_days > 0) {
+            return false; // Tour package multi-day / full day trip
+        }
+
+        $depSchedule = $this->schedule;
+        $retSchedule = $this->returnSchedule;
+
+        if ($depSchedule) {
+            $depDuration = $depSchedule->duration_minutes;
+            if ($retSchedule) {
+                $retDuration = $retSchedule->duration_minutes;
+                return max($depDuration, $retDuration) < 300;
+            }
+            return $depDuration < 300;
+        }
+
+        return false;
+    }
+
+    /**
      * The refundable ticket base = total paid minus the non-refundable platform fees.
      * web_admin_fee (per passenger) + transaction_fee are always non-refundable.
      */
@@ -460,9 +484,13 @@ class Booking extends Model
         $settings       = \App\Models\PaymentSetting::current();
         $passengerCount = max(1, $this->passengers()->count());
         $multiplier     = $passengerCount;
+        $isShortHaul    = $this->isShortHaul();
 
-        $nonRefundable  = (floatval($settings->web_admin_fee) * $multiplier)
-                        + (floatval($settings->transaction_fee) * $multiplier);
+        $webAdminFee    = $settings->getWebAdminFee($isShortHaul);
+        $txFee          = $settings->getTransactionFee($isShortHaul);
+
+        $nonRefundable  = ($webAdminFee * $multiplier)
+                        + ($txFee * $multiplier);
 
         return max(0, floatval($this->total_price) - $nonRefundable);
     }
@@ -497,8 +525,13 @@ class Booking extends Model
         $settings       = \App\Models\PaymentSetting::current();
         $passengerCount = max(1, $this->passengers()->count());
         $multiplier     = $passengerCount;
-        $webAdminFeeTotal    = floatval($settings->web_admin_fee) * $multiplier;
-        $transactionFeeTotal = floatval($settings->transaction_fee) * $multiplier;
+        $isShortHaul    = $this->isShortHaul();
+
+        $webAdminFeePerPax = $settings->getWebAdminFee($isShortHaul);
+        $txFeePerBooking   = $settings->getTransactionFee($isShortHaul);
+
+        $webAdminFeeTotal    = $webAdminFeePerPax * $multiplier;
+        $transactionFeeTotal = $txFeePerBooking * $multiplier;
         $nonRefundableFees   = $webAdminFeeTotal + $transactionFeeTotal;
 
         $rebookingFeeTotal = $this->transaction ? (float) $this->transaction->rebooking_fee : 0.0;
@@ -815,31 +848,56 @@ class Booking extends Model
         
         if ($fees > 0.01) {
             $settings = \App\Models\PaymentSetting::current();
+            $paxCount = max(1, $this->passengers->count());
+            $isShortHaul = $this->isShortHaul();
+
+            $expectedWebAdminFee = $paxCount * $settings->getWebAdminFee($isShortHaul);
+            $expectedTransactionFee = $paxCount * $settings->getTransactionFee($isShortHaul);
+            $expectedHotelFee = $this->accommodations->count() > 0 ? (float) $settings->fee_per_accommodation : 0;
             
-            // Replicate CreateBookingAction multiplier logic for display
-            $isFerry    = optional($this->schedule)->route?->mode === 'ferry';
-            $paxCount   = $this->passengers->count();
-            // If mode isn't loaded, fallback to checking service name or just assume ferry multiplier
-            if (!$this->relationLoaded('schedule') || !isset($isFerry)) {
-                $isFerry = stripos($this->schedule_service ?? '', 'airline') === false;
-            }
-            $multiplier = $paxCount + ($isFerry ? $paxCount : 0);
-            
-            $transactionFee = $multiplier * (float) $settings->transaction_fee;
-            $hotelFee       = $this->accommodations->count() > 0 ? (float) $settings->fee_per_accommodation : 0;
-            
-            if ($fees >= $transactionFee && $transactionFee > 0) {
-                $breakdown[] = ['label' => 'Transaction Fee', 'amount' => $transactionFee, 'class' => 'text-slate-500'];
-                $fees -= $transactionFee;
-            }
-            
-            if ($fees >= $hotelFee && $hotelFee > 0) {
-                $breakdown[] = ['label' => 'Hotel Service Fee', 'amount' => $hotelFee, 'class' => 'text-slate-500'];
-                $fees -= $hotelFee;
+            $hotelFee = 0;
+            if ($expectedHotelFee > 0 && $fees >= $expectedHotelFee) {
+                $hotelFee = $expectedHotelFee;
+                $fees -= $expectedHotelFee;
             }
 
+            $webAdminFee = 0;
+            if ($expectedWebAdminFee > 0 && $fees >= $expectedWebAdminFee) {
+                $webAdminFee = $expectedWebAdminFee;
+                $fees -= $expectedWebAdminFee;
+            }
+
+            $transactionFee = 0;
+            if ($expectedTransactionFee > 0 && $fees >= $expectedTransactionFee) {
+                $transactionFee = $expectedTransactionFee;
+                $fees -= $expectedTransactionFee;
+            }
+
+            // If there's remaining fees or exact match didn't trigger, distribute proportionally
             if ($fees > 0.01) {
-                $breakdown[] = ['label' => 'Web Admin Fee', 'amount' => $fees, 'class' => 'text-slate-500'];
+                if ($webAdminFee === 0 && $transactionFee === 0) {
+                    $defaultWeb = $settings->getWebAdminFee($isShortHaul);
+                    $defaultTx  = $settings->getTransactionFee($isShortHaul);
+                    $defaultSum = ($defaultWeb + $defaultTx) * $paxCount;
+                    if ($defaultSum > 0) {
+                        $webAdminFee = round($fees * (($defaultWeb * $paxCount) / $defaultSum), 2);
+                        $transactionFee = round($fees - $webAdminFee, 2);
+                    } else {
+                        $webAdminFee = $fees;
+                    }
+                } else {
+                    $webAdminFee += $fees;
+                }
+            }
+
+            if ($hotelFee > 0) {
+                $breakdown[] = ['label' => 'Hotel Service Fee', 'amount' => $hotelFee, 'class' => 'text-slate-500'];
+            }
+            if ($webAdminFee > 0) {
+                $breakdown[] = ['label' => 'Web Admin Fee', 'amount' => $webAdminFee, 'class' => 'text-slate-500'];
+            }
+            if ($transactionFee > 0) {
+                $breakdown[] = ['label' => 'Transaction Fee', 'amount' => $transactionFee, 'class' => 'text-slate-500'];
             }
         }
         

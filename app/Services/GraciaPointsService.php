@@ -52,8 +52,9 @@ class GraciaPointsService
 
             $settings = \App\Models\PaymentSetting::current();
             $multiplier = max(1, $booking->passengers()->count());
-            $webAdminFee = $multiplier * (float) ($settings->web_admin_fee ?? 0);
-            $transactionFee = $multiplier * (float) ($settings->transaction_fee ?? 0);
+            $isShortHaul = $booking->isShortHaul();
+            $webAdminFee = $multiplier * $settings->getWebAdminFee($isShortHaul);
+            $transactionFee = $multiplier * $settings->getTransactionFee($isShortHaul);
             
             $eligibleSpend = max(0, $booking->total_price - $webAdminFee - $transactionFee);
             $spendCentavos = (int) round($eligibleSpend * 100);

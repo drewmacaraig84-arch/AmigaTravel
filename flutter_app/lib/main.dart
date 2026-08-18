@@ -9324,9 +9324,36 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
   // Payment / QR
   String? _qrCodeUrl;
   bool _loadingPaymentSettings = true;
-  double _feePerPerson = 0.0;
-  double _feePerAccommodation = 0.0;
-  double _transactionFee = 0.0;
+  double _feePerPerson = 175.0;
+  double _shortHaulFeePerPerson = 30.0;
+  double _feePerAccommodation = 5000.0;
+  double _transactionFee = 345.0;
+  double _shortHaulTransactionFee = 70.0;
+
+  bool _isShortHaulTrip() {
+    int parseDuration(Map<String, dynamic>? sch) {
+      if (sch == null) return 0;
+      if (sch['duration_minutes'] != null) {
+        final m = int.tryParse(sch['duration_minutes'].toString());
+        if (m != null && m > 0) return m;
+      }
+      if (sch['is_short_haul'] == true) return 60;
+      if (sch['is_short_haul'] == false) return 360;
+      final dur = sch['duration']?.toString() ?? '';
+      final hMatch = RegExp(r'(\d+)\s*h', caseSensitive: false).firstMatch(dur);
+      final mMatch = RegExp(r'(\d+)\s*m', caseSensitive: false).firstMatch(dur);
+      final hours = hMatch != null ? int.tryParse(hMatch.group(1) ?? '0') ?? 0 : 0;
+      final mins = mMatch != null ? int.tryParse(mMatch.group(1) ?? '0') ?? 0 : 0;
+      return (hours * 60) + mins;
+    }
+
+    final depDur = parseDuration(widget.booking.selectedSchedule);
+    if (widget.booking.tripType == 'round_trip' && widget.booking.selectedReturnSchedule != null) {
+      final retDur = parseDuration(widget.booking.selectedReturnSchedule);
+      return (depDur > 0 || retDur > 0) && (depDur > retDur ? depDur : retDur) < 300;
+    }
+    return depDur > 0 && depDur < 300;
+  }
 
   // Points
   bool _usePoints = false;
@@ -9527,9 +9554,11 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
         if (data['status'] == 'success') {
           setState(() {
             _qrCodeUrl = data['qr_code_url'];
-            _feePerPerson = _parseDouble(data['web_admin_fee']);
-            _feePerAccommodation = _parseDouble(data['fee_per_accommodation']);
-            _transactionFee = _parseDouble(data['transaction_fee']);
+            _feePerPerson = _parseDouble(data['web_admin_fee'] ?? 175.0);
+            _shortHaulFeePerPerson = _parseDouble(data['short_haul_web_admin_fee'] ?? 30.0);
+            _feePerAccommodation = _parseDouble(data['fee_per_accommodation'] ?? 5000.0);
+            _transactionFee = _parseDouble(data['transaction_fee'] ?? 345.0);
+            _shortHaulTransactionFee = _parseDouble(data['short_haul_transaction_fee'] ?? 70.0);
           });
         }
       }
@@ -10233,9 +10262,13 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                       }
                       transportClassCost = transportClassCost * payingPax;
 
-                      double calculationFee = (multiplier * _feePerPerson) +
+                      final isShortHaul = _isShortHaulTrip();
+                      final activeFeePerPerson = isShortHaul ? _shortHaulFeePerPerson : _feePerPerson;
+                      final activeTxFee = isShortHaul ? _shortHaulTransactionFee : _transactionFee;
+
+                      double calculationFee = (multiplier * activeFeePerPerson) +
                           (accommodationCost > 0 ? _feePerAccommodation : 0);
-                      double transactionFeeTotal = multiplier * _transactionFee;
+                      double transactionFeeTotal = multiplier * activeTxFee;
 
                       double subtotal = ticketPrice +
                           scheduleAccommodationCost +
@@ -10268,7 +10301,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                           (totalBeforePoints - pointsDiscount) > 0
                               ? (totalBeforePoints - pointsDiscount)
                               : 0.0;
-                      final webAdminFee = multiplier * _feePerPerson;
+                      final webAdminFee = multiplier * activeFeePerPerson;
                       final eligiblePointsTotal =
                           (finalTotal - webAdminFee - transactionFeeTotal)
                               .clamp(0.0, double.infinity);

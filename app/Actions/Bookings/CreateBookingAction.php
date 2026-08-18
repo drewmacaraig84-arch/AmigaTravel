@@ -473,9 +473,16 @@ class CreateBookingAction
         $settings       = PaymentSetting::current();
         $multiplier     = max(1, count($passengers));
 
-        $serviceFee     = $multiplier * (float) ($settings->web_admin_fee ?? 0);
+        $depDuration    = $schedule->duration_minutes;
+        $retDuration    = $returnSchedule?->duration_minutes ?? 0;
+        $isShortHaul    = $returnSchedule ? max($depDuration, $retDuration) < 300 : $depDuration < 300;
+
+        $webAdminFee    = $settings->getWebAdminFee($isShortHaul);
+        $txFee          = $settings->getTransactionFee($isShortHaul);
+
+        $serviceFee     = $multiplier * $webAdminFee;
         $hotelFee       = $accommodationsTotal > 0 ? (float) ($settings->fee_per_accommodation ?? 0) : 0;
-        $transactionFee = $multiplier * (float) ($settings->transaction_fee ?? 0);
+        $transactionFee = $multiplier * $txFee;
 
         return $ferryTotal + $transportClassTotal + $accommodationsTotal + $vehicleTotal + $serviceFee + $hotelFee + $transactionFee;
     }

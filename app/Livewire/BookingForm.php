@@ -2518,6 +2518,51 @@ public function selectedSchedule(): ?array
         return 'AGT-' . now()->format('Ymd') . '-' . rand(1000, 9999);
     }
 
+    public function isBookingShortHaul(): bool
+    {
+        if ($this->prefilled_from_package || $this->tour_id || (!empty($this->duration_days) && $this->duration_days > 0)) {
+            return false;
+        }
+
+        $depSchedule = collect($this->availableSchedules)->firstWhere('id', $this->selected_schedule_id);
+        $retSchedule = $this->trip_type === 'round_trip'
+            ? collect($this->availableReturnSchedules)->firstWhere('id', $this->selected_return_schedule_id)
+            : null;
+
+        if ($depSchedule) {
+            $depMins = $this->parseScheduleDurationMinutes($depSchedule);
+            if ($retSchedule) {
+                $retMins = $this->parseScheduleDurationMinutes($retSchedule);
+                return max($depMins, $retMins) < 300;
+            }
+            return $depMins < 300;
+        }
+
+        return false;
+    }
+
+    protected function parseScheduleDurationMinutes(?array $schedule): int
+    {
+        if (!$schedule) {
+            return 0;
+        }
+        if (!empty($schedule['duration_minutes'])) {
+            return (int) $schedule['duration_minutes'];
+        }
+        if (isset($schedule['is_short_haul'])) {
+            return $schedule['is_short_haul'] ? 60 : 360;
+        }
+        if (!empty($schedule['duration'])) {
+            preg_match('/(?:(\d+)\s*h)?\s*(?:(\d+)\s*m)?/i', $schedule['duration'], $m);
+            $hours = !empty($m[1]) ? (int) $m[1] : 0;
+            $mins = !empty($m[2]) ? (int) $m[2] : 0;
+            if ($hours > 0 || $mins > 0) {
+                return ($hours * 60) + $mins;
+            }
+        }
+        return 0;
+    }
+
     protected function getFeeMultiplier(): int
     {
         return max(1, count($this->passengers));
@@ -2538,10 +2583,11 @@ public function selectedSchedule(): ?array
 
             $settings = PaymentSetting::current();
             $multiplier = $this->getFeeMultiplier();
-            $serviceFee = ($multiplier * floatval($settings->web_admin_fee));
+            $isShortHaul = $this->isBookingShortHaul();
+            $serviceFee = ($multiplier * $settings->getWebAdminFee($isShortHaul));
             // Accommodation fee: only charged if accommodation is actually selected AND has a price
             $accommodationFee = $hotelTotal > 0 ? floatval($settings->fee_per_accommodation) : 0;
-            $transactionFee = floatval($settings->transaction_fee) * $multiplier;
+            $transactionFee = $settings->getTransactionFee($isShortHaul) * $multiplier;
 
             return $transportTotal + $vehicleTotal + $hotelTotal + $serviceFee + $accommodationFee + $transactionFee;
         }
@@ -2565,10 +2611,11 @@ public function selectedSchedule(): ?array
 
             $settings = PaymentSetting::current();
             $multiplier = $this->getFeeMultiplier();
-            $serviceFee = ($multiplier * floatval($settings->web_admin_fee));
+            $isShortHaul = $this->isBookingShortHaul();
+            $serviceFee = ($multiplier * $settings->getWebAdminFee($isShortHaul));
             // Accommodation fee: only charged if accommodation is actually selected AND has a price
             $accommodationFee = $hotelTotal > 0 ? floatval($settings->fee_per_accommodation) : 0;
-            $transactionFee = floatval($settings->transaction_fee) * $multiplier;
+            $transactionFee = $settings->getTransactionFee($isShortHaul) * $multiplier;
 
             return $transportTotal + $vehicleTotal + $hotelTotal + $serviceFee + $accommodationFee + $transactionFee;
         }
@@ -2649,15 +2696,16 @@ public function selectedSchedule(): ?array
             : 0;
 
         $settings = PaymentSetting::current();
+        $isShortHaul = $this->isBookingShortHaul();
 
         // Service fee: charged per ticket + transport class
         $multiplier = $this->getFeeMultiplier();
-        $serviceFee = ($multiplier * floatval($settings->web_admin_fee));
+        $serviceFee = ($multiplier * $settings->getWebAdminFee($isShortHaul));
         
         // Accommodation fee: only charged if hotel is actually selected AND has a price
         $accommodationFee = $hotelTotal > 0 ? floatval($settings->fee_per_accommodation) : 0;
         
-        $transactionFee = floatval($settings->transaction_fee) * $multiplier;
+        $transactionFee = $settings->getTransactionFee($isShortHaul) * $multiplier;
 
         return $transportTotal + $transportClassTotal + $vehicleTotal + $hotelTotal + $serviceFee + $accommodationFee + $transactionFee + $this->getExtraBaggageTotalPrice();
     }
@@ -2759,12 +2807,13 @@ public function selectedSchedule(): ?array
 
         // Fees
         $multiplier = $this->getFeeMultiplier();
-        $breakdown['fee_per_traveler'] = $multiplier * floatval($settings->web_admin_fee);
+        $isShortHaul = $this->isBookingShortHaul();
+        $breakdown['fee_per_traveler'] = $multiplier * $settings->getWebAdminFee($isShortHaul);
         
         // Accommodation fee: only charged if hotel is actually selected AND has a price
         $breakdown['fee_per_accommodation'] = $breakdown['hotel'] > 0 ? floatval($settings->fee_per_accommodation) : 0;
 
-        $breakdown['transaction_fee'] = floatval($settings->transaction_fee) * $multiplier;
+        $breakdown['transaction_fee'] = $settings->getTransactionFee($isShortHaul) * $multiplier;
 
         // Calculate total (sum of all items)
         $breakdown['total'] = 
