@@ -150,6 +150,7 @@ class BookingController extends Controller
 
         $bookings = $bookings->map(function (Booking $booking) {
             $data = $booking->toArray();
+            $transaction = $booking->transaction;
             $isConfirmed = in_array($booking->status, ['confirmed', Booking::STATUS_PENDING_REBOOKING]);
             if ($isConfirmed || $transaction?->confirmation_pdf || $transaction?->confirmation_url) {
                 // Route through server-side route so the file is served directly
@@ -250,6 +251,7 @@ class BookingController extends Controller
 
         // Apply same formatting as index
         $data = $booking->toArray();
+        $transaction = $booking->transaction;
         $isConfirmed = in_array($booking->status, ['confirmed', Booking::STATUS_PENDING_REBOOKING]);
         if ($isConfirmed || $transaction?->confirmation_pdf || $transaction?->confirmation_url) {
             // Route through server-side route so the file is served directly
