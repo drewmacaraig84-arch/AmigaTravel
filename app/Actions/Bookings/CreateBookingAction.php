@@ -471,11 +471,10 @@ class CreateBookingAction
         $vehicleTotal = $hasVehicle ? (float) ($vehiclePrice ?? 0) : 0;
 
         $settings       = PaymentSetting::current();
-        $multiplier     = max(1, count($passengers));
-
+        $isAirline      = strtolower($schedule->ferryRoute?->mode ?? '') === 'airline';
         $depDuration    = $schedule->duration_minutes;
         $retDuration    = $returnSchedule?->duration_minutes ?? 0;
-        $isShortHaul    = $returnSchedule ? max($depDuration, $retDuration) < 300 : $depDuration < 300;
+        $isShortHaul    = ! $isAirline && ($returnSchedule ? max($depDuration, $retDuration) < 300 : $depDuration < 300);
 
         $webAdminFee    = $settings->getWebAdminFee($isShortHaul);
         $txFee          = $settings->getTransactionFee($isShortHaul);

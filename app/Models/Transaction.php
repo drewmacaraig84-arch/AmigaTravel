@@ -16,6 +16,7 @@ class Transaction extends Model
         'payment_deadline_at',
         'payment_reference',
         'proof_of_payment',
+        'proof_submitted_at',
         'confirmation_url',
         'confirmation_pdf',
         'rebooking_fee',
@@ -30,6 +31,7 @@ class Transaction extends Model
         'student_discount_proofs' => 'array',
         'verified_at' => 'datetime',
         'payment_deadline_at' => 'datetime',
+        'proof_submitted_at' => 'datetime',
     ];
 
     protected static function booted()
@@ -55,11 +57,12 @@ class Transaction extends Model
 
     public function verificationUnlockAt(): ?Carbon
     {
-        if (! $this->created_at) {
+        $base = $this->proof_submitted_at ?? $this->created_at;
+        if (! $base) {
             return null;
         }
 
-        return $this->created_at->copy()->addMinutes(5);
+        return $base->copy()->addMinutes(5);
     }
 
     public function isVerificationLocked(): bool

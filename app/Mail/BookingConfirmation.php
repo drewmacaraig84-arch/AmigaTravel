@@ -66,6 +66,13 @@ class BookingConfirmation extends Mailable implements ShouldQueue
         $receiptToAttach = $this->receiptPath ?: ($transaction?->confirmation_pdf ?? null);
         $diskToUse = $this->receiptDisk ?: 'public';
 
+        \Illuminate\Support\Facades\Log::info('BookingConfirmation: building email', [
+            'booking_id'      => $this->booking->id ?? null,
+            'ticketUrl'       => $this->ticketUrl,
+            'receiptToAttach' => $receiptToAttach,
+            'diskToUse'       => $diskToUse,
+        ]);
+
         if ($receiptToAttach) {
             $resolvedFullPath = $this->resolveAttachmentPath($receiptToAttach, $diskToUse);
             if ($resolvedFullPath) {

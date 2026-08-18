@@ -330,6 +330,7 @@ class BookingController extends Controller
             'proof_of_payment' => $path,
             'payment_reference' => $request->input('reference_number'),
             'payment_status' => 'pending',
+            'proof_submitted_at' => now(),
         ]);
 
         try {
@@ -537,6 +538,7 @@ class BookingController extends Controller
             'rebooking_fee' => $rebookingFee,
             'rebooking_proof_of_payment' => $proofPath,
             'payment_status' => 'pending',
+            'proof_submitted_at' => now(),
         ]);
         $booking->update([
             'is_rebooked' => true,

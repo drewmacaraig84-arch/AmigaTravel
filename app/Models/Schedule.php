@@ -194,6 +194,10 @@ class Schedule extends Model
 
     public function isShortHaul(): bool
     {
+        if (strtolower($this->ferryRoute?->mode ?? '') === 'airline') {
+            return false;
+        }
+
         return $this->duration_minutes < 300;
     }
 

@@ -201,6 +201,7 @@ class PaymentProof extends Component
             'payment_status' => 'pending',
             'payment_reference' => $this->reference_number,
             'payment_deadline_at' => null, // Stop the timer
+            'proof_submitted_at' => now(),
         ]);
 
         // Also ensure the booking status is not cancelled (it might have been caught

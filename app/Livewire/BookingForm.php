@@ -2520,6 +2520,10 @@ public function selectedSchedule(): ?array
 
     public function isBookingShortHaul(): bool
     {
+        if (strtolower($this->mode ?? '') === 'airline') {
+            return false;
+        }
+
         if ($this->prefilled_from_package || $this->tour_id || (!empty($this->duration_days) && $this->duration_days > 0)) {
             return false;
         }

@@ -6492,13 +6492,6 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
           ]),
         if (_booking['status'] != 'cancelled' &&
             _booking['status'] != 'operator_cancelled') ...[
-          if (_booking['ticket_url'] != null && _paymentStatus == 'paid')
-            OutlinedButton.icon(
-              onPressed: () =>
-                  launchUrl(Uri.parse(_booking['ticket_url'].toString())),
-              icon: const Icon(Icons.receipt_long),
-              label: const Text('E-acknowledgement'),
-            ),
           if ((_booking['confirmation_pdf_url'] != null ||
                   transaction['confirmation_url'] != null ||
                   _booking['confirmation_url'] != null) &&
@@ -6514,6 +6507,13 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               label: const Text('Download Ticket'),
               style: FilledButton.styleFrom(
                   backgroundColor: kGreen, foregroundColor: Colors.white),
+            ),
+          if (_booking['ticket_url'] != null && _paymentStatus == 'paid')
+            OutlinedButton.icon(
+              onPressed: () =>
+                  launchUrl(Uri.parse(_booking['ticket_url'].toString())),
+              icon: const Icon(Icons.receipt_long),
+              label: const Text('Payment Acknowledgement'),
             ),
         ],
         const SizedBox(height: 12),
@@ -9331,6 +9331,8 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
   double _shortHaulTransactionFee = 70.0;
 
   bool _isShortHaulTrip() {
+    if (widget.booking.mode == 'airline') return false;
+
     int parseDuration(Map<String, dynamic>? sch) {
       if (sch == null) return 0;
       if (sch['duration_minutes'] != null) {

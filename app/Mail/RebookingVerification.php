@@ -32,15 +32,51 @@ class RebookingVerification extends Mailable implements ShouldQueue
         $mail = $this->subject('Amiga Gracia Travel Rebooking Verified')
             ->view('emails.rebooking-verification');
 
+        // Generate the official payment acknowledgement PDF (same as BookingConfirmation)
+        try {
+            $ackDir = storage_path('app/acknowledgements');
+            $autoAckPath = $ackDir . '/acknowledgement-' . $this->booking->transaction_number . '.pdf';
+
+            if (! is_dir($ackDir)) {
+                mkdir($ackDir, 0755, true);
+            }
+
+            if (file_exists($autoAckPath)) {
+                @unlink($autoAckPath);
+            }
+
+            \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.receipt', ['booking' => $this->booking])
+                ->setPaper('a4')
+                ->save($autoAckPath);
+
+            $mail->attach($autoAckPath, [
+                'as'   => 'Payment_Acknowledgement.pdf',
+                'mime' => 'application/pdf',
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('RebookingVerification: Failed to generate payment acknowledgement PDF', [
+                'booking_id'         => $this->booking->id ?? null,
+                'transaction_number' => $this->booking->transaction_number ?? null,
+                'error'              => $e->getMessage(),
+            ]);
+        }
+
         $transaction = $this->booking->transaction ?? \App\Models\Transaction::where('booking_id', $this->booking->id)->first();
         $receiptToAttach = $this->receiptPath ?: ($transaction?->confirmation_pdf ?? null);
         $diskToUse = $this->receiptDisk ?: 'public';
+
+        \Illuminate\Support\Facades\Log::info('RebookingVerification: building email', [
+            'booking_id'      => $this->booking->id ?? null,
+            'ticketUrl'       => $this->ticketUrl,
+            'receiptToAttach' => $receiptToAttach,
+            'diskToUse'       => $diskToUse,
+        ]);
 
         if ($receiptToAttach) {
             $resolvedFullPath = $this->resolveAttachmentPath($receiptToAttach, $diskToUse);
             if ($resolvedFullPath) {
                 $mail->attach($resolvedFullPath, [
-                    'as' => 'Ticket_Confirmation.pdf',
+                    'as'   => 'Ticket_Confirmation.pdf',
                     'mime' => 'application/pdf',
                 ]);
                 $this->hasTicketAttachment = true;
@@ -57,9 +93,10 @@ class RebookingVerification extends Mailable implements ShouldQueue
                     }
                 } catch (\Throwable $e) {
                     \Illuminate\Support\Facades\Log::warning('RebookingVerification: ticket PDF could not be located on disk or storage.', [
-                        'booking_id' => $this->booking->id ?? null,
+                        'booking_id'  => $this->booking->id ?? null,
                         'receiptPath' => $receiptToAttach,
                         'receiptDisk' => $diskToUse,
+                        'error'       => $e->getMessage(),
                     ]);
                 }
             }

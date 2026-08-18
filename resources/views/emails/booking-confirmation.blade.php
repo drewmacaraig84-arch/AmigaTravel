@@ -26,25 +26,33 @@
                 <li><strong>Infants:</strong> {{ $booking->passengers->where('type', 'infant')->count() }}</li>
             </ul>
             <p style="margin:0 0 18px 0;">
-                Your booking has been confirmed. Please find the attached confirmation document or use the link below:
+                Your booking has been verified and confirmed. Please review your booking details below.
             </p>
             @if(! empty($ticketUrl))
-                <p style="text-align:center; margin: 24px 0;">
+                <div style="text-align:center; margin: 24px 0; padding: 18px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
+                    <p style="margin: 0 0 12px 0; font-weight: 600; color: #166534;">Your Official E-Ticket / Confirmation Link:</p>
                     <a href="{{ $ticketUrl }}"
                        style="display:inline-block; padding:14px 32px; background:#216417; color:#ffffff;
                               text-decoration:none; border-radius:12px; font-weight:bold; font-size:16px;">
                         View / Download Your Ticket
                     </a>
-                </p>
-                <p style="font-size:12px; color:#64748b; text-align:center; margin:0 0 16px 0;">
-                    Or copy this link: <span style="word-break: break-all;">{{ $ticketUrl }}</span>
-                </p>
+                    <p style="font-size:12px; color:#64748b; text-align:center; margin:12px 0 0 0;">
+                        Or copy this link: <span style="word-break: break-all;">{{ $ticketUrl }}</span>
+                    </p>
+                </div>
             @endif
-            @if(! empty($hasTicketAttachment))
-                <p style="color:#1e293b; font-weight:600; margin:0;">
-                    📎 Ticket_Confirmation.pdf is attached to this email.
+
+            <div style="margin: 20px 0; padding: 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <p style="margin: 0 0 6px 0; font-weight: bold; color: #334155;">Attached Documents:</p>
+                <p style="color:#1e293b; font-size: 14px; margin:0 0 4px 0;">
+                    📎 <strong>Payment_Acknowledgement.pdf</strong> (Proof of payment & booking summary)
                 </p>
-            @endif
+                @if(! empty($hasTicketAttachment))
+                    <p style="color:#166534; font-size: 14px; font-weight:600; margin:0;">
+                        📎 <strong>Ticket_Confirmation.pdf</strong> (Official E-Ticket / Itinerary from Admin)
+                    </p>
+                @endif
+            </div>
         </div>
     </body>
 </html>

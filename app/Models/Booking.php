@@ -257,14 +257,14 @@ class Booking extends Model
 
     public function isVerificationLocked(): bool
     {
-        return $this->status === 'pending'
+        return in_array($this->status, ['pending', 'unpaid'], true)
             && $this->transaction !== null
             && $this->transaction->isVerificationLocked();
     }
 
     public function verificationTimerLabel(): string
     {
-        if ($this->status !== 'pending') {
+        if (! in_array($this->status, ['pending', 'unpaid'], true)) {
             return '—';
         }
 
@@ -277,7 +277,7 @@ class Booking extends Model
 
     public function verificationTimerTooltip(): ?string
     {
-        if ($this->status !== 'pending') {
+        if (! in_array($this->status, ['pending', 'unpaid'], true)) {
             return null;
         }
 
@@ -456,6 +456,10 @@ class Booking extends Model
      */
     public function isShortHaul(): bool
     {
+        if (strtolower($this->getMode()) === 'airline') {
+            return false;
+        }
+
         if (!empty($this->duration_days) && $this->duration_days > 0) {
             return false; // Tour package multi-day / full day trip
         }
