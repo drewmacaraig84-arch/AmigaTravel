@@ -321,15 +321,18 @@ Route::get('/ticket/download/{transaction_number}', function ($transaction_numbe
     ]);
 })->name('ticket.download');
 
-// Serves the admin-uploaded confirmation PDF (used for the "Download Ticket" button in-app)
+// Serves the admin-uploaded confirmation PDF or official E-Ticket / Travel Itinerary (used for "Download Ticket")
 Route::get('/ticket/admin-pdf/{transaction_number}', function ($transaction_number) {
     $booking = \App\Models\Booking::where('transaction_number', $transaction_number)
-        ->with('transaction')
+        ->with(['passengers.discount', 'schedule.ferryRoute', 'returnSchedule', 'transaction', 'accommodations', 'transportClasses'])
         ->firstOrFail();
 
     $pdfPath = $booking->transaction?->confirmation_pdf;
 
     if ($pdfPath) {
+        $cleanPdfPath = ltrim($pdfPath, '/\\');
+        $baseName = basename($pdfPath);
+
         if (\Illuminate\Support\Facades\Storage::disk('public')->exists($pdfPath)) {
             return response()->file(
                 \Illuminate\Support\Facades\Storage::disk('public')->path($pdfPath),
@@ -340,20 +343,42 @@ Route::get('/ticket/admin-pdf/{transaction_number}', function ($transaction_numb
             );
         }
 
-        $cleanPdfPath = ltrim($pdfPath, '/\\');
-        $baseName = basename($pdfPath);
+        if (\Illuminate\Support\Facades\Storage::disk('public')->exists($cleanPdfPath)) {
+            return response()->file(
+                \Illuminate\Support\Facades\Storage::disk('public')->path($cleanPdfPath),
+                [
+                    'Content-Type' => 'application/pdf',
+                    'Content-Disposition' => 'inline; filename="Ticket_Confirmation_' . $booking->transaction_number . '.pdf"',
+                ]
+            );
+        }
+
+        if (\Illuminate\Support\Facades\Storage::disk('public')->exists('tickets/' . $baseName)) {
+            return response()->file(
+                \Illuminate\Support\Facades\Storage::disk('public')->path('tickets/' . $baseName),
+                [
+                    'Content-Type' => 'application/pdf',
+                    'Content-Disposition' => 'inline; filename="Ticket_Confirmation_' . $booking->transaction_number . '.pdf"',
+                ]
+            );
+        }
 
         $candidates = [
             $pdfPath,
             storage_path('app/public/' . $cleanPdfPath),
             storage_path('app/' . $cleanPdfPath),
             public_path('storage/' . $cleanPdfPath),
+            storage_path('app/public/tickets/' . $cleanPdfPath),
+            storage_path('app/tickets/' . $cleanPdfPath),
+            public_path('tickets/' . $cleanPdfPath),
             storage_path('app/public/tickets/' . $baseName),
             storage_path('app/tickets/' . $baseName),
             public_path('tickets/' . $baseName),
+            public_path('storage/tickets/' . $baseName),
             storage_path('app/public/receipts/' . $baseName),
             storage_path('app/receipts/' . $baseName),
             public_path('receipts/' . $baseName),
+            public_path('storage/receipts/' . $baseName),
         ];
 
         foreach ($candidates as $candidate) {
@@ -370,8 +395,30 @@ Route::get('/ticket/admin-pdf/{transaction_number}', function ($transaction_numb
         return redirect()->away($booking->transaction->confirmation_url);
     }
 
-    // Fallback: redirect to the itinerary acknowledgement if no admin PDF exists
-    return redirect()->route('ticket.download', ['transaction_number' => $transaction_number]);
+    // If no admin custom PDF or URL exists, generate and serve the Official E-Ticket & Travel Itinerary PDF
+    $ticketDir = storage_path('app/tickets');
+    $path = $ticketDir . '/itinerary-' . $booking->transaction_number . '.pdf';
+
+    try {
+        if (! is_dir($ticketDir)) {
+            mkdir($ticketDir, 0755, true);
+        }
+        if (file_exists($path)) {
+            @unlink($path);
+        }
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.receipt', ['booking' => $booking, 'isTicket' => true]);
+        $pdf->setPaper('a4');
+        $pdf->save($path);
+    } catch (\Throwable $e) {
+        \Illuminate\Support\Facades\Log::error('Ticket PDF generation failed: ' . $e->getMessage());
+        return response()->view('pdf.receipt', ['booking' => $booking, 'isTicket' => true]);
+    }
+
+    return response()->file($path, [
+        'Content-Type' => 'application/pdf',
+        'Content-Disposition' => 'inline; filename="Ticket_Confirmation_' . $booking->transaction_number . '.pdf"',
+    ]);
 })->name('ticket.admin-pdf');
 
 // Serves any public storage file through the server (avoids Railway storage URL 404s)
