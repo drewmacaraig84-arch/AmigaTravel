@@ -13402,6 +13402,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           final bool isRead =
                               notif['is_read'] == 1 || notif['is_read'] == true;
                           return ListTile(
+                            onTap: () => _handleNotificationTap(notif),
                             tileColor:
                                 isRead ? null : kGreen.withOpacity(0.05),
                             leading: CircleAvatar(
