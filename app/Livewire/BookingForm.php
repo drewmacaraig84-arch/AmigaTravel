@@ -2005,6 +2005,7 @@ public function selectedSchedule(): ?array
                             'price' => $price,
                             'is_promo' => $scheduleTransportClass->is_promo,
                             'rate_code' => $scheduleTransportClass->rate_code,
+                            'is_return' => false,
                         ]);
                     }
                 }
@@ -2017,6 +2018,7 @@ public function selectedSchedule(): ?array
                             'price' => $price,
                             'is_promo' => $returnScheduleTransportClass->is_promo,
                             'rate_code' => $returnScheduleTransportClass->rate_code,
+                            'is_return' => true,
                         ]);
                     }
                 }

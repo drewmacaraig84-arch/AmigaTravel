@@ -118,27 +118,35 @@ class BookingObserver
             if ($booking->schedule_id) {
                 // We need the transport class linked to this booking
                 $booking->loadMissing('transportClasses');
-                foreach ($booking->transportClasses as $tc) {
+                $allTcs = $booking->transportClasses;
+                $depTcs = $allTcs->filter(fn ($tc) => ! (bool) $tc->pivot->is_return);
+                // Legacy fallback: if no is_return flag, use first entry
+                if ($depTcs->isEmpty() && $allTcs->isNotEmpty()) {
+                    $depTcs = collect([$allTcs->first()]);
+                }
+                $depTc = $depTcs->first();
+                if ($depTc) {
                     ScheduleTransportClass::where('schedule_id', $booking->schedule_id)
-                        ->where('transport_class_id', $tc->id)
+                        ->where('transport_class_id', $depTc->id)
                         ->increment('tickets_available');
-                    break; // Only one outbound transport class per booking
                 }
             }
 
             // Restore return transport class seat (return bookings have the
             // return transport class stored in the same pivot with the return schedule)
             if ($booking->return_schedule_id) {
-                // Return transport class is the second entry in the pivot (if present)
                 $booking->loadMissing('transportClasses');
-                $classes = $booking->transportClasses;
-                if ($classes->count() > 1) {
-                    $returnTc = $classes->skip(1)->first();
-                    if ($returnTc) {
-                        ScheduleTransportClass::where('schedule_id', $booking->return_schedule_id)
-                            ->where('transport_class_id', $returnTc->id)
-                            ->increment('tickets_available');
-                    }
+                $allTcs = $booking->transportClasses;
+                $retTcs = $allTcs->filter(fn ($tc) => (bool) $tc->pivot->is_return);
+                // Legacy fallback: if no is_return flag, use second entry
+                if ($retTcs->isEmpty() && $allTcs->count() > 1) {
+                    $retTcs = collect([$allTcs->skip(1)->first()]);
+                }
+                $returnTc = $retTcs->first();
+                if ($returnTc) {
+                    ScheduleTransportClass::where('schedule_id', $booking->return_schedule_id)
+                        ->where('transport_class_id', $returnTc->id)
+                        ->increment('tickets_available');
                 }
             }
 
@@ -181,26 +189,35 @@ class BookingObserver
 
             if ($booking->schedule_id) {
                 $booking->loadMissing('transportClasses');
-                foreach ($booking->transportClasses as $tc) {
+                $allTcs = $booking->transportClasses;
+                $depTcs = $allTcs->filter(fn ($tc) => ! (bool) $tc->pivot->is_return);
+                // Legacy fallback: if no is_return flag, use first entry
+                if ($depTcs->isEmpty() && $allTcs->isNotEmpty()) {
+                    $depTcs = collect([$allTcs->first()]);
+                }
+                $depTc = $depTcs->first();
+                if ($depTc) {
                     ScheduleTransportClass::where('schedule_id', $booking->schedule_id)
-                        ->where('transport_class_id', $tc->id)
+                        ->where('transport_class_id', $depTc->id)
                         ->where('tickets_available', '>', 0)
                         ->decrement('tickets_available');
-                    break;
                 }
             }
 
             if ($booking->return_schedule_id) {
                 $booking->loadMissing('transportClasses');
-                $classes = $booking->transportClasses;
-                if ($classes->count() > 1) {
-                    $returnTc = $classes->skip(1)->first();
-                    if ($returnTc) {
-                        ScheduleTransportClass::where('schedule_id', $booking->return_schedule_id)
-                            ->where('transport_class_id', $returnTc->id)
-                            ->where('tickets_available', '>', 0)
-                            ->decrement('tickets_available');
-                    }
+                $allTcs = $booking->transportClasses;
+                $retTcs = $allTcs->filter(fn ($tc) => (bool) $tc->pivot->is_return);
+                // Legacy fallback: if no is_return flag, use second entry
+                if ($retTcs->isEmpty() && $allTcs->count() > 1) {
+                    $retTcs = collect([$allTcs->skip(1)->first()]);
+                }
+                $returnTc = $retTcs->first();
+                if ($returnTc) {
+                    ScheduleTransportClass::where('schedule_id', $booking->return_schedule_id)
+                        ->where('transport_class_id', $returnTc->id)
+                        ->where('tickets_available', '>', 0)
+                        ->decrement('tickets_available');
                 }
             }
 

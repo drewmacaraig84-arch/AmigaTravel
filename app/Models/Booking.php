@@ -708,6 +708,11 @@ class Booking extends Model
         $depTcPrice = $depTcs->sum(fn ($tc) => (float) $tc->pivot->price);
         $retTcPrice = $retTcs->sum(fn ($tc) => (float) $tc->pivot->price);
 
+        $payingPassengers = $passengers->filter(function ($p) {
+            return ! ($this->has_vehicle && $p->type === 'driver');
+        });
+        $payingCount = $payingPassengers->count();
+
         foreach ($passengers as $p) {
             if ($this->has_vehicle && $p->type === 'driver') {
                 continue;
@@ -744,7 +749,7 @@ class Booking extends Model
         // Combine ticket + accommodation/transport class into one line
         if ($depTicketTotal + $depAccTotal > 0) {
             $breakdown[] = [
-                'label' => 'Departure Ticket & Transport Class (' . $passengers->count() . 'x)',
+                'label' => 'Departure Ticket & Transport Class (' . $payingCount . 'x)',
                 'amount' => $depTicketTotal + $depAccTotal,
                 'class' => ''
             ];
@@ -752,7 +757,7 @@ class Booking extends Model
         
         if ($retTicketTotal + $retAccTotal > 0) {
             $breakdown[] = [
-                'label' => 'Return Ticket & Transport Class (' . $passengers->count() . 'x)',
+                'label' => 'Return Ticket & Transport Class (' . $payingCount . 'x)',
                 'amount' => $retTicketTotal + $retAccTotal,
                 'class' => ''
             ];

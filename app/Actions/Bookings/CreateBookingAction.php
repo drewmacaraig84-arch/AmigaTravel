@@ -286,6 +286,7 @@ class CreateBookingAction
                     
                     $booking->transportClasses()->attach($transportClass->id, [
                         'price' => $price,
+                        'is_return' => false,
                     ]);
                 }
             }

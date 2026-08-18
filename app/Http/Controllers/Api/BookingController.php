@@ -54,7 +54,7 @@ class BookingController extends Controller
             'voucher_code'                              => 'nullable|string|max:50',
             'return_schedule_id'                        => 'nullable|integer|exists:schedules,id',
             'selected_return_schedule_accommodation_id' => 'nullable|integer|exists:schedule_accommodations,id',
-            'return_selected_transport_class_id'        => 'nullable|integer|exists:transport_classes,id',
+            'selected_return_transport_class_id'        => 'nullable|integer|exists:transport_classes,id',
             'use_points'                                => 'nullable|boolean',
         ]);
 
@@ -186,6 +186,7 @@ class BookingController extends Controller
             }
 
             // Per-pax TC prices for Trip Details display in app
+            // TC pivot price is already stored per-passenger (matching schedule_price semantics)
             $paxCount = max(1, $booking->passengers->count());
             $allTcs = $booking->transportClasses;
             $depTcPrice = $allTcs->filter(fn ($tc) => ! (bool) $tc->pivot->is_return)->sum(fn ($tc) => (float) $tc->pivot->price);
@@ -196,8 +197,8 @@ class BookingController extends Controller
                 $depTcPrice = (float) $tcArr[0]->pivot->price;
                 $retTcPrice = (float) $tcArr[1]->pivot->price;
             }
-            $data['departure_tc_price_per_pax'] = $paxCount > 0 ? round($depTcPrice / $paxCount, 2) : 0;
-            $data['return_tc_price_per_pax']    = $paxCount > 0 ? round($retTcPrice / $paxCount, 2) : 0;
+            $data['departure_tc_price_per_pax'] = round($depTcPrice, 2);
+            $data['return_tc_price_per_pax']    = round($retTcPrice, 2);
 
             return $data;
         });
@@ -271,6 +272,7 @@ class BookingController extends Controller
         }
 
         // Per-pax TC prices for Trip Details display in app
+        // TC pivot price is already stored per-passenger (matching schedule_price semantics)
         $paxCount = max(1, $booking->passengers->count());
         $allTcs = $booking->transportClasses;
         $depTcPrice = $allTcs->filter(fn ($tc) => ! (bool) $tc->pivot->is_return)->sum(fn ($tc) => (float) $tc->pivot->price);
@@ -280,8 +282,8 @@ class BookingController extends Controller
             $depTcPrice = (float) $tcArr[0]->pivot->price;
             $retTcPrice = (float) $tcArr[1]->pivot->price;
         }
-        $data['departure_tc_price_per_pax'] = $paxCount > 0 ? round($depTcPrice / $paxCount, 2) : 0;
-        $data['return_tc_price_per_pax']    = $paxCount > 0 ? round($retTcPrice / $paxCount, 2) : 0;
+        $data['departure_tc_price_per_pax'] = round($depTcPrice, 2);
+        $data['return_tc_price_per_pax']    = round($retTcPrice, 2);
 
         return response()->json([
             'status' => 'success',
