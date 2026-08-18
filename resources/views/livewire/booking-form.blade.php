@@ -1416,12 +1416,6 @@
                                         <p class="text-slate-900 font-bold">&#8369;{{ number_format($vehicle_price ?? 0, 2) }}</p>
                                     </div>
                                 @endif
-                                @if ($selected_transport_class_id && isset($selectedClass))
-                                    <div class="rounded-xl bg-white p-4 border border-slate-200 shadow-sm flex justify-between items-center">
-                                        <p class="text-slate-900 font-bold text-sm">Travel Class: <span class="text-[#db2777]">{{ $selectedClass['name'] }}</span></p>
-                                        <p class="text-slate-900 font-bold">&#8369;{{ number_format($selectedClass['price'], 2) }}</p>
-                                    </div>
-                                @endif
                                 @if ($selected_hotel_id)
                                     @php $selectedHotel = $accommodationCatalog->firstWhere('id', $selected_hotel_id); @endphp
                                     <div class="rounded-xl bg-white p-4 border border-slate-200 shadow-sm flex justify-between items-center">
@@ -1437,10 +1431,19 @@
                             @php
                                 $departureSchedule = collect($availableSchedules)->firstWhere('id', $selected_schedule_id);
                                 $returnSchedule = $trip_type === 'round_trip' ? collect($availableReturnSchedules)->firstWhere('id', $selected_return_schedule_id) : null;
+                                $departureClass = $departureSchedule && $selected_transport_class_id
+                                    ? collect($departureSchedule['transport_classes'] ?? [])->firstWhere(fn($c) => (int)($c['pivot_id'] ?? $c['id']) === (int)$selected_transport_class_id)
+                                    : null;
+                                $returnClass = $returnSchedule && $selected_return_transport_class_id
+                                    ? collect($returnSchedule['transport_classes'] ?? [])->firstWhere(fn($c) => (int)($c['pivot_id'] ?? $c['id']) === (int)$selected_return_transport_class_id)
+                                    : null;
                             @endphp
                             
                             {{-- Departure Ticket --}}
                             @if ($departureSchedule)
+                                @php
+                                    $depTicketFare = (float)($departureSchedule['price'] ?? 0) + (float)($departureClass['price'] ?? 0);
+                                @endphp
                                 <div class="mt-4 rounded-xl bg-white p-5 border border-slate-200 shadow-sm">
                                     <div class="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">Departure</div>
                                     
@@ -1465,9 +1468,12 @@
                                         <div>
                                             <p class="text-[#db2777] font-extrabold text-lg">{{ $departureSchedule['service'] }}</p>
                                             <p class="text-slate-600 font-medium mt-1">{{ $departureSchedule['departure'] }} - {{ $departureSchedule['arrival'] }}</p>
+                                            @if ($departureClass)
+                                                <p class="text-slate-700 text-sm mt-1.5"><span class="font-bold text-slate-900">Travel Class:</span> <span class="text-[#db2777] font-semibold">{{ $departureClass['name'] }}</span></p>
+                                            @endif
                                         </div>
                                         <div class="text-right">
-                                            <p class="text-slate-900 font-bold text-lg">&#8369;{{ number_format($departureSchedule['price'], 2) }}</p>
+                                            <p class="text-slate-900 font-bold text-lg">&#8369;{{ number_format($depTicketFare, 2) }}</p>
                                             <p class="text-slate-500 text-sm">Duration: {{ $departureSchedule['duration'] }}</p>
                                         </div>
                                     </div>
@@ -1484,6 +1490,9 @@
                             {{-- Return Ticket (if round trip) --}}
                             @if ($trip_type === 'round_trip')
                                 @if ($returnSchedule)
+                                    @php
+                                        $retTicketFare = (float)($returnSchedule['price'] ?? 0) + (float)($returnClass['price'] ?? 0);
+                                    @endphp
                                     <div class="mt-4 rounded-xl bg-white p-5 border border-slate-200 shadow-sm">
                                         <div class="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">Return</div>
                                         
@@ -1508,9 +1517,12 @@
                                             <div>
                                                 <p class="text-[#db2777] font-extrabold text-lg">{{ $returnSchedule['service'] }}</p>
                                                 <p class="text-slate-600 font-medium mt-1">{{ $returnSchedule['departure'] }} - {{ $returnSchedule['arrival'] }}</p>
+                                                @if ($returnClass)
+                                                    <p class="text-slate-700 text-sm mt-1.5"><span class="font-bold text-slate-900">Travel Class:</span> <span class="text-[#db2777] font-semibold">{{ $returnClass['name'] }}</span></p>
+                                                @endif
                                             </div>
                                             <div class="text-right">
-                                                <p class="text-slate-900 font-bold text-lg">&#8369;{{ number_format($returnSchedule['price'], 2) }}</p>
+                                                <p class="text-slate-900 font-bold text-lg">&#8369;{{ number_format($retTicketFare, 2) }}</p>
                                                 <p class="text-slate-500 text-sm">Duration: {{ $returnSchedule['duration'] }}</p>
                                             </div>
                                         </div>
