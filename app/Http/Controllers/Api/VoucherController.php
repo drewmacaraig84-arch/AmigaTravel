@@ -10,6 +10,19 @@ class VoucherController extends Controller
 {
     public function index(Request $request)
     {
+        $email = null;
+        $userId = null;
+        if (auth('api')->check()) {
+            $userId = auth('api')->id();
+            $email = auth('api')->user()->email;
+        } elseif (auth('sanctum')->check()) {
+            $userId = auth('sanctum')->id();
+            $email = auth('sanctum')->user()->email;
+        }
+        if (!$email && $request->filled('email')) {
+            $email = $request->input('email');
+        }
+
         $vouchersQuery = \App\Models\Voucher::withCount('redemptions')
             ->where('is_active', true)
             ->where(function ($q) {
@@ -20,8 +33,7 @@ class VoucherController extends Controller
             });
 
         // Vouchers should be either public (not hidden) OR claimed by the logged in user
-        if (auth('api')->check()) {
-            $userId = auth('api')->id();
+        if ($userId) {
             $vouchersQuery->where(function($q) use ($userId) {
                 $q->where('is_hidden', false)
                   ->orWhereHas('claimedByUsers', function($q2) use ($userId) {
@@ -31,21 +43,37 @@ class VoucherController extends Controller
         } else {
             $vouchersQuery->where('is_hidden', false);
         }
+
         $userRedeemedVoucherIds = [];
-        if (auth('api')->check()) {
-            $user = auth('api')->user();
-            $userRedeemedVoucherIds = \App\Models\VoucherRedemption::where('user_id', $user->id)
-                ->orWhere('normalized_email', strtolower(trim($user->email)))
+        if ($userId || $email) {
+            $userRedeemedVoucherIds = \App\Models\VoucherRedemption::query()
+                ->where(function ($q) use ($userId, $email) {
+                    if ($userId) {
+                        $q->where('user_id', $userId);
+                    }
+                    if ($email) {
+                        $q->orWhere('normalized_email', strtolower(trim($email)));
+                    }
+                })
+                ->whereHas('booking', function ($q) {
+                    $q->whereNotIn('status', ['cancelled', 'operator_cancelled'])
+                      ->where(function ($sub) {
+                          $sub->where('status', 'confirmed')
+                              ->orWhereHas('transaction', function ($t) {
+                                  $t->where('payment_status', 'paid')
+                                    ->orWhere('payment_deadline_at', '>=', now());
+                              });
+                      });
+                })
                 ->pluck('voucher_id')
                 ->toArray();
         }
 
         $vouchers = $vouchersQuery->orderBy('created_at', 'desc')->get();
 
-        // Filter out vouchers that have reached their total_usage_limit
-        // Or if the voucher is one_use_per_customer and the user already redeemed it
+        // Filter out vouchers that have reached their total_usage_limit OR already redeemed by user
         $vouchers = $vouchers->filter(function ($voucher) use ($userRedeemedVoucherIds) {
-            if ($voucher->one_use_per_customer && in_array($voucher->id, $userRedeemedVoucherIds)) {
+            if (in_array($voucher->id, $userRedeemedVoucherIds)) {
                 return false;
             }
 

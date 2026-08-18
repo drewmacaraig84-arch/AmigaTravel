@@ -31,9 +31,10 @@ class BookingObserver
             $becomingCancelled = in_array($newStatus, $cancelledStatuses, true);
             $wasAlreadyCancelled = in_array($oldStatus, $cancelledStatuses, true);
 
-            // --- RESTORE tickets when a booking is cancelled ---
+            // --- RESTORE tickets and release voucher when a booking is cancelled ---
             if ($becomingCancelled && ! $wasAlreadyCancelled) {
                 $this->restoreTickets($booking);
+                \App\Models\VoucherRedemption::where('booking_id', $booking->id)->delete();
             }
 
             // --- DEDUCT tickets if a booking is somehow un-cancelled back to active ---
