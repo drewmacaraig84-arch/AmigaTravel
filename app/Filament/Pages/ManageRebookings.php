@@ -209,19 +209,14 @@ class ManageRebookings extends Page implements HasTable
                             ->maxSize(5120)
                             ->columnSpanFull(),
                     ])
+                    ->disabled(fn (Booking $record): bool => ! $record->transaction || $record->transaction->payment_status === 'unpaid' || blank($record->transaction->rebooking_proof_of_payment))
+                    ->tooltip(fn (Booking $record): ?string => (! $record->transaction || $record->transaction->payment_status === 'unpaid' || blank($record->transaction->rebooking_proof_of_payment))
+                        ? 'Cannot verify: Rebooking payment status is unpaid or proof is missing.'
+                        : null)
                     ->action(function (Booking $record, array $data): void {
                         try {
                             $ticketUrl = !empty($data['confirmation_url']) ? trim($data['confirmation_url']) : null;
-                            $rawPdf = $data['confirmation_pdf'] ?? null;
-                            if (is_array($rawPdf)) {
-                                $rawPdf = reset($rawPdf);
-                            }
-                            $confirmationPdfPath = null;
-                            if ($rawPdf instanceof \Illuminate\Http\UploadedFile || (is_object($rawPdf) && method_exists($rawPdf, 'storeAs'))) {
-                                $confirmationPdfPath = $rawPdf->storeAs('tickets', 'ticket-' . $record->transaction_number . '.pdf', 'public');
-                            } elseif (is_string($rawPdf) && filled($rawPdf)) {
-                                $confirmationPdfPath = $rawPdf;
-                            }
+                            $confirmationPdfPath = Booking::resolveUploadedPdfPath($data['confirmation_pdf'] ?? null, $record->transaction_number);
 
                             if ($record->transaction) {
                                 if (!empty($ticketUrl)) {

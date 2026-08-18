@@ -506,10 +506,12 @@ class ViewBooking extends ViewRecord
                         ->acceptedFileTypes(['application/pdf'])
                         ->maxSize(10240),
                 ])
-                ->disabled(fn (): bool => ! $this->record->transaction || $this->record->isVerificationLocked())
+                ->disabled(fn (): bool => ! $this->record->transaction || $this->record->transaction->payment_status === 'unpaid' || $this->record->isVerificationLocked())
                 ->tooltip(fn (): ?string => ! $this->record->transaction
                     ? 'No payment transaction found for this booking.'
-                    : $this->record->verificationTimerTooltip())
+                    : ($this->record->transaction->payment_status === 'unpaid'
+                        ? 'Cannot verify: Payment status is Unpaid.'
+                        : $this->record->verificationTimerTooltip()))
                 ->action(function (array $data) {
                     $booking = $this->record;
 
@@ -518,18 +520,7 @@ class ViewBooking extends ViewRecord
                     }
 
                     $ticketUrl = !empty($data['confirmation_url']) ? trim($data['confirmation_url']) : null;
-                    $rawPdf = $data['confirmation_pdf'] ?? null;
-                    if (is_array($rawPdf)) {
-                        $rawPdf = reset($rawPdf);
-                    }
-
-                    $confirmationPdfPath = null;
-                    if ($rawPdf instanceof \Illuminate\Http\UploadedFile || (is_object($rawPdf) && method_exists($rawPdf, 'storeAs'))) {
-                        $confirmationPdfPath = $rawPdf->storeAs('tickets', 'ticket-' . $booking->transaction_number . '.pdf', 'public');
-                    } elseif (is_string($rawPdf) && filled($rawPdf)) {
-                        $confirmationPdfPath = $rawPdf;
-                    }
-
+                    $confirmationPdfPath = Booking::resolveUploadedPdfPath($data['confirmation_pdf'] ?? null, $booking->transaction_number);
                     $receiptPath = $confirmationPdfPath;
                     $receiptDisk = $confirmationPdfPath ? 'public' : null;
 

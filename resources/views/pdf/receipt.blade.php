@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>E-Acknowledgement - {{ $booking->transaction_number }}</title>
+    <title>{{ ($isTicket ?? false) ? 'E-Ticket Itinerary' : 'E-Acknowledgement' }} - {{ $booking->transaction_number }}</title>
     <style>
         @page {
             margin: 12mm 15mm;
@@ -222,7 +222,7 @@
             <td>
                 <div class="brand-logo-wrap">
                     <img src="data:image/png;base64,{{ base64_encode(file_get_contents(public_path('images/amiga-logo-transparent.png'))) }}" alt="Amiga Gracia" class="brand-logo" />
-                    <div class="brand-sub brand-sub--ack">E-ACKNOWLEDGEMENT</div>
+                    <div class="brand-sub brand-sub--ack">{{ ($isTicket ?? false) ? 'OFFICIAL E-TICKET & ITINERARY' : 'E-ACKNOWLEDGEMENT' }}</div>
                 </div>
             </td>
             <td class="receipt-title-box">

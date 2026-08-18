@@ -72,6 +72,7 @@ class RebookingVerification extends Mailable implements ShouldQueue
             'diskToUse'       => $diskToUse,
         ]);
 
+        $ticketAttached = false;
         if ($receiptToAttach) {
             $resolvedFullPath = $this->resolveAttachmentPath($receiptToAttach, $diskToUse);
             if ($resolvedFullPath) {
@@ -80,6 +81,7 @@ class RebookingVerification extends Mailable implements ShouldQueue
                     'mime' => 'application/pdf',
                 ]);
                 $this->hasTicketAttachment = true;
+                $ticketAttached = true;
             } else {
                 try {
                     if (Storage::disk($diskToUse)->exists($receiptToAttach)) {
@@ -89,6 +91,7 @@ class RebookingVerification extends Mailable implements ShouldQueue
                                 'mime' => 'application/pdf',
                             ]);
                             $this->hasTicketAttachment = true;
+                            $ticketAttached = true;
                         }
                     }
                 } catch (\Throwable $e) {
@@ -99,6 +102,38 @@ class RebookingVerification extends Mailable implements ShouldQueue
                         'error'       => $e->getMessage(),
                     ]);
                 }
+            }
+        }
+
+        // If no external ticket PDF was uploaded or found, auto-generate official e-ticket itinerary PDF
+        if (! $ticketAttached) {
+            try {
+                $ticketDir = storage_path('app/tickets');
+                $autoTicketPath = $ticketDir . '/itinerary-' . $this->booking->transaction_number . '.pdf';
+
+                if (! is_dir($ticketDir)) {
+                    mkdir($ticketDir, 0755, true);
+                }
+
+                if (file_exists($autoTicketPath)) {
+                    @unlink($autoTicketPath);
+                }
+
+                \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.receipt', ['booking' => $this->booking, 'isTicket' => true])
+                    ->setPaper('a4')
+                    ->save($autoTicketPath);
+
+                $mail->attach($autoTicketPath, [
+                    'as'   => 'Ticket_Confirmation.pdf',
+                    'mime' => 'application/pdf',
+                ]);
+                $this->hasTicketAttachment = true;
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('RebookingVerification: Failed to auto-generate fallback ticket itinerary PDF', [
+                    'booking_id'         => $this->booking->id ?? null,
+                    'transaction_number' => $this->booking->transaction_number ?? null,
+                    'error'              => $e->getMessage(),
+                ]);
             }
         }
 
@@ -126,21 +161,40 @@ class RebookingVerification extends Mailable implements ShouldQueue
                         return $p;
                     }
                 }
+                if (Storage::disk($d)->exists($cleanPath)) {
+                    $p = Storage::disk($d)->path($cleanPath);
+                    if (file_exists($p) && is_file($p)) {
+                        return $p;
+                    }
+                }
+                if (Storage::disk($d)->exists('tickets/' . $baseName)) {
+                    $p = Storage::disk($d)->path('tickets/' . $baseName);
+                    if (file_exists($p) && is_file($p)) {
+                        return $p;
+                    }
+                }
             } catch (\Throwable $e) {
                 // ignore
             }
         }
 
         $candidates = [
+            $path,
             storage_path('app/public/' . $cleanPath),
             storage_path('app/' . $cleanPath),
             public_path('storage/' . $cleanPath),
+            storage_path('app/public/tickets/' . $cleanPath),
+            storage_path('app/tickets/' . $cleanPath),
+            public_path('tickets/' . $cleanPath),
             storage_path('app/public/tickets/' . $baseName),
             storage_path('app/tickets/' . $baseName),
             public_path('tickets/' . $baseName),
+            public_path('storage/tickets/' . $baseName),
             storage_path('app/public/receipts/' . $baseName),
             storage_path('app/receipts/' . $baseName),
             public_path('receipts/' . $baseName),
+            public_path('storage/receipts/' . $baseName),
+            storage_path('app/acknowledgements/' . $baseName),
         ];
 
         foreach ($candidates as $candidate) {

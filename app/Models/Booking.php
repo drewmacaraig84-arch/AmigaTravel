@@ -704,6 +704,59 @@ class Booking extends Model
     }
 
     /**
+     * Resolve uploaded PDF path from Filament 3 FileUpload data.
+     */
+    public static function resolveUploadedPdfPath(mixed $rawPdf, string $transactionNumber): ?string
+    {
+        if (empty($rawPdf)) {
+            return null;
+        }
+
+        if (is_array($rawPdf)) {
+            foreach ($rawPdf as $k => $v) {
+                if ($v instanceof \Illuminate\Http\UploadedFile || (is_object($v) && method_exists($v, 'storeAs'))) {
+                    return $v->storeAs('tickets', 'ticket-' . $transactionNumber . '-' . uniqid() . '.pdf', 'public');
+                }
+                if (is_string($v) && filled($v)) {
+                    if (\Illuminate\Support\Facades\Storage::disk('public')->exists($v)) {
+                        return $v;
+                    }
+                    if (\Illuminate\Support\Facades\Storage::disk('public')->exists('tickets/' . $v)) {
+                        return 'tickets/' . $v;
+                    }
+                }
+                if (is_string($k) && filled($k) && !is_numeric($k)) {
+                    if (\Illuminate\Support\Facades\Storage::disk('public')->exists($k)) {
+                        return $k;
+                    }
+                    if (\Illuminate\Support\Facades\Storage::disk('public')->exists('tickets/' . $k)) {
+                        return 'tickets/' . $k;
+                    }
+                }
+            }
+
+            $firstKey = key($rawPdf);
+            $firstVal = reset($rawPdf);
+            if (is_string($firstKey) && !is_numeric($firstKey) && filled($firstKey)) {
+                return $firstKey;
+            }
+            if (is_string($firstVal) && filled($firstVal)) {
+                return $firstVal;
+            }
+        }
+
+        if ($rawPdf instanceof \Illuminate\Http\UploadedFile || (is_object($rawPdf) && method_exists($rawPdf, 'storeAs'))) {
+            return $rawPdf->storeAs('tickets', 'ticket-' . $transactionNumber . '-' . uniqid() . '.pdf', 'public');
+        }
+
+        if (is_string($rawPdf) && filled($rawPdf)) {
+            return $rawPdf;
+        }
+
+        return null;
+    }
+
+    /**
      * Calculate the refund amount based on mode, timing, and configurable surcharge.
      *
      * Formula:

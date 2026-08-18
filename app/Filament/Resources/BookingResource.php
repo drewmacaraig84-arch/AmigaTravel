@@ -235,10 +235,12 @@ class BookingResource extends Resource
                             ->maxSize(10240),
                     ])
                     ->visible(fn (Booking $record): bool => $record->status === 'pending')
-                    ->disabled(fn (Booking $record): bool => ! $record->transaction || $record->isVerificationLocked())
+                    ->disabled(fn (Booking $record): bool => ! $record->transaction || $record->transaction->payment_status === 'unpaid' || $record->isVerificationLocked())
                     ->tooltip(fn (Booking $record): ?string => ! $record->transaction
                         ? 'No payment transaction found for this booking.'
-                        : $record->verificationTimerTooltip())
+                        : ($record->transaction->payment_status === 'unpaid'
+                            ? 'Cannot verify: Payment status is Unpaid.'
+                            : $record->verificationTimerTooltip()))
                     ->requiresConfirmation()
                     ->action(function (Booking $record, array $data): void {
                         if (empty($data['confirmation_url']) && empty($data['confirmation_pdf'])) {
@@ -246,18 +248,7 @@ class BookingResource extends Resource
                         }
 
                         $ticketUrl = !empty($data['confirmation_url']) ? trim($data['confirmation_url']) : null;
-                        $rawPdf = $data['confirmation_pdf'] ?? null;
-                        if (is_array($rawPdf)) {
-                            $rawPdf = reset($rawPdf);
-                        }
-
-                        $confirmationPdfPath = null;
-                        if ($rawPdf instanceof \Illuminate\Http\UploadedFile || (is_object($rawPdf) && method_exists($rawPdf, 'storeAs'))) {
-                            $confirmationPdfPath = $rawPdf->storeAs('tickets', 'ticket-' . $record->transaction_number . '.pdf', 'public');
-                        } elseif (is_string($rawPdf) && filled($rawPdf)) {
-                            $confirmationPdfPath = $rawPdf;
-                        }
-
+                        $confirmationPdfPath = Booking::resolveUploadedPdfPath($data['confirmation_pdf'] ?? null, $record->transaction_number);
                         $receiptPath = $confirmationPdfPath;
                         $receiptDisk = $confirmationPdfPath ? 'public' : null;
 

@@ -35,8 +35,10 @@ class ViewTransaction extends ViewRecord
                         ->acceptedFileTypes(['application/pdf'])
                         ->maxSize(10240),
                 ])
-                ->disabled(fn (): bool => $this->record->isVerificationLocked())
-                ->tooltip(fn (): ?string => $this->record->verificationTimerTooltip())
+                ->disabled(fn (): bool => $this->record->payment_status === 'unpaid' || $this->record->isVerificationLocked())
+                ->tooltip(fn (): ?string => $this->record->payment_status === 'unpaid'
+                    ? 'Cannot verify: Payment status is Unpaid.'
+                    : $this->record->verificationTimerTooltip())
                 ->action(function (array $data): void {
                     $record = $this->record;
 
@@ -45,17 +47,8 @@ class ViewTransaction extends ViewRecord
                     }
 
                     $ticketUrl = !empty($data['confirmation_url']) ? trim($data['confirmation_url']) : null;
-                    $rawPdf = $data['confirmation_pdf'] ?? null;
-                    if (is_array($rawPdf)) {
-                        $rawPdf = reset($rawPdf);
-                    }
-
-                    $confirmationPdfPath = null;
-                    if ($rawPdf instanceof \Illuminate\Http\UploadedFile || (is_object($rawPdf) && method_exists($rawPdf, 'storeAs'))) {
-                        $confirmationPdfPath = $rawPdf->storeAs('tickets', 'ticket-' . $record->booking->transaction_number . '.pdf', 'public');
-                    } elseif (is_string($rawPdf) && filled($rawPdf)) {
-                        $confirmationPdfPath = $rawPdf;
-                    }
+                    $txNumber = $record->booking?->transaction_number ?? (string) $record->id;
+                    $confirmationPdfPath = \App\Models\Booking::resolveUploadedPdfPath($data['confirmation_pdf'] ?? null, $txNumber);
 
                     $pdfPath = $confirmationPdfPath;
                     $receiptPath = $confirmationPdfPath;
