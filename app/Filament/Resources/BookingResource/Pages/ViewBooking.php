@@ -138,6 +138,8 @@ class ViewBooking extends ViewRecord
                             ->label('Origin'),
                         TextInput::make('destination')
                             ->label('Destination'),
+                        TextInput::make('operator_name')
+                            ->label('Operator'),
                         TextInput::make('status')
                             ->label('Booking status'),
                         TextInput::make('schedule_service')
@@ -441,6 +443,7 @@ class ViewBooking extends ViewRecord
 
         return [
             ...$data,
+            'operator_name' => $this->record->getOperatorName() ?? '—',
             'baggage_details' => $this->record->has_extra_baggage ? "{$this->record->extra_baggage_weight} kg — ₱" . number_format((float) $this->record->extra_baggage_price, 2) : 'None',
             'transaction_payment_status' => $this->record->transaction?->payment_status,
             'payment_reference' => $this->record->transaction?->payment_reference ?? '—',

@@ -254,6 +254,10 @@
                                     <p class="font-medium text-slate-900">{{ $booking->origin }} → {{ $booking->destination }}</p>
                                 </div>
                                 <div class="rounded-2xl bg-white p-4 border border-slate-200">
+                                    <p class="text-sm text-slate-500">Operator</p>
+                                    <p class="font-medium text-slate-900">{{ $booking->getOperatorName() ?: '—' }}</p>
+                                </div>
+                                <div class="rounded-2xl bg-white p-4 border border-slate-200">
                                     <p class="text-sm text-slate-500">Travel Dates</p>
                                     <p class="font-medium text-slate-900">{{ $booking->departure_date->format('M d, Y') }}{{ $booking->return_date ? ' → ' . $booking->return_date->format('M d, Y') : ' (One-way)' }}</p>
                                 </div>

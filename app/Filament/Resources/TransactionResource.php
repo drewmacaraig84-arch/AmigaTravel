@@ -176,6 +176,9 @@ class TransactionResource extends Resource
                             ->label('Origin'),
                         TextEntry::make('booking.destination')
                             ->label('Destination'),
+                        TextEntry::make('booking.operator_name')
+                            ->label('Operator')
+                            ->state(fn (Transaction $record): string => $record->booking?->getOperatorName() ?? '—'),
                         TextEntry::make('booking.departure_date')
                             ->label('Departure date')
                             ->date(),
@@ -341,6 +344,10 @@ class TransactionResource extends Resource
                     ->label('Payment Ref No.')
                     ->searchable()
                     ->placeholder('N/A'),
+                TextColumn::make('booking.operator_name')
+                    ->label('Operator')
+                    ->state(fn (Transaction $record): string => $record->booking?->getOperatorName() ?? '—')
+                    ->toggleable(),
                 TextColumn::make('booking.status')
                     ->label('Booking Status')
                     ->badge()

@@ -68,6 +68,10 @@ class ManageRebookings extends Page implements HasTable
                 Tables\Columns\TextColumn::make('route')
                     ->label('Route')
                     ->state(fn (Booking $record): string => $record->origin . ' → ' . $record->destination),
+                Tables\Columns\TextColumn::make('operator_name')
+                    ->label('Operator')
+                    ->state(fn (Booking $record): string => $record->getOperatorName() ?? '—')
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('departure_date')
                     ->label('Original Departure')
                     ->date()

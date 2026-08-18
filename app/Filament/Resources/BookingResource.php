@@ -108,6 +108,10 @@ class BookingResource extends Resource
                 Tables\Columns\TextColumn::make('schedule_service')
                     ->label('Schedule')
                     ->placeholder('—'),
+                Tables\Columns\TextColumn::make('operator_name')
+                    ->label('Operator')
+                    ->state(fn (Booking $record): string => $record->getOperatorName() ?? '—')
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Created Date')
                     ->dateTime()

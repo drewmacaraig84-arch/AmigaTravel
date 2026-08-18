@@ -99,7 +99,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.109+120';
+  static const String appVersion = '1.0.110+121';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -5740,7 +5740,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                         ],
                       ),
                       const SizedBox(height: 4),
-                      // Vessel / schedule name
+                      // Vessel / schedule name with Operator
                       Row(
                         children: [
                           Icon(
@@ -5754,7 +5754,14 @@ class _ActivityScreenState extends State<ActivityScreen> {
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
-                              (b['schedule_summary'] ?? b['schedule_service'] ?? '').toString(),
+                              () {
+                                final op = (b['operator_name'] ?? b['schedule']?['route']?['operator'] ?? '').toString().trim();
+                                final svc = (b['schedule_summary'] ?? b['schedule_service'] ?? '').toString().trim();
+                                if (op.isNotEmpty && svc.isNotEmpty && !svc.toLowerCase().contains(op.toLowerCase())) {
+                                  return '$op • $svc';
+                                }
+                                return op.isNotEmpty ? op : (svc.isNotEmpty ? svc : 'Standard Trip');
+                              }(),
                               style: const TextStyle(fontSize: 12, color: kSlate500),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -6330,6 +6337,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
           title: 'Trip Details',
           children: [
             _SummaryRow('Route', '${_booking['origin'] ?? ''} → ${_booking['destination'] ?? ''}'),
+            _SummaryRow('Operator', (_booking['operator_name'] ?? _booking['schedule']?['route']?['operator'] ?? '—').toString()),
             _SummaryRow('Mode', (_booking['mode'] ?? _booking['schedule']?['route']?['mode'] ?? 'ferry').toString().toUpperCase()),
             _SummaryRow(
               'Date',
@@ -6377,6 +6385,13 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             ),
             // Return trip rows (only for round trips)
             if (_booking['return_date'] != null || _booking['rebooking_return_date'] != null) ...[
+              if (_booking['return_operator_name'] != null &&
+                  _booking['return_operator_name'].toString().isNotEmpty &&
+                  _booking['return_operator_name'] != _booking['operator_name'])
+                _SummaryRow(
+                  'Return Operator',
+                  _booking['return_operator_name'].toString(),
+                ),
               _SummaryRow(
                 'Return Schedule',
                 () {

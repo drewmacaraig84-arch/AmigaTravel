@@ -162,6 +162,8 @@ class BookingController extends Controller
                 ? route('ticket.download', ['transaction_number' => $booking->transaction_number])
                 : null;
             $data['mode'] = $booking->getMode();
+            $data['operator_name'] = $booking->getOperatorName();
+            $data['return_operator_name'] = $booking->getReturnOperatorName();
             $data['price_breakdown'] = $booking->getPriceBreakdown();
             $data['calculated_rebooking_fee'] = $booking->getRebookingFeeAmount();
             $data['can_cancel'] = $booking->canCancel();
@@ -259,6 +261,8 @@ class BookingController extends Controller
             ? route('ticket.download', ['transaction_number' => $booking->transaction_number])
             : null;
         $data['mode'] = $booking->getMode();
+        $data['operator_name'] = $booking->getOperatorName();
+        $data['return_operator_name'] = $booking->getReturnOperatorName();
         $data['price_breakdown'] = $booking->getPriceBreakdown();
         $data['calculated_rebooking_fee'] = $booking->getRebookingFeeAmount();
         $data['can_cancel'] = $booking->canCancel();

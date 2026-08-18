@@ -437,6 +437,154 @@ class Booking extends Model
     }
 
     /**
+     * Get the operator name for this booking (Ferry company or Airline carrier).
+     */
+    public function getOperatorName(): ?string
+    {
+        // 1. Direct from departure schedule relation
+        if ($this->schedule) {
+            $route = $this->schedule->ferryRoute ?? $this->schedule->route;
+            if ($route) {
+                $name = $route->operatorRecord?->name ?? $route->operator;
+                if (filled($name)) {
+                    return $name;
+                }
+            }
+        }
+
+        // 2. Query via schedule_id
+        if ($this->schedule_id) {
+            try {
+                $route = \App\Models\FerryRoute::query()
+                    ->join('schedules', 'ferry_routes.id', '=', 'schedules.ferry_route_id')
+                    ->where('schedules.id', $this->schedule_id)
+                    ->with('operatorRecord')
+                    ->first(['ferry_routes.*']);
+
+                if ($route) {
+                    $name = $route->operatorRecord?->name ?? $route->operator;
+                    if (filled($name)) {
+                        return $name;
+                    }
+                }
+            } catch (\Throwable $e) {
+                // ignore
+            }
+        }
+
+        // 3. Fallback matching airline flight code prefixes and standard ferry keywords
+        $svc = strtoupper(trim((string) $this->schedule_service));
+        if (str_starts_with($svc, '5J') || str_contains($svc, 'CEBU PACIFIC')) {
+            return 'Cebu Pacific';
+        }
+        if (str_starts_with($svc, 'PR') || str_contains($svc, 'PHILIPPINE AIRLINES') || str_contains($svc, 'PAL')) {
+            return 'Philippine Airlines';
+        }
+        if (str_starts_with($svc, 'Z2') || str_contains($svc, 'AIRASIA')) {
+            return 'AirAsia';
+        }
+        if (str_starts_with($svc, 'DG')) {
+            return 'Cebgo';
+        }
+        if (str_starts_with($svc, 'GAP') || str_contains($svc, 'AIR SWIFT') || str_contains($svc, 'AIRSWIFT')) {
+            return 'AirSWIFT';
+        }
+        if (str_contains($svc, 'FASTCAT')) {
+            return 'FastCat';
+        }
+        if (str_contains($svc, 'STARLITE')) {
+            return 'Starlite Ferries';
+        }
+        if (str_contains($svc, 'MONTENEGRO')) {
+            return 'Montenegro Shipping Lines';
+        }
+        if (str_contains($svc, '2GO')) {
+            return '2GO Travel';
+        }
+        if (str_contains($svc, 'OCEANJET')) {
+            return 'OceanJet';
+        }
+        if (str_contains($svc, 'SUPER CAT') || str_contains($svc, 'SUPERCAT')) {
+            return 'SuperCat';
+        }
+
+        return filled($this->schedule_service) ? $this->schedule_service : null;
+    }
+
+    /**
+     * Get return operator name for round-trip bookings.
+     */
+    public function getReturnOperatorName(): ?string
+    {
+        if (! $this->return_date && ! $this->rebooking_return_date) {
+            return null;
+        }
+
+        if ($this->returnSchedule) {
+            $route = $this->returnSchedule->ferryRoute ?? $this->returnSchedule->route;
+            if ($route) {
+                $name = $route->operatorRecord?->name ?? $route->operator;
+                if (filled($name)) {
+                    return $name;
+                }
+            }
+        }
+
+        if ($this->return_schedule_id) {
+            try {
+                $route = \App\Models\FerryRoute::query()
+                    ->join('schedules', 'ferry_routes.id', '=', 'schedules.ferry_route_id')
+                    ->where('schedules.id', $this->return_schedule_id)
+                    ->with('operatorRecord')
+                    ->first(['ferry_routes.*']);
+
+                if ($route) {
+                    $name = $route->operatorRecord?->name ?? $route->operator;
+                    if (filled($name)) {
+                        return $name;
+                    }
+                }
+            } catch (\Throwable $e) {
+                // ignore
+            }
+        }
+
+        $svc = strtoupper(trim((string) $this->return_schedule_service));
+        if (str_starts_with($svc, '5J') || str_contains($svc, 'CEBU PACIFIC')) {
+            return 'Cebu Pacific';
+        }
+        if (str_starts_with($svc, 'PR') || str_contains($svc, 'PHILIPPINE AIRLINES') || str_contains($svc, 'PAL')) {
+            return 'Philippine Airlines';
+        }
+        if (str_starts_with($svc, 'Z2') || str_contains($svc, 'AIRASIA')) {
+            return 'AirAsia';
+        }
+        if (str_starts_with($svc, 'DG')) {
+            return 'Cebgo';
+        }
+        if (str_starts_with($svc, 'GAP') || str_contains($svc, 'AIR SWIFT') || str_contains($svc, 'AIRSWIFT')) {
+            return 'AirSWIFT';
+        }
+        if (str_contains($svc, 'FASTCAT')) {
+            return 'FastCat';
+        }
+        if (str_contains($svc, 'STARLITE')) {
+            return 'Starlite Ferries';
+        }
+        if (str_contains($svc, 'MONTENEGRO')) {
+            return 'Montenegro Shipping Lines';
+        }
+        if (str_contains($svc, '2GO')) {
+            return '2GO Travel';
+        }
+        if (str_contains($svc, 'OCEANJET')) {
+            return 'OceanJet';
+        }
+
+        return filled($this->return_schedule_service) ? $this->return_schedule_service : $this->getOperatorName();
+    }
+
+    /**
      * True if the booking's departure service is Starlite.
      */
     public function isStarlite(): bool
