@@ -713,44 +713,122 @@ class Booking extends Model
         }
 
         $txPrefix = $transactionNumber ? preg_replace('/[^A-Za-z0-9_-]/', '', $transactionNumber) . '-' : '';
+        $generateFilename = fn () => 'ticket-' . $txPrefix . uniqid() . '.pdf';
 
+        // 1. Array handling (Filament 3 often passes ['livewire-tmp/xxx' => 'name.pdf'] or ['uuid' => File])
         if (is_array($rawPdf)) {
             foreach ($rawPdf as $k => $v) {
-                $resolved = self::resolveUploadedPdfPath($v, $transactionNumber) ?? (is_string($k) && !is_numeric($k) ? self::resolveUploadedPdfPath($k, $transactionNumber) : null);
+                $resolved = self::resolveUploadedPdfPath($v, $transactionNumber);
                 if ($resolved) {
                     return $resolved;
+                }
+                if (is_string($k) && !is_numeric($k)) {
+                    $resolved = self::resolveUploadedPdfPath($k, $transactionNumber);
+                    if ($resolved) {
+                        return $resolved;
+                    }
                 }
             }
             return null;
         }
 
+        // 2. Object with storeAs / getRealPath / readStream
         if ($rawPdf instanceof \Illuminate\Http\UploadedFile || (is_object($rawPdf) && method_exists($rawPdf, 'storeAs'))) {
-            $filename = 'ticket-' . $txPrefix . uniqid() . '.pdf';
+            $filename = $generateFilename();
             return $rawPdf->storeAs('tickets', $filename, 'public');
         }
 
         if (is_object($rawPdf) && method_exists($rawPdf, 'getRealPath')) {
             $realPath = $rawPdf->getRealPath();
             if ($realPath && file_exists($realPath)) {
-                $filename = 'ticket-' . $txPrefix . uniqid() . '.pdf';
-                \Illuminate\Support\Facades\Storage::disk('public')->put('tickets/' . $filename, file_get_contents($realPath));
+                $filename = $generateFilename();
+                Storage::disk('public')->put('tickets/' . $filename, file_get_contents($realPath));
                 return 'tickets/' . $filename;
             }
         }
 
-        if (is_string($rawPdf) && filled($rawPdf)) {
-            $clean = ltrim($rawPdf, '/\\');
-            if (\Illuminate\Support\Facades\Storage::disk('public')->exists($clean)) {
-                return $clean;
-            }
-            if (\Illuminate\Support\Facades\Storage::disk('public')->exists('tickets/' . basename($clean))) {
-                return 'tickets/' . basename($clean);
-            }
-            if (file_exists($rawPdf) && is_file($rawPdf)) {
-                $filename = 'ticket-' . $txPrefix . uniqid() . '.pdf';
-                \Illuminate\Support\Facades\Storage::disk('public')->put('tickets/' . $filename, file_get_contents($rawPdf));
+        if (is_object($rawPdf) && method_exists($rawPdf, 'readStream')) {
+            $stream = $rawPdf->readStream();
+            if ($stream) {
+                $filename = $generateFilename();
+                Storage::disk('public')->put('tickets/' . $filename, $stream);
                 return 'tickets/' . $filename;
             }
+        }
+
+        // 3. String path handling
+        if (is_string($rawPdf) && filled($rawPdf)) {
+            $clean = ltrim($rawPdf, '/\\');
+            $baseName = basename($clean);
+
+            // If it is ALREADY permanently stored in tickets/ on the public disk:
+            if (str_starts_with($clean, 'tickets/') && Storage::disk('public')->exists($clean)) {
+                return $clean;
+            }
+
+            // If it's a relative filename in public disk tickets:
+            if (Storage::disk('public')->exists('tickets/' . $baseName)) {
+                return 'tickets/' . $baseName;
+            }
+
+            // Search across known storage disks (local, public, livewire temp) for temporary files
+            $disksToCheck = array_values(array_unique(array_filter([
+                config('livewire.temporary_file_upload.disk'),
+                config('filesystems.default'),
+                'local',
+                'public',
+            ])));
+
+            foreach ($disksToCheck as $disk) {
+                try {
+                    $storage = Storage::disk($disk);
+                    if ($storage->exists($clean)) {
+                        $contents = $storage->get($clean);
+                        if ($contents) {
+                            $filename = $generateFilename();
+                            Storage::disk('public')->put('tickets/' . $filename, $contents);
+                            return 'tickets/' . $filename;
+                        }
+                    }
+                    if ($storage->exists('livewire-tmp/' . $baseName)) {
+                        $contents = $storage->get('livewire-tmp/' . $baseName);
+                        if ($contents) {
+                            $filename = $generateFilename();
+                            Storage::disk('public')->put('tickets/' . $filename, $contents);
+                            return 'tickets/' . $filename;
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    // continue
+                }
+            }
+
+            // Check candidate local paths
+            $fileCandidates = [
+                $rawPdf,
+                storage_path('app/private/' . $clean),
+                storage_path('app/' . $clean),
+                storage_path('app/public/' . $clean),
+                storage_path('app/private/livewire-tmp/' . $baseName),
+                storage_path('app/livewire-tmp/' . $baseName),
+                storage_path('app/public/livewire-tmp/' . $baseName),
+                storage_path('framework/livewire-tmp/' . $baseName),
+                sys_get_temp_dir() . DIRECTORY_SEPARATOR . $baseName,
+                public_path('storage/' . $clean),
+            ];
+
+            foreach ($fileCandidates as $candidate) {
+                if (file_exists($candidate) && is_file($candidate)) {
+                    $filename = $generateFilename();
+                    Storage::disk('public')->put('tickets/' . $filename, file_get_contents($candidate));
+                    return 'tickets/' . $filename;
+                }
+            }
+
+            if (Storage::disk('public')->exists($clean)) {
+                return $clean;
+            }
+
             return $clean;
         }
 
