@@ -41,19 +41,22 @@ class IssueSlaVouchers extends Command
         // Find bookings that:
         // 1. Are pending (unverified)
         // 2. Have not had an SLA voucher issued yet
-        // 3. Have submitted proof of payment older than the cutoff window
+        // 3. Have paid/submitted proof of payment older than the cutoff window (NOT unpaid)
         $qualifyingBookings = Booking::query()
             ->whereIn('status', ['pending', Booking::STATUS_PENDING_REBOOKING])
             ->whereNull('sla_voucher_issued_at')
             ->whereHas('transaction', function ($q) use ($cutoff) {
-                $q->where(function ($sub) use ($cutoff) {
-                    $sub->whereNotNull('proof_submitted_at')
-                        ->where('proof_submitted_at', '<=', $cutoff);
-                })->orWhere(function ($sub) use ($cutoff) {
-                    $sub->whereNull('proof_submitted_at')
-                        ->whereNotNull('proof_of_payment')
-                        ->where('created_at', '<=', $cutoff);
-                });
+                $q->whereNotIn('payment_status', ['unpaid', 'cancelled'])
+                  ->where(function ($sub) use ($cutoff) {
+                      $sub->where(function ($s) use ($cutoff) {
+                          $s->whereNotNull('proof_submitted_at')
+                            ->where('proof_submitted_at', '<=', $cutoff);
+                      })->orWhere(function ($s) use ($cutoff) {
+                          $s->whereNull('proof_submitted_at')
+                            ->whereNotNull('proof_of_payment')
+                            ->where('created_at', '<=', $cutoff);
+                      });
+                  });
             })
             ->with(['transaction', 'user'])
             ->get();

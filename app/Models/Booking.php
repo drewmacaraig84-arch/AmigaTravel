@@ -156,6 +156,12 @@ class Booking extends Model
             return null;
         }
 
+        // Only show if the customer has actually submitted payment / payment proof (not unpaid)
+        $tx = $this->transaction;
+        if (! $tx || $tx->payment_status === 'unpaid' || (! $tx->proof_submitted_at && ! $tx->proof_of_payment && $tx->payment_status !== 'paid')) {
+            return null;
+        }
+
         $hours = $settings->getSlaVoucherHours();
         $amount = number_format($settings->getSlaVoucherAmount(), 0);
 
