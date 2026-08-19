@@ -17638,6 +17638,16 @@ class _RebookScreenState extends State<RebookScreen> {
   XFile? _proof;
   final TextEditingController _rebookingReferenceCtrl = TextEditingController();
 
+  bool get _isAirline {
+    final m = (widget.booking['mode'] ??
+            widget.booking['schedule']?['route']?['mode'] ??
+            widget.booking['schedule']?['mode'] ??
+            '')
+        .toString()
+        .toLowerCase();
+    return m == 'airline' || m == 'flight';
+  }
+
   bool get _isRoundTrip => widget.booking['return_date'] != null;
 
   Future<void> _fetchDepSchedules() async {
@@ -17658,7 +17668,7 @@ class _RebookScreenState extends State<RebookScreen> {
           'origin': widget.booking['origin'] ?? '',
           'destination': widget.booking['destination'] ?? '',
           'date': _depDate!.toIso8601String().split('T')[0],
-          'mode': widget.booking['mode'],
+          'mode': _isAirline ? 'airline' : 'ferry',
           if (depOperator.isNotEmpty) 'operator': depOperator,
         }),
       );
@@ -17704,7 +17714,7 @@ class _RebookScreenState extends State<RebookScreen> {
           'origin': widget.booking['destination'] ?? '',
           'destination': widget.booking['origin'] ?? '',
           'date': _retDate!.toIso8601String().split('T')[0],
-          'mode': widget.booking['mode'],
+          'mode': _isAirline ? 'airline' : 'ferry',
           if (retOperator.isNotEmpty) 'operator': retOperator,
         }),
       );
@@ -17748,7 +17758,7 @@ class _RebookScreenState extends State<RebookScreen> {
           'Content-Type': 'application/json'
         },
         body: jsonEncode({
-          'email': UserSession.email,
+          'email': (widget.booking['client_email'] ?? UserSession.email).toString().trim(),
           'dep_schedule_id': _selDepSchId,
           'dep_accommodation_id': _selDepAccId,
           'ret_schedule_id': _selRetSchId,
@@ -17793,7 +17803,7 @@ class _RebookScreenState extends State<RebookScreen> {
       final req = http.MultipartRequest('POST',
           Uri.parse('$baseUrl/api/bookings/${widget.booking['id']}/rebook'));
       req.headers['Accept'] = 'application/json';
-      req.fields['email'] = UserSession.email;
+      req.fields['email'] = (widget.booking['client_email'] ?? UserSession.email).toString().trim();
       req.fields['reference_number'] = reference;
       req.fields['departure_date'] = _depDate!.toIso8601String().split('T')[0];
       if (_isRoundTrip)
@@ -17917,7 +17927,7 @@ class _RebookScreenState extends State<RebookScreen> {
     final schs = isReturn ? _retSchedules : _depSchedules;
     final selSchId = isReturn ? _selRetSchId : _selDepSchId;
     final selAccId = isReturn ? _selRetAccId : _selDepAccId;
-    final isAirline = widget.booking['mode'] == 'airline';
+    final isAirline = _isAirline;
 
     if (selSchId == null) {
       return ListView(
@@ -18061,22 +18071,20 @@ class _RebookScreenState extends State<RebookScreen> {
               final tc = subList[index];
               final isAccSel = selAccId == tc['id'];
 
-              final isAirline = widget.booking['mode'] == 'airline';
-
               final ticketPrice = _parseDouble(selectedSch['price']);
               final rawClassPrice = _parseDouble(tc['price']);
               final combinedPrice = isAirline ? ((ticketPrice + rawClassPrice) * 1.5) : (ticketPrice + rawClassPrice);
 
               final tcs = widget.booking['transport_classes'] as List? ?? [];
               final origTcPrice = (tcs.isNotEmpty && isReturn && tcs.length > 1)
-                  ? _parseDouble(tcs[1]['pivot']['price'])
+                  ? _parseDouble(tcs[1]['pivot']?['price'] ?? tcs[1]['price'])
                   : (tcs.isNotEmpty
-                      ? _parseDouble(tcs[0]['pivot']['price'])
+                      ? _parseDouble(tcs[0]['pivot']?['price'] ?? tcs[0]['price'])
                       : 0.0);
 
               final originalSchPrice = isReturn
-                  ? _parseDouble(widget.booking['return_schedule_price'])
-                  : _parseDouble(widget.booking['schedule_price']);
+                  ? _parseDouble(widget.booking['return_schedule_price'] ?? widget.booking['return_schedule']?['price'])
+                  : _parseDouble(widget.booking['schedule_price'] ?? widget.booking['schedule']?['price']);
               final originalAccPrice = isReturn
                   ? _parseDouble(
                       widget.booking['return_schedule_accommodation_price'])
