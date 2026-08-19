@@ -706,51 +706,52 @@ class Booking extends Model
     /**
      * Resolve uploaded PDF path from Filament 3 FileUpload data.
      */
-    public static function resolveUploadedPdfPath(mixed $rawPdf, string $transactionNumber): ?string
+    public static function resolveUploadedPdfPath(mixed $rawPdf, ?string $transactionNumber = null): ?string
     {
         if (empty($rawPdf)) {
             return null;
         }
 
+        $txPrefix = $transactionNumber ? preg_replace('/[^A-Za-z0-9_-]/', '', $transactionNumber) . '-' : '';
+
         if (is_array($rawPdf)) {
             foreach ($rawPdf as $k => $v) {
-                if ($v instanceof \Illuminate\Http\UploadedFile || (is_object($v) && method_exists($v, 'storeAs'))) {
-                    return $v->storeAs('tickets', 'ticket-' . $transactionNumber . '-' . uniqid() . '.pdf', 'public');
-                }
-                if (is_string($v) && filled($v)) {
-                    if (\Illuminate\Support\Facades\Storage::disk('public')->exists($v)) {
-                        return $v;
-                    }
-                    if (\Illuminate\Support\Facades\Storage::disk('public')->exists('tickets/' . $v)) {
-                        return 'tickets/' . $v;
-                    }
-                }
-                if (is_string($k) && filled($k) && !is_numeric($k)) {
-                    if (\Illuminate\Support\Facades\Storage::disk('public')->exists($k)) {
-                        return $k;
-                    }
-                    if (\Illuminate\Support\Facades\Storage::disk('public')->exists('tickets/' . $k)) {
-                        return 'tickets/' . $k;
-                    }
+                $resolved = self::resolveUploadedPdfPath($v, $transactionNumber) ?? (is_string($k) && !is_numeric($k) ? self::resolveUploadedPdfPath($k, $transactionNumber) : null);
+                if ($resolved) {
+                    return $resolved;
                 }
             }
-
-            $firstKey = key($rawPdf);
-            $firstVal = reset($rawPdf);
-            if (is_string($firstKey) && !is_numeric($firstKey) && filled($firstKey)) {
-                return $firstKey;
-            }
-            if (is_string($firstVal) && filled($firstVal)) {
-                return $firstVal;
-            }
+            return null;
         }
 
         if ($rawPdf instanceof \Illuminate\Http\UploadedFile || (is_object($rawPdf) && method_exists($rawPdf, 'storeAs'))) {
-            return $rawPdf->storeAs('tickets', 'ticket-' . $transactionNumber . '-' . uniqid() . '.pdf', 'public');
+            $filename = 'ticket-' . $txPrefix . uniqid() . '.pdf';
+            return $rawPdf->storeAs('tickets', $filename, 'public');
+        }
+
+        if (is_object($rawPdf) && method_exists($rawPdf, 'getRealPath')) {
+            $realPath = $rawPdf->getRealPath();
+            if ($realPath && file_exists($realPath)) {
+                $filename = 'ticket-' . $txPrefix . uniqid() . '.pdf';
+                \Illuminate\Support\Facades\Storage::disk('public')->put('tickets/' . $filename, file_get_contents($realPath));
+                return 'tickets/' . $filename;
+            }
         }
 
         if (is_string($rawPdf) && filled($rawPdf)) {
-            return $rawPdf;
+            $clean = ltrim($rawPdf, '/\\');
+            if (\Illuminate\Support\Facades\Storage::disk('public')->exists($clean)) {
+                return $clean;
+            }
+            if (\Illuminate\Support\Facades\Storage::disk('public')->exists('tickets/' . basename($clean))) {
+                return 'tickets/' . basename($clean);
+            }
+            if (file_exists($rawPdf) && is_file($rawPdf)) {
+                $filename = 'ticket-' . $txPrefix . uniqid() . '.pdf';
+                \Illuminate\Support\Facades\Storage::disk('public')->put('tickets/' . $filename, file_get_contents($rawPdf));
+                return 'tickets/' . $filename;
+            }
+            return $clean;
         }
 
         return null;
@@ -1218,3 +1219,5 @@ class Booking extends Model
         return $breakdown;
     }
 }
+
+
