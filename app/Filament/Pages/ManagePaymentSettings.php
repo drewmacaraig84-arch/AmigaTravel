@@ -54,6 +54,9 @@ class ManagePaymentSettings extends Page implements HasForms
             'rebook_ferry_before_departure_surcharge_pct' => $settings->rebook_ferry_before_departure_surcharge_pct,
             'rebook_ferry_after_departure_surcharge_pct'  => $settings->rebook_ferry_after_departure_surcharge_pct,
             'rebook_airline_before_departure_surcharge_pct' => $settings->rebook_airline_before_departure_surcharge_pct,
+            'sla_voucher_enabled'                   => $settings->isSlaVoucherEnabled(),
+            'sla_voucher_hours'                     => $settings->getSlaVoucherHours(),
+            'sla_voucher_amount'                    => $settings->getSlaVoucherAmount(),
         ]);
     }
 
@@ -169,6 +172,30 @@ class ManagePaymentSettings extends Page implements HasForms
                     ])
                     ->columns(3),
 
+                Section::make('Verification SLA Guarantee')
+                    ->description('Automatically issues a flat-amount compensation voucher to the customer if their submitted booking is not confirmed/verified within the specified time window.')
+                    ->schema([
+                        \Filament\Forms\Components\Toggle::make('sla_voucher_enabled')
+                            ->label('Enable Verification SLA Guarantee Reward')
+                            ->helperText('When enabled, unverified bookings past the handling window receive an automatic non-expiring voucher.')
+                            ->default(true),
+                        TextInput::make('sla_voucher_hours')
+                            ->label('Handling Window (Hours)')
+                            ->helperText('Number of hours after proof of payment submission before voucher reward triggers. Default: 2 hours.')
+                            ->numeric()
+                            ->minValue(1)
+                            ->suffix('hours')
+                            ->required(),
+                        TextInput::make('sla_voucher_amount')
+                            ->label('Voucher Reward Amount (₱)')
+                            ->helperText('Flat amount of the non-expiring voucher issued to the client. Default: ₱500.00.')
+                            ->numeric()
+                            ->prefix('₱')
+                            ->minValue(0)
+                            ->required(),
+                    ])
+                    ->columns(3),
+
                 Section::make('Payment QR Code')
                     ->description('This single QR code (e.g. your GCash QR) is shown to every client on the payment page.')
                     ->schema([
@@ -204,6 +231,9 @@ class ManagePaymentSettings extends Page implements HasForms
             'rebook_ferry_before_departure_surcharge_pct' => $state['rebook_ferry_before_departure_surcharge_pct'],
             'rebook_ferry_after_departure_surcharge_pct'  => $state['rebook_ferry_after_departure_surcharge_pct'],
             'rebook_airline_before_departure_surcharge_pct' => $state['rebook_airline_before_departure_surcharge_pct'],
+            'sla_voucher_enabled'                   => $state['sla_voucher_enabled'],
+            'sla_voucher_hours'                     => $state['sla_voucher_hours'],
+            'sla_voucher_amount'                    => $state['sla_voucher_amount'],
         ]);
         PaymentSetting::bust(); // Clear cached payment settings
 

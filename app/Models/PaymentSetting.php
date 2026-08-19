@@ -23,6 +23,9 @@ class PaymentSetting extends Model
         'rebook_ferry_before_departure_surcharge_pct',
         'rebook_ferry_after_departure_surcharge_pct',
         'rebook_airline_before_departure_surcharge_pct',
+        'sla_voucher_enabled',
+        'sla_voucher_hours',
+        'sla_voucher_amount',
     ];
 
     protected $casts = [
@@ -39,6 +42,9 @@ class PaymentSetting extends Model
         'rebook_ferry_before_departure_surcharge_pct' => 'decimal:2',
         'rebook_ferry_after_departure_surcharge_pct' => 'decimal:2',
         'rebook_airline_before_departure_surcharge_pct' => 'decimal:2',
+        'sla_voucher_enabled' => 'boolean',
+        'sla_voucher_hours' => 'integer',
+        'sla_voucher_amount' => 'decimal:2',
     ];
 
     /**
@@ -59,6 +65,21 @@ class PaymentSetting extends Model
         return (float) ($isShortHaul
             ? ($this->short_haul_transaction_fee ?? 70)
             : ($this->transaction_fee ?? 345));
+    }
+
+    public function isSlaVoucherEnabled(): bool
+    {
+        return (bool) ($this->sla_voucher_enabled ?? true);
+    }
+
+    public function getSlaVoucherHours(): int
+    {
+        return (int) ($this->sla_voucher_hours ?? 2);
+    }
+
+    public function getSlaVoucherAmount(): float
+    {
+        return (float) ($this->sla_voucher_amount ?? 500);
     }
 
     /**
@@ -84,6 +105,9 @@ class PaymentSetting extends Model
                 'rebook_ferry_before_departure_surcharge_pct' => 15,
                 'rebook_ferry_after_departure_surcharge_pct'  => 35,
                 'rebook_airline_before_departure_surcharge_pct' => 15,
+                'sla_voucher_enabled'                => true,
+                'sla_voucher_hours'                  => 2,
+                'sla_voucher_amount'                 => 500,
             ]);
 
             return $model->getAttributes();

@@ -6721,6 +6721,45 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
       appBar: AppBar(title: const Text('Booking details')),
       body: ListView(padding: const EdgeInsets.all(16), children: [
         _detailHeader(status),
+        if (status == 'pending' && _booking['sla_voucher_note'] != null && _booking['sla_voucher_note'].toString().isNotEmpty)
+          Card(
+            color: const Color(0xFFFDF2F8),
+            margin: const EdgeInsets.only(bottom: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: Color(0xFFF472B6)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.access_time_filled_rounded,
+                          color: Color(0xFFEE018D), size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'Verification Guarantee',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF9D174D),
+                            fontSize: 14),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _booking['sla_voucher_note'].toString(),
+                    style: const TextStyle(
+                        color: Color(0xFF374151),
+                        fontSize: 13,
+                        height: 1.4),
+                  ),
+                ],
+              ),
+            ),
+          ),
         if (status == 'operator_cancelled' ||
             _booking['service_cancellation_id'] != null)
           Card(

@@ -91,6 +91,7 @@ class Booking extends Model
         'has_extra_baggage',
         'extra_baggage_weight',
         'extra_baggage_price',
+        'sla_voucher_issued_at',
     ];
 
     public function isUserCancelled(): bool
@@ -136,7 +137,34 @@ class Booking extends Model
         'points_discount' => 'decimal:2',
         'has_extra_baggage' => 'boolean',
         'extra_baggage_price' => 'decimal:2',
+        'sla_voucher_issued_at' => 'datetime',
     ];
+
+    /**
+     * Get the SLA guarantee note message.
+     */
+    public function getSlaVoucherNote(?PaymentSetting $settings = null, bool $forApp = false): ?string
+    {
+        $settings = $settings ?? PaymentSetting::current();
+
+        if (! $settings->isSlaVoucherEnabled()) {
+            return null;
+        }
+
+        // Only show if booking is pending
+        if ($this->status !== 'pending' && $this->status !== self::STATUS_PENDING_REBOOKING) {
+            return null;
+        }
+
+        $hours = $settings->getSlaVoucherHours();
+        $amount = number_format($settings->getSlaVoucherAmount(), 0);
+
+        if ($forApp) {
+            return "Our Verification Guarantee: If your booking is not processed within {$hours} hours of payment submission, you will automatically receive a ₱{$amount} non-expiring voucher in your account for your next booking.";
+        }
+
+        return "Our Verification Guarantee: If your booking is not processed within {$hours} hours of payment submission, you will automatically receive a ₱{$amount} non-expiring voucher for your next booking. Download the Amiga Gracia app to easily claim and manage your reward vouchers!";
+    }
 
     public function serviceCancellation(): BelongsTo
     {

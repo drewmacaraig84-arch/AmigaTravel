@@ -169,6 +169,7 @@ class BookingController extends Controller
             $data['calculated_rebooking_fee'] = $booking->getRebookingFeeAmount();
             $data['can_cancel'] = $booking->canCancel();
             $data['can_rebook'] = $booking->canRebook();
+            $data['sla_voucher_note'] = $booking->getSlaVoucherNote(null, true);
 
             // Add schedule times for full datetime display in the app
             if ($booking->schedule) {
@@ -270,6 +271,7 @@ class BookingController extends Controller
         $data['calculated_rebooking_fee'] = $booking->getRebookingFeeAmount();
         $data['can_cancel'] = $booking->canCancel();
         $data['can_rebook'] = $booking->canRebook();
+        $data['sla_voucher_note'] = $booking->getSlaVoucherNote(null, true);
 
         if ($booking->schedule) {
             $depTime = \Carbon\Carbon::parse($booking->schedule->departure_time)->timezone('Asia/Manila');
