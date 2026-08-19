@@ -11911,7 +11911,7 @@ class _VoucherPickerScreenState extends State<VoucherPickerScreen> {
 
   Future<void> _fetchVouchers() async {
     try {
-      final email = UserSession.email.isNotEmpty ? UserSession.email : (widget.booking?.clientEmail ?? '');
+      final email = UserSession.email.isNotEmpty ? UserSession.email : (widget.booking.clientEmail ?? '');
       final uri = Uri.parse('${UserSession.getBaseUrl()}/api/vouchers').replace(
         queryParameters: {
           if (email.isNotEmpty) 'email': email,
@@ -15489,14 +15489,12 @@ class _ZigzagFillPainter extends CustomPainter {
   const _ZigzagFillPainter({
     required this.seamX,
     required this.color,
-    this.toothHeight = 7.0,
-    this.amplitude = 5.5,
   });
 
   final double seamX;
   final Color color;
-  final double toothHeight;
-  final double amplitude;
+  static const double toothHeight = 7.0;
+  static const double amplitude = 5.5;
 
   @override
   void paint(Canvas canvas, Size size) {
