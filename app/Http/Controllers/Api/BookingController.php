@@ -635,6 +635,8 @@ class BookingController extends Controller
             $depTcs = collect([$arr[0]]);
             $retTcs = collect([$arr[1]]);
         }
+        $depTCPerPax = (float) $depTcs->sum(fn ($tc) => (float)($tc->pivot->price ?? 0));
+        $retTCPerPax = (float) $retTcs->sum(fn ($tc) => (float)($tc->pivot->price ?? 0));
         $origDepPerPax = (float)($booking->schedule_price ?? 0)
                        + $depTCPerPax
                        + (float)($booking->schedule_accommodation_price ?? 0);

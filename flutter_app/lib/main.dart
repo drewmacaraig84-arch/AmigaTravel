@@ -99,7 +99,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.118+129';
+  static const String appVersion = '1.0.119+130';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -1224,14 +1224,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       desc:
           'Explore live schedules, seat classes, and nationwide routes across top maritime ferry carriers, domestic airlines, and curated tour packages.',
       chips: [
-        'FastCat, 2GO & Ferry Lines',
+        '2GO & Ferry Lines',
         'Domestic Airline Flights',
         'Curated Tour Packages',
       ],
       heroIcon: Icons.travel_explore_rounded,
-      floatingBadgeTop: '🚢 Maritime Ferries',
+      floatingBadgeTop: 'Maritime Ferries',
       floatingIconTop: Icons.directions_boat_filled_rounded,
-      floatingBadgeBottom: '✈️ Domestic Flights',
+      floatingBadgeBottom: 'Domestic Flights',
       floatingIconBottom: Icons.flight_takeoff_rounded,
       gradientStart: Color(0xFF14532D),
       gradientEnd: Color(0xFF1A5319),
@@ -1248,9 +1248,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         'Live Updates & Easy Rebooking',
       ],
       heroIcon: Icons.confirmation_number_rounded,
-      floatingBadgeTop: '⚡ Fast Verification',
+      floatingBadgeTop: 'Fast Verification',
       floatingIconTop: Icons.verified_rounded,
-      floatingBadgeBottom: '📱 Digital Boarding Pass',
+      floatingBadgeBottom: 'Digital Boarding Pass',
       floatingIconBottom: Icons.qr_code_2_rounded,
       gradientStart: Color(0xFF9D174D),
       gradientEnd: Color(0xFFE91E63),
@@ -1267,9 +1267,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         'Special Promos & Referral Perks',
       ],
       heroIcon: Icons.card_giftcard_rounded,
-      floatingBadgeTop: '🎟️ Promo Vouchers',
+      floatingBadgeTop: 'Promo Vouchers',
       floatingIconTop: Icons.local_offer_rounded,
-      floatingBadgeBottom: '⭐ Gracia Points Rewards',
+      floatingBadgeBottom: 'Gracia Points Rewards',
       floatingIconBottom: Icons.stars_rounded,
       gradientStart: Color(0xFF064E3B),
       gradientEnd: Color(0xFF059669),
