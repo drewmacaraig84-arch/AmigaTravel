@@ -143,7 +143,7 @@ class BookingController extends Controller
             }
         });
 
-        $bookings = $bookingsQuery->with(['passengers.discount', 'accommodations', 'transaction', 'transactions', 'schedule', 'returnSchedule', 'transportClasses'])
+        $bookings = $bookingsQuery->with(['passengers.discount', 'accommodations', 'transaction', 'transactions', 'schedule', 'returnSchedule', 'transportClasses', 'serviceCancellation'])
             ->orderBy('created_at', 'desc')
             ->limit(50)
             ->get();
@@ -173,6 +173,17 @@ class BookingController extends Controller
             $data['can_cancel'] = $booking->canCancel();
             $data['can_rebook'] = $booking->canRebook();
             $data['sla_voucher_note'] = $booking->getSlaVoucherNote(null, true);
+            $data['service_cancellation_id'] = $booking->service_cancellation_id;
+            $data['service_cancellation'] = $booking->serviceCancellation ? [
+                'id' => $booking->serviceCancellation->id,
+                'cancellation_code' => $booking->serviceCancellation->cancellation_code,
+                'carrier' => $booking->serviceCancellation->carrier,
+                'reason_category' => $booking->serviceCancellation->reason_category,
+                'customer_message' => $booking->serviceCancellation->customer_message,
+                'resume_date' => $booking->serviceCancellation->resume_date ? $booking->serviceCancellation->resume_date->format('Y-m-d') : null,
+                'status' => $booking->serviceCancellation->status,
+                'resumed_at' => $booking->serviceCancellation->resumed_at?->toDateTimeString(),
+            ] : null;
 
             // Add schedule times for full datetime display in the app
             if ($booking->schedule) {
@@ -237,7 +248,7 @@ class BookingController extends Controller
         }
 
         $booking = Booking::where('transaction_number', $transaction_number)
-            ->with(['passengers.discount', 'schedule.route', 'returnSchedule', 'transaction', 'transactions', 'accommodations', 'transportClasses', 'accommodations.transportClass'])
+            ->with(['passengers.discount', 'schedule.route', 'returnSchedule', 'transaction', 'transactions', 'accommodations', 'transportClasses', 'accommodations.transportClass', 'serviceCancellation'])
             ->first();
 
         if (!$booking) {
@@ -278,6 +289,17 @@ class BookingController extends Controller
         $data['can_cancel'] = $booking->canCancel();
         $data['can_rebook'] = $booking->canRebook();
         $data['sla_voucher_note'] = $booking->getSlaVoucherNote(null, true);
+        $data['service_cancellation_id'] = $booking->service_cancellation_id;
+        $data['service_cancellation'] = $booking->serviceCancellation ? [
+            'id' => $booking->serviceCancellation->id,
+            'cancellation_code' => $booking->serviceCancellation->cancellation_code,
+            'carrier' => $booking->serviceCancellation->carrier,
+            'reason_category' => $booking->serviceCancellation->reason_category,
+            'customer_message' => $booking->serviceCancellation->customer_message,
+            'resume_date' => $booking->serviceCancellation->resume_date ? $booking->serviceCancellation->resume_date->format('Y-m-d') : null,
+            'status' => $booking->serviceCancellation->status,
+            'resumed_at' => $booking->serviceCancellation->resumed_at?->toDateTimeString(),
+        ] : null;
 
         if ($booking->schedule) {
             $depTime = \Carbon\Carbon::parse($booking->schedule->departure_time)->timezone('Asia/Manila');

@@ -99,7 +99,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.119+130';
+  static const String appVersion = '1.0.121+132';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -6101,12 +6101,16 @@ class _ActivityScreenState extends State<ActivityScreen> {
           else
             ..._bookings.whereType<Map>().map((b) {
               final status = b['status']?.toString() ?? 'pending';
+              final sc = b['service_cancellation'];
+              final String? resumeDate = (sc is Map) ? sc['resume_date']?.toString() : null;
+              final bool isResumed = resumeDate != null && resumeDate.trim().isNotEmpty;
+
               Color statusColor = Colors.orange;
               if (status == 'confirmed' || status == 'paid') {
                 statusColor = kGreen;
               }
               if (status == 'cancelled' || status == 'operator_cancelled') {
-                statusColor = Colors.red;
+                statusColor = isResumed ? kGreen : Colors.red;
               }
 
               return Card(
@@ -6136,7 +6140,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                             ),
                             child: Text(
                               status == 'operator_cancelled'
-                                  ? 'CANCELLED BY OPERATOR'
+                                  ? (isResumed ? 'SERVICE RESUMED' : 'CANCELLED BY OPERATOR')
                                   : status.toUpperCase(),
                               style: TextStyle(
                                   color: statusColor,
@@ -6765,66 +6769,87 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             ),
           ),
         if (status == 'operator_cancelled' ||
-            _booking['service_cancellation_id'] != null)
-          Card(
-            color: Colors.red.shade50,
-            margin: const EdgeInsets.only(bottom: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: Colors.red.shade300),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.warning_amber_rounded,
-                          color: Colors.red, size: 24),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          'Service Cancelled by Operator',
-                          style: TextStyle(
+            _booking['service_cancellation_id'] != null) ...[
+          () {
+            final sc = _booking['service_cancellation'];
+            final String? resumeDate = (sc is Map) ? sc['resume_date']?.toString() : null;
+            final bool isResumed = resumeDate != null && resumeDate.trim().isNotEmpty;
+            final String carrier = (sc is Map && sc['carrier'] != null) ? sc['carrier'].toString() : 'The operator';
+            final String reason = (sc is Map && sc['reason_category'] != null) 
+                ? sc['reason_category'].toString().replaceAll('_', ' ') 
+                : 'service disruption';
+
+            return Card(
+              color: isResumed ? const Color(0xFFF0FDF4) : Colors.red.shade50,
+              margin: const EdgeInsets.only(bottom: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: isResumed ? const Color(0xFF86EFAC) : Colors.red.shade300),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          isResumed ? Icons.check_circle_outline_rounded : Icons.warning_amber_rounded,
+                          color: isResumed ? kGreen : Colors.red,
+                          size: 24,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            isResumed ? 'Travel Operations Resuming!' : 'Service Cancelled by Operator',
+                            style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              color: Colors.red.shade900,
-                              fontSize: 16),
+                              color: isResumed ? const Color(0xFF14532D) : Colors.red.shade900,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      isResumed
+                          ? 'Good news! Travel operations for $carrier are officially resuming starting $resumeDate. You can now select your replacement travel date at zero extra cost.'
+                          : 'This trip was cancelled by $carrier due to $reason. Operations are temporarily suspended. We will notify you once travel clearance is granted and service resumes.',
+                      style: TextStyle(
+                        color: isResumed ? const Color(0xFF166534) : Colors.red.shade800,
+                        fontSize: 13,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ServiceCancellationScreen(booking: _booking),
+                            ),
+                          ).then((res) {
+                            if (res == true) _refreshBooking();
+                          });
+                        },
+                        icon: Icon(isResumed ? Icons.calendar_today_rounded : Icons.swap_horiz_rounded),
+                        label: Text(isResumed ? 'Select Replacement Travel Date (Free)' : 'Reschedule / Refund Options'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: isResumed ? kGreen : Colors.red.shade700,
+                          foregroundColor: Colors.white,
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                ServiceCancellationScreen(booking: _booking),
-                          ),
-                        ).then((res) {
-                          if (res == true) _refreshBooking();
-                        });
-                      },
-                      icon: const Icon(Icons.swap_horiz_rounded),
-                      label: const Text('Reschedule / Refund Options'),
-                      style: FilledButton.styleFrom(
-                          backgroundColor: Colors.red.shade700,
-                          foregroundColor: Colors.white),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'This trip has been cancelled by the operator/admin due to service disruption. Please contact support for rescheduling or assistance.',
-                    style: TextStyle(color: Colors.red.shade800, fontSize: 13),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ),
+            );
+          }(),
+        ],
         const SizedBox(height: 12),
         _SummarySection(
           title: 'Trip Details',
@@ -13808,6 +13833,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (type == 'booking' ||
         type == 'payment' ||
         type == 'service_cancellation' ||
+        type == 'service_resumption' ||
         type == 'cancellation' ||
         type == 'refund' ||
         targetId.toUpperCase().startsWith('AGT-')) {
@@ -14003,9 +14029,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             tileColor:
                                 isRead ? null : kGreen.withOpacity(0.05),
                             leading: CircleAvatar(
-                              backgroundColor: kGreen.withOpacity(0.2),
-                              child: const Icon(Icons.notifications_active,
-                                  color: kGreen),
+                              backgroundColor: (notif['type'] == 'service_resumption')
+                                  ? kGreen.withOpacity(0.25)
+                                  : kGreen.withOpacity(0.2),
+                              child: Icon(
+                                (notif['type'] == 'service_resumption')
+                                    ? Icons.event_available_rounded
+                                    : Icons.notifications_active,
+                                color: kGreen,
+                              ),
                             ),
                             title: Text(notif['title'] ?? '',
                                 style: TextStyle(
@@ -15962,6 +15994,22 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
   final _bankNameCtrl = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    final resume = _resumeDate;
+    if (resume != null && resume.isNotEmpty) {
+      _depDate = resume;
+      if (_isReturnTrip) {
+        _retDate = resume;
+      }
+      _fetchSchedules(resume);
+      if (_isReturnTrip) {
+        _fetchReturnSchedules(resume);
+      }
+    }
+  }
+
+  @override
   void dispose() {
     _accountNumberCtrl.dispose();
     _accountNameCtrl.dispose();
@@ -16098,14 +16146,26 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
 
   bool get _isReturnTrip => widget.booking['return_date'] != null;
 
-  String? get _resumeDate => (widget.booking['service_cancellation']
-          as Map<String, dynamic>?)?['resume_date']
-      ?.toString();
+  String? get _resumeDate {
+    final sc = widget.booking['service_cancellation'];
+    if (sc is Map) {
+      final r = sc['resume_date']?.toString();
+      if (r != null && r.trim().isNotEmpty && r.trim() != 'null') {
+        return r.trim();
+      }
+    }
+    final direct = widget.booking['resume_date']?.toString();
+    if (direct != null && direct.trim().isNotEmpty && direct.trim() != 'null') {
+      return direct.trim();
+    }
+    return null;
+  }
 
   DateTime? get _resumeDateTime {
-    if (_resumeDate == null || _resumeDate!.isEmpty) return null;
+    final r = _resumeDate;
+    if (r == null || r.isEmpty) return null;
     try {
-      return DateTime.parse(_resumeDate!);
+      return DateTime.parse(r);
     } catch (_) {
       return null;
     }
@@ -16724,10 +16784,22 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
                                   'Rescheduling is temporarily unavailable until the operator publishes a resume date.');
                             }
                           : () async {
-                              final minDate = _resumeDateTime ?? DateTime.now();
+                              final resume = _resumeDateTime;
+                              final now = DateTime.now();
+                              DateTime minDate = now;
+                              if (resume != null && resume.isAfter(now)) {
+                                minDate = resume;
+                              }
+                              DateTime initDate = minDate;
+                              if (_depDate.isNotEmpty) {
+                                final cur = DateTime.tryParse(_depDate);
+                                if (cur != null && !cur.isBefore(minDate)) {
+                                  initDate = cur;
+                                }
+                              }
                               final picked = await showDatePicker(
                                 context: context,
-                                initialDate: minDate,
+                                initialDate: initDate,
                                 firstDate: minDate,
                                 lastDate: DateTime.now()
                                     .add(const Duration(days: 365)),

@@ -40,10 +40,14 @@ class ServiceCancellationNotificationMail extends Mailable implements ShouldQueu
 
     public function content(): Content
     {
+        $baseUrl = config('app.url') ?: 'https://www.amigagracia.com';
+        $cleanBase = rtrim($baseUrl, '/');
+        $rescheduleUrl = $cleanBase . '/booking/reschedule/' . $this->booking->transaction_number;
+
         return new Content(
             view: 'emails.service-cancellation-notification',
             with: [
-                'rescheduleUrl' => route('book.status', ['transaction_number' => $this->booking->transaction_number]),
+                'rescheduleUrl' => $rescheduleUrl,
                 'isResumption'  => $this->isResumption,
             ],
         );

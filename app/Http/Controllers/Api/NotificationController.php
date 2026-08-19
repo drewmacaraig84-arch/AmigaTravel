@@ -97,27 +97,49 @@ class NotificationController extends Controller
         }
 
         // Fetch service cancellations that affect user's bookings
-        $cancellations = \App\Models\Booking::where('user_id', $user->id)
+        $cancellations = \App\Models\Booking::where(function ($q) use ($user) {
+                $q->where('user_id', $user->id);
+                if (filled($user->email)) {
+                    $q->orWhere('client_email', $user->email);
+                }
+            })
             ->whereNotNull('service_cancellation_id')
             ->with('serviceCancellation')
             ->get();
             
         foreach ($cancellations as $booking) {
             if ($booking->serviceCancellation) {
-                $vid = 'cancel_' . $booking->id;
+                $cancellation = $booking->serviceCancellation;
+                $isResumed = ! empty($cancellation->resume_date);
+                $vid = ($isResumed ? 'resume_' : 'cancel_') . $booking->id;
 
                 if (in_array($vid, $deletedVirtualIds)) {
                     continue;
                 }
 
+                if ($isResumed) {
+                    $resumeFormatted = $cancellation->resume_date ? $cancellation->resume_date->format('M d, Y') : 'soon';
+                    $title = '🟢 Operations Resumed: Select New Date';
+                    $body = "Travel operations for booking #{$booking->transaction_number} are resuming starting {$resumeFormatted}! Tap to select your replacement schedule at zero extra cost.";
+                    $type = 'service_resumption';
+                    $createdAt = $cancellation->resumed_at 
+                        ? $cancellation->resumed_at->toDateTimeString() 
+                        : $cancellation->updated_at->toDateTimeString();
+                } else {
+                    $title = '🔴 Schedule Cancellation Notice';
+                    $body = "Your booking #{$booking->transaction_number} has been affected by a service cancellation: {$cancellation->customer_message}";
+                    $type = 'service_cancellation';
+                    $createdAt = $cancellation->created_at->toDateTimeString();
+                }
+
                 $notifications[] = [
                     'id' => $vid,
-                    'title' => 'Service Cancellation Notice',
-                    'body' => 'Your booking ' . $booking->transaction_number . ' has been affected by a service cancellation: ' . $booking->serviceCancellation->customer_message,
-                    'type' => 'service_cancellation',
+                    'title' => $title,
+                    'body' => $body,
+                    'type' => $type,
                     'target_id' => $booking->transaction_number,
                     'is_read' => in_array($vid, $readVirtualIds),
-                    'created_at' => $booking->serviceCancellation->created_at->toDateTimeString(),
+                    'created_at' => $createdAt,
                 ];
             }
         }

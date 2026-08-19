@@ -38,21 +38,25 @@ class NotifyAffectedBookerJob implements ShouldQueue
 
         // Mobile App Push Notification (FCM)
         try {
-            $resumeText = ! empty($this->cancellation->resume_date)
-                ? "Tap to choose a new travel date starting {$this->cancellation->resume_date->format('M d, Y')}."
-                : "Service operations are temporarily suspended. We will notify you when travel resumes.";
-
-            // AppNotification was removed here to prevent global broadcast to unaffected users
-            // NotificationController dynamically creates virtual notifications for affected users
+            if ($this->isResumption && ! empty($this->cancellation->resume_date)) {
+                $title = "🟢 {$this->cancellation->carrier} Operations Resuming";
+                $body = "Travel for Booking #{$this->booking->transaction_number} is resuming! Tap to choose your replacement travel date starting {$this->cancellation->resume_date->format('M d, Y')}.";
+                $notifType = 'service_resumption';
+            } elseif (! empty($this->cancellation->resume_date)) {
+                $title = "🔴 {$this->cancellation->carrier} Disruption Notice";
+                $body = "Booking #{$this->booking->transaction_number} was cancelled due to {$this->cancellation->reason_category}. Service resumes {$this->cancellation->resume_date->format('M d, Y')}. Tap to select a replacement date.";
+                $notifType = 'service_cancellation';
+            } else {
+                $title = "🔴 {$this->cancellation->carrier} Disruption Notice";
+                $body = "Booking #{$this->booking->transaction_number} was cancelled due to {$this->cancellation->reason_category}. Operations temporarily suspended.";
+                $notifType = 'service_cancellation';
+            }
 
             // Send user-specific FCM push to only the affected user's device
             if (filled($this->booking->client_email)) {
                 $userTopic = 'user_' . md5(strtolower(trim($this->booking->client_email)));
                 $messaging = app(Messaging::class);
-                $notification = \Kreait\Firebase\Messaging\Notification::create(
-                    "✈️ {$this->cancellation->carrier} Disruption",
-                    "Booking #{$this->booking->transaction_number} was cancelled due to {$this->cancellation->reason_category}. {$resumeText}"
-                );
+                $notification = \Kreait\Firebase\Messaging\Notification::create($title, $body);
                 $androidConfig = \Kreait\Firebase\Messaging\AndroidConfig::fromArray([
                     'notification' => [
                         'channel_id' => 'high_importance_channel',
@@ -62,7 +66,7 @@ class NotifyAffectedBookerJob implements ShouldQueue
                 $message = \Kreait\Firebase\Messaging\CloudMessage::new()
                     ->withTopic($userTopic)
                     ->withNotification($notification)
-                    ->withData(['type' => 'booking', 'target_id' => $this->booking->transaction_number])
+                    ->withData(['type' => $notifType, 'target_id' => $this->booking->transaction_number])
                     ->withAndroidConfig($androidConfig);
                 $messaging->send($message);
             }
