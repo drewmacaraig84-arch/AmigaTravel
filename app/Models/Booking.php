@@ -268,11 +268,6 @@ class Booking extends Model
         return $this->belongsTo(Voucher::class);
     }
 
-    public function serviceCancellation(): BelongsTo
-    {
-        return $this->belongsTo(ServiceCancellation::class, 'service_cancellation_id');
-    }
-
     public function voucherRedemption(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(VoucherRedemption::class);
