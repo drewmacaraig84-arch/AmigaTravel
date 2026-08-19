@@ -6997,7 +6997,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
           ]),
         if (_booking['status'] != 'cancelled' &&
             _booking['status'] != 'operator_cancelled') ...[
-          if (_paymentStatus == 'paid') ...[
+          if (_paymentStatus == 'paid' || _booking['status'] == 'confirmed') ...[
             if (_booking['confirmation_url'] != null && _booking['confirmation_url'].toString().trim().isNotEmpty)
               FilledButton.icon(
                 onPressed: () {
@@ -7013,10 +7013,13 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 style: FilledButton.styleFrom(
                     backgroundColor: kGreen, foregroundColor: Colors.white),
               )
-            else if (_booking['confirmation_pdf_url'] != null)
+            else if (_booking['confirmation_pdf_url'] != null || _booking['confirmation_pdf'] != null || _booking['transaction_number'] != null)
               FilledButton.icon(
                 onPressed: () {
-                  final rawUrl = _booking['confirmation_pdf_url'].toString().trim();
+                  final rawUrl = (_booking['confirmation_pdf_url'] ??
+                          '/ticket/admin-pdf/${_booking['transaction_number']}')
+                      .toString()
+                      .trim();
                   final uri = Uri.parse(rawUrl);
                   final fullUrl = uri.hasScheme
                       ? uri
@@ -7028,17 +7031,18 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 style: FilledButton.styleFrom(
                     backgroundColor: kGreen, foregroundColor: Colors.white),
               ),
-            if (_booking['ticket_url'] != null)
+            if (_booking['ticket_url'] != null || _booking['transaction_number'] != null)
               OutlinedButton.icon(
                 onPressed: () {
-                  final rawUrl = _booking['ticket_url'];
-                  if (rawUrl != null) {
-                    final uri = Uri.parse(rawUrl.toString());
-                    final fullUrl = uri.hasScheme
-                        ? uri
-                        : Uri.parse('${UserSession.getBaseUrl()}${rawUrl.toString()}');
-                    launchUrl(fullUrl, mode: LaunchMode.externalApplication);
-                  }
+                  final rawUrl = (_booking['ticket_url'] ??
+                          '/ticket/download/${_booking['transaction_number']}')
+                      .toString()
+                      .trim();
+                  final uri = Uri.parse(rawUrl);
+                  final fullUrl = uri.hasScheme
+                      ? uri
+                      : Uri.parse('${UserSession.getBaseUrl()}$rawUrl');
+                  launchUrl(fullUrl, mode: LaunchMode.externalApplication);
                 },
                 icon: const Icon(Icons.receipt_long),
                 label: const Text('Payment Acknowledgement'),

@@ -144,64 +144,6 @@ class RebookingVerification extends Mailable
      */
     private function resolveAttachmentPath(string $path, ?string $disk = 'public'): ?string
     {
-        $cleanPath = ltrim($path, '/\\');
-        $baseName = basename($path);
-
-        if (file_exists($path) && is_file($path)) {
-            return $path;
-        }
-
-        $disks = array_values(array_unique(array_filter([$disk, 'public', 'local'])));
-        foreach ($disks as $d) {
-            try {
-                if (Storage::disk($d)->exists($path)) {
-                    $p = Storage::disk($d)->path($path);
-                    if (file_exists($p) && is_file($p)) {
-                        return $p;
-                    }
-                }
-                if (Storage::disk($d)->exists($cleanPath)) {
-                    $p = Storage::disk($d)->path($cleanPath);
-                    if (file_exists($p) && is_file($p)) {
-                        return $p;
-                    }
-                }
-                if (Storage::disk($d)->exists('tickets/' . $baseName)) {
-                    $p = Storage::disk($d)->path('tickets/' . $baseName);
-                    if (file_exists($p) && is_file($p)) {
-                        return $p;
-                    }
-                }
-            } catch (\Throwable $e) {
-                // ignore
-            }
-        }
-
-        $candidates = [
-            $path,
-            storage_path('app/public/' . $cleanPath),
-            storage_path('app/' . $cleanPath),
-            public_path('storage/' . $cleanPath),
-            storage_path('app/public/tickets/' . $cleanPath),
-            storage_path('app/tickets/' . $cleanPath),
-            public_path('tickets/' . $cleanPath),
-            storage_path('app/public/tickets/' . $baseName),
-            storage_path('app/tickets/' . $baseName),
-            public_path('tickets/' . $baseName),
-            public_path('storage/tickets/' . $baseName),
-            storage_path('app/public/receipts/' . $baseName),
-            storage_path('app/receipts/' . $baseName),
-            public_path('receipts/' . $baseName),
-            public_path('storage/receipts/' . $baseName),
-            storage_path('app/acknowledgements/' . $baseName),
-        ];
-
-        foreach ($candidates as $candidate) {
-            if (file_exists($candidate) && is_file($candidate)) {
-                return $candidate;
-            }
-        }
-
-        return null;
+        return Booking::resolveAttachmentPath($path, $disk);
     }
 }
