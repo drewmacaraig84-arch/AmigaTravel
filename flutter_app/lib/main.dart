@@ -18015,10 +18015,11 @@ class _RebookScreenState extends State<RebookScreen> {
               final tc = subList[index];
               final isAccSel = selAccId == tc['id'];
 
-              final ticketPrice = _parseDouble(selectedSch['price']);
-              final combinedPrice = ticketPrice + _parseDouble(tc['price']);
-
               final isAirline = widget.booking['mode'] == 'airline';
+
+              final ticketPrice = _parseDouble(selectedSch['price']);
+              final rawClassPrice = _parseDouble(tc['price']);
+              final combinedPrice = isAirline ? ((ticketPrice + rawClassPrice) * 1.5) : (ticketPrice + rawClassPrice);
 
               final tcs = widget.booking['transport_classes'] as List? ?? [];
               final origTcPrice = (tcs.isNotEmpty && isReturn && tcs.length > 1)
@@ -18036,11 +18037,13 @@ class _RebookScreenState extends State<RebookScreen> {
                   : _parseDouble(
                       widget.booking['schedule_accommodation_price']);
 
-              final originalPerPax =
-                  originalSchPrice + origTcPrice + originalAccPrice;
+              final originalPerPax = isAirline
+                  ? (((originalSchPrice + origTcPrice) > 0)
+                      ? ((originalSchPrice + origTcPrice) * 1.5)
+                      : 0.0)
+                  : (originalSchPrice + origTcPrice + originalAccPrice);
 
-              final newPerPax =
-                  isAirline ? _parseDouble(tc['price']) : combinedPrice;
+              final newPerPax = combinedPrice;
 
               final isTooLow = newPerPax < originalPerPax;
 
