@@ -444,35 +444,47 @@ class TransactionResource extends Resource
                         ]);
 
                         if ($record->booking) {
-                            $record->booking->update([
-                                'status' => 'confirmed',
+                            $booking = $record->booking;
+                            $booking->update([
                                 'verified_by_user_id' => $staffUserId,
-                                'verified_at' => $now,
+                                'verified_at'         => $now,
                             ]);
-                            $record->booking->setRelation('transaction', $record);
+                            $booking->setRelation('transaction', $record);
 
-                            app(\App\Services\GraciaPointsService::class)->awardPointsForBooking($record->booking, Auth::user());
-
-                            try {
-                                Mail::to($record->booking->client_email)->send(new BookingConfirmation($record->booking, $ticketUrl, $receiptPath, $receiptDisk));
+                            if ($booking->rebooking_status === 'pending') {
+                                // Rebooking path — handles status, dates, points, and email internally
+                                $booking->verifyRebooking($ticketUrl, $receiptPath, $receiptDisk);
 
                                 Notification::make()
-                                    ->title('Payment verified')
-                                    ->body('Payment verified and confirmation email sent.')
+                                    ->title('Rebooking verified')
+                                    ->body('Rebooking verified and confirmation email sent.')
                                     ->success()
                                     ->send();
-                            } catch (Throwable $e) {
-                                Log::error('Failed sending booking confirmation email (transaction verify)', [
-                                    'transaction_id' => $record->id ?? null,
-                                    'booking_id' => $record->booking->id ?? null,
-                                    'email' => $record->booking->client_email ?? null,
-                                    'error' => $e->getMessage(),
-                                ]);
-                                Notification::make()
-                                    ->title('Payment verified with warning')
-                                    ->body('Payment was verified, but the confirmation email failed to send.')
-                                    ->warning()
-                                    ->send();
+                            } else {
+                                $booking->update(['status' => 'confirmed']);
+                                app(\App\Services\GraciaPointsService::class)->awardPointsForBooking($booking, Auth::user());
+
+                                try {
+                                    Mail::to($booking->client_email)->send(new BookingConfirmation($booking, $ticketUrl, $receiptPath, $receiptDisk));
+
+                                    Notification::make()
+                                        ->title('Payment verified')
+                                        ->body('Payment verified and confirmation email sent.')
+                                        ->success()
+                                        ->send();
+                                } catch (Throwable $e) {
+                                    Log::error('Failed sending booking confirmation email (transaction verify)', [
+                                        'transaction_id' => $record->id ?? null,
+                                        'booking_id'     => $booking->id ?? null,
+                                        'email'          => $booking->client_email ?? null,
+                                        'error'          => $e->getMessage(),
+                                    ]);
+                                    Notification::make()
+                                        ->title('Payment verified with warning')
+                                        ->body('Payment was verified, but the confirmation email failed to send.')
+                                        ->warning()
+                                        ->send();
+                                }
                             }
                         }
                     })
