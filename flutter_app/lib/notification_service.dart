@@ -24,8 +24,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 class NotificationService {
-  static final FlutterLocalNotificationsPlugin _plugin =
-      FlutterLocalNotificationsPlugin();
+  static dynamic _plugin = FlutterLocalNotificationsPlugin();
 
   static const String _channelId = 'amiga_travel_alerts';
   static const String _channelName = 'Amiga Travel Alerts';
