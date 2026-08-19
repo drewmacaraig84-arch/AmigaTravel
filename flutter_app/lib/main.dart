@@ -99,7 +99,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.116+127';
+  static const String appVersion = '1.0.117+128';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -6998,21 +6998,30 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         if (_booking['status'] != 'cancelled' &&
             _booking['status'] != 'operator_cancelled') ...[
           if (_paymentStatus == 'paid') ...[
-            if (_booking['confirmation_pdf_url'] != null ||
-                transaction['confirmation_url'] != null ||
-                _booking['confirmation_url'] != null)
+            if (_booking['confirmation_url'] != null && _booking['confirmation_url'].toString().trim().isNotEmpty)
               FilledButton.icon(
                 onPressed: () {
-                  final rawUrl = _booking['confirmation_pdf_url'] ??
-                      transaction['confirmation_url'] ??
-                      _booking['confirmation_url'];
-                  if (rawUrl != null) {
-                    final uri = Uri.parse(rawUrl.toString());
-                    final fullUrl = uri.hasScheme
-                        ? uri
-                        : Uri.parse('${UserSession.getBaseUrl()}${rawUrl.toString()}');
-                    launchUrl(fullUrl, mode: LaunchMode.externalApplication);
-                  }
+                  final rawUrl = _booking['confirmation_url'].toString().trim();
+                  final uri = Uri.parse(rawUrl);
+                  final fullUrl = uri.hasScheme
+                      ? uri
+                      : Uri.parse('${UserSession.getBaseUrl()}$rawUrl');
+                  launchUrl(fullUrl, mode: LaunchMode.externalApplication);
+                },
+                icon: const Icon(Icons.download),
+                label: const Text('Download Ticket'),
+                style: FilledButton.styleFrom(
+                    backgroundColor: kGreen, foregroundColor: Colors.white),
+              )
+            else if (_booking['confirmation_pdf_url'] != null)
+              FilledButton.icon(
+                onPressed: () {
+                  final rawUrl = _booking['confirmation_pdf_url'].toString().trim();
+                  final uri = Uri.parse(rawUrl);
+                  final fullUrl = uri.hasScheme
+                      ? uri
+                      : Uri.parse('${UserSession.getBaseUrl()}$rawUrl');
+                  launchUrl(fullUrl, mode: LaunchMode.externalApplication);
                 },
                 icon: const Icon(Icons.download),
                 label: const Text('Download Ticket'),

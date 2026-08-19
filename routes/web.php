@@ -324,10 +324,17 @@ Route::get('/ticket/download/{transaction_number}', function ($transaction_numbe
 // Serves the admin-uploaded confirmation PDF or official E-Ticket / Travel Itinerary (used for "Download Ticket")
 Route::get('/ticket/admin-pdf/{transaction_number}', function ($transaction_number) {
     $booking = \App\Models\Booking::where('transaction_number', $transaction_number)
-        ->with(['passengers.discount', 'schedule.ferryRoute', 'returnSchedule', 'transaction', 'accommodations', 'transportClasses'])
+        ->with(['passengers.discount', 'schedule.ferryRoute', 'returnSchedule', 'transaction', 'transactions', 'accommodations', 'transportClasses'])
         ->firstOrFail();
 
-    $pdfPath = $booking->transaction?->confirmation_pdf;
+    $transaction = $booking->transaction 
+        ?? $booking->transactions()->where(function ($q) {
+            $q->whereNotNull('confirmation_pdf')->orWhereNotNull('confirmation_url');
+        })->latest('id')->first() 
+        ?? $booking->transactions()->latest('id')->first();
+
+    $pdfPath = $transaction?->confirmation_pdf;
+    $confirmationUrl = $transaction?->confirmation_url;
 
     if ($pdfPath) {
         $cleanPdfPath = ltrim($pdfPath, '/\\');
@@ -391,8 +398,8 @@ Route::get('/ticket/admin-pdf/{transaction_number}', function ($transaction_numb
         }
     }
 
-    if (! empty($booking->transaction?->confirmation_url)) {
-        return redirect()->away($booking->transaction->confirmation_url);
+    if (! empty($confirmationUrl)) {
+        return redirect()->away($confirmationUrl);
     }
 
     // If no admin custom PDF or URL exists, generate and serve the Official E-Ticket & Travel Itinerary PDF

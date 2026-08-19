@@ -150,7 +150,9 @@ class BookingController extends Controller
 
         $bookings = $bookings->map(function (Booking $booking) {
             $data = $booking->toArray();
-            $transaction = $booking->transaction;
+            $transaction = $booking->transaction ?? $booking->transactions->first(function ($t) {
+                return !empty($t->confirmation_pdf) || !empty($t->confirmation_url);
+            }) ?? $booking->transactions->last();
             $isConfirmed = in_array($booking->status, ['confirmed', Booking::STATUS_PENDING_REBOOKING]);
             if ($isConfirmed || $transaction?->confirmation_pdf || $transaction?->confirmation_url) {
                 // Route through server-side route so the file is served directly
@@ -158,6 +160,7 @@ class BookingController extends Controller
                 $data['confirmation_pdf_url'] = route('ticket.admin-pdf', ['transaction_number' => $booking->transaction_number]);
             }
             $data['confirmation_url'] = $transaction?->confirmation_url;
+            $data['confirmation_pdf'] = $transaction?->confirmation_pdf;
             // Always allow payment acknowledgement download for confirmed/paid bookings
             $data['ticket_url'] = in_array($booking->status, ['confirmed', 'pending', Booking::STATUS_PENDING_REBOOKING])
                 ? route('ticket.download', ['transaction_number' => $booking->transaction_number])
@@ -252,7 +255,9 @@ class BookingController extends Controller
 
         // Apply same formatting as index
         $data = $booking->toArray();
-        $transaction = $booking->transaction;
+        $transaction = $booking->transaction ?? $booking->transactions->first(function ($t) {
+            return !empty($t->confirmation_pdf) || !empty($t->confirmation_url);
+        }) ?? $booking->transactions->last();
         $isConfirmed = in_array($booking->status, ['confirmed', Booking::STATUS_PENDING_REBOOKING]);
         if ($isConfirmed || $transaction?->confirmation_pdf || $transaction?->confirmation_url) {
             // Route through server-side route so the file is served directly
@@ -260,6 +265,7 @@ class BookingController extends Controller
             $data['confirmation_pdf_url'] = route('ticket.admin-pdf', ['transaction_number' => $booking->transaction_number]);
         }
         $data['confirmation_url'] = $transaction?->confirmation_url;
+        $data['confirmation_pdf'] = $transaction?->confirmation_pdf;
         // Always allow payment acknowledgement download for confirmed/paid bookings
         $data['ticket_url'] = in_array($booking->status, ['confirmed', 'pending', Booking::STATUS_PENDING_REBOOKING])
             ? route('ticket.download', ['transaction_number' => $booking->transaction_number])
