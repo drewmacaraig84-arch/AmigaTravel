@@ -11911,7 +11911,7 @@ class _VoucherPickerScreenState extends State<VoucherPickerScreen> {
 
   Future<void> _fetchVouchers() async {
     try {
-      final email = UserSession.email.isNotEmpty ? UserSession.email : (widget.booking.clientEmail ?? '');
+      final email = UserSession.email.isNotEmpty ? UserSession.email : widget.booking.clientEmail;
       final uri = Uri.parse('${UserSession.getBaseUrl()}/api/vouchers').replace(
         queryParameters: {
           if (email.isNotEmpty) 'email': email,
