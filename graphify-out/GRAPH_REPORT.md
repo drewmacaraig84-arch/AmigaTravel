@@ -190,7 +190,7 @@
 - hw
 - Vl
 - .processRow
-- .fromWireType
+- makeRequest
 - flutter.js
 - add
 - AdminPanelProvider.php
@@ -200,7 +200,7 @@
 - composer.json
 - sc
 - bY
-- gaR
+- gkr
 - G
 - Deployment setup
 - rs
@@ -212,31 +212,16 @@
 - .fromWireType
 - GeneratedPluginRegistrant.swift
 - wWinMain
-- BookingsRelationManager.php
 - app.js
-- GraciaPointLedgersRelationManager.php
-- AccommodationsRelationManager.php
 - manifest.json
-- PassengersRelationManager.php
-- TransportClassesRelationManager.php
 - aYd
-- FerryRoutesRelationManager.php
-- DatesRelationManager.php
-- VehicleModelsRelationManager.php
-- RedemptionsRelationManager.php
-- ThrottleSensitiveActions.php
-- mutationIsSignificant
 - manifest.json
 - mergeNewHead
-- EnsureStaffPermission.php
-- _each
 - booking-reschedule.blade.php
 - dispatchEvent
-- flutter_export_environment.sh
 - fb
 - fb
 - Rb
-- oc
 - Flutter & Android Studio Setup Guide
 - graphify reference: extra exports and benchmark
 - graphify reference: extra exports and benchmark
@@ -336,7 +321,7 @@
 
 ### Community 0 - "BookingForm"
 Cohesion: 0.04
-Nodes (4): BookingForm, BelongsTo, TourDate, Validator
+Nodes (4): BookingForm, TourDate, Illuminate\Support\Facades\Validator, Validator
 
 ### Community 1 - ".saveDraft"
 Cohesion: 0.00
@@ -375,8 +360,8 @@ Cohesion: 0.03
 Nodes (32): BookingController, Request, NotifyAffectedBookerJob, SendBookingConfirmationJob, BookingCancellation, self, BookingConfirmation, BookingCreated (+24 more)
 
 ### Community 10 - "download.blade.php"
-Cohesion: 0.06
-Nodes (16): Form, ViewBooking, PromoImageManager, Passenger, BelongsTo, storage_asset_path(), dismissCancellationReminder, HtmlString (+8 more)
+Cohesion: 0.02
+Nodes (114): a0i(), a0O(), a10(), a1G(), a2d(), a46(), a4t(), a7m() (+106 more)
 
 ### Community 12 - "schedules.blade.php"
 Cohesion: 0.05
@@ -516,7 +501,7 @@ Nodes (44): afterBuildTicks(), afterCalculateLabelRotation(), afterDataLimits(),
 
 ### Community 47 - "ListRecords"
 Cohesion: 0.04
-Nodes (21): ListAccommodations, ListAirlineBaggageRules, ListApkUsers, ListAppNotifications, ListBookings, ListDiscounts, ListFerryRoutes, ListGraciaEarningRules (+13 more)
+Nodes (20): ListAccommodations, ListAirlineBaggageRules, ListApkUsers, ListAppNotifications, ListBookings, ListDiscounts, ListFerryRoutes, ListGraciaEarningRules (+12 more)
 
 ### Community 48 - "canvaskit.js"
 Cohesion: 0.06
@@ -556,7 +541,7 @@ Nodes (15): AccommodationController, BookingCalculateController, DiscountControl
 
 ### Community 57 - "canvaskit.js"
 Cohesion: 0.08
-Nodes (30): A(), b(), Ba(), c(), d(), E(), eb(), Ed() (+22 more)
+Nodes (32): A(), Ad(), b(), Ba(), c(), d(), dd(), E() (+24 more)
 
 ### Community 58 - "dH"
 Cohesion: 0.01
@@ -587,8 +572,8 @@ Cohesion: 0.03
 Nodes (101): a05(), a0x(), a39(), a3a(), a3b(), a5B(), a5Y(), a7y() (+93 more)
 
 ### Community 65 - "I"
-Cohesion: 0.12
-Nodes (24): afterDatasetsUpdate(), _d(), generateLabels(), getDatasetMeta(), getDataVisibility(), getMaxBorderWidth(), getStyle(), _handleEvent() (+16 more)
+Cohesion: 0.08
+Nodes (32): afterDatasetsUpdate(), _d(), generateLabels(), getDatasetMeta(), getDataVisibility(), getMaxBorderWidth(), getStyle(), _handleEvent() (+24 more)
 
 ### Community 66 - "i"
 Cohesion: 0.06
@@ -607,8 +592,8 @@ Cohesion: 0.09
 Nodes (54): Ae(), as(), fd(), fi(), ga(), go(), lf(), ls() (+46 more)
 
 ### Community 70 - "a"
-Cohesion: 0.18
-Nodes (17): cancelUpload(), getCsrfToken(), getUploadManager(), handleFileUpload(), handleS3PreSignedUrl(), handleSignedUrl(), makeRequest(), markUploadErrored() (+9 more)
+Cohesion: 0.10
+Nodes (28): cancelUpload(), componentsByName(), dispatch(), dispatch2(), dispatch3(), dispatchEvent(), dispatchEvents(), dispatchGlobal() (+20 more)
 
 ### Community 71 - "a5"
 Cohesion: 0.08
@@ -639,8 +624,8 @@ Cohesion: 0.01
 Nodes (204): $1$1(), a0k(), a19(), a1G(), a1m(), a1N(), a1w(), a1x() (+196 more)
 
 ### Community 78 - "push"
-Cohesion: 0.05
-Nodes (21): CreateUser, EditUser, AuthController, Request, AdminNotificationStatus, BelongsTo, HasMany, HasOne (+13 more)
+Cohesion: 0.03
+Nodes (33): CreateUser, EditUser, AdminNotificationController, JsonResponse, AccommodationController, BookingCalculateController, BookingController, DiscountController (+25 more)
 
 ### Community 79 - "o8"
 Cohesion: 0.12
@@ -683,8 +668,8 @@ Cohesion: 0.07
 Nodes (51): disabled(), acquireContext(), buildTicks(), calculateLabelRotation(), _computeAngle(), _computeGridLineItems(), _computeLabelItems(), computeTickLimit() (+43 more)
 
 ### Community 89 - "HasFactory"
-Cohesion: 0.07
-Nodes (13): CreateBookingAction, Accommodation, BelongsToMany, BelongsTo, ScheduleTransportClass, BelongsTo, HasMany, Voucher (+5 more)
+Cohesion: 0.21
+Nodes (12): average(), getCenterPoint(), getProps(), hasValue(), hs(), inXRange(), inYRange(), nearest() (+4 more)
 
 ### Community 90 - "skwasm_heavy.js"
 Cohesion: 0.06
@@ -707,8 +692,8 @@ Cohesion: 0.02
 Nodes (144): a14(), a1c(), a1D(), a1f(), a1T(), a2M(), a2N(), a42() (+136 more)
 
 ### Community 95 - "r"
-Cohesion: 0.12
-Nodes (13): BookingsSheet, Collection, Worksheet, OverallBreakdownSheet, Collection, Worksheet, FromArray, FromCollection (+5 more)
+Cohesion: 0.14
+Nodes (10): BookingsSheet, OverallBreakdownSheet, Maatwebsite\Excel\Concerns\FromArray, Maatwebsite\Excel\Concerns\FromCollection, Maatwebsite\Excel\Concerns\WithColumnWidths, Maatwebsite\Excel\Concerns\WithHeadings, Maatwebsite\Excel\Concerns\WithMapping, Maatwebsite\Excel\Concerns\WithStyles (+2 more)
 
 ### Community 96 - ".$1"
 Cohesion: 0.03
@@ -751,8 +736,8 @@ Cohesion: 0.12
 Nodes (20): actionIsExternal(), canInvokeAction(), compositionControllerDidBlur(), compositionControllerDidSyncDocumentView(), compositionDidAddAttachment(), compositionDidChangeAttachmentPreviewURL(), compositionDidChangeCurrentAttributes(), compositionDidEditAttachment() (+12 more)
 
 ### Community 108 - "UseAdminGuard.php"
-Cohesion: 0.05
-Nodes (50): Ad(), Bd(), Cd(), Fd(), Gd(), Id(), Jd(), Kd() (+42 more)
+Cohesion: 0.06
+Nodes (47): Bd(), Cd(), Fd(), Gd(), Hd(), Id(), Kd(), Ld() (+39 more)
 
 ### Community 109 - "add"
 Cohesion: 0.07
@@ -903,12 +888,8 @@ Cohesion: 0.50
 Nodes (4): post-create-project-cmd, @php artisan key:generate --ansi, @php artisan migrate --graceful --ansi, @php -r \"file_exists('database/database.sqlite') || touch('database/database.sqlite');\
 
 ### Community 146 - "$0"
-Cohesion: 0.60
-Nodes (3): AdminMiddleware, Closure, Request
-
-### Community 147 - "gO"
-Cohesion: 0.60
-Nodes (3): Closure, Request, UpdateUserActivity
+Cohesion: 0.29
+Nodes (6): e(), i(), l(), Ni(), o(), t()
 
 ### Community 149 - "package.json"
 Cohesion: 0.09
@@ -925,10 +906,6 @@ Nodes (48): dart:convert, build, _confirmPassController, createState, _emailCont
 ### Community 152 - "kr"
 Cohesion: 0.24
 Nodes (14): c(), _createScriptTag(), E(), F(), _getNewServiceWorker(), I(), load(), loadEntrypoint() (+6 more)
-
-### Community 153 - "$2"
-Cohesion: 0.60
-Nodes (3): Closure, Request, UseAdminGuard
 
 ### Community 154 - "dB"
 Cohesion: 0.08
@@ -1023,12 +1000,12 @@ Cohesion: 0.12
 Nodes (20): addCleanup(), applyUpdates(), bs(), constructor(), dp(), ds(), Fr(), ft() (+12 more)
 
 ### Community 177 - ".processRow"
-Cohesion: 0.18
-Nodes (6): Form, Table, Carbon, ScheduleCsvImportService, normalize_operator_name(), operator_is_ferry()
+Cohesion: 0.50
+Nodes (4): R(), td(), ud(), vd()
 
-### Community 178 - ".fromWireType"
-Cohesion: 0.13
-Nodes (9): Ac(), cc(), Lb(), nb(), Ob(), Rb(), Xd(), yc() (+1 more)
+### Community 178 - "makeRequest"
+Cohesion: 0.18
+Nodes (13): handleS3PreSignedUrl(), handleSignedUrl(), ji(), makeRequest(), markUploadErrored(), markUploadFinished(), prepare(), qt() (+5 more)
 
 ### Community 179 - "flutter.js"
 Cohesion: 0.23
@@ -1043,8 +1020,8 @@ Cohesion: 0.02
 Nodes (39): Action, PurgeExpiredProofs, AdminNotifications, ManagePaymentSettings, Form, ManageProofs, Collection, Form (+31 more)
 
 ### Community 182 - "ho"
-Cohesion: 0.15
-Nodes (8): BookingsExport, AdminNotificationController, JsonResponse, Request, BookingExportController, Response, Exportable, WithMultipleSheets
+Cohesion: 0.22
+Nodes (5): BookingsExport, BookingExportController, Illuminate\Http\Response, Maatwebsite\Excel\Concerns\Exportable, Maatwebsite\Excel\Concerns\WithMultipleSheets
 
 ### Community 183 - "constructor"
 Cohesion: 0.09
@@ -1066,9 +1043,9 @@ Nodes (17): D(), f(), g(), k(), l(), m(), mb(), q() (+9 more)
 Cohesion: 0.02
 Nodes (203): a1O(), a4e(), a52(), a62(), a8u(), a9N(), a_6(), a_7() (+195 more)
 
-### Community 189 - "gaR"
+### Community 189 - "gkr"
 Cohesion: 0.33
-Nodes (5): BookingsRelationManager, Table, LoginHistoriesRelationManager, Table, RelationManager
+Nodes (9): a78(), a7A(), aim(), aWu(), aWV(), gHK(), gkr(), grp() (+1 more)
 
 ### Community 190 - "G"
 Cohesion: 0.67
@@ -1106,10 +1083,6 @@ Nodes (13): file_selector_macos, firebase_core, firebase_messaging, flutter_app_
 Cohesion: 0.24
 Nodes (9): wWinMain(), string, wchar_t, CreateAndAttachConsole(), GetCommandLineArguments(), Utf8FromUtf16(), _In_, _In_opt_ (+1 more)
 
-### Community 225 - "BookingsRelationManager.php"
-Cohesion: 0.47
-Nodes (3): BookingsRelationManager, Form, Table
-
 ### Community 231 - "app.js"
 Cohesion: 0.26
 Nodes (7): C(), D(), J(), O(), U(), v(), X()
@@ -1125,14 +1098,6 @@ Nodes (3): AccommodationsRelationManager, Form, Table
 ### Community 236 - "manifest.json"
 Cohesion: 0.18
 Nodes (10): background_color, description, display, icons, name, orientation, prefer_related_applications, short_name (+2 more)
-
-### Community 237 - "PassengersRelationManager.php"
-Cohesion: 0.47
-Nodes (3): PassengersRelationManager, Form, Table
-
-### Community 238 - "TransportClassesRelationManager.php"
-Cohesion: 0.47
-Nodes (3): Form, Table, TransportClassesRelationManager
 
 ### Community 239 - "aYd"
 Cohesion: 0.04
@@ -1340,7 +1305,7 @@ _Questions this graph is uniquely positioned to answer:_
   _`a()` has 246 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 235 inferred relationships involving `a()` (e.g. with `$0()` and `b()`) actually correct?**
   _`a()` has 235 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 498 inferred relationships involving `b()` (e.g. with `main.dart.js` and `$0()`) actually correct?**
+- **Are the 498 inferred relationships involving `b()` (e.g. with `web/main.dart.js` and `$0()`) actually correct?**
   _`b()` has 498 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 496 inferred relationships involving `c()` (e.g. with `$0()` and `$1()`) actually correct?**
   _`c()` has 496 INFERRED edges - model-reasoned connections that need verification._

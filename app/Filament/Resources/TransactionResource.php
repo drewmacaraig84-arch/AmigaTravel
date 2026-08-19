@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\TransactionResource\Pages;
 use App\Mail\BookingConfirmation;
+use App\Models\Booking;
 use App\Models\Transaction;
 use App\Models\User;
 use Filament\Forms\Components\FileUpload;

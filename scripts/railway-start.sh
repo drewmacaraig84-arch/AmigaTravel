@@ -129,9 +129,15 @@ timeout 60 php artisan migrate --force --no-interaction || echo "Migrations skip
 
 # Ensure all required storage subdirectories exist (important when using Railway Persistent Volume)
 # These are wiped if the volume is freshly mounted, so we recreate them every startup
+mkdir -p /var/www/html/storage/app/public/tickets
 mkdir -p /var/www/html/storage/app/public/proofs
 mkdir -p /var/www/html/storage/app/public/receipts
 mkdir -p /var/www/html/storage/app/public/rebooking_proofs
+mkdir -p /var/www/html/storage/app/public/livewire-tmp
+mkdir -p /var/www/html/storage/app/private/livewire-tmp
+mkdir -p /var/www/html/storage/app/livewire-tmp
+mkdir -p /var/www/html/storage/app/acknowledgements
+mkdir -p /var/www/html/storage/app/tickets
 mkdir -p /var/www/html/storage/app/private
 mkdir -p /var/www/html/storage/framework/cache
 mkdir -p /var/www/html/storage/framework/sessions

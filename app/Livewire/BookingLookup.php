@@ -577,9 +577,7 @@ class BookingLookup extends Component
         $isAirline = $this->booking->getMode() === 'airline';
         $this->booking->loadMissing('transportClasses');
         $origTCPerPax = (float) optional($this->booking->transportClasses->values()->get(0))->pivot?->price;
-        $originalPerPax = (float)($this->booking->schedule_price ?? 0)
-                        + $origTCPerPax
-                        + (float)($this->booking->schedule_accommodation_price ?? 0);
+        $originalPerPax = (float)($this->booking->schedule_price ?? 0) + $origTCPerPax + (float)($this->booking->schedule_accommodation_price ?? 0);
 
         return $schedules->filter(function($schedule) use ($isAirline, $originalPerPax) {
             if ($schedule->scheduleAccommodations->isEmpty() && $schedule->transportClasses->isEmpty()) {
@@ -589,13 +587,13 @@ class BookingLookup extends Component
 
             foreach ($schedule->scheduleAccommodations->where('is_active', true) as $acc) {
                 $price = (float)$acc->price;
-                $newPerPax = $isAirline ? $price : (($schedule->price ?? 0) + $price);
+                $newPerPax = $isAirline ? ((($schedule->price ?? 0) + $price) * 1.5) : (($schedule->price ?? 0) + $price);
                 if ($newPerPax >= $originalPerPax) return true;
             }
 
             foreach ($schedule->transportClasses->where('pivot.is_active', true) as $tc) {
                 $price = (float)$tc->pivot->additional_price;
-                $newPerPax = $isAirline ? $price : (($schedule->price ?? 0) + $price);
+                $newPerPax = $isAirline ? ((($schedule->price ?? 0) + $price) * 1.5) : (($schedule->price ?? 0) + $price);
                 if ($newPerPax >= $originalPerPax) return true;
             }
 
@@ -614,12 +612,8 @@ class BookingLookup extends Component
 
         $isAirline = $this->booking->getMode() === 'airline';
         $this->booking->loadMissing('transportClasses');
-        $origTCPerPax = (float) optional($this->booking->transportClasses->values()->get(0))->pivot?->price;
-        // Re-use original outward minimum as baseline for return ticket too, 
-        // or actually compute original return minimum:
-        $originalPerPax = (float)($this->booking->return_schedule_price ?? 0)
-                        + $origTCPerPax
-                        + (float)($this->booking->return_schedule_accommodation_price ?? 0);
+        $origTCPerPax = (float) optional($this->booking->transportClasses->values()->get(1))->pivot?->price;
+        $originalPerPax = (float)($this->booking->return_schedule_price ?? 0) + $origTCPerPax + (float)($this->booking->return_schedule_accommodation_price ?? 0);
 
         return $schedules->filter(function($schedule) use ($isAirline, $originalPerPax) {
             if ($schedule->scheduleAccommodations->isEmpty() && $schedule->transportClasses->isEmpty()) {
@@ -629,13 +623,13 @@ class BookingLookup extends Component
 
             foreach ($schedule->scheduleAccommodations->where('is_active', true) as $acc) {
                 $price = (float)$acc->price;
-                $newPerPax = $isAirline ? $price : (($schedule->price ?? 0) + $price);
+                $newPerPax = $isAirline ? ((($schedule->price ?? 0) + $price) * 1.5) : (($schedule->price ?? 0) + $price);
                 if ($newPerPax >= $originalPerPax) return true;
             }
 
             foreach ($schedule->transportClasses->where('pivot.is_active', true) as $tc) {
                 $price = (float)$tc->pivot->additional_price;
-                $newPerPax = $isAirline ? $price : (($schedule->price ?? 0) + $price);
+                $newPerPax = $isAirline ? ((($schedule->price ?? 0) + $price) * 1.5) : (($schedule->price ?? 0) + $price);
                 if ($newPerPax >= $originalPerPax) return true;
             }
 
@@ -650,7 +644,7 @@ class BookingLookup extends Component
         if (!$schedule) return collect();
 
         $isAirline    = $this->booking && $this->booking->getMode() === 'airline';
-        $schedulePrice = $isAirline ? ($schedule->price ?? 0) : 0;
+        $schedulePrice = (float) ($schedule->price ?? 0);
 
         // Compute the original per-pax minimum
         $this->booking->loadMissing('transportClasses');
@@ -679,12 +673,13 @@ class BookingLookup extends Component
         if ($isAirline || $items->isEmpty()) {
             foreach ($schedule->transportClasses->where('pivot.is_active', true)->sortBy('pivot.sort_order') as $tc) {
                 $price = (float)$tc->pivot->additional_price;
-                $newPerPax = $isAirline ? $price : (($this->rebooking_dep_schedule_price ?? 0) + $price);
+                $newPerPax = $isAirline ? (($schedulePrice + $price) * 1.5) : (($this->rebooking_dep_schedule_price ?? 0) + $price);
+                $displayPrice = $isAirline ? $newPerPax : $price;
                 $items->push((object)[
                     'id'       => 'tc_' . $tc->id,
                     'name'     => $tc->name,
                     'description' => $tc->pivot->description ?? $tc->description,
-                    'price'    => $price,
+                    'price'    => $displayPrice,
                     'disabled' => $newPerPax < $originalPerPax,
                 ]);
             }
@@ -699,7 +694,7 @@ class BookingLookup extends Component
         if (!$schedule) return collect();
 
         $isAirline    = $this->booking && $this->booking->getMode() === 'airline';
-        $schedulePrice = $isAirline ? ($schedule->price ?? 0) : 0;
+        $schedulePrice = (float) ($schedule->price ?? 0);
 
         // Compute the original per-pax minimum for the return leg
         $this->booking->loadMissing('transportClasses');
@@ -728,12 +723,13 @@ class BookingLookup extends Component
         if ($isAirline || $items->isEmpty()) {
             foreach ($schedule->transportClasses->where('pivot.is_active', true)->sortBy('pivot.sort_order') as $tc) {
                 $price = (float)$tc->pivot->additional_price;
-                $newPerPax = $isAirline ? $price : (($this->rebooking_ret_schedule_price ?? 0) + $price);
+                $newPerPax = $isAirline ? (($schedulePrice + $price) * 1.5) : (($this->rebooking_ret_schedule_price ?? 0) + $price);
+                $displayPrice = $isAirline ? $newPerPax : $price;
                 $items->push((object)[
                     'id'       => 'tc_' . $tc->id,
                     'name'     => $tc->name,
                     'description' => $tc->pivot->description ?? $tc->description,
-                    'price'    => $price,
+                    'price'    => $displayPrice,
                     'disabled' => $newPerPax < $originalPerPax,
                 ]);
             }

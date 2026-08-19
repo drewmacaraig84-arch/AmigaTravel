@@ -627,9 +627,6 @@ class BookingController extends Controller
             $depTcs = collect([$arr[0]]);
             $retTcs = collect([$arr[1]]);
         }
-        $depTCPerPax = (float) $depTcs->sum(fn ($tc) => $tc->pivot->price);
-        $retTCPerPax = (float) $retTcs->sum(fn ($tc) => $tc->pivot->price);
-
         $origDepPerPax = (float)($booking->schedule_price ?? 0)
                        + $depTCPerPax
                        + (float)($booking->schedule_accommodation_price ?? 0);
@@ -692,10 +689,10 @@ class BookingController extends Controller
         }
 
         if ($isAirline) {
-            $depPerPax = $depAccPrice;
+            $depPerPax = (($depSchedule->price ?? 0) + $depAccPrice) * 1.5;
             $newTotal += $depPerPax * $passengerCount;
             if ($request->input('is_round_trip')) {
-                $retPerPax = $retAccPrice;
+                $retPerPax = (($retSchedule->price ?? 0) + $retAccPrice) * 1.5;
                 $newTotal += $retPerPax * $passengerCount;
             }
         } else {
