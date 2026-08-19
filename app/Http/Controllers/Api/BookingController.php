@@ -627,20 +627,12 @@ class BookingController extends Controller
             $depTcs = collect([$arr[0]]);
             $retTcs = collect([$arr[1]]);
         }
-        $depTCPerPax = (float) $depTcs->sum(fn ($tc) => $tc->pivot->price);
-        $retTCPerPax = (float) $retTcs->sum(fn ($tc) => $tc->pivot->price);
-
-        if ($isAirline) {
-            $origDepPerPax = ((float)($booking->schedule_price ?? 0) + $depTCPerPax) * 1.5;
-            $origRetPerPax = ((float)($booking->return_schedule_price ?? 0) + $retTCPerPax) * 1.5;
-        } else {
-            $origDepPerPax = (float)($booking->schedule_price ?? 0)
-                           + $depTCPerPax
-                           + (float)($booking->schedule_accommodation_price ?? 0);
-            $origRetPerPax = (float)($booking->return_schedule_price ?? 0)
-                           + $retTCPerPax
-                           + (float)($booking->return_schedule_accommodation_price ?? 0);
-        }
+        $origDepPerPax = (float)($booking->schedule_price ?? 0)
+                       + $depTCPerPax
+                       + (float)($booking->schedule_accommodation_price ?? 0);
+        $origRetPerPax = (float)($booking->return_schedule_price ?? 0)
+                       + $retTCPerPax
+                       + (float)($booking->return_schedule_accommodation_price ?? 0);
 
         $originalFare = ($origDepPerPax + $origRetPerPax) * $passengerCount;
 

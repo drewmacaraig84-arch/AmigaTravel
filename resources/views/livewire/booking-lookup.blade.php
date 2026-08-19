@@ -869,16 +869,12 @@
                                                                 $origDepTCPerPax = (float)$_depTcs->sum(fn ($tc) => $tc->pivot->price);
                                                                 $accPrice = (float)($booking->schedule_accommodation_price ?? 0);
                                                                 $classPrice = ($mode === 'airline') ? $origDepTCPerPax : ($accPrice > 0 ? $accPrice : $origDepTCPerPax);
-                                                                $origDep = ($mode === 'airline')
-                                                                    ? (((float)($booking->schedule_price ?? 0) + $classPrice) * 1.5)
-                                                                    : ((float)($booking->schedule_price ?? 0) + $classPrice);
+                                                                $origDep = (float)($booking->schedule_price ?? 0) + $classPrice;
 
                                                                 $origRetTCPerPax = (float)$_retTcs->sum(fn ($tc) => $tc->pivot->price);
                                                                 $retAccPrice = (float)($booking->return_schedule_accommodation_price ?? 0);
                                                                 $retClassPrice = ($mode === 'airline') ? $origRetTCPerPax : ($retAccPrice > 0 ? $retAccPrice : $origRetTCPerPax);
-                                                                $origRet = ($mode === 'airline')
-                                                                    ? (((float)($booking->return_schedule_price ?? 0) + $retClassPrice) * 1.5)
-                                                                    : ((float)($booking->return_schedule_price ?? 0) + $retClassPrice);
+                                                                $origRet = (float)($booking->return_schedule_price ?? 0) + $retClassPrice;
 
                                                                 $displayOrigFare = ($origDep + $origRet) * $paxCount;
                                                             @endphp

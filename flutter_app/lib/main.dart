@@ -18038,9 +18038,7 @@ class _RebookScreenState extends State<RebookScreen> {
                       widget.booking['schedule_accommodation_price']);
 
               final originalPerPax = isAirline
-                  ? (((originalSchPrice + origTcPrice) > 0)
-                      ? ((originalSchPrice + origTcPrice) * 1.5)
-                      : 0.0)
+                  ? (originalSchPrice + origTcPrice)
                   : (originalSchPrice + origTcPrice + originalAccPrice);
 
               final newPerPax = combinedPrice;

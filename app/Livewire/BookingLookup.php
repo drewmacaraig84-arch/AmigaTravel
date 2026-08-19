@@ -497,9 +497,7 @@ class BookingLookup extends Component
         $accPrice = (float)($this->booking->schedule_accommodation_price ?? 0);
         $classPrice = ($mode === 'airline') ? $origDepTCPerPax : ($accPrice > 0 ? $accPrice : $origDepTCPerPax);
         
-        $originalPerPax = ($mode === 'airline')
-            ? (((float)($this->booking->schedule_price ?? 0) + $classPrice) * 1.5)
-            : ((float)($this->booking->schedule_price ?? 0) + $classPrice);
+        $originalPerPax = (float)($this->booking->schedule_price ?? 0) + $classPrice;
 
         if ($mode === 'airline') {
             $newPerPax = $price;
@@ -546,9 +544,7 @@ class BookingLookup extends Component
         $retAccPrice = (float)($this->booking->return_schedule_accommodation_price ?? 0);
         $classPrice = ($mode === 'airline') ? $origRetTCPerPax : ($retAccPrice > 0 ? $retAccPrice : $origRetTCPerPax);
         
-        $originalPerPax = ($mode === 'airline')
-            ? (((float)($this->booking->return_schedule_price ?? 0) + $classPrice) * 1.5)
-            : ((float)($this->booking->return_schedule_price ?? 0) + $classPrice);
+        $originalPerPax = (float)($this->booking->return_schedule_price ?? 0) + $classPrice;
 
         if ($mode === 'airline') {
             $newPerPax = $price;
@@ -581,9 +577,7 @@ class BookingLookup extends Component
         $isAirline = $this->booking->getMode() === 'airline';
         $this->booking->loadMissing('transportClasses');
         $origTCPerPax = (float) optional($this->booking->transportClasses->values()->get(0))->pivot?->price;
-        $originalPerPax = $isAirline
-            ? (((float)($this->booking->schedule_price ?? 0) + $origTCPerPax) * 1.5)
-            : ((float)($this->booking->schedule_price ?? 0) + $origTCPerPax + (float)($this->booking->schedule_accommodation_price ?? 0));
+        $originalPerPax = (float)($this->booking->schedule_price ?? 0) + $origTCPerPax + (float)($this->booking->schedule_accommodation_price ?? 0);
 
         return $schedules->filter(function($schedule) use ($isAirline, $originalPerPax) {
             if ($schedule->scheduleAccommodations->isEmpty() && $schedule->transportClasses->isEmpty()) {
@@ -619,9 +613,7 @@ class BookingLookup extends Component
         $isAirline = $this->booking->getMode() === 'airline';
         $this->booking->loadMissing('transportClasses');
         $origTCPerPax = (float) optional($this->booking->transportClasses->values()->get(1))->pivot?->price;
-        $originalPerPax = $isAirline
-            ? (((float)($this->booking->return_schedule_price ?? 0) + $origTCPerPax) * 1.5)
-            : ((float)($this->booking->return_schedule_price ?? 0) + $origTCPerPax + (float)($this->booking->return_schedule_accommodation_price ?? 0));
+        $originalPerPax = (float)($this->booking->return_schedule_price ?? 0) + $origTCPerPax + (float)($this->booking->return_schedule_accommodation_price ?? 0);
 
         return $schedules->filter(function($schedule) use ($isAirline, $originalPerPax) {
             if ($schedule->scheduleAccommodations->isEmpty() && $schedule->transportClasses->isEmpty()) {
@@ -660,9 +652,7 @@ class BookingLookup extends Component
         $accPrice = (float)($this->booking->schedule_accommodation_price ?? 0);
         $classPrice = $isAirline ? $origTCPerPax : ($accPrice > 0 ? $accPrice : $origTCPerPax);
         
-        $originalPerPax = $isAirline
-            ? (((float)($this->booking->schedule_price ?? 0) + $classPrice) * 1.5)
-            : ((float)($this->booking->schedule_price ?? 0) + $classPrice);
+        $originalPerPax = (float)($this->booking->schedule_price ?? 0) + $classPrice;
 
         $items = collect();
 
@@ -712,9 +702,7 @@ class BookingLookup extends Component
         $accPrice = (float)($this->booking->return_schedule_accommodation_price ?? 0);
         $classPrice = $isAirline ? $origTCPerPax : ($accPrice > 0 ? $accPrice : $origTCPerPax);
         
-        $originalPerPax = $isAirline
-            ? (((float)($this->booking->return_schedule_price ?? 0) + $classPrice) * 1.5)
-            : ((float)($this->booking->return_schedule_price ?? 0) + $classPrice);
+        $originalPerPax = (float)($this->booking->return_schedule_price ?? 0) + $classPrice;
 
         $items = collect();
 
@@ -769,17 +757,12 @@ class BookingLookup extends Component
             $depTCPerPax = (float) $depTcs->sum(fn ($tc) => $tc->pivot->price);
             $retTCPerPax = (float) $retTcs->sum(fn ($tc) => $tc->pivot->price);
 
-            if ($isAirline) {
-                $origDepPerPax = ((float)($this->booking->schedule_price ?? 0) + $depTCPerPax) * 1.5;
-                $origRetPerPax = ((float)($this->booking->return_schedule_price ?? 0) + $retTCPerPax) * 1.5;
-            } else {
-                $origDepPerPax = (float)($this->booking->schedule_price ?? 0)
-                            + $depTCPerPax
-                            + (float)($this->booking->schedule_accommodation_price ?? 0);
-                $origRetPerPax = (float)($this->booking->return_schedule_price ?? 0)
-                            + $retTCPerPax
-                            + (float)($this->booking->return_schedule_accommodation_price ?? 0);
-            }
+            $origDepPerPax = (float)($this->booking->schedule_price ?? 0)
+                        + $depTCPerPax
+                        + (float)($this->booking->schedule_accommodation_price ?? 0);
+            $origRetPerPax = (float)($this->booking->return_schedule_price ?? 0)
+                        + $retTCPerPax
+                        + (float)($this->booking->return_schedule_accommodation_price ?? 0);
             $originalFare  = ($origDepPerPax + $origRetPerPax) * $passengerCount;
 
             // ── New total ──
