@@ -239,7 +239,7 @@ class Booking extends Model
 
     public function transaction(): HasOne
     {
-        return $this->hasOne(Transaction::class);
+        return $this->hasOne(Transaction::class)->latestOfMany();
     }
 
     public function verifiedByUser(): BelongsTo
@@ -865,80 +865,6 @@ class Booking extends Model
             }
 
             return $clean;
-        }
-
-        return null;
-    }
-
-    /**
-     * Resolve a ticket/receipt path into a concrete filesystem path.
-     * Returns null if file cannot be found on local filesystem.
-     */
-    public static function resolveAttachmentPath(string $path, ?string $disk = 'public'): ?string
-    {
-        $cleanPath = ltrim($path, '/\\');
-        $baseName = basename($path);
-
-        // 1. Direct filesystem check
-        if (file_exists($path) && is_file($path)) {
-            return $path;
-        }
-
-        // 2. Storage disks
-        $disks = array_values(array_unique(array_filter([$disk, 'public', 'local', config('filesystems.default')])));
-        foreach ($disks as $d) {
-            try {
-                if (Storage::disk($d)->exists($path)) {
-                    $p = Storage::disk($d)->path($path);
-                    if (file_exists($p) && is_file($p)) {
-                        return $p;
-                    }
-                }
-                if (Storage::disk($d)->exists($cleanPath)) {
-                    $p = Storage::disk($d)->path($cleanPath);
-                    if (file_exists($p) && is_file($p)) {
-                        return $p;
-                    }
-                }
-                if (Storage::disk($d)->exists('tickets/' . $baseName)) {
-                    $p = Storage::disk($d)->path('tickets/' . $baseName);
-                    if (file_exists($p) && is_file($p)) {
-                        return $p;
-                    }
-                }
-            } catch (\Throwable $e) {
-                // ignore
-            }
-        }
-
-        // 3. Common filesystem candidates
-        $candidates = [
-            $path,
-            storage_path('app/public/' . $cleanPath),
-            storage_path('app/private/' . $cleanPath),
-            storage_path('app/' . $cleanPath),
-            public_path('storage/' . $cleanPath),
-            storage_path('app/public/tickets/' . $cleanPath),
-            storage_path('app/private/tickets/' . $cleanPath),
-            storage_path('app/tickets/' . $cleanPath),
-            public_path('tickets/' . $cleanPath),
-            storage_path('app/public/tickets/' . $baseName),
-            storage_path('app/private/tickets/' . $baseName),
-            storage_path('app/tickets/' . $baseName),
-            public_path('tickets/' . $baseName),
-            public_path('storage/tickets/' . $baseName),
-            storage_path('app/public/receipts/' . $baseName),
-            storage_path('app/private/receipts/' . $baseName),
-            storage_path('app/receipts/' . $baseName),
-            public_path('receipts/' . $baseName),
-            public_path('storage/receipts/' . $baseName),
-            storage_path('app/acknowledgements/' . $baseName),
-        ];
-
-        foreach ($candidates as $candidate) {
-            if (file_exists($candidate) && is_file($candidate)) {
-                return $candidate;
-            }
         }
 
         return null;

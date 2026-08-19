@@ -327,37 +327,107 @@ Route::get('/ticket/admin-pdf/{transaction_number}', function ($transaction_numb
         ->with(['passengers.discount', 'schedule.ferryRoute', 'returnSchedule', 'transaction', 'transactions', 'accommodations', 'transportClasses'])
         ->firstOrFail();
 
-    // Find the transaction that has confirmation_pdf or confirmation_url
-    $transaction = $booking->transactions->first(function ($t) {
-        return !empty($t->confirmation_pdf) || !empty($t->confirmation_url);
-    }) ?? $booking->transaction ?? $booking->transactions()->latest('id')->first();
+    $transaction = $booking->transactions()
+        ->where(function ($q) {
+            $q->whereNotNull('confirmation_pdf')->orWhereNotNull('confirmation_url');
+        })
+        ->latest('id')
+        ->first() 
+        ?? $booking->transaction 
+        ?? $booking->transactions()->latest('id')->first();
 
     $pdfPath = $transaction?->confirmation_pdf;
     $confirmationUrl = $transaction?->confirmation_url;
 
-    // 1. If an external confirmation URL was provided, redirect to it
+    if ($pdfPath) {
+        $cleanPdfPath = ltrim($pdfPath, '/\\');
+        $baseName = basename($pdfPath);
+
+        // 1. Direct filesystem check
+        if (file_exists($pdfPath) && is_file($pdfPath)) {
+            return response()->file($pdfPath, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="Ticket_Confirmation_' . $booking->transaction_number . '.pdf"',
+            ]);
+        }
+
+        // 2. Storage disk checks
+        $disks = ['public', 'local'];
+        foreach ($disks as $d) {
+            try {
+                if (\Illuminate\Support\Facades\Storage::disk($d)->exists($pdfPath)) {
+                    $p = \Illuminate\Support\Facades\Storage::disk($d)->path($pdfPath);
+                    if (file_exists($p) && is_file($p)) {
+                        return response()->file($p, [
+                            'Content-Type' => 'application/pdf',
+                            'Content-Disposition' => 'inline; filename="Ticket_Confirmation_' . $booking->transaction_number . '.pdf"',
+                        ]);
+                    }
+                }
+                if (\Illuminate\Support\Facades\Storage::disk($d)->exists($cleanPdfPath)) {
+                    $p = \Illuminate\Support\Facades\Storage::disk($d)->path($cleanPdfPath);
+                    if (file_exists($p) && is_file($p)) {
+                        return response()->file($p, [
+                            'Content-Type' => 'application/pdf',
+                            'Content-Disposition' => 'inline; filename="Ticket_Confirmation_' . $booking->transaction_number . '.pdf"',
+                        ]);
+                    }
+                }
+                if (\Illuminate\Support\Facades\Storage::disk($d)->exists('tickets/' . $baseName)) {
+                    $p = \Illuminate\Support\Facades\Storage::disk($d)->path('tickets/' . $baseName);
+                    if (file_exists($p) && is_file($p)) {
+                        return response()->file($p, [
+                            'Content-Type' => 'application/pdf',
+                            'Content-Disposition' => 'inline; filename="Ticket_Confirmation_' . $booking->transaction_number . '.pdf"',
+                        ]);
+                    }
+                }
+            } catch (\Throwable $e) {
+                // ignore
+            }
+        }
+
+        // 3. Common filesystem candidates
+        $candidates = [
+            $pdfPath,
+            storage_path('app/public/' . $cleanPdfPath),
+            storage_path('app/' . $cleanPdfPath),
+            public_path('storage/' . $cleanPdfPath),
+            storage_path('app/public/tickets/' . $cleanPdfPath),
+            storage_path('app/tickets/' . $cleanPdfPath),
+            public_path('tickets/' . $cleanPdfPath),
+            storage_path('app/public/tickets/' . $baseName),
+            storage_path('app/tickets/' . $baseName),
+            public_path('tickets/' . $baseName),
+            public_path('storage/tickets/' . $baseName),
+            storage_path('app/public/receipts/' . $baseName),
+            storage_path('app/receipts/' . $baseName),
+            public_path('receipts/' . $baseName),
+            public_path('storage/receipts/' . $baseName),
+            storage_path('app/acknowledgements/' . $baseName),
+            storage_path('app/private/' . $cleanPdfPath),
+            storage_path('app/private/tickets/' . $baseName),
+            storage_path('app/private/livewire-tmp/' . $baseName),
+            storage_path('app/livewire-tmp/' . $baseName),
+            storage_path('app/public/livewire-tmp/' . $baseName),
+            sys_get_temp_dir() . DIRECTORY_SEPARATOR . $baseName,
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (file_exists($candidate) && is_file($candidate)) {
+                return response()->file($candidate, [
+                    'Content-Type' => 'application/pdf',
+                    'Content-Disposition' => 'inline; filename="Ticket_Confirmation_' . $booking->transaction_number . '.pdf"',
+                ]);
+            }
+        }
+    }
+
     if (! empty($confirmationUrl)) {
         return redirect()->away($confirmationUrl);
     }
 
-    // 2. If confirmation_pdf is an external URL, redirect to it
-    if (! empty($pdfPath) && (filter_var($pdfPath, FILTER_VALIDATE_URL) || str_starts_with($pdfPath, 'http://') || str_starts_with($pdfPath, 'https://'))) {
-        return redirect()->away($pdfPath);
-    }
-
-    // 3. If confirmation_pdf is a file path, resolve it across all disks & candidates
-    if (! empty($pdfPath)) {
-        $resolvedFullPath = \App\Models\Booking::resolveAttachmentPath($pdfPath);
-        if ($resolvedFullPath && file_exists($resolvedFullPath) && is_file($resolvedFullPath)) {
-            $mime = mime_content_type($resolvedFullPath) ?: 'application/pdf';
-            return response()->file($resolvedFullPath, [
-                'Content-Type' => $mime,
-                'Content-Disposition' => 'inline; filename="Ticket_Confirmation_' . $booking->transaction_number . '.pdf"',
-            ]);
-        }
-    }
-
-    // 4. If no admin custom PDF or URL exists, generate and serve the Official E-Ticket & Travel Itinerary PDF
+    // If no admin custom PDF or URL exists, generate and serve the Official E-Ticket & Travel Itinerary PDF
     $ticketDir = storage_path('app/tickets');
     $path = $ticketDir . '/itinerary-' . $booking->transaction_number . '.pdf';
 
