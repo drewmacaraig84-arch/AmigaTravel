@@ -3,7 +3,7 @@
     {{-- ========================================================
          PAYMENT DEADLINE NOTICE (only shown before proof is submitted)
          ======================================================== --}}
-    @if (!$showThankYou && !$isExpired && $deadlineTimestamp > 0)
+    @if (!$showThankYou && !$isExpired && $remainingSeconds > 0)
         <div
             id="payment-deadline-notice"
             class="rounded-2xl border border-amber-200 bg-amber-50 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-start gap-3"
@@ -201,39 +201,28 @@
      Uses localStorage so the deadline persists across reloads.
      Key: amiga_payment_deadline_<transaction_id>
      ============================================================ --}}
-@if (!$showThankYou && !$isExpired && $deadlineTimestamp > 0)
+@if (!$showThankYou && !$isExpired && $remainingSeconds > 0)
 <script>
 (function () {
-    const SERVER_DEADLINE = {{ $deadlineTimestamp }};
-    const STORAGE_KEY     = 'amiga_payment_deadline_{{ $transaction->id }}';
-    const countdownEl     = document.getElementById('countdown-text');
-    const noticeEl        = document.getElementById('payment-deadline-notice');
+    const INITIAL_REMAINING = {{ $remainingSeconds }};
+    const PAGE_LOAD_TIME    = Math.floor(Date.now() / 1000);
+    const countdownEl       = document.getElementById('countdown-text');
+    const noticeEl          = document.getElementById('payment-deadline-notice');
 
-    if (! countdownEl) return;
+    if (! countdownEl || INITIAL_REMAINING <= 0) return;
 
-    // Persist deadline in localStorage so refresh doesn't reset it.
-    // Always trust the server value if it comes BEFORE what's stored
-    // (meaning the server reset it – e.g. admin extended). Otherwise keep
-    // the stored value so the user can't gain extra time by reloading.
-    let storedDeadline = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10);
-
-    if (SERVER_DEADLINE > 0) {
-        // If nothing stored, or server deadline is earlier (shorter window), use server
-        if (storedDeadline === 0 || SERVER_DEADLINE < storedDeadline) {
-            storedDeadline = SERVER_DEADLINE;
-            localStorage.setItem(STORAGE_KEY, storedDeadline);
-        }
-    }
-
-    const DEADLINE = storedDeadline;
+    // Purge any stale legacy localStorage item to prevent stale timestamps
+    try {
+        localStorage.removeItem('amiga_payment_deadline_{{ $transaction->id }}');
+    } catch (e) {}
 
     function pad(n) {
         return String(n).padStart(2, '0');
     }
 
     function tick() {
-        const now = Math.floor(Date.now() / 1000);
-        const remaining = DEADLINE - now;
+        const elapsed = Math.floor(Date.now() / 1000) - PAGE_LOAD_TIME;
+        const remaining = Math.max(0, INITIAL_REMAINING - elapsed);
 
         if (remaining <= 0) {
             countdownEl.textContent = '00:00:00';
@@ -251,8 +240,6 @@
                     countdownBadge.classList.add('bg-rose-100', 'border-rose-300', 'text-rose-800');
                 }
             }
-            // Reload after 3 s so Livewire picks up the cancelled state from the server
-            setTimeout(() => window.location.reload(), 3000);
             return;
         }
 

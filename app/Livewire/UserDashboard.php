@@ -14,7 +14,7 @@ class UserDashboard extends Component
     {
         $user = Auth::user();
 
-        $this->bookings = Booking::with(['transaction', 'passengers', 'accommodations'])
+        $this->bookings = Booking::with(['transaction', 'passengers', 'accommodations', 'schedule'])
             ->where(function ($query) use ($user) {
                 $query->where('user_id', $user->id)
                       ->orWhere('client_email', $user->email);

@@ -75,9 +75,23 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
+                    @php
+                        $netRefund = $booking->getTicketBase();
+                        $nonRefundable = $booking->getNonRefundableFees();
+                    @endphp
                     <div class="mb-6">
-                        <h2 class="text-xl font-black text-rose-700">Cancel & Request 100% Refund</h2>
-                        <p class="mt-1 text-sm text-slate-600">Since this cancellation was caused by the operator, you are entitled to a full refund of <strong>₱{{ number_format($booking->total_price, 2) }}</strong>.</p>
+                        <h2 class="text-xl font-black text-rose-700">Cancel &amp; Request Refund</h2>
+                        <p class="mt-1 text-sm text-slate-600">
+                            Since this voyage was cancelled by the operator, your ticket fares and accommodation charges are <strong>100% refundable</strong> (<strong>₱{{ number_format($netRefund, 2) }}</strong>).
+                        </p>
+                        @if($nonRefundable > 0)
+                            <div class="mt-3 rounded-2xl bg-amber-50/90 border border-amber-200 p-3.5 text-xs text-amber-900 leading-relaxed flex items-start gap-2.5">
+                                <svg class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                <div>
+                                    <span class="font-bold">Fee Policy Notice:</span> In accordance with booking terms, third-party payment gateway processing fees and web administrative fees (₱{{ number_format($nonRefundable, 2) }}) are non-refundable as they cover direct automated payment processing costs.
+                                </div>
+                            </div>
+                        @endif
                     </div>
 
                     <div class="grid gap-6 sm:grid-cols-2">

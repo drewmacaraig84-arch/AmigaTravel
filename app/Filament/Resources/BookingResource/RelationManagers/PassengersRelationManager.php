@@ -37,20 +37,40 @@ class PassengersRelationManager extends RelationManager
     {
         return $table
             ->recordTitleAttribute('name')
+            ->defaultSort('item_number', 'asc')
             ->columns([
+                Tables\Columns\TextColumn::make('item_number')
+                    ->label('Item #')
+                    ->formatStateUsing(fn ($state) => 'Item ' . ($state ?? '1'))
+                    ->weight('bold')
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('name')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('type'),
-                Tables\Columns\TextColumn::make('birthdate')
-                    ->date(),
-                Tables\Columns\TextColumn::make('id_number')
-                    ->label('ID No.'),
-                Tables\Columns\ImageColumn::make('id_image_front_url')
-                    ->label('Front ID')
-                    ->height(40),
-                Tables\Columns\ImageColumn::make('id_image_back_url')
-                    ->label('Back ID')
-                    ->height(40),
+                    ->label('Passenger Name')
+                    ->searchable()
+                    ->description(fn (Passenger $record): string => $record->ticket_number ?? ''),
+                Tables\Columns\TextColumn::make('type')
+                    ->badge()
+                    ->formatStateUsing(fn ($state) => ucfirst($state ?? 'adult')),
+                Tables\Columns\TextColumn::make('status')
+                    ->badge()
+                    ->formatStateUsing(fn (Passenger $record) => $record->getStatusLabel())
+                    ->color(fn (Passenger $record) => $record->getStatusColor()),
+                Tables\Columns\TextColumn::make('fare_and_class')
+                    ->label('Fare & Class')
+                    ->state(fn (Passenger $record): string => '₱' . number_format($record->getEffectiveFareAndClass(), 2)),
+                Tables\Columns\TextColumn::make('web_admin_fee')
+                    ->label('Web Admin Fee')
+                    ->state(fn (Passenger $record): string => '₱' . number_format($record->getEffectiveWebAdminFee(), 2))
+                    ->color('gray'),
+                Tables\Columns\TextColumn::make('transaction_fee')
+                    ->label('Transaction Fee')
+                    ->state(fn (Passenger $record): string => '₱' . number_format($record->getEffectiveTransactionFee(), 2))
+                    ->color('gray'),
+                Tables\Columns\TextColumn::make('item_total')
+                    ->label('Item Total')
+                    ->state(fn (Passenger $record): string => '₱' . number_format($record->getEffectiveItemTotal(), 2))
+                    ->weight('bold')
+                    ->color('primary'),
             ])
             ->filters([
                 //

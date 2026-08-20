@@ -317,14 +317,21 @@
                  driver_birthday: ''
              },
              init() {
-                 this.$watch('trip_type', (val) => {
-                     if (val === 'round_trip' && this.origin && this.destination) {
-                         if (!this.hasReturnRoute(this.origin, this.destination)) {
-                             this.destination = '';
-                             this.return_date = '';
-                         }
-                     }
-                 });
+                  this.clampPassengersToMax();
+                  this.$watch('trip_type', (val) => {
+                      this.clampPassengersToMax();
+                      if (val === 'round_trip' && this.origin && this.destination) {
+                          if (!this.hasReturnRoute(this.origin, this.destination)) {
+                              this.destination = '';
+                              this.return_date = '';
+                          }
+                      }
+                  });
+                  this.$watch('adults', () => this.clampPassengersToMax());
+                  this.$watch('children', () => this.clampPassengersToMax());
+                  this.$watch('minors', () => this.clampPassengersToMax());
+                  this.$watch('infants', () => this.clampPassengersToMax());
+                  this.$watch('mode', () => this.clampPassengersToMax());
              },
              hasReturnRoute(origin, destination) {
                  return this.activeRoutes.some(r => 
@@ -410,15 +417,49 @@
                   });
                   return dates.sort();
               },
+              get maxPassengers() {
+                  return this.trip_type === 'round_trip' ? 4 : 8;
+              },
+              setTripType(val) {
+                  this.trip_type = val;
+                  this.clampPassengersToMax();
+                  this.showTripTypeDropdown = false;
+                  if (val === 'round_trip' && this.origin && this.destination) {
+                      if (!this.hasReturnRoute(this.origin, this.destination)) {
+                          this.destination = '';
+                          this.return_date = '';
+                      }
+                  }
+              },
               get totalPassengers() {
-                 return parseInt(this.adults) + parseInt(this.children) + (this.mode === 'airline' ? parseInt(this.minors) + parseInt(this.infants) : 0);
-             },
-             swapPorts() {
-                 let tmp = this.origin;
-                 this.origin = this.destination;
-                 this.destination = tmp;
-             },
+                  return parseInt(this.adults) + parseInt(this.children) + (this.mode === 'airline' ? parseInt(this.minors) + parseInt(this.infants) : 0);
+              },
+              clampPassengersToMax() {
+                  const limit = this.trip_type === 'round_trip' ? 4 : 8;
+                  while (this.totalPassengers > limit) {
+                      if (this.infants > 0) {
+                          this.infants--;
+                      } else if (this.minors > 0) {
+                          this.minors--;
+                      } else if (this.children > 0) {
+                          this.children--;
+                      } else if (this.adults > 1) {
+                          this.adults--;
+                      } else {
+                          break;
+                      }
+                  }
+                  if (this.infants > this.adults) {
+                      this.infants = this.adults;
+                  }
+              },
+              swapPorts() {
+                  let tmp = this.origin;
+                  this.origin = this.destination;
+                  this.destination = tmp;
+              },
              search() {
+                 this.clampPassengersToMax();
                  this.errors.operator = '';
                  this.errors.origin = '';
                  this.errors.destination = '';
@@ -567,13 +608,13 @@
                          x-transition:leave="transition ease-in duration-75"
                          class="absolute left-0 top-full mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50"
                          style="display: none;">
-                        <button type="button" @click="trip_type = 'one_way'; showTripTypeDropdown = false;"
+                        <button type="button" @click="setTripType('one_way')"
                                 class="w-full text-left px-4 py-2.5 text-sm font-semibold flex items-center justify-between hover:bg-slate-50 transition"
                                 :class="trip_type === 'one_way' ? 'text-[#216417] bg-emerald-50/50' : 'text-slate-700'">
                             <span>One Way</span>
                             <svg x-show="trip_type === 'one_way'" class="w-4 h-4 text-[#216417]" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                         </button>
-                        <button type="button" @click="trip_type = 'round_trip'; showTripTypeDropdown = false;"
+                        <button type="button" @click="setTripType('round_trip')"
                                 class="w-full text-left px-4 py-2.5 text-sm font-semibold flex items-center justify-between hover:bg-slate-50 transition"
                                 :class="trip_type === 'round_trip' ? 'text-[#216417] bg-emerald-50/50' : 'text-slate-700'">
                             <span>Round Trip</span>
@@ -700,8 +741,8 @@
                                         </button>
                                         <span class="w-5 text-center font-bold text-slate-900" x-text="adults"></span>
                                         <button type="button" 
-                                                @click="if(totalPassengers < 8) adults++" 
-                                                :disabled="totalPassengers >= 8"
+                                                @click="if(totalPassengers < (trip_type === 'round_trip' ? 4 : 8)) adults++" 
+                                                :disabled="totalPassengers >= (trip_type === 'round_trip' ? 4 : 8)"
                                                 class="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-700 hover:border-[#216417] hover:text-[#216417] disabled:opacity-40 disabled:cursor-not-allowed transition">
                                             +
                                         </button>
@@ -723,8 +764,8 @@
                                         </button>
                                         <span class="w-5 text-center font-bold text-slate-900" x-text="minors"></span>
                                         <button type="button" 
-                                                @click="if(totalPassengers < 8) minors++" 
-                                                :disabled="totalPassengers >= 8"
+                                                @click="if(totalPassengers < (trip_type === 'round_trip' ? 4 : 8)) minors++" 
+                                                :disabled="totalPassengers >= (trip_type === 'round_trip' ? 4 : 8)"
                                                 class="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-700 hover:border-[#216417] hover:text-[#216417] disabled:opacity-40 disabled:cursor-not-allowed transition">
                                             +
                                         </button>
@@ -746,8 +787,8 @@
                                         </button>
                                         <span class="w-5 text-center font-bold text-slate-900" x-text="children"></span>
                                         <button type="button" 
-                                                @click="if(totalPassengers < 8) children++" 
-                                                :disabled="totalPassengers >= 8"
+                                                @click="if(totalPassengers < (trip_type === 'round_trip' ? 4 : 8)) children++" 
+                                                :disabled="totalPassengers >= (trip_type === 'round_trip' ? 4 : 8)"
                                                 class="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-700 hover:border-[#216417] hover:text-[#216417] disabled:opacity-40 disabled:cursor-not-allowed transition">
                                             +
                                         </button>
@@ -769,8 +810,8 @@
                                         </button>
                                         <span class="w-5 text-center font-bold text-slate-900" x-text="infants"></span>
                                         <button type="button" 
-                                                @click="if(infants < adults && totalPassengers < 8) infants++" 
-                                                :disabled="infants >= adults || totalPassengers >= 8"
+                                                @click="if(infants < adults && totalPassengers < (trip_type === 'round_trip' ? 4 : 8)) infants++" 
+                                                :disabled="infants >= adults || totalPassengers >= (trip_type === 'round_trip' ? 4 : 8)"
                                                 class="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-700 hover:border-[#216417] hover:text-[#216417] disabled:opacity-40 disabled:cursor-not-allowed transition">
                                             +
                                         </button>
@@ -797,8 +838,8 @@
                                         </button>
                                         <span class="w-5 text-center font-bold text-slate-900" x-text="adults"></span>
                                         <button type="button" 
-                                                @click="if(totalPassengers < 8) adults++" 
-                                                :disabled="totalPassengers >= 8"
+                                                @click="if(totalPassengers < (trip_type === 'round_trip' ? 4 : 8)) adults++" 
+                                                :disabled="totalPassengers >= (trip_type === 'round_trip' ? 4 : 8)"
                                                 class="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-700 hover:border-[#216417] hover:text-[#216417] disabled:opacity-40 disabled:cursor-not-allowed transition">
                                             +
                                         </button>
@@ -820,8 +861,8 @@
                                         </button>
                                         <span class="w-5 text-center font-bold text-slate-900" x-text="children"></span>
                                         <button type="button" 
-                                                @click="if(totalPassengers < 8) { children++; if(!hasSeenMinorAgeWarning) { showMinorAgeWarning = true; hasSeenMinorAgeWarning = true; } }" 
-                                                :disabled="totalPassengers >= 8"
+                                                @click="if(totalPassengers < (trip_type === 'round_trip' ? 4 : 8)) { children++; if(!hasSeenMinorAgeWarning) { showMinorAgeWarning = true; hasSeenMinorAgeWarning = true; } }" 
+                                                :disabled="totalPassengers >= (trip_type === 'round_trip' ? 4 : 8)"
                                                 class="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-700 hover:border-[#216417] hover:text-[#216417] disabled:opacity-40 disabled:cursor-not-allowed transition">
                                             +
                                         </button>
@@ -832,7 +873,7 @@
 
                         {{-- Footer with Done button --}}
                         <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                            <span class="text-xs text-slate-400 font-medium">Limit 8 passengers</span>
+                            <span class="text-xs text-slate-400 font-medium" x-text="'Limit ' + (trip_type === 'round_trip' ? 4 : 8) + ' passengers'">Limit 8 passengers</span>
                             <button type="button" 
                                     @click="showPassengerDropdown = false"
                                     class="bg-[#008000] hover:bg-[#006600] text-white font-bold px-6 py-2 rounded-xl text-sm shadow transition">

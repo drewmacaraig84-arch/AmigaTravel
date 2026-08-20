@@ -92,7 +92,10 @@ class BookingResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $query) => $query)
+            ->modifyQueryUsing(fn (Builder $query) => $query->where(function (Builder $q) {
+                $q->whereNull('refund_amount')
+                  ->orWhere('refund_amount', '<=', 0);
+            }))
             ->defaultSort('created_at', 'desc')
             ->poll('10s')
             ->columns([
@@ -130,36 +133,30 @@ class BookingResource extends Resource
                 Tables\Columns\TextColumn::make('status')
                     ->label('Booking Status')
                     ->badge()
-                    ->formatStateUsing(function (string $state, Booking $record) {
-                        if (in_array($state, ['cancelled', 'operator_cancelled']) && $record->refund_amount > 0) {
-                            return 'Refunded';
-                        }
+                    ->formatStateUsing(function (string $state) {
                         if ($state === 'operator_cancelled') {
                             return 'Cancelled by Operator';
                         }
-                        return ucfirst($state);
+                        if ($state === 'operator_rebooking') {
+                            return 'Operator Rebooking';
+                        }
+                        return ucfirst(str_replace('_', ' ', $state));
                     })
-                    ->color(fn (?string $state, Booking $record): string => match (true) {
-                        $state === 'pending' => 'warning',
-                        $state === 'confirmed' => 'success',
-                        in_array($state, ['cancelled', 'operator_cancelled']) && $record->refund_amount > 0 => 'info',
-                        in_array($state, ['cancelled', 'operator_cancelled']) => 'danger',
+                    ->color(fn (?string $state): string => match ($state) {
+                        'pending' => 'warning',
+                        'confirmed' => 'success',
+                        'operator_rebooking' => 'info',
+                        'cancelled', 'operator_cancelled' => 'danger',
                         default => 'secondary',
                     }),
                 Tables\Columns\TextColumn::make('transaction.payment_status')
                     ->label('Payment Status')
                     ->badge()
-                    ->formatStateUsing(function (?string $state, Booking $record) {
-                        if ($state === 'cancelled' && $record->refund_amount > 0) {
-                            return 'Refunded';
-                        }
-                        return $state ? ucfirst($state) : null;
-                    })
-                    ->color(fn (?string $state, Booking $record): string => match (true) {
-                        $state === 'paid' => 'success',
-                        $state === 'pending' => 'warning',
-                        $state === 'cancelled' && $record->refund_amount > 0 => 'info',
-                        $state === 'cancelled' => 'danger',
+                    ->formatStateUsing(fn (?string $state) => $state ? ucfirst($state) : null)
+                    ->color(fn (?string $state): string => match ($state) {
+                        'paid' => 'success',
+                        'pending' => 'warning',
+                        'cancelled' => 'danger',
                         default => 'gray',
                     })
                     ->placeholder('—'),
@@ -200,8 +197,9 @@ class BookingResource extends Resource
                     ->options([
                         'pending' => 'Pending',
                         'confirmed' => 'Confirmed',
-                        'cancelled' => 'Cancelled',
+                        'operator_rebooking' => 'Operator Rebooking',
                         'operator_cancelled' => 'Cancelled by Operator',
+                        'cancelled' => 'Cancelled',
                     ]),
                 SelectFilter::make('transaction_payment_status')
                     ->label('Payment status')

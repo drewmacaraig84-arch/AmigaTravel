@@ -151,17 +151,64 @@ class AdminNotificationFeed
         $notifications = collect();
 
         $bookings = Booking::query()
-            ->latest('created_at')
-            ->limit(20)
+            ->with('passengers')
+            ->latest('updated_at')
+            ->limit(30)
             ->get();
 
         foreach ($bookings as $booking) {
-            if ($booking->status === 'cancelled') {
+            // Helper: get a short passenger label for item-level notifications
+            $itemLabel = function (Booking $b, array $statusFilter = [], bool $withRefund = false): string {
+                $passengers = $b->passengers;
+                if ($passengers->isEmpty()) {
+                    return $b->client_name;
+                }
+                if (! empty($statusFilter)) {
+                    $filtered = $passengers->filter(fn ($p) => in_array($p->status, $statusFilter));
+                } elseif ($withRefund) {
+                    $filtered = $passengers->filter(fn ($p) => (float) $p->refund_amount > 0);
+                } else {
+                    $filtered = $passengers;
+                }
+                if ($filtered->isEmpty()) {
+                    $filtered = $passengers;
+                }
+                $filtered = $filtered->sortBy('item_number');
+                if ($filtered->count() === $passengers->count()) {
+                    return $b->client_name; // all passengers → use client name
+                }
+                return $filtered->map(fn ($p) => ($p->name ?? 'Passenger') . " (Item {$p->item_number})")->implode(', ');
+            };
+
+            // Refund Notifications for Admin
+            if (in_array($booking->status, ['cancelled', 'operator_cancelled']) && (float) $booking->refund_amount > 0) {
+                $paxLabel = $itemLabel($booking, [], true);
+                if ($booking->isRefundCompleted()) {
+                    $notifications->push([
+                        'id' => 'booking-refund-done-' . $booking->id,
+                        'type' => 'refund_completed',
+                        'title' => 'Refund Disbursed',
+                        'message' => "Refund of ₱" . number_format((float) $booking->refund_amount, 2) . " disbursed for {$paxLabel} in #{$booking->transaction_number}" . (filled($booking->refund_reference) ? " (Ref: {$booking->refund_reference})" : ""),
+                        'created_at' => $booking->refund_processed_at ?? $booking->updated_at ?? $booking->created_at,
+                        'url' => '/admin/refunds',
+                    ]);
+                } else {
+                    $notifications->push([
+                        'id' => 'booking-refund-req-' . $booking->id,
+                        'type' => 'refund_request',
+                        'title' => 'Refund Request Pending',
+                        'message' => "{$paxLabel} requested ₱" . number_format((float) $booking->refund_amount, 2) . " refund for #{$booking->transaction_number}",
+                        'created_at' => $booking->updated_at ?? $booking->created_at,
+                        'url' => '/admin/refunds',
+                    ]);
+                }
+            } elseif ($booking->status === 'cancelled') {
+                $paxLabel = $itemLabel($booking, ['cancelled', 'operator_cancelled']);
                 $notifications->push([
                     'id' => 'booking-cancel-' . $booking->id,
                     'type' => 'cancellation',
                     'title' => 'Booking cancelled',
-                    'message' => $booking->client_name . ' cancelled booking #' . $booking->transaction_number,
+                    'message' => "{$paxLabel} cancelled booking #" . $booking->transaction_number,
                     'created_at' => $booking->updated_at ?? $booking->created_at,
                     'url' => '/admin/bookings/' . $booking->id,
                 ]);
@@ -179,11 +226,25 @@ class AdminNotificationFeed
             }
 
             if ($booking->is_rebooked && $booking->rebooking_status === 'pending') {
+                $paxLabel = $itemLabel($booking, ['rebooking_pending', 'operator_rebooking', 'rebooked']);
                 $notifications->push([
                     'id' => 'booking-rebook-' . $booking->id,
                     'type' => 'rebooking',
                     'title' => 'Rebooking request',
-                    'message' => $booking->client_name . ' submitted a rebooking request for #' . $booking->transaction_number,
+                    'message' => "{$paxLabel} submitted a rebooking request for #{$booking->transaction_number}",
+                    'created_at' => $booking->updated_at ?? $booking->created_at,
+                    'url' => '/admin/manage-rebookings',
+                ]);
+            }
+
+            // Operator Reschedule Request Notification
+            if ($booking->status === 'operator_rebooking' || ($booking->isServiceCancellation() && $booking->disruption_status === 'reschedule_requested' && $booking->rebooking_status === 'reschedule_requested')) {
+                $paxLabel = $itemLabel($booking, ['operator_rebooking', 'rebooking_pending']);
+                $notifications->push([
+                    'id' => 'booking-op-rebook-' . $booking->id,
+                    'type' => 'operator_reschedule_request',
+                    'title' => 'Operator Reschedule Request',
+                    'message' => "{$paxLabel} requested replacement schedule for cancelled trip #{$booking->transaction_number}",
                     'created_at' => $booking->updated_at ?? $booking->created_at,
                     'url' => '/admin/manage-rebookings',
                 ]);

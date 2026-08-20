@@ -139,9 +139,12 @@ class BookingObserver
             ]);
 
             // Bust schedule cache so pages reflect restored seats immediately
+            $depSched = $booking->relationLoaded('schedule') ? $booking->schedule : ($booking->schedule_id ? \App\Models\Schedule::find($booking->schedule_id) : null);
+            $retSched = $booking->relationLoaded('returnSchedule') ? $booking->returnSchedule : ($booking->return_schedule_id ? \App\Models\Schedule::find($booking->return_schedule_id) : null);
+
             CreateBookingAction::bustScheduleCache(
-                $booking->schedule ?? null,
-                $booking->returnSchedule ?? null
+                $depSched,
+                $retSched
             );
         } catch (\Throwable $e) {
             Log::error('Failed to restore tickets after booking cancellation.', [
@@ -206,9 +209,12 @@ class BookingObserver
             ]);
 
             // Bust schedule cache so pages reflect re-deducted seats immediately
+            $depSched = $booking->relationLoaded('schedule') ? $booking->schedule : ($booking->schedule_id ? \App\Models\Schedule::find($booking->schedule_id) : null);
+            $retSched = $booking->relationLoaded('returnSchedule') ? $booking->returnSchedule : ($booking->return_schedule_id ? \App\Models\Schedule::find($booking->return_schedule_id) : null);
+
             CreateBookingAction::bustScheduleCache(
-                $booking->schedule ?? null,
-                $booking->returnSchedule ?? null
+                $depSched,
+                $retSched
             );
         } catch (\Throwable $e) {
             Log::error('Failed to re-deduct tickets after booking un-cancellation.', [

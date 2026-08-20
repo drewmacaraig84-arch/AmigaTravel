@@ -15,6 +15,7 @@ import 'dart:async';
 import 'package:intl/intl.dart';
 import 'package:video_player/video_player.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import 'notification_service.dart';
 import 'forgot_password_screen.dart';
@@ -283,6 +284,42 @@ class BookingData {
 
   int get totalPassengers => adults + children + minors + infants;
 
+  double get totalExtraBaggagePrice {
+    double total = 0.0;
+    for (var p in passengers) {
+      if (p['extra_baggage_price'] != null) {
+        total += (double.tryParse(p['extra_baggage_price'].toString()) ?? 0.0);
+      }
+    }
+    return total;
+  }
+
+  int get passengersWithBaggageCount {
+    int count = 0;
+    for (var p in passengers) {
+      if (p['extra_baggage_weight'] != null &&
+          p['extra_baggage_weight'].toString().isNotEmpty &&
+          (double.tryParse(p['extra_baggage_price']?.toString() ?? '0') ?? 0) > 0) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  bool get isInternational {
+    if (mode.toLowerCase() != 'airline') return false;
+    const domestic = [
+      'manila', 'batangas', 'calapan', 'caticlan', 'boracay', 'boracay (caticlan)',
+      'cebu', 'davao', 'roxas', 'puerto princesa', 'el nido', 'coron',
+      'bacolod', 'iloilo', 'tagbilaran', 'bohol', 'siargao', 'zamboanga',
+      'general santos', 'clark', 'laoag', 'legazpi', 'dumaguete', 'tacloban',
+      'cagayan de oro', 'butuan', 'ozamiz', 'dipolog', 'pagadian', 'surigao',
+      'tandag', 'camiguin', 'batanes', 'basco', 'busuanga', 'san jose'
+    ];
+    return !domestic.contains(origin.toLowerCase().trim()) ||
+        !domestic.contains(destination.toLowerCase().trim());
+  }
+
   static String passengerTypeLabel(String type, int index) {
     switch (type.toLowerCase()) {
       case 'driver':
@@ -320,6 +357,8 @@ class BookingData {
         'name': vehicleDriverName,
         'birthdate': vehicleDriverBirthday,
         'discount_id': null,
+        'extra_baggage_weight': null,
+        'extra_baggage_price': 0.0,
       });
     }
 
@@ -329,6 +368,8 @@ class BookingData {
         'name': '',
         'birthdate': '',
         'discount_id': null,
+        'extra_baggage_weight': null,
+        'extra_baggage_price': 0.0,
       });
     }
 
@@ -339,6 +380,8 @@ class BookingData {
           'name': '',
           'birthdate': '',
           'discount_id': null,
+          'extra_baggage_weight': null,
+          'extra_baggage_price': 0.0,
         });
       }
       for (var i = 0; i < children; i++) {
@@ -347,6 +390,8 @@ class BookingData {
           'name': '',
           'birthdate': '',
           'discount_id': null,
+          'extra_baggage_weight': null,
+          'extra_baggage_price': 0.0,
         });
       }
       for (var i = 0; i < infants; i++) {
@@ -355,6 +400,8 @@ class BookingData {
           'name': '',
           'birthdate': '',
           'discount_id': null,
+          'extra_baggage_weight': null,
+          'extra_baggage_price': 0.0,
         });
       }
     } else {
@@ -364,6 +411,8 @@ class BookingData {
           'name': '',
           'birthdate': '',
           'discount_id': null,
+          'extra_baggage_weight': null,
+          'extra_baggage_price': 0.0,
         });
       }
     }
@@ -3449,6 +3498,22 @@ class _TravelScreenState extends State<TravelScreen>
     _tripTabController = TabController(length: 2, vsync: this);
     _tripTabController.addListener(() {
       if (_tripTabController.indexIsChanging) return;
+      if (_tripTabController.index == 1 && _totalPassengers > 4) {
+        while (_totalPassengers > 4) {
+          if (_infants > 0) {
+            _infants--;
+          } else if (_minors > 0) {
+            _minors--;
+          } else if (_children > 0) {
+            _children--;
+          } else if (_adults > 1) {
+            _adults--;
+          } else {
+            break;
+          }
+        }
+        if (_infants > _adults) _infants = _adults;
+      }
       setState(() {});
       if (_origin != null) {
         if (_tripTabController.index == 1 && _destination != null) {
@@ -3728,6 +3793,8 @@ class _TravelScreenState extends State<TravelScreen>
     ];
     return '${months[d.month - 1]} ${d.day}, ${d.year}';
   }
+
+  int get _maxPassengers => _tripTabController.index == 1 ? 4 : 8;
 
   int get _totalPassengers =>
       _adults + _children + (_mode == 'airline' ? _minors + _infants : 0);
@@ -4100,15 +4167,15 @@ class _TravelScreenState extends State<TravelScreen>
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('Maximum 8 passengers per booking',
-                                      style: TextStyle(
+                                  Text('Maximum $_maxPassengers passengers per booking',
+                                      style: const TextStyle(
                                           color: kSlate500, fontSize: 12)),
                                   const SizedBox(height: 12),
                                   _PassengerCounter(
                                     label: 'Adult',
                                     subtitle: _mode == 'airline' ? '12 years and above' : '11 years and above',
                                     count: _adults,
-                                    onIncrement: _totalPassengers < 8
+                                    onIncrement: _totalPassengers < _maxPassengers
                                         ? () => setState(() => _adults++)
                                         : null,
                                     onDecrement: _adults > 1
@@ -4121,7 +4188,7 @@ class _TravelScreenState extends State<TravelScreen>
                                       label: 'Minor',
                                       subtitle: '2 - 11 years',
                                       count: _children,
-                                      onIncrement: _totalPassengers < 8
+                                      onIncrement: _totalPassengers < _maxPassengers
                                           ? () {
                                               showDialog(
                                                 context: context,
@@ -4161,7 +4228,7 @@ class _TravelScreenState extends State<TravelScreen>
                                       label: 'Minor',
                                       subtitle: '7 - 11 years',
                                       count: _minors,
-                                      onIncrement: _totalPassengers < 8
+                                      onIncrement: _totalPassengers < _maxPassengers
                                           ? () => setState(() => _minors++)
                                           : null,
                                       onDecrement: _minors > 0
@@ -4173,7 +4240,7 @@ class _TravelScreenState extends State<TravelScreen>
                                       label: 'Child',
                                       subtitle: '2 - 6 years',
                                       count: _children,
-                                      onIncrement: _totalPassengers < 8
+                                      onIncrement: _totalPassengers < _maxPassengers
                                           ? () => setState(() => _children++)
                                           : null,
                                       onDecrement: _children > 0
@@ -4185,7 +4252,7 @@ class _TravelScreenState extends State<TravelScreen>
                                       label: 'Infant',
                                       subtitle: 'Under 2 years',
                                       count: _infants,
-                                      onIncrement: _totalPassengers < 8 &&
+                                      onIncrement: _totalPassengers < _maxPassengers &&
                                               _infants < _adults
                                           ? () => setState(() => _infants++)
                                           : null,
@@ -4207,14 +4274,14 @@ class _TravelScreenState extends State<TravelScreen>
                                                   fontSize: 16)),
                                           content: Text(
                                             _mode == 'airline'
-                                                ? 'You can book up to 8 travelers total (Adults, Children, Minors, Infants).\n\n'
-                                                    '1. Adults and minors count towards the 8-person total.\n\n'
+                                                ? 'You can book up to $_maxPassengers travelers total (Adults, Children, Minors, Infants).\n\n'
+                                                    '1. Adults and minors count towards the $_maxPassengers-person total.\n\n'
                                                     '2. Infants under 2 years must be accompanied by an adult (max 1 infant per adult).\n\n'
-                                                    '3. Use the buttons to update counts. The form prevents totals above 8.'
-                                                : 'You can book up to 8 travelers total. This includes both adults and minors combined. Any discounts are applied per traveler on the next step.\n\n'
-                                                    '1. Adults are counted separately from minors, but both count toward the same 8-person total.\n\n'
+                                                    '3. Use the buttons to update counts. The form prevents totals above $_maxPassengers.'
+                                                : 'You can book up to $_maxPassengers travelers total. This includes both adults and minors combined. Any discounts are applied per traveler on the next step.\n\n'
+                                                    '1. Adults are counted separately from minors, but both count toward the same $_maxPassengers-person total.\n\n'
                                                     '2. Minors aged 2 to 11 are still part of the booking capacity limit.\n\n'
-                                                    '3. Use the buttons to update counts. The form prevents totals above 8.',
+                                                    '3. Use the buttons to update counts. The form prevents totals above $_maxPassengers.',
                                             style: const TextStyle(
                                                 fontSize: 13,
                                                 color: kSlate600,
@@ -6941,28 +7008,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         ),
 
         _priceBreakdownCard(),
-        if (_booking['passengers'] != null &&
-            _booking['passengers'] is List &&
-            (_booking['passengers'] as List).isNotEmpty)
-          _detailSection(
-            'Passengers & Discount IDs',
-            (_booking['passengers'] as List).map<String>((p) {
-              if (p is! Map) return 'Invalid passenger entry';
-              final name = p['name'] ?? 'Passenger';
-              final type = (p['type'] ?? 'adult').toString().toUpperCase();
-              final bday = p['birthdate'] ?? 'N/A';
-              final idNum = p['id_number'];
-              final front = p['id_image_front_url'] ?? p['id_image_front'];
-              final back = p['id_image_back_url'] ?? p['id_image_back'];
-              String str = '$name ($type) • Bday: $bday';
-              if (idNum != null && idNum.toString().isNotEmpty) {
-                str += ' • ID: $idNum';
-              }
-              if (front != null) str += ' • Front ID: Attached';
-              if (back != null) str += ' • Back ID: Attached';
-              return str;
-            }).toList(),
-          ),
+        _PassengerItemsCard(passengers: _booking['passengers'] as List),
         if (paymentDeadlineAt != null && _paymentStatus == 'unpaid') ...[
           Card(
             color: isExpired ? Colors.red.shade50 : Colors.orange.shade50,
@@ -7072,6 +7118,130 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 icon: const Icon(Icons.receipt_long),
                 label: const Text('Payment Acknowledgement'),
               ),
+          ],
+        ] else ...[
+          // Cancelled / Operator Cancelled bookings
+          if (_parseDouble(_booking['refund_amount']) > 0) ...[
+            Card(
+              color: _booking['refund_status'] == 'completed'
+                  ? const Color(0xFFECFDF5)
+                  : const Color(0xFFFFFBEB),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(
+                  color: _booking['refund_status'] == 'completed'
+                      ? const Color(0xFFA7F3D0)
+                      : const Color(0xFFFDE68A),
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          _booking['refund_status'] == 'completed'
+                              ? Icons.check_circle_outline_rounded
+                              : Icons.access_time_rounded,
+                          color: _booking['refund_status'] == 'completed'
+                              ? const Color(0xFF059669)
+                              : const Color(0xFFD97706),
+                          size: 22,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _booking['refund_status'] == 'completed'
+                                ? 'Refund Successfully Disbursed'
+                                : 'Refund Request In Progress',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              color: _booking['refund_status'] == 'completed'
+                                  ? const Color(0xFF065F46)
+                                  : const Color(0xFF92400E),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _booking['refund_message']?.toString() ??
+                          (_booking['refund_status'] == 'completed'
+                              ? 'Your refund has been disbursed to your designated account.'
+                              : 'Your refund request is currently being processed by our finance team. Please allow 24–48 hours for review and disbursement to your account.'),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: _booking['refund_status'] == 'completed'
+                            ? const Color(0xFF047857)
+                            : const Color(0xFFB45309),
+                        height: 1.4,
+                      ),
+                    ),
+                    if (_booking['refund_destination'] != null &&
+                        _booking['refund_destination'].toString().isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        'Destination: ${_booking['refund_destination']}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: kSlate800,
+                        ),
+                      ),
+                    ],
+                    if (_booking['refund_reference'] != null &&
+                        _booking['refund_reference'].toString().isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Transfer Ref No: ${_booking['refund_reference']}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: kPink,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            FilledButton.icon(
+              onPressed: () {
+                final txNum = _booking['transaction_number']?.toString() ?? _booking['id'].toString();
+                final fullUrl = Uri.parse('${UserSession.getBaseUrl()}/ticket/refund-acknowledgement/$txNum');
+                launchUrl(fullUrl, mode: LaunchMode.externalApplication);
+              },
+              icon: const Icon(Icons.receipt_long),
+              label: const Text('Refund Acknowledgement'),
+              style: FilledButton.styleFrom(
+                backgroundColor: kSlate800,
+                foregroundColor: Colors.white,
+              ),
+            ),
+            if (_booking['refund_proof_url'] != null &&
+                _booking['refund_proof_url'].toString().isNotEmpty) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: () {
+                  final rawUrl = _booking['refund_proof_url'].toString().trim();
+                  final uri = Uri.parse(rawUrl);
+                  final fullUrl = uri.hasScheme
+                      ? uri
+                      : Uri.parse('${UserSession.getBaseUrl()}$rawUrl');
+                  launchUrl(fullUrl, mode: LaunchMode.externalApplication);
+                },
+                icon: const Icon(Icons.image_outlined),
+                label: const Text('View Proof of Refund'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF059669),
+                ),
+              ),
+            ],
           ],
         ],
         const SizedBox(height: 12),
@@ -7206,9 +7376,32 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   Widget _detailHeader(String status) {
     final isOpCancelled = status == 'operator_cancelled' ||
         _booking['service_cancellation_id'] != null;
-    final bg = isOpCancelled || status == 'cancelled' ? Colors.red : kGreen;
+    final isRefundCompleted = _booking['refund_status'] == 'completed';
+    final isCancelledWithRefund = (status == 'cancelled' || isOpCancelled) &&
+        (_parseDouble(_booking['refund_amount']) > 0);
+
+    Color bg = kGreen;
+    String statusTitle = status.toUpperCase();
+
+    if (isOpCancelled) {
+      statusTitle = 'CANCELLED BY OPERATOR';
+      bg = Colors.red.shade700;
+    } else if (isCancelledWithRefund) {
+      if (isRefundCompleted) {
+        statusTitle = 'REFUNDED & DISBURSED';
+        bg = const Color(0xFF059669);
+      } else {
+        statusTitle = 'REFUND PROCESSING (24–48 HRS)';
+        bg = const Color(0xFFD97706);
+      }
+    } else if (status == 'cancelled') {
+      statusTitle = 'CANCELLED';
+      bg = Colors.red.shade700;
+    }
+
     return Card(
         color: bg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: Padding(
             padding: const EdgeInsets.all(18),
             child:
@@ -7220,11 +7413,11 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                       fontSize: 18)),
               const SizedBox(height: 8),
               Text(
-                  isOpCancelled
-                      ? 'CANCELLED BY OPERATOR'
-                      : status.toUpperCase(),
+                  statusTitle,
                   style: const TextStyle(
-                      color: Colors.white70, fontWeight: FontWeight.bold))
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5))
             ])));
   }
 
@@ -7848,8 +8041,9 @@ class _StepProgress extends StatelessWidget {
         return mode == 'airline' ? Icons.flight : Icons.directions_boat;
       case 'schedule':
         return Icons.calendar_month;
+      case 'details':
       case 'discount':
-        return Icons.local_offer;
+        return Icons.badge_outlined;
       case 'hotels':
         return Icons.hotel;
       case 'submit':
@@ -7939,7 +8133,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
   bool _isLoading = true;
   String? _error;
 
-  static const _steps = ['Route', 'Schedule', 'Discount', 'Hotels', 'Submit'];
+  static const _steps = ['Route', 'Schedule', 'Details', 'Hotels', 'Submit'];
 
   @override
   void initState() {
@@ -8205,7 +8399,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                                         borderRadius:
                                             BorderRadius.circular(12)),
                                   ),
-                                  child: const Text('Continue to Discounts',
+                                  child: const Text('Continue to Details',
                                       style: TextStyle(
                                           color: Colors.white,
                                           fontSize: 16,
@@ -8282,7 +8476,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                                           borderRadius:
                                               BorderRadius.circular(12)),
                                     ),
-                                    child: const Text('Continue to Discounts',
+                                    child: const Text('Continue to Details',
                                         style: TextStyle(
                                             color: Colors.white,
                                             fontSize: 16,
@@ -8732,31 +8926,35 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
     if (widget.booking.mode != 'airline') return const SizedBox.shrink();
     if (widget.booking.selectedSchedule == null) return const SizedBox.shrink();
 
-    final serviceName = widget.booking.selectedSchedule!['operator']
-            ?.toString()
-            .toLowerCase() ??
-        '';
+    final serviceName = (widget.booking.selectedSchedule!['operator'] ??
+            widget.booking.selectedSchedule!['service'] ??
+            widget.booking.operator ??
+            '')
+        .toString()
+        .toLowerCase();
 
     String matchedOperator = 'ceb_pac';
     if (serviceName.contains('pal') || serviceName.contains('philippine')) {
       matchedOperator = 'pal';
+    } else if (serviceName.contains('airasia') ||
+        serviceName.contains('air asia')) {
+      matchedOperator = 'airasia';
     } else if (serviceName.contains('cebu') ||
         serviceName.contains('pacific') ||
-        serviceName.contains('ceb_pac')) {
+        serviceName.contains('ceb_pac') ||
+        serviceName.contains('ceb')) {
       matchedOperator = 'ceb_pac';
-    } else if (serviceName.contains('airasia')) {
-      matchedOperator = 'airasia';
-    } else if (serviceName.contains('sunlight')) {
-      matchedOperator = 'sunlight';
     }
 
-    final operatorRules = (_baggageRules['local'] != null
-            ? _baggageRules['local'][matchedOperator]
-            : null) ??
-        (_baggageRules['international'] != null
-            ? _baggageRules['international'][matchedOperator]
-            : null) ??
-        _baggageRules[matchedOperator];
+    final scopeKey = widget.booking.isInternational ? 'international' : 'local';
+    final scopeRules = _baggageRules[scopeKey] as Map<String, dynamic>? ??
+        _baggageRules['local'] as Map<String, dynamic>? ??
+        _baggageRules;
+
+    final operatorRules = (scopeRules[matchedOperator] as Map<String, dynamic>?) ??
+        (scopeRules['ceb_pac'] as Map<String, dynamic>?) ??
+        (scopeRules.isNotEmpty ? scopeRules.values.first as Map<String, dynamic>? : null);
+
     if (operatorRules == null ||
         operatorRules['options'] == null ||
         (operatorRules['options'] as List).isEmpty) {
@@ -8764,84 +8962,354 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
     }
 
     final options = operatorRules['options'] as List;
+    final operatorName = operatorRules['name']?.toString() ??
+        (matchedOperator == 'pal'
+            ? 'Philippine Airlines'
+            : matchedOperator == 'airasia'
+                ? 'Philippines AirAsia'
+                : 'Cebu Pacific');
+    final totalBaggage = widget.booking.totalExtraBaggagePrice;
+    final paxWithBaggage = widget.booking.passengersWithBaggageCount;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade300)),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.shade300),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              )
+            ]),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Row(
               children: [
-                Icon(Icons.business_center, color: kGreen, size: 18),
+                Icon(Icons.business_center, color: kGreen, size: 20),
                 SizedBox(width: 8),
-                Text('Extra Baggage (Optional)',
+                Expanded(
+                  child: Text('Prepaid Extra Baggage',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: kSlate800)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3E8FF),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFD8B4FE)),
+                  ),
+                  child: Text(
+                    '✈️ $operatorName',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF7E22CE),
+                    ),
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: widget.booking.isInternational
+                        ? Colors.blue.withOpacity(0.12)
+                        : kGreen.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    widget.booking.isInternational
+                        ? '🌐 International Rates'
+                        : '🇵🇭 Domestic Rates',
                     style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: kSlate800)),
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: widget.booking.isInternational
+                          ? const Color(0xFF0284C7)
+                          : kGreen,
+                    ),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 8),
-            const Text(
-                'Select extra baggage weight. The price will be applied per passenger.',
-                style: TextStyle(fontSize: 12, color: kSlate500)),
+            Text(
+              'Select check-in baggage allowance for each passenger on your $operatorName flight.',
+              style: const TextStyle(fontSize: 12, color: kSlate500),
+            ),
             const SizedBox(height: 12),
-            DropdownButtonFormField<int?>(
-              value: widget.booking.hasExtraBaggage
-                  ? widget.booking.extraBaggageKg
-                  : null,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                contentPadding:
-                    EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              ),
-              hint: const Text('No extra baggage'),
-              isExpanded: true,
-              items: [
-                const DropdownMenuItem<int?>(
-                  value: null,
-                  child: Text('No extra baggage (7kg Hand Carry Only)',
-                      style: TextStyle(fontSize: 14)),
+
+            // Quick apply toolbar
+            if (options.isNotEmpty && widget.booking.passengers.length > 1) ...[
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey.shade200),
                 ),
-                ...options.map((opt) {
-                  int kg = int.tryParse(opt['weight']
-                          .toString()
-                          .replaceAll(RegExp(r'[^0-9]'), '')) ??
-                      0;
-                  return DropdownMenuItem<int?>(
-                    value: kg,
-                    child: Text('${opt['weight']} (+ ₱${opt['price']})',
-                        style: const TextStyle(fontSize: 14)),
-                  );
-                }),
-              ],
-              onChanged: (val) {
-                setState(() {
-                  if (val == null) {
-                    widget.booking.hasExtraBaggage = false;
-                    widget.booking.extraBaggageKg = null;
-                    widget.booking.extraBaggagePrice = 0.0;
-                  } else {
-                    widget.booking.hasExtraBaggage = true;
-                    widget.booking.extraBaggageKg = val;
-                    final selectedOpt = options.firstWhere((o) {
-                      int k = int.tryParse(o['weight']
-                              .toString()
-                              .replaceAll(RegExp(r'[^0-9]'), '')) ??
-                          0;
-                      return k == val;
-                    });
-                    widget.booking.extraBaggagePrice =
-                        double.tryParse(selectedOpt['price'].toString()) ?? 0.0;
-                  }
-                });
-              },
+                child: Row(
+                  children: [
+                    const Text('⚡ Quick apply:',
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: kSlate700)),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            ...options.take(4).map((opt) {
+                              final price = double.tryParse(
+                                      opt['price'].toString()) ??
+                                  0.0;
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 6),
+                                child: InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      for (var p
+                                          in widget.booking.passengers) {
+                                        p['extra_baggage_weight'] =
+                                            opt['weight'];
+                                        p['extra_baggage_price'] = price;
+                                      }
+                                      widget.booking.hasExtraBaggage = true;
+                                    });
+                                  },
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      border: Border.all(
+                                          color: Colors.grey.shade300),
+                                      borderRadius:
+                                          BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      '${opt['weight']}',
+                                      style: const TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }),
+                            InkWell(
+                              onTap: () {
+                                setState(() {
+                                  for (var p in widget.booking.passengers) {
+                                    p['extra_baggage_weight'] = null;
+                                    p['extra_baggage_price'] = 0.0;
+                                  }
+                                  widget.booking.hasExtraBaggage = false;
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(8),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  border:
+                                      Border.all(color: Colors.grey.shade300),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Text(
+                                  'Clear all',
+                                  style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.red,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            // Per passenger selector rows
+            ...List.generate(widget.booking.passengers.length, (i) {
+              final p = widget.booking.passengers[i];
+              final pWeight = p['extra_baggage_weight'];
+              final pPrice = (p['extra_baggage_price'] != null)
+                  ? (double.tryParse(p['extra_baggage_price'].toString()) ?? 0.0)
+                  : 0.0;
+              final pType = p['type']?.toString().toUpperCase() ?? 'ADULT';
+              final pName = (p['name'] ?? '').toString().isNotEmpty
+                  ? p['name']
+                  : 'Traveler #${i + 1} ($pType)';
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: (pWeight != null && pWeight.toString().isNotEmpty)
+                      ? kGreen.withOpacity(0.04)
+                      : Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: (pWeight != null && pWeight.toString().isNotEmpty)
+                        ? kGreen.withOpacity(0.5)
+                        : Colors.grey.shade200,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 12,
+                      backgroundColor:
+                          (pWeight != null && pWeight.toString().isNotEmpty)
+                              ? kGreen
+                              : Colors.grey.shade300,
+                      child: Text(
+                        '${i + 1}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: (pWeight != null &&
+                                  pWeight.toString().isNotEmpty)
+                              ? Colors.white
+                              : Colors.black87,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 4,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            pName,
+                            style: const TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.bold),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (pWeight != null && pWeight.toString().isNotEmpty)
+                            Text(
+                              '🧳 $pWeight (+₱${pPrice.toStringAsFixed(2)})',
+                              style: const TextStyle(
+                                  fontSize: 11,
+                                  color: kGreen,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 6,
+                      child: DropdownButtonFormField<String?>(
+                        value: pWeight,
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          contentPadding:
+                              EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          isDense: true,
+                        ),
+                        hint: const Text('0 kg (₱0)',
+                            style: TextStyle(fontSize: 11)),
+                        items: [
+                          const DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text('0 kg (₱0.00)',
+                                style: TextStyle(fontSize: 11)),
+                          ),
+                          ...options.map((opt) {
+                            final pr = double.tryParse(opt['price'].toString()) ?? 0.0;
+                            return DropdownMenuItem<String?>(
+                              value: opt['weight'].toString(),
+                              child: Text(
+                                  '${opt['weight']} (+₱${pr.toStringAsFixed(0)})',
+                                  style: const TextStyle(fontSize: 11)),
+                            );
+                          }),
+                        ],
+                        onChanged: (val) {
+                          setState(() {
+                            if (val == null) {
+                              p['extra_baggage_weight'] = null;
+                              p['extra_baggage_price'] = 0.0;
+                            } else {
+                              final sel = options.firstWhere(
+                                  (o) => o['weight'].toString() == val,
+                                  orElse: () => {});
+                              p['extra_baggage_weight'] = val;
+                              p['extra_baggage_price'] = double.tryParse(
+                                      sel['price']?.toString() ?? '0') ??
+                                  0.0;
+                            }
+                            widget.booking.hasExtraBaggage =
+                                widget.booking.totalExtraBaggagePrice > 0;
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+
+            const SizedBox(height: 6),
+            // Summary footer
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: kGreen.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    paxWithBaggage > 0
+                        ? 'Added for $paxWithBaggage traveler${paxWithBaggage > 1 ? 's' : ''}'
+                        : 'No extra baggage added',
+                    style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: kSlate700),
+                  ),
+                  Text(
+                    '+₱${totalBaggage.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: kGreen),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -8935,6 +9403,9 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                       final promo = s['promotional_ticket'];
                       widget.booking.promotionalTicketId =
                           promo != null ? promo['id'] as int? : null;
+                      widget.booking.hasExtraBaggage = false;
+                      widget.booking.extraBaggageKg = null;
+                      widget.booking.extraBaggagePrice = 0.0;
                       widget.booking.passengers = BookingData.buildPassengerEntries(
                         adults: widget.booking.adults,
                         children: widget.booking.children,
@@ -9126,7 +9597,21 @@ class _DiscountScreenState extends State<DiscountScreen> {
   List<String?> _idFrontBase64 = [];
   List<String?> _idBackBase64 = [];
 
-  static const _steps = ['Route', 'Schedule', 'Discount', 'Hotels', 'Submit'];
+  // Passport info controllers (for international flights)
+  List<String?> _passportCountries = [];
+  List<TextEditingController> _passportNumberControllers = [];
+  List<TextEditingController> _passportIssuanceControllers = [];
+  List<TextEditingController> _passportExpiryControllers = [];
+
+  static const _passportCountryOptions = [
+    'Philippines', 'India', 'Japan', 'Singapore', 'South Korea', 'Hong Kong', 'United States',
+    'Australia', 'Canada', 'United Kingdom', 'China', 'Taiwan', 'Malaysia', 'Indonesia',
+    'Thailand', 'Vietnam', 'United Arab Emirates', 'Saudi Arabia', 'Qatar', 'Kuwait',
+    'Germany', 'France', 'Italy', 'Spain', 'Switzerland', 'Netherlands', 'New Zealand',
+    'Brazil', 'Mexico', 'South Africa', 'Egypt', 'Turkey', 'Russia'
+  ];
+
+  static const _steps = ['Route', 'Schedule', 'Details', 'Hotels', 'Submit'];
 
   @override
   void initState() {
@@ -9150,6 +9635,26 @@ class _DiscountScreenState extends State<DiscountScreen> {
     _idBackBase64 = List.generate(widget.booking.passengers.length, (i) {
       return widget.booking.passengers[i]['id_image_back'];
     });
+
+    _passportCountries = List.generate(widget.booking.passengers.length, (i) {
+      return widget.booking.passengers[i]['passport_country'];
+    });
+    _passportNumberControllers =
+        List.generate(widget.booking.passengers.length, (i) {
+      return TextEditingController(
+          text: widget.booking.passengers[i]['passport_number'] ?? '');
+    });
+    _passportIssuanceControllers =
+        List.generate(widget.booking.passengers.length, (i) {
+      return TextEditingController(
+          text: widget.booking.passengers[i]['passport_issuance_date'] ?? '');
+    });
+    _passportExpiryControllers =
+        List.generate(widget.booking.passengers.length, (i) {
+      return TextEditingController(
+          text: widget.booking.passengers[i]['passport_expiry_date'] ?? '');
+    });
+
     _fetchDiscounts();
   }
 
@@ -9162,6 +9667,15 @@ class _DiscountScreenState extends State<DiscountScreen> {
       c.dispose();
     }
     for (var c in _idControllers) {
+      c.dispose();
+    }
+    for (var c in _passportNumberControllers) {
+      c.dispose();
+    }
+    for (var c in _passportIssuanceControllers) {
+      c.dispose();
+    }
+    for (var c in _passportExpiryControllers) {
       c.dispose();
     }
     super.dispose();
@@ -9303,9 +9817,23 @@ class _DiscountScreenState extends State<DiscountScreen> {
         widget.booking.passengers[i]['school_name'] = null;
       } else {
         widget.booking.passengers[i]['school_name'] = null;
-        widget.booking.passengers[i]['id_number'] = null;
         widget.booking.passengers[i]['id_image_front'] = null;
         widget.booking.passengers[i]['id_image_back'] = null;
+      }
+
+      if (widget.booking.isInternational) {
+        widget.booking.passengers[i]['passport_country'] = _passportCountries[i];
+        widget.booking.passengers[i]['passport_number'] =
+            _passportNumberControllers[i].text.trim();
+        widget.booking.passengers[i]['passport_issuance_date'] =
+            _passportIssuanceControllers[i].text.trim();
+        widget.booking.passengers[i]['passport_expiry_date'] =
+            _passportExpiryControllers[i].text.trim();
+      } else {
+        widget.booking.passengers[i]['passport_country'] = null;
+        widget.booking.passengers[i]['passport_number'] = null;
+        widget.booking.passengers[i]['passport_issuance_date'] = null;
+        widget.booking.passengers[i]['passport_expiry_date'] = null;
       }
     }
     widget.booking.savedStep = 3;
@@ -9327,7 +9855,7 @@ class _DiscountScreenState extends State<DiscountScreen> {
     final pax = widget.booking.passengers;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Passenger & Discount')),
+      appBar: AppBar(title: const Text('Passenger Details')),
       body: Column(
         children: [
           _StepProgress(
@@ -9592,6 +10120,187 @@ class _DiscountScreenState extends State<DiscountScreen> {
                                   return const SizedBox.shrink();
                                 },
                               ),
+                              if (widget.booking.isInternational) ...[
+                                const SizedBox(height: 14),
+                                Container(
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFECFDF5),
+                                    border: Border.all(
+                                        color: const Color(0xFF10B981)
+                                            .withOpacity(0.4),
+                                        width: 1.5),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Row(
+                                        children: [
+                                          Text(
+                                            '▲ ADD PASSPORT INFORMATION',
+                                            style: TextStyle(
+                                              color: Color(0xFF047857),
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
+                                          SizedBox(width: 6),
+                                          Text('*',
+                                              style: TextStyle(
+                                                  color: Colors.red,
+                                                  fontWeight: FontWeight.bold)),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 4),
+                                      const Text(
+                                        'Required for international flight',
+                                        style: TextStyle(
+                                            color: Color(0xFF065F46),
+                                            fontSize: 11),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      DropdownButtonFormField<String>(
+                                        value: _passportCountries[i],
+                                        decoration: InputDecoration(
+                                          labelText:
+                                              'Country of Issue / Nationality *',
+                                          filled: true,
+                                          fillColor: Colors.white,
+                                          border: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(10)),
+                                        ),
+                                        items: _passportCountryOptions
+                                            .map((c) => DropdownMenuItem(
+                                                value: c, child: Text(c)))
+                                            .toList(),
+                                        validator: (v) => (widget
+                                                    .booking.isInternational &&
+                                                (v == null || v.isEmpty))
+                                            ? 'Issuing country is required'
+                                            : null,
+                                        onChanged: (v) => setState(
+                                            () => _passportCountries[i] = v),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      TextFormField(
+                                        controller:
+                                            _passportNumberControllers[i],
+                                        textCapitalization:
+                                            TextCapitalization.characters,
+                                        decoration: InputDecoration(
+                                          labelText: 'Passport Number *',
+                                          hintText: 'e.g. P1234567A',
+                                          filled: true,
+                                          fillColor: Colors.white,
+                                          border: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(10)),
+                                        ),
+                                        validator: (v) => (widget
+                                                    .booking.isInternational &&
+                                                (v == null || v.trim().isEmpty))
+                                            ? 'Passport number is required'
+                                            : null,
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: TextFormField(
+                                              controller:
+                                                  _passportIssuanceControllers[
+                                                      i],
+                                              readOnly: true,
+                                              decoration: InputDecoration(
+                                                labelText:
+                                                    'Date of Issuance *',
+                                                hintText: 'YYYY-MM-DD',
+                                                filled: true,
+                                                fillColor: Colors.white,
+                                                suffixIcon: const Icon(
+                                                    Icons.calendar_today,
+                                                    size: 16),
+                                                border: OutlineInputBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            10)),
+                                              ),
+                                              validator: (v) => (widget.booking
+                                                          .isInternational &&
+                                                      (v == null ||
+                                                          v.trim().isEmpty))
+                                                  ? 'Required'
+                                                  : null,
+                                              onTap: () async {
+                                                final d = await showDatePicker(
+                                                  context: context,
+                                                  initialDate: DateTime.now()
+                                                      .subtract(const Duration(
+                                                          days: 365)),
+                                                  firstDate: DateTime(1970),
+                                                  lastDate: DateTime.now(),
+                                                );
+                                                if (d != null) {
+                                                  _passportIssuanceControllers[
+                                                          i]
+                                                      .text =
+                                                      "${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}";
+                                                }
+                                              },
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: TextFormField(
+                                              controller:
+                                                  _passportExpiryControllers[i],
+                                              readOnly: true,
+                                              decoration: InputDecoration(
+                                                labelText: 'Date of Expiry *',
+                                                hintText: 'YYYY-MM-DD',
+                                                filled: true,
+                                                fillColor: Colors.white,
+                                                suffixIcon: const Icon(
+                                                    Icons.calendar_today,
+                                                    size: 16),
+                                                border: OutlineInputBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            10)),
+                                              ),
+                                              validator: (v) => (widget.booking
+                                                          .isInternational &&
+                                                      (v == null ||
+                                                          v.trim().isEmpty))
+                                                  ? 'Required'
+                                                  : null,
+                                              onTap: () async {
+                                                final d = await showDatePicker(
+                                                  context: context,
+                                                  initialDate: DateTime.now()
+                                                      .add(const Duration(
+                                                          days: 365 * 5)),
+                                                  firstDate: DateTime.now(),
+                                                  lastDate: DateTime(2050),
+                                                );
+                                                if (d != null) {
+                                                  _passportExpiryControllers[i]
+                                                      .text =
+                                                      "${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}";
+                                                }
+                                              },
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ],
                           ],
                         ),
@@ -9642,7 +10351,7 @@ class _StayScreenState extends State<StayScreen> {
   List<Map<String, dynamic>> _accommodations = [];
   bool _isLoading = true;
 
-  static const _steps = ['Route', 'Schedule', 'Discount', 'Hotels', 'Submit'];
+  static const _steps = ['Route', 'Schedule', 'Details', 'Hotels', 'Submit'];
 
   @override
   void initState() {
@@ -9925,7 +10634,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
   double _availablePoints = 0.0;
   bool _fetchingPoints = false;
 
-  static const _steps = ['Route', 'Schedule', 'Discount', 'Hotels', 'Submit'];
+  static const _steps = ['Route', 'Schedule', 'Details', 'Hotels', 'Submit'];
 
   @override
   void initState() {
@@ -10637,6 +11346,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                     try {
                       double ticketPrice = 0.0;
                       double scheduleAccommodationCost = 0.0;
+                      final isFerryMode = widget.booking.mode != 'airline';
                       final totalAirlinePassengers = widget.booking.mode == 'airline'
                           ? widget.booking.adults + widget.booking.children + widget.booking.minors + widget.booking.infants
                           : widget.booking.adults + widget.booking.children;
@@ -10649,100 +11359,57 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                       int payingPax = payingAdults + payingChildren + payingMinors + payingInfants;
 
                       if (widget.booking.selectedSchedule != null) {
-                        final adultP =
-                            (widget.booking.selectedSchedule!['adult_price'] ??
-                                widget.booking.selectedSchedule!['price'] ??
-                                0);
-                        final childP =
-                            (widget.booking.selectedSchedule!['child_price'] ??
-                                widget.booking.selectedSchedule!['price'] ??
-                                0);
-                        final minorP =
-                            (widget.booking.selectedSchedule!['minor_price'] ??
-                                widget.booking.selectedSchedule!['child_price'] ??
-                                widget.booking.selectedSchedule!['price'] ??
-                                0);
-                        final infantP =
-                            (widget.booking.selectedSchedule!['infant_price'] ??
-                                widget.booking.selectedSchedule!['child_price'] ??
-                                widget.booking.selectedSchedule!['price'] ??
-                                0);
-                        ticketPrice += (payingAdults *
-                                (adultP is num
-                                    ? adultP.toDouble()
-                                    : double.tryParse(adultP.toString()) ??
-                                        0)) +
-                            (payingChildren *
-                                (childP is num
-                                    ? childP.toDouble()
-                                    : double.tryParse(childP.toString()) ?? 0)) +
-                            (payingMinors *
-                                (minorP is num
-                                    ? minorP.toDouble()
-                                    : double.tryParse(minorP.toString()) ?? 0)) +
-                            (payingInfants *
-                                (infantP is num
-                                    ? infantP.toDouble()
-                                    : double.tryParse(infantP.toString()) ?? 0));
-                        if (widget.booking.selectedScheduleAccommodation !=
-                            null) {
-                          final accPrice = widget.booking
-                                  .selectedScheduleAccommodation!['price'] ??
-                              0;
+                        final rawAdultP = widget.booking.selectedSchedule!['adult_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0;
+                        final adultP = rawAdultP is num ? rawAdultP.toDouble() : (double.tryParse(rawAdultP.toString()) ?? 0.0);
+                        
+                        final rawChildP = isFerryMode
+                            ? (0.5 * adultP)
+                            : (widget.booking.selectedSchedule!['child_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0);
+                        final childP = rawChildP is num ? rawChildP.toDouble() : (double.tryParse(rawChildP.toString()) ?? 0.0);
+
+                        final rawMinorP = widget.booking.selectedSchedule!['minor_price'] ?? widget.booking.selectedSchedule!['child_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0;
+                        final minorP = rawMinorP is num ? rawMinorP.toDouble() : (double.tryParse(rawMinorP.toString()) ?? 0.0);
+
+                        final rawInfantP = widget.booking.selectedSchedule!['infant_price'] ?? widget.booking.selectedSchedule!['child_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0;
+                        final infantP = rawInfantP is num ? rawInfantP.toDouble() : (double.tryParse(rawInfantP.toString()) ?? 0.0);
+
+                        ticketPrice += (payingAdults * adultP) +
+                            (payingChildren * childP) +
+                            (payingMinors * minorP) +
+                            (payingInfants * infantP);
+
+                        if (widget.booking.selectedScheduleAccommodation != null) {
+                          final accPrice = widget.booking.selectedScheduleAccommodation!['price'] ?? 0;
                           scheduleAccommodationCost += (payingPax *
-                              (accPrice is num
-                                  ? accPrice.toDouble()
-                                  : double.tryParse(accPrice.toString()) ?? 0));
+                              (accPrice is num ? accPrice.toDouble() : (double.tryParse(accPrice.toString()) ?? 0.0)));
                         }
                       }
+
                       if (widget.booking.tripType == 'round_trip' &&
                           widget.booking.selectedReturnSchedule != null) {
-                        final adultP = (widget.booking
-                                .selectedReturnSchedule!['adult_price'] ??
-                            widget.booking.selectedReturnSchedule!['price'] ??
-                            0);
-                        final childP = (widget.booking
-                                .selectedReturnSchedule!['child_price'] ??
-                            widget.booking.selectedReturnSchedule!['price'] ??
-                            0);
-                        final minorP = (widget.booking
-                                .selectedReturnSchedule!['minor_price'] ??
-                            widget.booking.selectedReturnSchedule!['child_price'] ??
-                            widget.booking.selectedReturnSchedule!['price'] ??
-                            0);
-                        final infantP = (widget.booking
-                                .selectedReturnSchedule!['infant_price'] ??
-                            widget.booking.selectedReturnSchedule!['child_price'] ??
-                            widget.booking.selectedReturnSchedule!['price'] ??
-                            0);
-                        ticketPrice += (payingAdults *
-                                (adultP is num
-                                    ? adultP.toDouble()
-                                    : double.tryParse(adultP.toString()) ??
-                                        0)) +
-                            (payingChildren *
-                                (childP is num
-                                    ? childP.toDouble()
-                                    : double.tryParse(childP.toString()) ?? 0)) +
-                            (payingMinors *
-                                (minorP is num
-                                    ? minorP.toDouble()
-                                    : double.tryParse(minorP.toString()) ?? 0)) +
-                            (payingInfants *
-                                (infantP is num
-                                    ? infantP.toDouble()
-                                    : double.tryParse(infantP.toString()) ?? 0));
-                        if (widget
-                                .booking.selectedReturnScheduleAccommodation !=
-                            null) {
-                          final accPrice = widget.booking
-                                      .selectedReturnScheduleAccommodation![
-                                  'price'] ??
-                              0;
+                        final rawAdultP = widget.booking.selectedReturnSchedule!['adult_price'] ?? widget.booking.selectedReturnSchedule!['price'] ?? 0;
+                        final adultP = rawAdultP is num ? rawAdultP.toDouble() : (double.tryParse(rawAdultP.toString()) ?? 0.0);
+
+                        final rawChildP = isFerryMode
+                            ? (0.5 * adultP)
+                            : (widget.booking.selectedReturnSchedule!['child_price'] ?? widget.booking.selectedReturnSchedule!['price'] ?? 0);
+                        final childP = rawChildP is num ? rawChildP.toDouble() : (double.tryParse(rawChildP.toString()) ?? 0.0);
+
+                        final rawMinorP = widget.booking.selectedReturnSchedule!['minor_price'] ?? widget.booking.selectedReturnSchedule!['child_price'] ?? widget.booking.selectedReturnSchedule!['price'] ?? 0;
+                        final minorP = rawMinorP is num ? rawMinorP.toDouble() : (double.tryParse(rawMinorP.toString()) ?? 0.0);
+
+                        final rawInfantP = widget.booking.selectedReturnSchedule!['infant_price'] ?? widget.booking.selectedReturnSchedule!['child_price'] ?? widget.booking.selectedReturnSchedule!['price'] ?? 0;
+                        final infantP = rawInfantP is num ? rawInfantP.toDouble() : (double.tryParse(rawInfantP.toString()) ?? 0.0);
+
+                        ticketPrice += (payingAdults * adultP) +
+                            (payingChildren * childP) +
+                            (payingMinors * minorP) +
+                            (payingInfants * infantP);
+
+                        if (widget.booking.selectedReturnScheduleAccommodation != null) {
+                          final accPrice = widget.booking.selectedReturnScheduleAccommodation!['price'] ?? 0;
                           scheduleAccommodationCost += (payingPax *
-                              (accPrice is num
-                                  ? accPrice.toDouble()
-                                  : double.tryParse(accPrice.toString()) ?? 0));
+                              (accPrice is num ? accPrice.toDouble() : (double.tryParse(accPrice.toString()) ?? 0.0)));
                         }
                       }
 
@@ -10754,8 +11421,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                         for (var p in widget.booking.passengers) {
                           if (p['discount_id'] != null &&
                               widget.booking.selectedSchedule != null) {
-                            final ap = widget
-                                    .booking.selectedSchedule!['adult_price'] ??
+                            final ap = widget.booking.selectedSchedule!['adult_price'] ??
                                 widget.booking.selectedSchedule!['price'] ??
                                 0;
                             passengerDiscount += ((ap is num
@@ -10795,13 +11461,16 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                         }
                       }
 
-                      // Extra baggage cost (airline only — prepaid per pax)
+                      // Extra baggage cost (airline only — per passenger sum)
                       double extraBaggageCost = 0.0;
-                      if (widget.booking.hasExtraBaggage &&
-                          widget.booking.mode == 'airline' &&
-                          widget.booking.extraBaggagePrice > 0) {
-                        extraBaggageCost = widget.booking.extraBaggagePrice *
-                            (widget.booking.adults + widget.booking.children);
+                      if (widget.booking.mode == 'airline') {
+                        extraBaggageCost = widget.booking.totalExtraBaggagePrice;
+                        if (extraBaggageCost == 0.0 &&
+                            widget.booking.hasExtraBaggage &&
+                            widget.booking.extraBaggagePrice > 0) {
+                          extraBaggageCost = widget.booking.extraBaggagePrice *
+                              (widget.booking.adults + widget.booking.children);
+                        }
                       }
 
                       int travelers = totalAirlinePassengers;
@@ -10809,23 +11478,19 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
 
                       double transportClassCost = 0.0;
                       if (widget.booking.mode == 'ferry') {
-                        transportClassCost +=
-                            widget.booking.selectedFerryAccommodationPrice ?? 0;
-                        if (widget.booking.tripType == 'round_trip') {
-                          transportClassCost += widget.booking
-                                  .selectedReturnFerryAccommodationPrice ??
-                              0;
-                        }
+                        final depTc = (widget.booking.selectedFerryAccommodationPrice ?? 0).toDouble();
+                        final retTc = widget.booking.tripType == 'round_trip'
+                            ? (widget.booking.selectedReturnFerryAccommodationPrice ?? 0).toDouble()
+                            : 0.0;
+                        transportClassCost = (payingAdults * (depTc + retTc)) +
+                            (payingChildren * (depTc + retTc) * 0.5);
                       } else {
-                        transportClassCost +=
-                            widget.booking.selectedAirlineClassPrice ?? 0;
-                        if (widget.booking.tripType == 'round_trip') {
-                          transportClassCost +=
-                              widget.booking.selectedReturnAirlineClassPrice ??
-                                  0;
-                        }
+                        double depClass = (widget.booking.selectedAirlineClassPrice ?? 0).toDouble();
+                        double retClass = widget.booking.tripType == 'round_trip'
+                            ? (widget.booking.selectedReturnAirlineClassPrice ?? 0).toDouble()
+                            : 0.0;
+                        transportClassCost = (depClass + retClass) * payingPax;
                       }
-                      transportClassCost = transportClassCost * payingPax;
 
                       final isShortHaul = _isShortHaulTrip();
                       final activeFeePerPerson = isShortHaul ? _shortHaulFeePerPerson : _feePerPerson;
@@ -10881,17 +11546,28 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                                 double depTicket = 0;
                                 double depClass = 0;
                                 if (widget.booking.selectedSchedule != null) {
-                                  final adultP = widget.booking.selectedSchedule!['adult_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0;
-                                  final childP = widget.booking.selectedSchedule!['child_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0;
-                                  final minorP = widget.booking.selectedSchedule!['minor_price'] ?? widget.booking.selectedSchedule!['child_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0;
-                                  final infantP = widget.booking.selectedSchedule!['infant_price'] ?? widget.booking.selectedSchedule!['child_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0;
-                                  depTicket = (payingAdults * (adultP is num ? adultP.toDouble() : double.tryParse(adultP.toString()) ?? 0)) +
-                                      (payingChildren * (childP is num ? childP.toDouble() : double.tryParse(childP.toString()) ?? 0)) +
-                                      (payingMinors * (minorP is num ? minorP.toDouble() : double.tryParse(minorP.toString()) ?? 0)) +
-                                      (payingInfants * (infantP is num ? infantP.toDouble() : double.tryParse(infantP.toString()) ?? 0));
+                                  final rawAdultP = widget.booking.selectedSchedule!['adult_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0;
+                                  final adultP = rawAdultP is num ? rawAdultP.toDouble() : (double.tryParse(rawAdultP.toString()) ?? 0.0);
+
+                                  final rawChildP = isFerryMode
+                                      ? (0.5 * adultP)
+                                      : (widget.booking.selectedSchedule!['child_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0);
+                                  final childP = rawChildP is num ? rawChildP.toDouble() : (double.tryParse(rawChildP.toString()) ?? 0.0);
+
+                                  final rawMinorP = widget.booking.selectedSchedule!['minor_price'] ?? widget.booking.selectedSchedule!['child_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0;
+                                  final minorP = rawMinorP is num ? rawMinorP.toDouble() : (double.tryParse(rawMinorP.toString()) ?? 0.0);
+
+                                  final rawInfantP = widget.booking.selectedSchedule!['infant_price'] ?? widget.booking.selectedSchedule!['child_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0;
+                                  final infantP = rawInfantP is num ? rawInfantP.toDouble() : (double.tryParse(rawInfantP.toString()) ?? 0.0);
+
+                                  depTicket = (payingAdults * adultP) +
+                                      (payingChildren * childP) +
+                                      (payingMinors * minorP) +
+                                      (payingInfants * infantP);
                                 }
                                 if (widget.booking.mode == 'ferry') {
-                                  depClass = (widget.booking.selectedFerryAccommodationPrice ?? 0) * payingPax;
+                                  final depTc = (widget.booking.selectedFerryAccommodationPrice ?? 0).toDouble();
+                                  depClass = (payingAdults * depTc) + (payingChildren * depTc * 0.5);
                                 } else {
                                   depClass = (widget.booking.selectedAirlineClassPrice ?? 0) * payingPax;
                                 }
@@ -10904,17 +11580,28 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                                 double retTicket = 0;
                                 double retClass = 0;
                                 if (widget.booking.selectedReturnSchedule != null) {
-                                  final adultP = widget.booking.selectedReturnSchedule!['adult_price'] ?? widget.booking.selectedReturnSchedule!['price'] ?? 0;
-                                  final childP = widget.booking.selectedReturnSchedule!['child_price'] ?? widget.booking.selectedReturnSchedule!['price'] ?? 0;
-                                  final minorP = widget.booking.selectedReturnSchedule!['minor_price'] ?? widget.booking.selectedReturnSchedule!['child_price'] ?? widget.booking.selectedReturnSchedule!['price'] ?? 0;
-                                  final infantP = widget.booking.selectedReturnSchedule!['infant_price'] ?? widget.booking.selectedReturnSchedule!['child_price'] ?? widget.booking.selectedReturnSchedule!['price'] ?? 0;
-                                  retTicket = (payingAdults * (adultP is num ? adultP.toDouble() : double.tryParse(adultP.toString()) ?? 0)) +
-                                      (payingChildren * (childP is num ? childP.toDouble() : double.tryParse(childP.toString()) ?? 0)) +
-                                      (payingMinors * (minorP is num ? minorP.toDouble() : double.tryParse(minorP.toString()) ?? 0)) +
-                                      (payingInfants * (infantP is num ? infantP.toDouble() : double.tryParse(infantP.toString()) ?? 0));
+                                  final rawAdultP = widget.booking.selectedReturnSchedule!['adult_price'] ?? widget.booking.selectedReturnSchedule!['price'] ?? 0;
+                                  final adultP = rawAdultP is num ? rawAdultP.toDouble() : (double.tryParse(rawAdultP.toString()) ?? 0.0);
+
+                                  final rawChildP = isFerryMode
+                                      ? (0.5 * adultP)
+                                      : (widget.booking.selectedReturnSchedule!['child_price'] ?? widget.booking.selectedReturnSchedule!['price'] ?? 0);
+                                  final childP = rawChildP is num ? rawChildP.toDouble() : (double.tryParse(rawChildP.toString()) ?? 0.0);
+
+                                  final rawMinorP = widget.booking.selectedReturnSchedule!['minor_price'] ?? widget.booking.selectedReturnSchedule!['child_price'] ?? widget.booking.selectedReturnSchedule!['price'] ?? 0;
+                                  final minorP = rawMinorP is num ? rawMinorP.toDouble() : (double.tryParse(rawMinorP.toString()) ?? 0.0);
+
+                                  final rawInfantP = widget.booking.selectedReturnSchedule!['infant_price'] ?? widget.booking.selectedReturnSchedule!['child_price'] ?? widget.booking.selectedReturnSchedule!['price'] ?? 0;
+                                  final infantP = rawInfantP is num ? rawInfantP.toDouble() : (double.tryParse(rawInfantP.toString()) ?? 0.0);
+
+                                  retTicket = (payingAdults * adultP) +
+                                      (payingChildren * childP) +
+                                      (payingMinors * minorP) +
+                                      (payingInfants * infantP);
                                 }
                                 if (widget.booking.mode == 'ferry') {
-                                  retClass = (widget.booking.selectedReturnFerryAccommodationPrice ?? 0) * payingPax;
+                                  final retTc = (widget.booking.selectedReturnFerryAccommodationPrice ?? 0).toDouble();
+                                  retClass = (payingAdults * retTc) + (payingChildren * retTc * 0.5);
                                 } else {
                                   retClass = (widget.booking.selectedReturnAirlineClassPrice ?? 0) * payingPax;
                                 }
@@ -10941,7 +11628,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                                   '₱${accommodationCost.toStringAsFixed(2)}'),
                             if (extraBaggageCost > 0)
                               _SummaryRow(
-                                  'Extra Baggage (${widget.booking.extraBaggageKg} kg)',
+                                  'Prepaid Extra Baggage (${widget.booking.passengersWithBaggageCount} traveler${widget.booking.passengersWithBaggageCount > 1 ? 's' : ''})',
                                   '₱${extraBaggageCost.toStringAsFixed(2)}'),
                             if (widget.booking.hasExtraBaggage &&
                                 widget.booking.mode == 'ferry')
@@ -11063,6 +11750,409 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Passenger Items Card ──────────────────────────────────────────────────────
+class _PassengerItemsCard extends StatefulWidget {
+  final List passengers;
+  final List<int>? selectedItemNumbers;
+  final ValueChanged<List<int>>? onSelectionChanged;
+  final bool showSelection;
+
+  const _PassengerItemsCard({
+    super.key,
+    required this.passengers,
+    this.selectedItemNumbers,
+    this.onSelectionChanged,
+    this.showSelection = false,
+  });
+
+  @override
+  State<_PassengerItemsCard> createState() => _PassengerItemsCardState();
+}
+
+class _PassengerItemsCardState extends State<_PassengerItemsCard> {
+  final Set<int> _expandedItems = {};
+  late List<int> _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = List<int>.from(widget.selectedItemNumbers ?? []);
+    if (_selected.isEmpty && widget.showSelection) {
+      _selected = widget.passengers.map<int>((p) {
+        if (p is Map) {
+          return int.tryParse(p['item_number']?.toString() ?? '1') ?? 1;
+        }
+        return 1;
+      }).toList();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _PassengerItemsCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.selectedItemNumbers != null) {
+      _selected = List<int>.from(widget.selectedItemNumbers!);
+    }
+  }
+
+  Color _statusBg(String status) {
+    return switch (status) {
+      'confirmed'          => const Color(0xFFDCFCE7),
+      'cancelled'          => const Color(0xFFFEE2E2),
+      'operator_cancelled' => const Color(0xFFFEE2E2),
+      'refund_pending'     => const Color(0xFFFFEDD5),
+      'refunded'           => const Color(0xFFDBEAFE),
+      'rebooking_pending'  => const Color(0xFFEDE9FE),
+      'rebooked'           => const Color(0xFFCCFBF1),
+      'operator_rebooking' => const Color(0xFFE0E7FF),
+      _                    => const Color(0xFFFEF3C7),
+    };
+  }
+
+  Color _statusFg(String status) {
+    return switch (status) {
+      'confirmed'          => const Color(0xFF166534),
+      'cancelled'          => const Color(0xFF991B1B),
+      'operator_cancelled' => const Color(0xFF991B1B),
+      'refund_pending'     => const Color(0xFF9A3412),
+      'refunded'           => const Color(0xFF1E40AF),
+      'rebooking_pending'  => const Color(0xFF5B21B6),
+      'rebooked'           => const Color(0xFF134E4A),
+      'operator_rebooking' => const Color(0xFF3730A3),
+      _                    => const Color(0xFF92400E),
+    };
+  }
+
+  String _statusLabel(String status) {
+    return switch (status) {
+      'confirmed'          => 'Confirmed',
+      'cancelled'          => 'Cancelled',
+      'operator_cancelled' => 'Cancelled by Operator',
+      'refund_pending'     => 'Refund Pending',
+      'refunded'           => 'Refunded',
+      'rebooking_pending'  => 'Rebooking Pending',
+      'rebooked'           => 'Rebooked',
+      'operator_rebooking' => 'Operator Rebooking',
+      _                    => 'Pending',
+    };
+  }
+
+  double _pd(dynamic v) {
+    if (v == null) return 0.0;
+    return double.tryParse(v.toString()) ?? 0.0;
+  }
+
+  void _toggleSelectAll() {
+    setState(() {
+      if (_selected.length == widget.passengers.length) {
+        _selected.clear();
+      } else {
+        _selected = widget.passengers.map<int>((p) {
+          if (p is Map) {
+            return int.tryParse(p['item_number']?.toString() ?? '1') ?? 1;
+          }
+          return 1;
+        }).toList();
+      }
+    });
+    widget.onSelectionChanged?.call(_selected);
+  }
+
+  void _toggleItem(int itemNum) {
+    setState(() {
+      if (_selected.contains(itemNum)) {
+        _selected.remove(itemNum);
+      } else {
+        _selected.add(itemNum);
+        _selected.sort();
+      }
+    });
+    widget.onSelectionChanged?.call(_selected);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.passengers.isEmpty) return const SizedBox.shrink();
+
+    final sorted = List<dynamic>.from(widget.passengers)
+      ..sort((a, b) {
+        final ia = a is Map ? (int.tryParse(a['item_number']?.toString() ?? '0') ?? 0) : 0;
+        final ib = b is Map ? (int.tryParse(b['item_number']?.toString() ?? '0') ?? 0) : 0;
+        return ia.compareTo(ib);
+      });
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Passenger Items',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+            ),
+            if (widget.showSelection)
+              TextButton(
+                onPressed: _toggleSelectAll,
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  _selected.length == widget.passengers.length ? 'Deselect All' : 'Select All',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: kPink),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ...sorted.map((p) {
+          if (p is! Map) return const SizedBox.shrink();
+          final itemNumInt = int.tryParse(p['item_number']?.toString() ?? '1') ?? 1;
+          final itemNum    = itemNumInt.toString();
+          final ticketNum  = p['ticket_number']?.toString() ?? '';
+          final name       = p['name']?.toString() ?? 'Passenger';
+          final type       = (p['type']?.toString() ?? 'adult').toUpperCase();
+          final bday       = p['birthdate']?.toString() ?? '';
+          final idNum      = p['id_number']?.toString() ?? '';
+          final discount   = p['discount']?['name']?.toString() ?? '';
+          final status     = p['status']?.toString() ?? 'pending';
+          final statusLabel = _statusLabel(status);
+          final bg         = _statusBg(status);
+          final fg         = _statusFg(status);
+
+          final fareAmt    = _pd(p['fare_amount']);
+          final accAmt     = _pd(p['accommodation_amount']);
+          final fareAndClass = _pd(p['fare_and_class']) > 0 ? _pd(p['fare_and_class']) : (fareAmt + accAmt);
+          final discAmt    = _pd(p['discount_amount']);
+          final voucherAmt = _pd(p['voucher_discount_share']);
+          final pointsAmt  = _pd(p['points_discount_share']);
+          final webFee     = _pd(p['web_admin_fee_share']) > 0 ? _pd(p['web_admin_fee_share']) : 25.0;
+          final txFee      = _pd(p['transaction_fee_share']) > 0 ? _pd(p['transaction_fee_share']) : 50.0;
+          final itemTotal  = _pd(p['item_total']) > 0
+              ? _pd(p['item_total'])
+              : (fareAndClass - discAmt - voucherAmt - pointsAmt + webFee + txFee);
+
+          final isExpanded = _expandedItems.contains(itemNumInt);
+          final isSelected = _selected.contains(itemNumInt);
+
+          return Card(
+            margin: const EdgeInsets.only(bottom: 10),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+              side: BorderSide(
+                color: isSelected && widget.showSelection ? kPink : bg.withOpacity(0.6),
+                width: isSelected && widget.showSelection ? 1.5 : 1.0,
+              ),
+            ),
+            color: bg.withOpacity(0.12),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: () {
+                setState(() {
+                  if (isExpanded) {
+                    _expandedItems.remove(itemNumInt);
+                  } else {
+                    _expandedItems.add(itemNumInt);
+                  }
+                });
+              },
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ── Header: Checkbox + item badge + name + status chip + chevron ─────
+                    Row(
+                      children: [
+                        if (widget.showSelection)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: Checkbox(
+                                value: isSelected,
+                                activeColor: kPink,
+                                onChanged: (_) => _toggleItem(itemNumInt),
+                              ),
+                            ),
+                          ),
+                        CircleAvatar(
+                          radius: 13,
+                          backgroundColor: const Color(0xFF1E293B),
+                          child: Text(
+                            itemNum,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      name,
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold, fontSize: 13),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.7),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      type,
+                                      style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: kSlate600),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (ticketNum.isNotEmpty)
+                                Text(
+                                  ticketNum,
+                                  style: TextStyle(
+                                      fontFamily: 'monospace',
+                                      fontSize: 10,
+                                      color: Colors.grey.shade500),
+                                ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: bg,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: fg.withOpacity(0.3)),
+                          ),
+                          child: Text(
+                            statusLabel,
+                            style: TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.bold,
+                                color: fg),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          isExpanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                          color: Colors.grey.shade600,
+                          size: 20,
+                        ),
+                      ],
+                    ),
+
+                    // ── Collapsible Body ──────────────────────────────────────────
+                    if (isExpanded) ...[
+                      const SizedBox(height: 10),
+                      // Detail pills
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: [
+                          _detailPill('Type', type),
+                          if (bday.isNotEmpty) _detailPill('Bday', bday),
+                          if (discount.isNotEmpty) _detailPill('Discount', discount),
+                          if (idNum.isNotEmpty) _detailPill('ID#', idNum),
+                          if (p['passport_number'] != null && p['passport_number'].toString().isNotEmpty)
+                            _detailPill('Passport', p['passport_number'].toString()),
+                          if (p['extra_baggage_weight'] != null && p['extra_baggage_weight'].toString().isNotEmpty)
+                            _detailPill('Baggage', '${p['extra_baggage_weight']} (+₱${_pd(p['extra_baggage_price']).toStringAsFixed(2)})'),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      // Individual Financial breakdown
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.85),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'ITEM PRICE BREAKDOWN',
+                              style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 0.5),
+                            ),
+                            const SizedBox(height: 4),
+                            _finRow('Ticket & Transport Class', fareAndClass),
+                            if (discAmt > 0) _finRow('Discount ($discount)', -discAmt, color: const Color(0xFF16A34A)),
+                            if (voucherAmt > 0) _finRow('Voucher Share', -voucherAmt, color: const Color(0xFF16A34A)),
+                            if (pointsAmt > 0) _finRow('Gracia Points', -pointsAmt, color: const Color(0xFF16A34A)),
+                            if (webFee > 0) _finRow('Web Admin Fee', webFee, color: Colors.grey.shade700),
+                            if (txFee > 0) _finRow('Transaction Fee', txFee, color: Colors.grey.shade700),
+                            if (_pd(p['extra_baggage_price']) > 0) _finRow('Extra Baggage Fee', _pd(p['extra_baggage_price']), color: Colors.grey.shade700),
+                            const Divider(height: 10, thickness: 0.5),
+                            _finRow('Item Total', itemTotal,
+                                color: const Color(0xFFEE018D), bold: true),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _detailPill(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.75),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Text(
+        '$label: $value',
+        style: TextStyle(fontSize: 10.5, color: Colors.grey.shade800),
+      ),
+    );
+  }
+
+  Widget _finRow(String label, double amount,
+      {Color color = Colors.black87, bool bold = false}) {
+    final isNeg = amount < 0;
+    final displayAmt = '${isNeg ? '-' : ''}₱${amount.abs().toStringAsFixed(2)}';
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label,
+              style: TextStyle(fontSize: 11.5, color: Colors.grey.shade700)),
+          Text(displayAmt,
+              style: TextStyle(
+                  fontSize: 11.5,
+                  color: color,
+                  fontWeight: bold ? FontWeight.bold : FontWeight.normal)),
         ],
       ),
     );
@@ -16442,15 +17532,56 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
                   ),
                 ],
                 const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
+                // ── Reference Number & QR Code ──
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: kSlate200),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // QR Code
+                      Builder(builder: (context) {
+                        final txNum = widget.booking['transaction_number']?.toString() ?? '';
+                        if (txNum.isEmpty) {
+                          return Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              color: kSlate100,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: kSlate200),
+                            ),
+                            child: const Center(
+                              child: Icon(Icons.qr_code_2_rounded, size: 40, color: kSlate400),
+                            ),
+                          );
+                        }
+                        return Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: kSlate200)),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: kSlate200),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: QrImageView(
+                              data: txNum,
+                              version: QrVersions.auto,
+                              size: 80,
+                              backgroundColor: Colors.white,
+                              errorCorrectionLevel: QrErrorCorrectLevel.M,
+                            ),
+                          ),
+                        );
+                      }),
+                      const SizedBox(width: 14),
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -16460,46 +17591,33 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
                                     fontWeight: FontWeight.bold,
                                     color: kSlate400,
                                     letterSpacing: 1)),
-                            const SizedBox(height: 4),
-                            Text(widget.booking['transaction_number'] ?? '—',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w900,
-                                    color: kSlate800)),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: kSlate200)),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
+                            const SizedBox(height: 3),
+                            SelectableText(
+                              widget.booking['transaction_number'] ?? '—',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 15,
+                                  color: kSlate800),
+                            ),
+                            const SizedBox(height: 8),
                             const Text('Service Resume Date',
                                 style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
                                     color: kSlate400,
                                     letterSpacing: 1)),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 3),
                             Text(
                               resumeDate ?? 'To Be Announced',
                               style: TextStyle(
                                   fontWeight: FontWeight.w900,
-                                  color: resumeDate != null
-                                      ? kGreen
-                                      : Colors.amber.shade700),
+                                  color: resumeDate != null ? kGreen : Colors.amber.shade700),
                             ),
                           ],
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -16589,7 +17707,7 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Cancel & Request 100% Refund',
+                          Text('Cancel & Request Refund',
                               style: TextStyle(
                                   fontWeight: FontWeight.w900,
                                   fontSize: 16,
@@ -16600,9 +17718,32 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
                                   setState(() => _showRefundForm = false)),
                         ],
                       ),
-                      Text(
-                        'Since this cancellation was caused by the operator, you are entitled to a full refund of ₱${totalPrice?.toString() ?? '—'}.',
-                        style: const TextStyle(fontSize: 13, color: kSlate600),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Since this voyage was cancelled by the operator, your ticket fares and accommodation charges are 100% refundable.',
+                        style: TextStyle(fontSize: 13, color: kSlate600),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.shade50,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.amber.shade200),
+                        ),
+                        child: const Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(Icons.info_outline, size: 16, color: Color(0xFFB45309)),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Advisory: Web administrative and payment processing fees are non-refundable per booking policy to cover automated payment gateway costs.',
+                                style: TextStyle(fontSize: 11.5, color: Color(0xFF92400E), height: 1.3),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 16),
                       // Refund Method
@@ -17250,32 +18391,91 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
                             'Price difference', 'No extra payment required'),
                       const SizedBox(height: 12),
                       if (_priceDiff > 0) ...[
-                        const Text(
-                            'Upload proof of payment for the price difference',
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                                color: kSlate800)),
-                        const SizedBox(height: 10),
-                        Row(
+                        const Divider(height: 24),
+                        const Row(
                           children: [
+                            Icon(Icons.upload_rounded, size: 16, color: kSlate600),
+                            SizedBox(width: 6),
                             Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: _pickPriceProof,
-                                icon: const Icon(Icons.upload_file),
-                                label: Text(_priceProofFile == null
-                                    ? 'Upload proof'
-                                    : 'Change proof'),
+                              child: Text(
+                                'Upload proof of payment for the price difference',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    color: kSlate800),
                               ),
                             ),
                           ],
                         ),
+                        const SizedBox(height: 10),
+                        // Proof preview card
                         if (_priceProofFile != null) ...[
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.network(
+                              _priceProofFile!.path,
+                              height: 160,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                height: 60,
+                                decoration: BoxDecoration(
+                                  color: kGreen.withOpacity(0.07),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: kGreen.withOpacity(0.3)),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.check_circle_rounded, color: kGreen, size: 20),
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: Text(
+                                        _priceProofFile!.name,
+                                        style: const TextStyle(color: kGreen, fontSize: 12, fontWeight: FontWeight.w600),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
                           const SizedBox(height: 8),
-                          Text('Selected file: ${_priceProofFile!.name}',
-                              style: const TextStyle(
-                                  color: kSlate600, fontSize: 12)),
+                        ] else ...[
+                          Container(
+                            height: 60,
+                            decoration: BoxDecoration(
+                              color: Colors.amber.shade50,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: Colors.amber.shade300),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.warning_amber_rounded, color: Colors.amber.shade700, size: 18),
+                                const SizedBox(width: 8),
+                                Text('Proof required to submit',
+                                    style: TextStyle(color: Colors.amber.shade800, fontSize: 12, fontWeight: FontWeight.w600)),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
                         ],
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: _pickPriceProof,
+                            icon: Icon(_priceProofFile == null ? Icons.upload_file_rounded : Icons.edit_rounded, size: 18),
+                            label: Text(_priceProofFile == null ? 'Upload Proof of Payment' : 'Change Proof'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: kGreen,
+                              side: BorderSide(color: _priceProofFile == null ? Colors.amber.shade400 : kGreen),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
                       ],
                     ],
                   ),
@@ -17285,30 +18485,64 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
             ],
 
             // ── Submit Reschedule Button ──
-            if (_selectedScheduleId != null &&
-                (!_isReturnTrip || _selectedReturnScheduleId != null))
-              SizedBox(
+            Builder(builder: (context) {
+              final bool hasSchedule = _selectedScheduleId != null &&
+                  (!_isReturnTrip || _selectedReturnScheduleId != null);
+              final bool proofRequired = _priceDiff > 0 && _priceProofFile == null;
+              final bool canSubmit = hasSchedule && !proofRequired && !_isSubmitting;
+              return SizedBox(
                 width: double.infinity,
-                height: 50,
+                height: 52,
                 child: ElevatedButton(
-                  onPressed: _isSubmitting ? null : _submitReschedule,
+                  onPressed: !hasSchedule || _isSubmitting
+                      ? null
+                      : proofRequired
+                          ? () {
+                              setState(() => _feedback =
+                                  'Please upload proof of payment for the price difference before submitting.');
+                            }
+                          : _submitReschedule,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: kGreen,
+                    backgroundColor: canSubmit ? kGreen : (proofRequired ? Colors.amber.shade700 : kSlate400),
                     foregroundColor: Colors.white,
+                    disabledBackgroundColor: kSlate300,
+                    disabledForegroundColor: Colors.white60,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                        borderRadius: BorderRadius.circular(14)),
+                    elevation: canSubmit ? 3 : 0,
                   ),
                   child: _isSubmitting
                       ? const SizedBox(
-                          width: 20,
-                          height: 20,
+                          width: 22,
+                          height: 22,
                           child: CircularProgressIndicator(
                               color: Colors.white, strokeWidth: 2.5))
-                      : const Text('Submit Reschedule Request',
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 15)),
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              proofRequired
+                                  ? Icons.upload_rounded
+                                  : !hasSchedule
+                                      ? Icons.schedule_rounded
+                                      : Icons.check_circle_rounded,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              proofRequired
+                                  ? 'Upload Proof to Continue'
+                                  : !hasSchedule
+                                      ? 'Select a Schedule First'
+                                      : 'Submit Reschedule Request',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 15),
+                            ),
+                          ],
+                        ),
                 ),
-              ),
+              );
+            }),
           ],
           const SizedBox(height: 32),
         ],
@@ -17330,6 +18564,8 @@ class _RefundScreenState extends State<RefundScreen> {
   bool _isSubmitting = false;
   String _error = '';
   String _success = '';
+  String _affectedItemsLabel = '';
+  List<int> _selectedPassengerItems = [];
   double? _cancellationFee;
   double? _refundAmount;
   double? _transactionFee;
@@ -17347,6 +18583,17 @@ class _RefundScreenState extends State<RefundScreen> {
   @override
   void initState() {
     super.initState();
+    final pax = widget.booking['passengers'];
+    if (pax is List && pax.isNotEmpty) {
+      _selectedPassengerItems = pax.map<int>((p) {
+        if (p is Map) {
+          return int.tryParse(p['item_number']?.toString() ?? '1') ?? 1;
+        }
+        return 1;
+      }).toList();
+    } else {
+      _selectedPassengerItems = [1];
+    }
     _startCancellation();
   }
 
@@ -17359,6 +18606,19 @@ class _RefundScreenState extends State<RefundScreen> {
   }
 
   Future<void> _startCancellation() async {
+    if (_selectedPassengerItems.isEmpty) {
+      setState(() {
+        _refundAmount = 0;
+        _cancellationFee = 0;
+        _transactionFee = 0;
+        _webAdminFee = 0;
+        _surchargeAmount = 0;
+        _affectedItemsLabel = 'None selected';
+        _isLoading = false;
+      });
+      return;
+    }
+    setState(() => _isLoading = true);
     try {
       final baseUrl = UserSession.getBaseUrl();
       final res = await http.post(
@@ -17369,10 +18629,12 @@ class _RefundScreenState extends State<RefundScreen> {
           body: {
             'email': UserSession.email,
             'action': 'start',
+            'passenger_items': _selectedPassengerItems.join(','),
           });
       final data = jsonDecode(res.body);
       if (res.statusCode == 200 && data['status'] == 'success') {
         setState(() {
+          _affectedItemsLabel = data['affected_items']?.toString() ?? '';
           _cancellationFee = _parseDouble(data['cancellation_fee']);
           _refundAmount = _parseDouble(data['refund_amount']);
           _transactionFee = _parseDouble(data['transaction_fee']);
@@ -17401,6 +18663,11 @@ class _RefundScreenState extends State<RefundScreen> {
   }
 
   Future<void> _submitRefund() async {
+    if (_selectedPassengerItems.isEmpty) {
+      showTopSnack(context,
+          const SnackBar(content: Text('Please select at least one passenger item to refund.')));
+      return;
+    }
     if (_accountCtrl.text.trim().isEmpty || _nameCtrl.text.trim().isEmpty) {
       showTopSnack(context,
           const SnackBar(content: Text('Please fill out all refund details')));
@@ -17426,11 +18693,12 @@ class _RefundScreenState extends State<RefundScreen> {
             'email': UserSession.email,
             'action': 'confirm',
             'refund_destination': dest,
+            'passenger_items': _selectedPassengerItems.join(','),
           });
       final data = jsonDecode(res.body);
       if (res.statusCode == 200) {
         setState(() => _success =
-            'Refund requested successfully! You will receive an email confirmation shortly.');
+            'Your refund request has been submitted successfully! Please allow 24–48 hours for our finance team to review and disburse your refund to your designated account. A confirmation email has been sent.');
       } else {
         if (!mounted) return;
         showTopSnack(
@@ -17483,10 +18751,11 @@ class _RefundScreenState extends State<RefundScreen> {
         (_webAdminFee ?? 0) +
         (_rebookingSurcharge ?? 0) +
         (_rebookingRevalidationFee ?? 0);
+    final paxList = widget.booking['passengers'] is List ? (widget.booking['passengers'] as List) : [];
 
     return Scaffold(
         appBar: AppBar(title: const Text('Request Refund')),
-        body: _isLoading
+        body: _isLoading && _refundAmount == null
             ? const Center(child: CircularProgressIndicator())
             : _error.isNotEmpty
                 ? Center(
@@ -17525,6 +18794,18 @@ class _RefundScreenState extends State<RefundScreen> {
                     : ListView(
                         padding: const EdgeInsets.all(16),
                         children: [
+                          if (paxList.isNotEmpty) ...[
+                            _PassengerItemsCard(
+                              passengers: paxList,
+                              showSelection: true,
+                              selectedItemNumbers: _selectedPassengerItems,
+                              onSelectionChanged: (selectedItems) {
+                                setState(() => _selectedPassengerItems = selectedItems);
+                                _startCancellation();
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                          ],
                           Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
@@ -17536,11 +18817,32 @@ class _RefundScreenState extends State<RefundScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('Refund Available',
-                                      style: TextStyle(
-                                          color: Color(0xFF92400E),
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16)),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text('Refund Breakdown',
+                                          style: TextStyle(
+                                              color: Color(0xFF92400E),
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16)),
+                                      if (_affectedItemsLabel.isNotEmpty)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFFEF3C7),
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(color: const Color(0xFFF59E0B)),
+                                          ),
+                                          child: Text(
+                                            _affectedItemsLabel,
+                                            style: const TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFFB45309)),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
                                   const SizedBox(height: 4),
                                   const Text(
                                       'The 100% refund window has expired. See the breakdown of your refund below.',
@@ -17548,7 +18850,7 @@ class _RefundScreenState extends State<RefundScreen> {
                                           color: Color(0xFF92400E),
                                           fontSize: 12)),
                                   const SizedBox(height: 16),
-                                  _buildBreakdownRow('Base Ticket Price:',
+                                  _buildBreakdownRow('Base Ticket & Class:',
                                       baseTicketPrice.toStringAsFixed(2)),
                                   if ((_surchargeAmount ?? 0) > 0)
                                     _buildBreakdownRow(
@@ -17556,22 +18858,22 @@ class _RefundScreenState extends State<RefundScreen> {
                                         _surchargeAmount!.toStringAsFixed(2),
                                         isNegative: true),
                                   if (nonRefundableFees > 0) ...[
-                                    _buildBreakdownRow('Non-Refundable Fees',
-                                        nonRefundableFees.toStringAsFixed(2),
-                                        isNegative: true, isBold: true),
                                     if ((_webAdminFee ?? 0) > 0)
                                       _buildBreakdownRow('Web Admin Fee',
                                           _webAdminFee!.toStringAsFixed(2),
-                                          isSub: true),
+                                          isNegative: true,
+                                          isSub: false),
                                     if ((_transactionFee ?? 0) > 0)
                                       _buildBreakdownRow('Transaction Fee',
                                           _transactionFee!.toStringAsFixed(2),
-                                          isSub: true),
+                                          isNegative: true,
+                                          isSub: false),
                                     if ((_rebookingRevalidationFee ?? 0) > 0)
                                       _buildBreakdownRow(
                                           'Revalidation Fee',
                                           _rebookingRevalidationFee!
                                               .toStringAsFixed(2),
+                                          isNegative: true,
                                           isSub: true),
                                   ],
                                   const Padding(
@@ -17667,7 +18969,7 @@ class _RefundScreenState extends State<RefundScreen> {
                                         child: CircularProgressIndicator(
                                             color: Colors.white,
                                             strokeWidth: 2))
-                                    : const Text('Confirm Cancellation'),
+                                    : const Text('Confirm Refund Request'),
                               ),
                               OutlinedButton(
                                 style: OutlinedButton.styleFrom(

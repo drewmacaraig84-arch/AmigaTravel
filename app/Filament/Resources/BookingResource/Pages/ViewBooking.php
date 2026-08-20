@@ -80,9 +80,31 @@ class ViewBooking extends ViewRecord
     private function renderPriceBreakdownContent(): HtmlString
     {
         $breakdown = $this->record->getPriceBreakdown();
-        $total = (float) $this->record->total_price;
+        $total     = (float) $this->record->total_price;
 
-        $html = '<div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">';
+        // Sum what the breakdown items give us
+        $computedSum = array_sum(array_column($breakdown, 'amount'));
+
+        // If there is a discrepancy between computed items and stored total_price,
+        // insert a reconciliation row so the table always balances.
+        $diff = round($total - $computedSum, 2);
+        if (abs($diff) >= 0.01) {
+            if ($diff > 0) {
+                $breakdown[] = [
+                    'label'  => 'Service Fees & Adjustments',
+                    'amount' => $diff,
+                    'class'  => 'text-slate-500',
+                ];
+            } else {
+                $breakdown[] = [
+                    'label'  => 'Discount / Adjustment',
+                    'amount' => $diff,          // negative → shown as discount
+                    'class'  => 'text-green-600',
+                ];
+            }
+        }
+
+        $html  = '<div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">';
         $html .= '<table class="w-full text-sm text-left text-gray-700 dark:text-gray-200">';
         $html .= '<thead class="text-xs uppercase bg-gray-50 dark:bg-gray-700/50 text-gray-500 border-b border-gray-200 dark:border-gray-700">';
         $html .= '<tr><th class="py-2.5 px-3">Item / Description</th><th class="py-2.5 px-3 text-right">Amount</th></tr>';
@@ -90,15 +112,18 @@ class ViewBooking extends ViewRecord
         $html .= '<tbody class="divide-y divide-gray-100 dark:divide-gray-700/50">';
 
         foreach ($breakdown as $item) {
-            $label = htmlspecialchars($item['label'] ?? '');
-            $amount = (float) ($item['amount'] ?? 0);
+            $label     = htmlspecialchars($item['label'] ?? '');
+            $amount    = (float) ($item['amount'] ?? 0);
             $isDiscount = $amount < 0;
-            $class = $isDiscount ? 'text-green-600 font-medium' : '';
+            $rowClass  = $item['class'] ?? '';
+            if ($isDiscount && !$rowClass) {
+                $rowClass = 'text-green-600 font-medium';
+            }
             $displayAmount = ($isDiscount ? '-₱' : '₱') . number_format(abs($amount), 2);
 
             $html .= '<tr class="hover:bg-gray-50/50 dark:hover:bg-gray-700/20">';
-            $html .= '<td class="py-2 px-3">' . $label . '</td>';
-            $html .= '<td class="py-2 px-3 text-right font-medium ' . $class . '">' . $displayAmount . '</td>';
+            $html .= '<td class="py-2 px-3 ' . htmlspecialchars($rowClass) . '">' . $label . '</td>';
+            $html .= '<td class="py-2 px-3 text-right font-medium ' . htmlspecialchars($rowClass) . '">' . $displayAmount . '</td>';
             $html .= '</tr>';
         }
 
@@ -115,10 +140,80 @@ class ViewBooking extends ViewRecord
         return new HtmlString($html);
     }
 
+    private function renderPassengerItemsContent(): HtmlString
+    {
+        $passengers = $this->record->passengers->sortBy('item_number');
+        if ($passengers->isEmpty()) {
+            return new HtmlString('<span class="text-gray-500">No passenger items recorded.</span>');
+        }
+
+        $html  = '<div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 space-y-4">';
+        $html .= '<div class="overflow-x-auto">';
+        $html .= '<table class="w-full text-sm text-left text-gray-700 dark:text-gray-200">';
+        $html .= '<thead class="text-xs uppercase bg-gray-50 dark:bg-gray-700/50 text-gray-500 border-b border-gray-200 dark:border-gray-700">';
+        $html .= '<tr>';
+        $html .= '<th class="py-2.5 px-3">Item #</th>';
+        $html .= '<th class="py-2.5 px-3">Passenger</th>';
+        $html .= '<th class="py-2.5 px-3">Status</th>';
+        $html .= '<th class="py-2.5 px-3 text-right">Fare & Transport Class</th>';
+        $html .= '<th class="py-2.5 px-3 text-right">Web Admin Fee</th>';
+        $html .= '<th class="py-2.5 px-3 text-right">Transaction Fee</th>';
+        $html .= '<th class="py-2.5 px-3 text-right">Item Total</th>';
+        $html .= '</tr>';
+        $html .= '</thead>';
+        $html .= '<tbody class="divide-y divide-gray-100 dark:divide-gray-700/50">';
+
+        foreach ($passengers as $p) {
+            $itemNum = $p->item_number ?? 1;
+            $name = htmlspecialchars($p->name ?? 'Passenger');
+            $type = htmlspecialchars(ucfirst($p->type ?? 'adult'));
+            $ticket = $p->ticket_number ? '<div class="text-xs text-gray-400 font-mono">' . htmlspecialchars($p->ticket_number) . '</div>' : '';
+            $statusLabel = htmlspecialchars($p->getStatusLabel());
+            $statusColor = $p->getStatusColor();
+            $badgeColorClass = match($statusColor) {
+                'success' => 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
+                'danger'  => 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
+                'warning' => 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
+                'info'    => 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
+                'primary' => 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300',
+                default   => 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+            };
+
+            $fareAndClass = $p->getEffectiveFareAndClass();
+            $webFee = $p->getEffectiveWebAdminFee();
+            $txFee = $p->getEffectiveTransactionFee();
+            $itemTotal = $p->getEffectiveItemTotal();
+
+            $html .= '<tr class="hover:bg-gray-50/50 dark:hover:bg-gray-700/20">';
+            $html .= '<td class="py-2.5 px-3 font-bold text-gray-900 dark:text-white">Item ' . $itemNum . '</td>';
+            $html .= '<td class="py-2.5 px-3"><span class="font-medium text-gray-900 dark:text-white">' . $name . '</span> <span class="text-xs text-gray-500">(' . $type . ')</span>' . $ticket . '</td>';
+            $html .= '<td class="py-2.5 px-3"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ' . $badgeColorClass . '">' . $statusLabel . '</span></td>';
+            $html .= '<td class="py-2.5 px-3 text-right font-medium">₱' . number_format($fareAndClass, 2) . '</td>';
+            $html .= '<td class="py-2.5 px-3 text-right text-gray-500">₱' . number_format($webFee, 2) . '</td>';
+            $html .= '<td class="py-2.5 px-3 text-right text-gray-500">₱' . number_format($txFee, 2) . '</td>';
+            $html .= '<td class="py-2.5 px-3 text-right font-bold text-primary-600 dark:text-primary-400">₱' . number_format($itemTotal, 2) . '</td>';
+            $html .= '</tr>';
+        }
+
+        $html .= '</tbody>';
+        $html .= '</table>';
+        $html .= '</div>';
+        $html .= '</div>';
+
+        return new HtmlString($html);
+    }
+
     public function form(Form $form): Form
     {
         return $form
             ->schema([
+                Section::make('Passenger Items & Financial Breakdown')
+                    ->schema([
+                        Placeholder::make('passenger_items_breakdown')
+                            ->label('')
+                            ->content(fn (): HtmlString => $this->renderPassengerItemsContent())
+                            ->columnSpanFull(),
+                    ]),
                 Section::make('Price Breakdown')
                     ->schema([
                         Placeholder::make('price_breakdown')
@@ -235,100 +330,154 @@ class ViewBooking extends ViewRecord
                             ->columnSpanFull(),
                     ])
                     ->columns(2),
-                Section::make('Passenger details')
+                Section::make('Passenger Items')
                     ->schema([
-                        Repeater::make('passengers')
-                            ->label('Passengers')
-                            ->disableLabel()
-                            ->schema([
-                                TextInput::make('name')
-                                    ->label('Name')
-                                    ->disabled(),
-                                TextInput::make('type')
-                                    ->label('Type')
-                                    ->disabled(),
-                                TextInput::make('birthdate')
-                                    ->label('Birthdate')
-                                    ->disabled(),
-                                TextInput::make('discount')
-                                    ->label('Discount')
-                                    ->disabled(),
-                                TextInput::make('id_number')
-                                    ->label('ID Number')
-                                    ->disabled(),
-                                Placeholder::make('id_image_front_view')
-                                    ->label('Front ID Image')
-                                    ->content(fn (?array $state = null): HtmlString => $this->renderPassengerIdLinkContent($state)),
-                                Placeholder::make('id_image_back_view')
-                                    ->label('Back ID Image')
-                                    ->content(fn (?array $state = null): HtmlString => $this->renderPassengerIdBackLinkContent($state)),
-                            ])
-                            ->columns(3)
-                            ->visible(fn (): bool => $this->record->passengers->isNotEmpty()),
-                    ]),
-                Section::make('Cancellation Details')
-                    ->schema([
-                        Placeholder::make('cancellation_refund_info')
-                            ->label('Cancellation & Refund Info')
+                        Placeholder::make('passenger_items_table')
+                            ->label('')
                             ->columnSpanFull()
                             ->content(function (): HtmlString {
-                                $booking = $this->record;
+                                $passengers = $this->record->passengers->sortBy('item_number');
 
-                                // Determine refund type and amount
-                                $isServiceCancellation = filled($booking->service_cancellation_id);
-                                $refundPercent = $isServiceCancellation ? 100 : 50;
-                                $refundAmount = $booking->refund_amount ?? ($booking->total_price * $refundPercent / 100);
-
-                                $html = '<div class="space-y-4">';
-
-                                // Refund amount row
-                                $html .= '<div class="grid grid-cols-2 gap-4">';
-                                $html .= '<div><p class="text-xs uppercase tracking-wide text-gray-500 mb-1">Refund Type</p>';
-                                $html .= '<p class="font-medium">' . ($isServiceCancellation ? '100% — Service Cancellation (Full Refund)' : '50% — Customer-Initiated Cancellation') . '</p></div>';
-                                $html .= '<div><p class="text-xs uppercase tracking-wide text-gray-500 mb-1">Refund Amount</p>';
-                                $html .= '<p class="font-semibold text-green-400">₱' . number_format($refundAmount, 2) . '</p></div>';
-                                $html .= '</div>';
-
-                                // Parse refund_destination string
-                                $destination = $booking->refund_destination;
-                                if (! filled($destination)) {
-                                    $html .= '<p class="text-gray-500 text-sm">No refund destination provided yet.</p>';
-                                    $html .= '</div>';
-                                    return new HtmlString($html);
+                                if ($passengers->isEmpty()) {
+                                    return new HtmlString('<p class="text-sm text-gray-500">No passengers recorded.</p>');
                                 }
 
-                                $parts = array_map('trim', explode('|', $destination));
-                                $parsed = [];
-                                foreach ($parts as $part) {
-                                    if (str_contains($part, ':')) {
-                                        [$key, $val] = array_map('trim', explode(':', $part, 2));
-                                        $parsed[$key] = $val;
+                                $statusColors = [
+                                    'pending'            => 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300',
+                                    'confirmed'          => 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
+                                    'cancelled'          => 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
+                                    'operator_cancelled' => 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
+                                    'operator_rebooking' => 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300',
+                                    'refund_pending'     => 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300',
+                                    'refunded'           => 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
+                                    'rebooking_pending'  => 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300',
+                                    'rebooked'           => 'bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300',
+                                ];
+
+                                $html  = '<div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">';
+                                $html .= '<table class="w-full text-sm text-left text-gray-700 dark:text-gray-200">';
+                                $html .= '<thead class="text-xs uppercase bg-gray-50 dark:bg-gray-800 text-gray-500 border-b border-gray-200 dark:border-gray-700">';
+                                $html .= '<tr>
+                                    <th class="py-2.5 px-3">Item #</th>
+                                    <th class="py-2.5 px-3">Status</th>
+                                    <th class="py-2.5 px-3">Passenger</th>
+                                    <th class="py-2.5 px-3">Type</th>
+                                    <th class="py-2.5 px-3">Birthdate</th>
+                                    <th class="py-2.5 px-3">Discount</th>
+                                    <th class="py-2.5 px-3 text-right">Fare</th>
+                                    <th class="py-2.5 px-3 text-right">Acc.</th>
+                                    <th class="py-2.5 px-3 text-right">Discount Amt</th>
+                                    <th class="py-2.5 px-3 text-right">Voucher</th>
+                                    <th class="py-2.5 px-3 text-right">Points</th>
+                                    <th class="py-2.5 px-3 text-right">Fees</th>
+                                    <th class="py-2.5 px-3 text-right font-bold">Item Total</th>
+                                    <th class="py-2.5 px-3">IDs</th>
+                                </tr>';
+                                $html .= '</thead>';
+                                $html .= '<tbody class="divide-y divide-gray-100 dark:divide-gray-700/50">';
+
+                                foreach ($passengers as $p) {
+                                    $itemNum    = $p->item_number ?? '—';
+                                    $ticketNum  = $p->ticket_number ?? '—';
+                                    $status     = $p->status ?? 'pending';
+                                    $statusLabel = $p->getStatusLabel();
+                                    $colorClass = $statusColors[$status] ?? 'bg-gray-100 text-gray-700';
+                                    $name       = e($p->name ?? 'N/A');
+                                    $type       = e(strtoupper($p->type ?? 'adult'));
+                                    $bday       = $p->birthdate ? $p->birthdate->format('Y-m-d') : 'N/A';
+                                    $discount   = e($p->discount?->name ?: 'None');
+                                    $fareAmt    = '₱' . number_format((float) $p->fare_amount, 2);
+                                    $accAmt     = '₱' . number_format((float) $p->accommodation_amount, 2);
+                                    $discAmt    = $p->discount_amount > 0 ? '-₱' . number_format((float) $p->discount_amount, 2) : '—';
+                                    $voucherAmt = $p->voucher_discount_share > 0 ? '-₱' . number_format((float) $p->voucher_discount_share, 2) : '—';
+                                    $pointsAmt  = $p->points_discount_share > 0 ? '-₱' . number_format((float) $p->points_discount_share, 2) : '—';
+                                    $feesAmt    = '₱' . number_format((float) ($p->web_admin_fee_share + $p->transaction_fee_share), 2);
+                                    $itemTotal  = '₱' . number_format((float) $p->item_total, 2);
+
+                                    // ID image links
+                                    $idLinks = '';
+                                    if ($p->id_image_front_url) {
+                                        $idLinks .= '<a href="' . e($p->id_image_front_url) . '" target="_blank" class="text-primary-600 text-xs underline">Front</a> ';
                                     }
+                                    if ($p->id_image_back_url) {
+                                        $idLinks .= '<a href="' . e($p->id_image_back_url) . '" target="_blank" class="text-primary-600 text-xs underline">Back</a>';
+                                    }
+                                    if (! $idLinks) {
+                                        $idLinks = '<em class="text-gray-400 text-xs">—</em>';
+                                    }
+
+                                    $passportBadge = '';
+                                    if ($p->hasPassportInfo()) {
+                                        $passportBadge = '<div class="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5">🛂 <span class="font-mono font-bold">' . e($p->passport_number) . '</span> (' . e($p->passport_country ?? 'N/A') . ') &bull; Exp: ' . ($p->passport_expiry_date ? $p->passport_expiry_date->format('Y-m-d') : 'N/A') . '</div>';
+                                    }
+
+                                    $baggageBadge = '';
+                                    if ($p->hasExtraBaggage()) {
+                                        $baggageBadge = '<div class="text-[11px] text-sky-600 dark:text-sky-400 mt-0.5">🧳 <span class="font-bold">' . e($p->extra_baggage_weight) . '</span> (+₱' . number_format((float) $p->extra_baggage_price, 2) . ')</div>';
+                                    }
+
+                                    $html .= "<tr class=\"hover:bg-gray-50/50 dark:hover:bg-gray-700/20\">
+                                        <td class=\"py-2.5 px-3 font-semibold text-gray-900 dark:text-white whitespace-nowrap\">
+                                            <div class=\"text-xs font-bold\">#{$itemNum}</div>
+                                            <div class=\"text-xs text-gray-400 font-mono\">{$ticketNum}</div>
+                                        </td>
+                                        <td class=\"py-2.5 px-3\"><span class=\"inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {$colorClass}\">{$statusLabel}</span></td>
+                                        <td class=\"py-2.5 px-3 font-medium\">
+                                            <div>{$name}</div>
+                                            {$passportBadge}
+                                            {$baggageBadge}
+                                        </td>
+                                        <td class=\"py-2.5 px-3 text-xs\">{$type}</td>
+                                        <td class=\"py-2.5 px-3 text-xs\">{$bday}</td>
+                                        <td class=\"py-2.5 px-3 text-xs\">{$discount}</td>
+                                        <td class=\"py-2.5 px-3 text-right text-xs\">{$fareAmt}</td>
+                                        <td class=\"py-2.5 px-3 text-right text-xs\">{$accAmt}</td>
+                                        <td class=\"py-2.5 px-3 text-right text-xs text-green-600\">{$discAmt}</td>
+                                        <td class=\"py-2.5 px-3 text-right text-xs text-green-600\">{$voucherAmt}</td>
+                                        <td class=\"py-2.5 px-3 text-right text-xs text-green-600\">{$pointsAmt}</td>
+                                        <td class=\"py-2.5 px-3 text-right text-xs text-slate-500\">{$feesAmt}</td>
+                                        <td class=\"py-2.5 px-3 text-right text-sm font-bold text-primary-600 dark:text-primary-400\">{$itemTotal}</td>
+                                        <td class=\"py-2.5 px-3\">{$idLinks}</td>
+                                    </tr>";
                                 }
 
-                                $html .= '<div class="grid grid-cols-2 gap-4 mt-2">';
+                                $html .= '</tbody></table></div>';
 
-                                if (isset($parsed['Method'])) {
-                                    $html .= '<div><p class="text-xs uppercase tracking-wide text-gray-500 mb-1">Refund Method</p>';
-                                    $html .= '<p class="font-medium">' . e($parsed['Method']) . '</p></div>';
-                                }
-                                if (isset($parsed['Institution'])) {
-                                    $html .= '<div><p class="text-xs uppercase tracking-wide text-gray-500 mb-1">Bank / E-Wallet</p>';
-                                    $html .= '<p class="font-medium">' . e($parsed['Institution']) . '</p></div>';
-                                }
-                                if (isset($parsed['Name'])) {
-                                    $html .= '<div><p class="text-xs uppercase tracking-wide text-gray-500 mb-1">Account Name</p>';
-                                    $html .= '<p class="font-medium">' . e($parsed['Name']) . '</p></div>';
-                                }
-                                if (isset($parsed['Account No'])) {
-                                    $html .= '<div><p class="text-xs uppercase tracking-wide text-gray-500 mb-1">Account Number</p>';
-                                    $html .= '<p class="font-medium font-mono">' . e($parsed['Account No']) . '</p></div>';
-                                }
-
-                                $html .= '</div></div>';
                                 return new HtmlString($html);
                             }),
                     ])
+                    ->visible(fn (): bool => $this->record->passengers->isNotEmpty()),
+                Section::make('Cancellation & Refund Details')
+                    ->schema([
+                        Placeholder::make('cancellation_refund_type')
+                            ->label('Refund Type')
+                            ->content(fn () => filled($this->record->service_cancellation_id) ? '100% — Service Cancellation' : 'Customer Cancellation'),
+                        Placeholder::make('cancellation_refund_amount')
+                            ->label('Refund Amount')
+                            ->content(fn () => new HtmlString('<span class="font-bold text-emerald-600 dark:text-emerald-400 text-base">₱' . number_format((float) ($this->record->refund_amount ?? ($this->record->total_price * (filled($this->record->service_cancellation_id) ? 1.0 : 0.5))), 2) . '</span>')),
+                        Placeholder::make('cancellation_refund_status')
+                            ->label('Disbursement Status')
+                            ->content(fn () => new HtmlString('<span class="font-bold ' . ($this->record->isRefundCompleted() ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-500') . '">' . e($this->record->getRefundStatusLabel()) . '</span>')),
+                        Placeholder::make('cancellation_refund_destination')
+                            ->label('Destination Account')
+                            ->content(fn () => $this->record->refund_destination ?? '—')
+                            ->columnSpanFull(),
+                        Placeholder::make('cancellation_refund_reference')
+                            ->label('Transfer Reference Number')
+                            ->content(fn () => $this->record->refund_reference ?? '—')
+                            ->visible(fn () => filled($this->record->refund_reference))
+                            ->columnSpanFull(),
+                        Placeholder::make('cancellation_refund_action')
+                            ->label('')
+                            ->columnSpanFull()
+                            ->content(fn (): HtmlString => new HtmlString(
+                                '<div class="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-gray-200 dark:border-gray-700">' .
+                                '<p class="text-xs text-gray-500 dark:text-gray-400">All refund verifications and proof receipts are managed in the dedicated <strong>Refunds</strong> page.</p>' .
+                                '<a href="/admin/refunds" class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 hover:bg-primary-500 px-4 py-2 text-xs font-bold text-white transition shadow-sm">Go to Refunds Page &rarr;</a>' .
+                                '</div>'
+                            )),
+                    ])
+                    ->columns(3)
                     ->visible(fn (): bool => in_array($this->record->status, ['cancelled', 'operator_cancelled']) || filled($this->record->refund_destination)),
                 Section::make('Rebook ticket details')
                     ->schema([
@@ -386,7 +535,7 @@ class ViewBooking extends ViewRecord
                             ->nullable(),
                     ])
                     ->columns(2)
-                    ->visible(fn (): bool => $this->record->has_vehicle && $this->record->schedule?->ferryRoute?->mode !== 'airline'),
+                    ->visible(fn (): bool => (bool) $this->record->has_vehicle && stripos((string) $this->record->schedule_service, 'airline') === false),
 
                 Section::make('Disruption & Rebooking Details')
                     ->schema([

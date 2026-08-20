@@ -49,6 +49,7 @@ class ManageRebookings extends Page implements HasTable
                 Booking::query()
                     ->where(function (Builder $query) {
                         $query->where('is_rebooked', true)
+                            ->orWhere('status', 'operator_rebooking')
                             ->orWhereNotNull('rebooking_status')
                             ->orWhereNotNull('disruption_status');
                     })
@@ -62,6 +63,13 @@ class ManageRebookings extends Page implements HasTable
                     ->searchable()
                     ->sortable()
                     ->url(fn (Booking $record): string => BookingResource::getUrl('view', ['record' => $record])),
+                Tables\Columns\TextColumn::make('affected_items')
+                    ->label('Affected Item(s)')
+                    ->state(fn (Booking $record): string => $record->getAffectedItemsLabel())
+                    ->wrap()
+                    ->badge()
+                    ->color('info')
+                    ->placeholder('—'),
                 Tables\Columns\TextColumn::make('client_name')
                     ->searchable()
                     ->sortable(),
@@ -253,7 +261,7 @@ class ManageRebookings extends Page implements HasTable
                     ->icon('heroicon-m-check-circle')
                     ->color('success')
                     ->button()
-                    ->visible(fn (Booking $record): bool => in_array($record->disruption_status, ['reschedule_requested', 'cancelled_by_operator_rescheduling_required']) && filled($record->preferred_replacement_schedule_id))
+                    ->visible(fn (Booking $record): bool => (in_array($record->disruption_status, ['reschedule_requested', 'cancelled_by_operator_rescheduling_required']) || $record->status === 'operator_rebooking') && (filled($record->preferred_replacement_schedule_id) || filled($record->disruption_notes)))
                     ->form([
                         Forms\Components\Textarea::make('staff_note')
                             ->label('Internal / Customer Staff Note')

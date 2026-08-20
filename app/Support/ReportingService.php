@@ -298,6 +298,20 @@ class ReportingService
             // Previous period stats for trend comparison
             $prevStats = $this->getPreviousPeriodStats($period, $startDate, $endDate);
 
+            // Passenger Item level metrics
+            $paxQuery = Passenger::query();
+            if ($period || $startDate) {
+                $paxQuery->whereHas('booking', function (Builder $q) use ($period, $startDate, $endDate) {
+                    $this->applyPeriodFilter($q, $period, $startDate, $endDate);
+                });
+            }
+            $totalPassengers = (clone $paxQuery)->count();
+            $confirmedPassengers = (clone $paxQuery)->where('status', 'confirmed')->count();
+            $cancelledPassengers = (clone $paxQuery)->whereIn('status', ['cancelled', 'operator_cancelled'])->count();
+            $refundedPassengers = (clone $paxQuery)->where('status', 'refunded')->count();
+            $rebookedPassengers = (clone $paxQuery)->where('status', 'rebooked')->count();
+            $totalRefundDisbursed = (float) (clone $paxQuery)->where('status', 'refunded')->sum('refund_amount');
+
             return [
                 'total_bookings' => $total,
                 'completed_bookings' => $confirmed,
@@ -312,6 +326,44 @@ class ReportingService
                 'cancellation_rate' => $cancellationRate,
                 'prev_total_bookings' => $prevStats['total'],
                 'prev_total_revenue' => $prevStats['revenue'],
+                // Item-level passenger metrics
+                'total_passengers' => $totalPassengers,
+                'confirmed_passengers' => $confirmedPassengers,
+                'cancelled_passengers' => $cancelledPassengers,
+                'refunded_passengers' => $refundedPassengers,
+                'rebooked_passengers' => $rebookedPassengers,
+                'total_refund_disbursed' => $totalRefundDisbursed,
+            ];
+        });
+    }
+
+    // ─── Passenger Status Distribution (Item-Level) ──────────────
+
+    public function getPassengerStatusDistribution(?string $period = null, ?string $startDate = null, ?string $endDate = null): array
+    {
+        $key = "passenger_status_dist_{$period}_{$startDate}_{$endDate}";
+
+        return Cache::remember($key, self::CACHE_TTL, function () use ($period, $startDate, $endDate) {
+            $query = Passenger::query();
+            if ($period || $startDate) {
+                $query->whereHas('booking', function (Builder $q) use ($period, $startDate, $endDate) {
+                    $this->applyPeriodFilter($q, $period, $startDate, $endDate);
+                });
+            }
+
+            $counts = $query->select('status', DB::raw('COUNT(*) as count'))
+                ->groupBy('status')
+                ->pluck('count', 'status')
+                ->toArray();
+
+            return [
+                'confirmed' => $counts['confirmed'] ?? 0,
+                'pending' => $counts['pending'] ?? 0,
+                'cancelled' => ($counts['cancelled'] ?? 0) + ($counts['operator_cancelled'] ?? 0),
+                'refund_pending' => $counts['refund_pending'] ?? 0,
+                'refunded' => $counts['refunded'] ?? 0,
+                'rebooking_pending' => $counts['rebooking_pending'] ?? 0,
+                'rebooked' => $counts['rebooked'] ?? 0,
             ];
         });
     }

@@ -291,7 +291,7 @@
                                                 <div class="flex items-start justify-between mb-3">
                                                     <div class="flex items-center gap-3">
                                                         @php
-                                                            $opName = $schedule->vehicle->operator ?? $route->operator ?? '';
+                                                            $opName = $route->vehicle?->operator ?? $route->operator ?? '';
                                                             $opLogo = null;
                                                             if (stripos($opName, '2GO') !== false) $opLogo = '2GO-Logo.png';
                                                             elseif (stripos($opName, 'Starlite') !== false) $opLogo = 'Starlite_Logo.png';

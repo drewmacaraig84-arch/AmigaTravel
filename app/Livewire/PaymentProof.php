@@ -24,6 +24,9 @@ class PaymentProof extends Component
     /** Unix timestamp of when the payment window expires (for JS countdown) */
     public int $deadlineTimestamp = 0;
 
+    /** Remaining seconds computed by server (avoids client clock drift) */
+    public int $remainingSeconds = 0;
+
     /** Whether the booking is already cancelled due to timeout */
     public bool $isExpired = false;
 
@@ -34,6 +37,8 @@ class PaymentProof extends Component
 
     public function mount(): void
     {
+        $this->transaction->loadMissing(['booking.schedule', 'booking.passengers', 'booking.accommodations']);
+
         $this->showThankYou = filled($this->transaction->proof_of_payment);
 
         // Check if already cancelled
@@ -51,6 +56,10 @@ class PaymentProof extends Component
 
         $this->deadlineTimestamp = $this->transaction->payment_deadline_at
             ? $this->transaction->payment_deadline_at->timestamp
+            : 0;
+
+        $this->remainingSeconds = $this->deadlineTimestamp > 0
+            ? max(0, $this->deadlineTimestamp - now()->timestamp)
             : 0;
     }
 

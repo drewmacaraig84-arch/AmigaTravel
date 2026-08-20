@@ -225,13 +225,50 @@
                                         </span>
                                     @endif
                                     <span class="rounded-full px-4 py-1.5 text-sm font-semibold" @style(['background' => $statusStyle['bg'], 'color' => $statusStyle['text']])>
-                                        {{ $booking->status === 'operator_cancelled' ? 'Cancelled by Operator' : ($booking->status === 'cancelled' ? 'Refunded' : ucfirst($booking->status)) }}
+                                        {{ in_array($booking->status, ['cancelled', 'operator_cancelled']) && (float) $booking->refund_amount > 0 ? $booking->getRefundStatusLabel() : ($booking->status === 'operator_cancelled' ? 'Cancelled by Operator' : ($booking->status === 'cancelled' ? 'Cancelled' : ucfirst($booking->status))) }}
                                         @if($booking->rebooking_status === 'pending')
                                             (Rebooking Pending)
                                         @endif
                                     </span>
                                 </div>
                             </div>
+
+                            @if(in_array($booking->status, ['cancelled', 'operator_cancelled']) && (float) $booking->refund_amount > 0)
+                                <div class="rounded-2xl border {{ $booking->isRefundCompleted() ? 'border-emerald-200 bg-emerald-50/70' : 'border-amber-200 bg-amber-50/70' }} p-5 shadow-sm space-y-3">
+                                    <div class="flex items-center gap-2.5 {{ $booking->isRefundCompleted() ? 'text-emerald-900' : 'text-amber-900' }} font-bold text-sm">
+                                        @if($booking->isRefundCompleted())
+                                            <svg class="h-5 w-5 shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            Refund Successfully Disbursed
+                                        @else
+                                            <svg class="h-5 w-5 shrink-0 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            Refund Request In Progress (24–48 Hours)
+                                        @endif
+                                    </div>
+                                    <p class="text-xs sm:text-sm text-slate-700 leading-relaxed">
+                                        {{ $booking->getRefundMessage() }}
+                                    </p>
+                                    <div class="flex flex-wrap gap-2.5 pt-1">
+                                        <a href="{{ route('ticket.refund-acknowledgement', $booking->transaction_number) }}" target="_blank" class="inline-flex items-center gap-1.5 rounded-2xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 transition">
+                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                            </svg>
+                                            Download Refund Acknowledgement
+                                        </a>
+                                        @if(filled($booking->refund_proof))
+                                            <a href="{{ storage_asset_path($booking->refund_proof) }}" target="_blank" class="inline-flex items-center gap-1.5 rounded-2xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition">
+                                                <svg class="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                </svg>
+                                                View Proof of Refund
+                                            </a>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endif
 
                             @if($booking->service_cancellation_id || $booking->status === 'operator_cancelled')
                                 <div class="rounded-2xl border border-amber-300 bg-amber-50 p-5 shadow-sm space-y-3">
@@ -323,21 +360,157 @@
                             </div>
 
                             <div>
-                                <h3 class="font-semibold text-slate-900 mb-3">Passengers</h3>
-                                <div class="space-y-2">
-                                    @foreach($booking->passengers as $passenger)
-                                        <div class="rounded-2xl bg-white p-4 border border-slate-200 flex items-center justify-between">
-                                            <div>
-                                                <span class="text-slate-800">{{ ucfirst($passenger->type) }}{{ $passenger->name ? ' — ' . $passenger->name : '' }}</span>
-                                                @if($passenger->birthdate)
-                                                    <span class="text-xs text-slate-500 ml-2">(Bday: {{ $passenger->birthdate->format('Y-m-d') }})</span>
-                                                @endif
+                                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                                    <div>
+                                        <h3 class="font-semibold text-slate-900 text-base">Passenger Items</h3>
+                                        <p class="text-xs text-slate-500">Select specific passenger(s) to cancel, refund, or rebook</p>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <button type="button" wire:click="selectAllPassengers" class="text-xs font-semibold text-pink-600 hover:text-pink-700 bg-pink-50 hover:bg-pink-100 px-3 py-1.5 rounded-lg border border-pink-200 transition">
+                                            Select All
+                                        </button>
+                                        <button type="button" wire:click="deselectAllPassengers" class="text-xs font-semibold text-slate-600 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg border border-slate-200 transition">
+                                            Deselect
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="space-y-3">
+                                    @foreach($booking->passengers->sortBy('item_number') as $passenger)
+                                        @php
+                                            $pItemNum = (int) ($passenger->item_number ?? 1);
+                                            $isSelected = in_array($pItemNum, array_map('intval', $selectedPassengerItems), true);
+                                            $pStatus = $passenger->status ?? 'pending';
+                                            $pStatusLabel = $passenger->getStatusLabel();
+                                            $itemStatusConfig = [
+                                                'pending'            => ['bg' => '#fef3c7', 'text' => '#92400e', 'border' => '#fde68a'],
+                                                'confirmed'          => ['bg' => '#dcfce7', 'text' => '#166534', 'border' => '#86efac'],
+                                                'cancelled'          => ['bg' => '#fee2e2', 'text' => '#991b1b', 'border' => '#fca5a5'],
+                                                'operator_cancelled' => ['bg' => '#fee2e2', 'text' => '#991b1b', 'border' => '#fca5a5'],
+                                                'refund_pending'     => ['bg' => '#ffedd5', 'text' => '#9a3412', 'border' => '#fdba74'],
+                                                'refunded'           => ['bg' => '#dbeafe', 'text' => '#1e40af', 'border' => '#93c5fd'],
+                                                'rebooking_pending'  => ['bg' => '#ede9fe', 'text' => '#5b21b6', 'border' => '#c4b5fd'],
+                                                'rebooked'           => ['bg' => '#ccfbf1', 'text' => '#134e4a', 'border' => '#6ee7b7'],
+                                                'operator_rebooking' => ['bg' => '#e0e7ff', 'text' => '#3730a3', 'border' => '#a5b4fc'],
+                                            ];
+                                            $pStyle = $itemStatusConfig[$pStatus] ?? $itemStatusConfig['pending'];
+                                            $fareAndClass = $passenger->getEffectiveFareAndClass();
+                                            $webFee = $passenger->getEffectiveWebAdminFee();
+                                            $txFee = $passenger->getEffectiveTransactionFee();
+                                            $itemTotal = $passenger->getEffectiveItemTotal();
+                                        @endphp
+                                        <div x-data="{ expanded: false }" class="rounded-2xl border transition-all duration-200 {{ $isSelected ? 'ring-2 ring-pink-500 shadow-sm' : '' }}" style="background: {{ $pStyle['bg'] }}18; border-color: {{ $isSelected ? '#ec4899' : $pStyle['border'] }};">
+                                            {{-- Header row: Checkbox + Item # + Name + Status + Collapse Toggle --}}
+                                            <div class="p-3.5 sm:p-4 flex items-center justify-between gap-2 border-b border-black/5 cursor-pointer" @click="expanded = !expanded">
+                                                <div class="flex items-center gap-3 min-w-0">
+                                                    {{-- Checkbox --}}
+                                                    <div @click.stop class="flex items-center">
+                                                        <input type="checkbox"
+                                                            wire:model.live="selectedPassengerItems"
+                                                            value="{{ $pItemNum }}"
+                                                            id="pax_item_{{ $pItemNum }}"
+                                                            class="w-4 h-4 rounded text-pink-600 focus:ring-pink-500 border-slate-300 cursor-pointer">
+                                                    </div>
+                                                    {{-- Item Number badge --}}
+                                                    <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-900 text-white text-xs font-bold shrink-0">
+                                                        {{ $pItemNum }}
+                                                    </span>
+                                                    {{-- Name and Ticket # --}}
+                                                    <div class="min-w-0">
+                                                        <div class="flex items-center gap-2">
+                                                            <label for="pax_item_{{ $pItemNum }}" @click.stop class="font-semibold text-slate-900 text-sm leading-tight truncate cursor-pointer hover:text-pink-600">
+                                                                {{ $passenger->name ?? 'Passenger' }}
+                                                            </label>
+                                                            <span class="text-[11px] font-medium px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                                                                {{ ucfirst($passenger->type ?? 'adult') }}
+                                                            </span>
+                                                        </div>
+                                                        @if($passenger->ticket_number)
+                                                            <p class="text-xs text-slate-400 font-mono leading-tight mt-0.5">{{ $passenger->ticket_number }}</p>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                                <div class="flex items-center gap-2 shrink-0">
+                                                    {{-- Status Chip --}}
+                                                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold" style="background: {{ $pStyle['bg'] }}; color: {{ $pStyle['text'] }}; border: 1px solid {{ $pStyle['border'] }};">
+                                                        {{ $pStatusLabel }}
+                                                    </span>
+                                                    {{-- Item Total Preview --}}
+                                                    <span class="text-xs font-bold text-slate-900 hidden sm:inline-block">
+                                                        ₱{{ number_format($itemTotal, 2) }}
+                                                    </span>
+                                                    {{-- Expand/Collapse Toggle Button --}}
+                                                    <button type="button" @click.stop="expanded = !expanded" class="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-black/5 transition">
+                                                        <svg class="w-4 h-4 transition-transform duration-200" :class="expanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
                                             </div>
-                                            <div class="text-right">
-                                                <span class="text-sm text-slate-600">{{ $passenger->discount->name ?? 'No discount' }}</span>
-                                                @if($passenger->id_number)
-                                                    <p class="text-xs text-slate-400">ID: {{ $passenger->id_number }}</p>
-                                                @endif
+
+                                            {{-- Collapsible Body --}}
+                                            <div x-show="expanded" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" class="p-3.5 sm:p-4 pt-3 space-y-3">
+                                                {{-- Details row --}}
+                                                <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600 bg-white/50 p-2.5 rounded-xl border border-black/5">
+                                                    <span><span class="font-medium text-slate-500">Type:</span> {{ ucfirst($passenger->type ?? 'adult') }}</span>
+                                                    @if($passenger->birthdate)
+                                                        <span><span class="font-medium text-slate-500">Bday:</span> {{ $passenger->birthdate->format('Y-m-d') }}</span>
+                                                    @endif
+                                                    @if($passenger->discount?->name)
+                                                        <span><span class="font-medium text-slate-500">Discount:</span> {{ $passenger->discount->name }}</span>
+                                                    @endif
+                                                    @if($passenger->id_number)
+                                                        <span><span class="font-medium text-slate-500">ID#:</span> {{ $passenger->id_number }}</span>
+                                                    @endif
+                                                    @if($passenger->hasPassportInfo())
+                                                        <span class="inline-flex items-center gap-1 font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                                                            <span>🛂 Passport:</span>
+                                                            <span class="font-mono">{{ $passenger->passport_number }}</span>
+                                                            @if($passenger->passport_country)
+                                                                <span class="font-normal text-emerald-600">({{ $passenger->passport_country }})</span>
+                                                            @endif
+                                                            @if($passenger->passport_expiry_date)
+                                                                <span class="font-normal text-emerald-600">&bull; Exp: {{ $passenger->passport_expiry_date->format('Y-m-d') }}</span>
+                                                            @endif
+                                                        </span>
+                                                    @endif
+                                                    @if($passenger->hasExtraBaggage())
+                                                        <span class="inline-flex items-center gap-1 font-semibold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-md border border-sky-200">
+                                                            <span>🧳 Baggage:</span>
+                                                            <span>{{ $passenger->extra_baggage_weight }}</span>
+                                                            <span class="font-normal text-sky-600">(+₱{{ number_format($passenger->extra_baggage_price, 2) }})</span>
+                                                        </span>
+                                                    @endif
+                                                </div>
+
+                                                {{-- Individual Financial breakdown --}}
+                                                <div class="rounded-xl bg-white/90 border border-slate-200 px-3.5 py-2.5 space-y-1 shadow-sm">
+                                                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Item Price Breakdown</p>
+                                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-xs text-slate-600">
+                                                        <div class="flex justify-between"><span class="text-slate-500">Ticket & Transport Class</span><span class="font-medium">₱{{ number_format($fareAndClass, 2) }}</span></div>
+                                                        @if($passenger->discount_amount > 0)
+                                                            <div class="flex justify-between"><span class="text-slate-500">Discount ({{ $passenger->discount?->name ?? 'Discount' }})</span><span class="text-green-600 font-medium">-₱{{ number_format($passenger->discount_amount, 2) }}</span></div>
+                                                        @endif
+                                                        @if($passenger->voucher_discount_share > 0)
+                                                            <div class="flex justify-between"><span class="text-slate-500">Voucher Share</span><span class="text-green-600 font-medium">-₱{{ number_format($passenger->voucher_discount_share, 2) }}</span></div>
+                                                        @endif
+                                                        @if($passenger->points_discount_share > 0)
+                                                            <div class="flex justify-between"><span class="text-slate-500">Gracia Points</span><span class="text-green-600 font-medium">-₱{{ number_format($passenger->points_discount_share, 2) }}</span></div>
+                                                        @endif
+                                                        @if($webFee > 0)
+                                                            <div class="flex justify-between"><span class="text-slate-500">Web Admin Fee</span><span class="font-medium text-slate-600">₱{{ number_format($webFee, 2) }}</span></div>
+                                                        @endif
+                                                        @if($txFee > 0)
+                                                            <div class="flex justify-between"><span class="text-slate-500">Transaction Fee</span><span class="font-medium text-slate-600">₱{{ number_format($txFee, 2) }}</span></div>
+                                                        @endif
+                                                        @if($passenger->hasExtraBaggage())
+                                                            <div class="flex justify-between"><span class="text-slate-500">Extra Baggage Fee</span><span class="font-medium text-slate-600">₱{{ number_format($passenger->extra_baggage_price, 2) }}</span></div>
+                                                        @endif
+                                                    </div>
+                                                    <div class="flex justify-between font-bold text-slate-900 text-xs pt-1.5 mt-1 border-t border-slate-100">
+                                                        <span>Item Total</span>
+                                                        <span style="color:#ee018d;" class="text-sm">₱{{ number_format($itemTotal, 2) }}</span>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     @endforeach
@@ -455,11 +628,17 @@
                                             </div>
                                             
                                             @php
-                                                $refundBreakdown = $booking->getRefundBreakdown(! $cancellationExpired);
+                                                $selectedItemsForRefund = ! empty($selectedPassengerItems) ? $selectedPassengerItems : $booking->passengers->pluck('item_number')->toArray();
+                                                $refundBreakdown = $booking->getPartialRefundBreakdown($selectedItemsForRefund, ! $cancellationExpired);
+                                                $selectedRefundLabel = $booking->getAffectedItemsLabel($selectedItemsForRefund);
                                             @endphp
-                                            <div class="mt-2 p-3 bg-white/60 rounded-xl space-y-1 text-sm text-amber-900 border border-amber-100/50">
+                                            <div class="mt-2 p-3 bg-white/70 rounded-xl space-y-1 text-sm text-amber-900 border border-amber-100/50">
+                                                <div class="flex items-center justify-between pb-1 mb-1 border-b border-amber-200/50">
+                                                    <span class="text-xs font-bold uppercase tracking-wider text-amber-800">Affected Passengers:</span>
+                                                    <span class="font-semibold text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-900">{{ $selectedRefundLabel }}</span>
+                                                </div>
                                                 <div class="flex justify-between">
-                                                    <span>Total Price:</span>
+                                                    <span>Selected Items Base Total:</span>
                                                     <span>₱{{ number_format($refundBreakdown['base_ticket'], 2) }}</span>
                                                 </div>
                                                 <div class="flex justify-between">
@@ -486,8 +665,8 @@
                                                         </div>
                                                     @endif
                                                 </div>
-                                                <div class="flex justify-between pt-1 mt-1 border-t border-amber-200/50 font-bold text-base">
-                                                    <span>Total Refundable:</span>
+                                                <div class="flex justify-between pt-1.5 mt-1 border-t border-amber-200/50 font-bold text-base">
+                                                    <span>Estimated Refund:</span>
                                                     <span class="text-green-700">₱{{ number_format($refundBreakdown['refundable_amount'], 2) }}</span>
                                                 </div>
                                             </div>

@@ -21,6 +21,7 @@ class Booking extends Model
     public const STATUS_CONFIRMED = 'confirmed';
     public const STATUS_CANCELLED = 'cancelled';
     public const STATUS_OPERATOR_CANCELLED = 'operator_cancelled';
+    public const STATUS_OPERATOR_REBOOKING = 'operator_rebooking';
 
     protected $fillable = [
         'user_id',
@@ -92,7 +93,51 @@ class Booking extends Model
         'extra_baggage_weight',
         'extra_baggage_price',
         'sla_voucher_issued_at',
+        'refund_status',
+        'refund_proof',
+        'refund_reference',
+        'refund_processed_at',
+        'refund_processed_by_user_id',
+        'refund_notes',
     ];
+
+    protected static function booted(): void
+    {
+        static::updated(function (Booking $booking) {
+            if ($booking->wasChanged('status')) {
+                $newStatus = $booking->status;
+                if ($newStatus === self::STATUS_CONFIRMED) {
+                    $booking->passengers()
+                        ->where('status', Passenger::STATUS_PENDING)
+                        ->update(['status' => Passenger::STATUS_CONFIRMED]);
+                } elseif ($newStatus === self::STATUS_CANCELLED) {
+                    $targetStatus = ((float) $booking->refund_amount > 0 && $booking->refund_status === 'pending')
+                        ? Passenger::STATUS_REFUND_PENDING
+                        : Passenger::STATUS_CANCELLED;
+                    $booking->passengers()
+                        ->whereIn('status', [Passenger::STATUS_PENDING, Passenger::STATUS_CONFIRMED])
+                        ->update(['status' => $targetStatus]);
+                } elseif ($newStatus === self::STATUS_OPERATOR_CANCELLED) {
+                    $booking->passengers()
+                        ->whereIn('status', [Passenger::STATUS_PENDING, Passenger::STATUS_CONFIRMED])
+                        ->update(['status' => Passenger::STATUS_OPERATOR_CANCELLED]);
+                } elseif ($newStatus === self::STATUS_OPERATOR_REBOOKING) {
+                    $booking->passengers()
+                        ->whereIn('status', [Passenger::STATUS_PENDING, Passenger::STATUS_CONFIRMED, Passenger::STATUS_OPERATOR_CANCELLED])
+                        ->update(['status' => Passenger::STATUS_OPERATOR_REBOOKING]);
+                }
+            }
+
+            if ($booking->wasChanged('refund_status') && $booking->refund_status === 'completed') {
+                $booking->passengers()
+                    ->whereIn('status', [Passenger::STATUS_REFUND_PENDING, Passenger::STATUS_CANCELLED, Passenger::STATUS_OPERATOR_CANCELLED])
+                    ->update([
+                        'status' => Passenger::STATUS_REFUNDED,
+                        'refund_status' => 'completed',
+                    ]);
+            }
+        });
+    }
 
     public function isUserCancelled(): bool
     {
@@ -104,9 +149,72 @@ class Booking extends Model
         return $this->status === self::STATUS_OPERATOR_CANCELLED;
     }
 
+    public function isOperatorRebooking(): bool
+    {
+        return $this->status === self::STATUS_OPERATOR_REBOOKING;
+    }
+
     public function isServiceCancellation(): bool
     {
-        return $this->isOperatorCancelled() || filled($this->service_cancellation_id);
+        return $this->isOperatorCancelled() || $this->isOperatorRebooking() || filled($this->service_cancellation_id);
+    }
+
+    public function isInternational(): bool
+    {
+        if ($this->schedule?->ferryRoute?->isInternational()) {
+            return true;
+        }
+        if (strtolower($this->mode ?? '') !== 'airline' && strtolower($this->schedule?->ferryRoute?->mode ?? '') !== 'airline') {
+            return false;
+        }
+        $domesticPorts = ['manila', 'batangas', 'calapan', 'caticlan', 'boracay', 'boracay (caticlan)', 'cebu', 'davao', 'roxas', 'puerto princesa', 'el nido', 'coron', 'bacolod', 'iloilo', 'tagbilaran', 'bohol', 'siargao', 'zamboanga', 'general santos', 'clark', 'laoag', 'legazpi', 'dumaguete', 'tacloban', 'cagayan de oro', 'butuan', 'ozamiz', 'dipolog', 'pagadian', 'surigao', 'tandag', 'camiguin', 'batanes', 'basco', 'busuanga', 'san jose'];
+        return !in_array(strtolower(trim($this->origin ?? '')), $domesticPorts, true)
+            || !in_array(strtolower(trim($this->destination ?? '')), $domesticPorts, true);
+    }
+
+    public function getNonRefundableFees(): float
+    {
+        return max(0, (float) $this->total_price - $this->getTicketBase());
+    }
+
+    public function isRefundPending(): bool
+    {
+        return in_array($this->status, [self::STATUS_CANCELLED, self::STATUS_OPERATOR_CANCELLED])
+            && (float) $this->refund_amount > 0
+            && ($this->refund_status === 'pending' || empty($this->refund_status));
+    }
+
+    public function isRefundCompleted(): bool
+    {
+        return in_array($this->status, [self::STATUS_CANCELLED, self::STATUS_OPERATOR_CANCELLED])
+            && (float) $this->refund_amount > 0
+            && $this->refund_status === 'completed';
+    }
+
+    public function getRefundStatusLabel(): string
+    {
+        if (! in_array($this->status, [self::STATUS_CANCELLED, self::STATUS_OPERATOR_CANCELLED]) || (float) $this->refund_amount <= 0) {
+            return ucfirst($this->status);
+        }
+
+        return $this->isRefundCompleted() ? 'Refunded & Disbursed' : 'Refund Processing';
+    }
+
+    public function getRefundMessage(): ?string
+    {
+        if (! in_array($this->status, [self::STATUS_CANCELLED, self::STATUS_OPERATOR_CANCELLED]) || (float) $this->refund_amount <= 0) {
+            return null;
+        }
+
+        $amountFormatted = '₱' . number_format((float) $this->refund_amount, 2);
+
+        if ($this->isRefundCompleted()) {
+            $refText = filled($this->refund_reference) ? " (Reference: {$this->refund_reference})" : '';
+            return "Your refund of {$amountFormatted} has been successfully processed and disbursed to your designated account{$refText}. You may download your official Refund Acknowledgement and proof of disbursement below.";
+        }
+
+        $destText = filled($this->refund_destination) ? " to {$this->refund_destination}" : '';
+        return "Your refund request of {$amountFormatted} is currently being processed by our finance team. Please allow 24–48 hours for review and disbursement{$destText}. You will receive an email confirmation and notification once completed.";
     }
 
     protected $casts = [
@@ -138,6 +246,7 @@ class Booking extends Model
         'has_extra_baggage' => 'boolean',
         'extra_baggage_price' => 'decimal:2',
         'sla_voucher_issued_at' => 'datetime',
+        'refund_processed_at' => 'datetime',
     ];
 
     /**
@@ -247,6 +356,10 @@ class Booking extends Model
         return $this->belongsTo(User::class, 'verified_by_user_id');
     }
 
+    public function refundProcessedByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'refund_processed_by_user_id');
+    }
 
     public function transactions(): HasMany
     {
@@ -477,7 +590,7 @@ class Booking extends Model
     public function getOperatorName(): ?string
     {
         // 1. Direct from departure schedule relation
-        if ($this->schedule) {
+        if ($this->relationLoaded('schedule') && $this->schedule) {
             $route = $this->schedule->ferryRoute ?? $this->schedule->route;
             if ($route) {
                 $name = $route->operatorRecord?->name ?? $route->operator;
@@ -703,8 +816,8 @@ class Booking extends Model
             return false; // Tour package multi-day / full day trip
         }
 
-        $depSchedule = $this->schedule;
-        $retSchedule = $this->returnSchedule;
+        $depSchedule = $this->relationLoaded('schedule') ? $this->schedule : ($this->schedule_id ? \App\Models\Schedule::find($this->schedule_id) : null);
+        $retSchedule = $this->relationLoaded('returnSchedule') ? $this->returnSchedule : ($this->return_schedule_id ? \App\Models\Schedule::find($this->return_schedule_id) : null);
 
         if ($depSchedule) {
             $depDuration = $depSchedule->duration_minutes;
@@ -903,10 +1016,10 @@ class Booking extends Model
         $isShortHaul    = $this->isShortHaul();
 
         $webAdminFeePerPax = $settings->getWebAdminFee($isShortHaul);
-        $txFeePerBooking   = $settings->getTransactionFee($isShortHaul);
+        $txFeePerPax       = $settings->getTransactionFee($isShortHaul);
 
         $webAdminFeeTotal    = $webAdminFeePerPax * $multiplier;
-        $transactionFeeTotal = $txFeePerBooking * $multiplier;
+        $transactionFeeTotal = $txFeePerPax * $multiplier;
         $nonRefundableFees   = $webAdminFeeTotal + $transactionFeeTotal;
 
         $rebookingFeeTotal = $this->transaction ? (float) $this->transaction->rebooking_fee : 0.0;
@@ -1015,6 +1128,132 @@ class Booking extends Model
     public function getCancellationFeeAmount(bool $isWithinGracePeriod = false): float
     {
         return $this->getRefundBreakdown($isWithinGracePeriod)['deduction_amount'];
+    }
+
+    /**
+     * Get a human-readable label for affected items e.g. "Item 1–5" or "Item 1 (Juan)"
+     */
+    public function getAffectedItemsLabel(?array $itemNumbers = null): string
+    {
+        $allPassengers = $this->passengers->sortBy('item_number')->values();
+        $totalCount = $allPassengers->count();
+        if ($totalCount === 0) {
+            return '—';
+        }
+
+        if ($itemNumbers === null) {
+            // Find active/affected passengers
+            $affected = $allPassengers->filter(function ($p) {
+                return in_array($p->status, [
+                    Passenger::STATUS_REFUND_PENDING,
+                    Passenger::STATUS_REFUNDED,
+                    Passenger::STATUS_CANCELLED,
+                    Passenger::STATUS_REBOOKING_PENDING,
+                    Passenger::STATUS_REBOOKED,
+                    Passenger::STATUS_OPERATOR_CANCELLED,
+                    Passenger::STATUS_OPERATOR_REBOOKING,
+                ], true) || (float) $p->refund_amount > 0 || ! empty($p->rebooking_status);
+            })->values();
+
+            if ($affected->isEmpty()) {
+                // If the entire booking is cancelled / refund / rebooking, all are affected
+                if (in_array($this->status, [
+                    self::STATUS_CANCELLED,
+                    self::STATUS_OPERATOR_CANCELLED,
+                    self::STATUS_OPERATOR_REBOOKING,
+                ], true) || (float) $this->refund_amount > 0 || ! empty($this->rebooking_status)) {
+                    return $totalCount > 1 ? "Item 1–{$totalCount}" : 'Item 1';
+                }
+                return '—';
+            }
+            $targetPassengers = $affected;
+        } else {
+            $targetPassengers = $allPassengers->filter(fn ($p) => in_array((int) $p->item_number, array_map('intval', $itemNumbers), true))->values();
+        }
+
+        if ($targetPassengers->count() === $totalCount && $totalCount > 1) {
+            return "Item 1–{$totalCount}";
+        }
+
+        return $targetPassengers->map(function ($p) {
+            $name = $p->name ? " ({$p->name})" : '';
+            return "Item {$p->item_number}{$name}";
+        })->implode(', ');
+    }
+
+    /**
+     * Calculate refund breakdown for a specific subset of passenger item numbers.
+     */
+    public function getPartialRefundBreakdown(array $itemNumbers, bool $isWithinGracePeriod = false): array
+    {
+        $allPassengers = $this->passengers->sortBy('item_number')->values();
+        $selectedPassengers = $allPassengers->filter(fn ($p) => in_array((int) $p->item_number, array_map('intval', $itemNumbers), true));
+
+        if ($selectedPassengers->isEmpty()) {
+            return $this->getRefundBreakdown($isWithinGracePeriod);
+        }
+
+        $selectedCount = $selectedPassengers->count();
+        $totalPaxCount = max(1, $allPassengers->count());
+        $isAll = ($selectedCount === $totalPaxCount);
+
+        if ($isAll) {
+            return $this->getRefundBreakdown($isWithinGracePeriod);
+        }
+
+        $settings     = \App\Models\PaymentSetting::current();
+        $isShortHaul  = $this->isShortHaul();
+        $webFeePerPax = $settings->getWebAdminFee($isShortHaul);
+        $txFeePerPax   = $settings->getTransactionFee($isShortHaul);
+
+        $selectedItemTotal = $selectedPassengers->sum(fn ($p) => $p->getEffectiveItemTotal());
+        $nonRefundableFees = ($webFeePerPax + $txFeePerPax) * $selectedCount;
+
+        if ($isWithinGracePeriod) {
+            return [
+                'base_ticket'         => $selectedItemTotal,
+                'surcharge_pct'       => 0,
+                'surcharge_amount'    => 0,
+                'non_refundable_fees' => 0,
+                'web_admin_fee'       => 0,
+                'transaction_fee'     => 0,
+                'refundable_amount'   => $selectedItemTotal,
+                'deduction_amount'    => 0,
+                'selected_count'      => $selectedCount,
+            ];
+        }
+
+        $surchargePct = $this->getRefundSurchargePercentage();
+        $ticketBase   = max(0, $selectedItemTotal - $nonRefundableFees);
+        $surcharge    = round($ticketBase * ($surchargePct / 100), 2);
+        $refundable   = max(0, round($selectedItemTotal - $surcharge - $nonRefundableFees, 2));
+
+        return [
+            'base_ticket'         => $selectedItemTotal,
+            'surcharge_pct'       => $surchargePct,
+            'surcharge_amount'    => $surcharge,
+            'non_refundable_fees' => $nonRefundableFees,
+            'web_admin_fee'       => $webFeePerPax * $selectedCount,
+            'transaction_fee'     => $txFeePerPax * $selectedCount,
+            'refundable_amount'   => $refundable,
+            'deduction_amount'    => $selectedItemTotal - $refundable,
+            'selected_count'      => $selectedCount,
+        ];
+    }
+
+    public function getPartialRebookingFeeAmount(array $itemNumbers): float
+    {
+        $allPassengers = $this->passengers->sortBy('item_number')->values();
+        $selectedPassengers = $allPassengers->filter(fn ($p) => in_array((int) $p->item_number, array_map('intval', $itemNumbers), true));
+        $selectedCount = max(1, $selectedPassengers->count());
+        $totalCount    = max(1, $allPassengers->count());
+
+        $fullFee = $this->getRebookingFeeAmount();
+        if ($fullFee <= 0) {
+            return 0.0;
+        }
+
+        return round(($fullFee / $totalCount) * $selectedCount, 2);
     }
 
     public function getRebookingFeeAmount(): float
@@ -1331,6 +1570,64 @@ class Booking extends Model
 
         return $breakdown;
     }
+
+    // ─── Item-Level Aggregate Helpers ─────────────────────────────────────────
+
+    /**
+     * Number of passengers whose item status is still active
+     * (pending, confirmed, or operator_rebooking).
+     */
+    public function getActivePassengersCount(): int
+    {
+        return $this->passengers()
+            ->whereIn('status', [
+                Passenger::STATUS_PENDING,
+                Passenger::STATUS_CONFIRMED,
+                Passenger::STATUS_OPERATOR_REBOOKING,
+            ])
+            ->count();
+    }
+
+    /**
+     * True when at least one passenger is cancelled/refunded while others are still active.
+     */
+    public function hasPartialCancellation(): bool
+    {
+        $cancelledCount = $this->passengers()
+            ->whereIn('status', [
+                Passenger::STATUS_CANCELLED,
+                Passenger::STATUS_OPERATOR_CANCELLED,
+                Passenger::STATUS_REFUND_PENDING,
+                Passenger::STATUS_REFUNDED,
+            ])
+            ->count();
+
+        $total = $this->passengers()->count();
+
+        return $cancelledCount > 0 && $cancelledCount < $total;
+    }
+
+    /**
+     * True when any passenger item has a pending refund.
+     */
+    public function hasPendingRefunds(): bool
+    {
+        return $this->passengers()
+            ->where('refund_status', 'pending')
+            ->where('refund_amount', '>', 0)
+            ->exists();
+    }
+
+    /**
+     * True when any passenger item has a pending rebooking.
+     */
+    public function hasPendingRebookings(): bool
+    {
+        return $this->passengers()
+            ->whereIn('status', [
+                Passenger::STATUS_REBOOKING_PENDING,
+                Passenger::STATUS_OPERATOR_REBOOKING,
+            ])
+            ->exists();
+    }
 }
-
-

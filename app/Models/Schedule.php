@@ -133,15 +133,16 @@ class Schedule extends Model
         });
     }
 
-    public function scopeForRouteAndDate(Builder $query, string $origin, string $destination, string $date, ?string $mode = null, ?string $operator = null): Builder
+    public function scopeForRouteAndDate(Builder $query, string $origin, string $destination, ?string $date = null, ?string $mode = null, ?string $operator = null): Builder
     {
+        $dateStr = $date ?: Carbon::today()->format('Y-m-d');
         $now    = Carbon::now();
-        $dayEnd = Carbon::parse($date)->endOfDay();
+        $dayEnd = Carbon::parse($dateStr)->endOfDay();
 
         // When the selected date is TODAY, use the current second as the lower
         // bound so that any schedule whose departure has already passed — even
         // by a single second — is excluded from results.
-        $lowerBound = Carbon::parse($date)->isToday() ? $now : Carbon::parse($date)->startOfDay();
+        $lowerBound = Carbon::parse($dateStr)->isToday() ? $now : Carbon::parse($dateStr)->startOfDay();
 
         return $query->active()
             ->whereHas('ferryRoute', function (Builder $routeQuery) use ($origin, $destination, $mode, $operator) {
@@ -194,7 +195,7 @@ class Schedule extends Model
 
     public function isShortHaul(): bool
     {
-        if (strtolower($this->ferryRoute?->mode ?? '') === 'airline') {
+        if (strtolower($this->getFerryRouteModel()?->mode ?? '') === 'airline') {
             return false;
         }
 
@@ -233,9 +234,24 @@ class Schedule extends Model
         return "{$hours}h {$minutes}m";
     }
 
+    public function getFerryRouteModel(): ?FerryRoute
+    {
+        if ($this->relationLoaded('ferryRoute')) {
+            return $this->getRelation('ferryRoute');
+        }
+        if ($this->ferry_route_id) {
+            $route = FerryRoute::find($this->ferry_route_id);
+            if ($route) {
+                $this->setRelation('ferryRoute', $route);
+            }
+            return $route;
+        }
+        return null;
+    }
+
     public function getAccommodationLabelAttribute(): string
     {
-        if ($this->ferryRoute?->mode === 'airline') {
+        if ($this->getFerryRouteModel()?->mode === 'airline') {
             $transportClasses = $this->relationLoaded('transportClasses')
                 ? $this->transportClasses
                 : $this->transportClasses()->get();
@@ -255,28 +271,28 @@ class Schedule extends Model
     }
 
     public function getAirlineSeatingProfile(): ?array
-{
-    $operator = $this->ferryRoute?->operator;
-    $resolvedAircraftType = $this->resolveAircraftConfigKey($this->service_name);
+    {
+        $operator = $this->getFerryRouteModel()?->operator;
+        $resolvedAircraftType = $this->resolveAircraftConfigKey($this->service_name);
 
-    if (blank($operator)) {
-        return null;
-    }
-
-    $resolvedOperator = $this->resolveOperatorConfigKey($operator);
-    if (blank($resolvedOperator)) {
-        return null;
-    }
-
-    if (! blank($resolvedAircraftType)) {
-        $profile = config("airline_seating.operators.{$resolvedOperator}.aircraft.{$resolvedAircraftType}");
-        if (! blank($profile)) {
-            return $profile;
+        if (blank($operator)) {
+            return null;
         }
-    }
 
-    return $this->getFallbackAirlineSeatingProfile($resolvedOperator);
-}
+        $resolvedOperator = $this->resolveOperatorConfigKey($operator);
+        if (blank($resolvedOperator)) {
+            return null;
+        }
+
+        if (! blank($resolvedAircraftType)) {
+            $profile = config("airline_seating.operators.{$resolvedOperator}.aircraft.{$resolvedAircraftType}");
+            if (! blank($profile)) {
+                return $profile;
+            }
+        }
+
+        return $this->getFallbackAirlineSeatingProfile($resolvedOperator);
+    }
 
     protected function getFallbackAirlineSeatingProfile(string $resolvedOperator): ?array
     {

@@ -49,6 +49,12 @@ class BookingController extends Controller
             'passengers.*.discount_id'                  => 'nullable|integer|exists:discounts,id',
             'passengers.*.school_name'                  => 'nullable|string|max:255',
             'passengers.*.id_number'                    => 'nullable|string|max:255',
+            'passengers.*.passport_country'             => 'nullable|string|max:100',
+            'passengers.*.passport_number'              => 'nullable|string|max:50',
+            'passengers.*.passport_issuance_date'       => 'nullable|date',
+            'passengers.*.passport_expiry_date'         => 'nullable|date',
+            'passengers.*.extra_baggage_weight'         => 'nullable|string|max:50',
+            'passengers.*.extra_baggage_price'          => 'nullable|numeric|min:0',
             'accommodation_ids'                         => 'nullable|array',
             'accommodation_ids.*'                       => 'integer|exists:accommodations,id',
             'voucher_code'                              => 'nullable|string|max:50',
@@ -57,6 +63,14 @@ class BookingController extends Controller
             'selected_return_transport_class_id'        => 'nullable|integer|exists:transport_classes,id',
             'use_points'                                => 'nullable|boolean',
         ]);
+
+        $maxPassengers = ($validated['trip_type'] ?? '') === 'round_trip' ? 4 : 8;
+        if (count($validated['passengers'] ?? []) > $maxPassengers) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => "Maximum {$maxPassengers} passengers allowed for " . ($validated['trip_type'] === 'round_trip' ? 'round trip' : 'one way') . ' bookings.',
+            ], 422);
+        }
 
         try {
             /** @var \App\Models\Booking $booking */
@@ -173,6 +187,13 @@ class BookingController extends Controller
             $data['can_cancel'] = $booking->canCancel();
             $data['can_rebook'] = $booking->canRebook();
             $data['sla_voucher_note'] = $booking->getSlaVoucherNote(null, true);
+            $data['refund_status'] = $booking->refund_status ?? ($booking->isRefundPending() ? 'pending' : null);
+            $data['refund_message'] = $booking->getRefundMessage();
+            $data['refund_reference'] = $booking->refund_reference;
+            $data['refund_proof_url'] = filled($booking->refund_proof) ? storage_asset_path($booking->refund_proof) : null;
+            $data['refund_acknowledgement_url'] = (in_array($booking->status, ['cancelled', 'operator_cancelled']) && (float) $booking->refund_amount > 0)
+                ? route('ticket.refund-acknowledgement', ['transaction_number' => $booking->transaction_number])
+                : null;
             $data['service_cancellation_id'] = $booking->service_cancellation_id;
             $data['service_cancellation'] = $booking->serviceCancellation ? [
                 'id' => $booking->serviceCancellation->id,
@@ -218,6 +239,19 @@ class BookingController extends Controller
             }
             $data['departure_tc_price_per_pax'] = round($depTcPrice, 2);
             $data['return_tc_price_per_pax']    = round($retTcPrice, 2);
+
+            $data['passengers'] = $booking->passengers->sortBy('item_number')->values()->map(function ($p) {
+                $pArr = $p->toArray();
+                $pArr['fare_amount'] = $p->getEffectiveFareAmount();
+                $pArr['accommodation_amount'] = $p->getEffectiveAccommodationAmount();
+                $pArr['fare_and_class'] = $p->getEffectiveFareAndClass();
+                $pArr['web_admin_fee_share'] = $p->getEffectiveWebAdminFee();
+                $pArr['transaction_fee_share'] = $p->getEffectiveTransactionFee();
+                $pArr['item_total'] = $p->getEffectiveItemTotal();
+                $pArr['status_label'] = $p->getStatusLabel();
+                $pArr['status_color'] = $p->getStatusColor();
+                return $pArr;
+            })->toArray();
 
             return $data;
         });
@@ -289,6 +323,13 @@ class BookingController extends Controller
         $data['can_cancel'] = $booking->canCancel();
         $data['can_rebook'] = $booking->canRebook();
         $data['sla_voucher_note'] = $booking->getSlaVoucherNote(null, true);
+        $data['refund_status'] = $booking->refund_status ?? ($booking->isRefundPending() ? 'pending' : null);
+        $data['refund_message'] = $booking->getRefundMessage();
+        $data['refund_reference'] = $booking->refund_reference;
+        $data['refund_proof_url'] = filled($booking->refund_proof) ? storage_asset_path($booking->refund_proof) : null;
+        $data['refund_acknowledgement_url'] = (in_array($booking->status, ['cancelled', 'operator_cancelled']) && (float) $booking->refund_amount > 0)
+            ? route('ticket.refund-acknowledgement', ['transaction_number' => $booking->transaction_number])
+            : null;
         $data['service_cancellation_id'] = $booking->service_cancellation_id;
         $data['service_cancellation'] = $booking->serviceCancellation ? [
             'id' => $booking->serviceCancellation->id,
@@ -331,6 +372,19 @@ class BookingController extends Controller
         $data['departure_tc_price_per_pax'] = round($depTcPrice, 2);
         $data['return_tc_price_per_pax']    = round($retTcPrice, 2);
 
+        $data['passengers'] = $booking->passengers->sortBy('item_number')->values()->map(function ($p) {
+            $pArr = $p->toArray();
+            $pArr['fare_amount'] = $p->getEffectiveFareAmount();
+            $pArr['accommodation_amount'] = $p->getEffectiveAccommodationAmount();
+            $pArr['fare_and_class'] = $p->getEffectiveFareAndClass();
+            $pArr['web_admin_fee_share'] = $p->getEffectiveWebAdminFee();
+            $pArr['transaction_fee_share'] = $p->getEffectiveTransactionFee();
+            $pArr['item_total'] = $p->getEffectiveItemTotal();
+            $pArr['status_label'] = $p->getStatusLabel();
+            $pArr['status_color'] = $p->getStatusColor();
+            return $pArr;
+        })->toArray();
+
         return response()->json([
             'status' => 'success',
             'booking' => $data
@@ -347,42 +401,21 @@ class BookingController extends Controller
 
         $booking = Booking::whereKey($id)
             ->where('client_email', $request->input('email'))
-            ->with('transaction')
             ->firstOrFail();
-        $transaction = $booking->transaction;
 
-        if (!$transaction) {
-            $transaction = Transaction::create([
-                'booking_id' => $booking->id,
-                'payment_status' => 'unpaid',
-            ]);
-        }
+        $path = $request->file('proof')->store('proofs', 'public');
 
-        $extension = $request->file('proof')->extension();
-        $safeReference = preg_replace('/[^A-Za-z0-9_-]/', '', $request->input('reference_number', uniqid()));
-        $filename = $booking->transaction_number . '_' . $safeReference . '.' . $extension;
-        $path = $request->file('proof')->storeAs('proofs', $filename, 'public');
-
-        $transaction->update([
-            'proof_of_payment' => $path,
-            'payment_reference' => $request->input('reference_number'),
-            'payment_status' => 'pending',
-            'proof_submitted_at' => now(),
-        ]);
-
-        try {
-            \Illuminate\Support\Facades\Mail::to($booking->client_email)->send(new \App\Mail\PaymentProofReceived($transaction));
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Failed sending PaymentProofReceived email', [
-                'booking_id' => $booking->id,
-                'email' => $booking->client_email,
-                'error' => $e->getMessage(),
+        if ($booking->transaction) {
+            $booking->transaction->update([
+                'proof_of_payment' => $path,
+                'payment_reference' => $request->input('reference_number'),
+                'payment_status' => 'pending',
             ]);
         }
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Proof of payment uploaded successfully!',
+            'message' => 'Proof of payment uploaded successfully.',
             'proof_url' => storage_asset_path($path),
         ]);
     }
@@ -414,11 +447,12 @@ class BookingController extends Controller
             'email' => 'required|email',
             'action' => 'nullable|string|in:start,confirm',
             'refund_destination' => 'nullable|string|max:255',
+            'passenger_items' => 'nullable',
         ]);
 
         $booking = Booking::whereKey($id)
             ->where('client_email', $request->input('email'))
-            ->with('transaction')
+            ->with(['transaction', 'passengers.discount'])
             ->firstOrFail();
 
         if (! $booking->canCancel() || ! in_array($booking->status, ['pending', 'confirmed'], true)) {
@@ -435,6 +469,14 @@ class BookingController extends Controller
 
         $isWithinFiveMinutes = $booking->created_at->addMinutes(5)->isFuture();
 
+        $passengerItems = $request->input('passenger_items');
+        if (is_string($passengerItems)) {
+            $passengerItems = array_filter(array_map('intval', explode(',', $passengerItems)));
+        }
+        $selectedItems = (is_array($passengerItems) && !empty($passengerItems))
+            ? $passengerItems
+            : $booking->passengers->pluck('item_number')->toArray();
+
         if ($request->input('action', 'confirm') === 'start') {
             if (! $isWithinFiveMinutes && ! $booking->isRefundEligible()) {
                 return response()->json([
@@ -443,19 +485,20 @@ class BookingController extends Controller
                 ], 400);
             }
 
-            $breakdown = $booking->getRefundBreakdown($isWithinFiveMinutes);
+            $breakdown = $booking->getPartialRefundBreakdown($selectedItems, $isWithinFiveMinutes);
 
             return response()->json([
-                'status'           => 'success',
-                'message'          => 'Cancellation started.',
-                'base_ticket'      => $breakdown['base_ticket'] ?? 0,
-                'cancellation_fee' => $breakdown['deduction_amount'],
-                'refund_amount'    => $breakdown['refundable_amount'],
-                'non_refundable_fees'=> $breakdown['non_refundable_fees'] ?? 0,
-                'transaction_fee'  => $breakdown['transaction_fee'],
-                'web_admin_fee'    => $breakdown['web_admin_fee'],
-                'surcharge_amount' => $breakdown['surcharge_amount'],
-                'surcharge_pct'    => $breakdown['surcharge_pct'],
+                'status'              => 'success',
+                'message'             => 'Cancellation started.',
+                'affected_items'      => $booking->getAffectedItemsLabel($selectedItems),
+                'base_ticket'         => $breakdown['base_ticket'] ?? 0,
+                'cancellation_fee'    => $breakdown['deduction_amount'],
+                'refund_amount'       => $breakdown['refundable_amount'],
+                'non_refundable_fees' => $breakdown['non_refundable_fees'] ?? 0,
+                'transaction_fee'     => $breakdown['transaction_fee'],
+                'web_admin_fee'       => $breakdown['web_admin_fee'],
+                'surcharge_amount'    => $breakdown['surcharge_amount'],
+                'surcharge_pct'       => $breakdown['surcharge_pct'],
                 'rebooking_surcharge' => $breakdown['rebooking_surcharge'] ?? 0,
                 'rebooking_revalidation_fee' => $breakdown['rebooking_revalidation_fee'] ?? 0,
                 'rebooking_rate_diff' => $breakdown['rebooking_rate_diff'] ?? 0,
@@ -471,32 +514,78 @@ class BookingController extends Controller
 
         $request->validate(['refund_destination' => 'required|string|max:255']);
 
-        $cancellationFee = $booking->getCancellationFeeAmount($isWithinFiveMinutes);
-        $refundAmount    = $booking->getRefundAmount($isWithinFiveMinutes);
+        $partialBreakdown = $booking->getPartialRefundBreakdown($selectedItems, $isWithinFiveMinutes);
+        $totalRefundAmount = $partialBreakdown['refundable_amount'];
+        $totalCancellationFee = $partialBreakdown['deduction_amount'];
 
-        $booking->update([
-            'status' => Booking::STATUS_CANCELLED,
-            'cancellation_fee' => $cancellationFee,
-            'refund_amount' => $refundAmount,
-            'refund_destination' => $request->input('refund_destination'),
-            'cancellation_window_expires_at' => null,
-        ]);
+        $allPassengers = $booking->passengers->sortBy('item_number')->values();
+        $selectedCount = count($selectedItems);
+        $totalPaxCount = $allPassengers->count();
+        $isFullCancellation = ($selectedCount >= $totalPaxCount);
+
+        foreach ($allPassengers as $p) {
+            if (in_array((int) $p->item_number, array_map('intval', $selectedItems), true)) {
+                $pItemTotal = $p->getEffectiveItemTotal();
+                $pRefund = $selectedCount > 0 ? round($totalRefundAmount / $selectedCount, 2) : $pItemTotal;
+                $pFee    = $selectedCount > 0 ? round($totalCancellationFee / $selectedCount, 2) : 0;
+
+                $p->update([
+                    'status'             => \App\Models\Passenger::STATUS_REFUND_PENDING,
+                    'refund_amount'      => $pRefund,
+                    'cancellation_fee'   => $pFee,
+                    'refund_destination' => $request->input('refund_destination'),
+                    'refund_status'      => 'pending',
+                ]);
+            }
+        }
+
+        $booking->load('passengers');
+        $allCancelled = $booking->passengers->every(fn ($p) => in_array($p->status, ['cancelled', 'refund_pending', 'refunded', 'operator_cancelled'], true));
+
+        if ($isFullCancellation || $allCancelled) {
+            $booking->update([
+                'status' => Booking::STATUS_CANCELLED,
+                'cancellation_fee' => $totalCancellationFee,
+                'refund_amount' => $booking->passengers->sum('refund_amount') ?: $totalRefundAmount,
+                'refund_destination' => $request->input('refund_destination'),
+                'refund_status' => 'pending',
+                'cancellation_window_expires_at' => null,
+            ]);
+            if ($booking->transaction) {
+                $booking->transaction->update(['payment_status' => 'cancelled']);
+            }
+        } else {
+            $booking->update([
+                'refund_amount'      => $booking->passengers->sum('refund_amount'),
+                'refund_destination' => $request->input('refund_destination'),
+                'refund_status'      => 'pending',
+            ]);
+        }
 
         app(\App\Services\GraciaPointsService::class)->reversePointsForBooking($booking);
         app(\App\Services\GraciaPointsService::class)->refundRedeemedPoints($booking);
 
-        if ($booking->transaction) {
-            $booking->transaction->update(['payment_status' => 'cancelled']);
+        $itemsLabel = $booking->getAffectedItemsLabel($selectedItems);
+
+        // Send User Notification & FCM push notification to the cancelling user
+        if ($booking->user_id) {
+            \App\Models\UserNotification::notify(
+                $booking->user_id,
+                '💰 Refund Request Received',
+                "Your refund request of ₱" . number_format((float) $totalRefundAmount, 2) . " for {$itemsLabel} (booking #{$booking->transaction_number}) is being processed. Please allow 24–48 hours for review and disbursement.",
+                'booking',
+                'money_off',
+                ['transaction_number' => $booking->transaction_number, 'refund_status' => 'pending']
+            );
         }
 
-        // Send a user-specific FCM push notification to the cancelling user's phone asynchronously
-        dispatch(function () use ($booking) {
+        dispatch(function () use ($booking, $totalRefundAmount, $itemsLabel) {
             try {
                 $userTopic = 'user_' . md5(strtolower(trim($booking->client_email)));
                 $messaging = app('firebase.messaging');
                 $notification = \Kreait\Firebase\Messaging\Notification::create(
-                    '✈️ Booking Cancelled',
-                    "Booking #{$booking->transaction_number} has been cancelled. Refund: ₱{$booking->refund_amount}. Please allow 3–5 business days for processing."
+                    '💰 Refund Request Received',
+                    "Your refund request of ₱" . number_format((float) $totalRefundAmount, 2) . " for {$itemsLabel} (booking #{$booking->transaction_number}) is being processed. Please allow 24–48 hours for disbursement."
                 );
                 $message = \Kreait\Firebase\Messaging\CloudMessage::new()
                     ->withTopic($userTopic)
@@ -912,6 +1001,7 @@ class BookingController extends Controller
         }
 
         $booking->update([
+            'status' => Booking::STATUS_OPERATOR_REBOOKING,
             'preferred_replacement_schedule_id' => $request->dep_schedule_id,
             'preferred_replacement_date' => $request->dep_date,
             'rebooking_departure_date' => $request->dep_date,
@@ -930,7 +1020,7 @@ class BookingController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Your new travel dates and accommodations have been submitted successfully and are awaiting staff approval.'
+            'message' => 'Your replacement travel selection has been submitted successfully and is awaiting staff approval.'
         ]);
     }
 
@@ -953,11 +1043,14 @@ class BookingController extends Controller
              ], 400);
         }
 
+        $netRefund = $booking->getTicketBase();
+        $nonRefundable = $booking->getNonRefundableFees();
+
         $booking->update([
-            'status' => $booking->status === Booking::STATUS_OPERATOR_CANCELLED ? Booking::STATUS_OPERATOR_CANCELLED : Booking::STATUS_CANCELLED,
+            'status' => Booking::STATUS_OPERATOR_CANCELLED,
             'disruption_status' => 'refund_requested',
             'refund_destination' => $request->refund_destination,
-            'refund_amount' => $booking->total_price, // 100% full refund
+            'refund_amount' => $netRefund,
         ]);
 
         if ($booking->transaction) {
@@ -966,8 +1059,9 @@ class BookingController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Your booking has been cancelled and a full 100% refund has been requested. Our team will process it shortly to your provided account.',
-            'refund_amount' => $booking->total_price,
+            'message' => 'Your cancellation has been recorded and a refund of ₱' . number_format($netRefund, 2) . ' has been requested. Our team will disburse it to your provided account within 24 to 48 hours.',
+            'refund_amount' => $netRefund,
+            'non_refundable_fees' => $nonRefundable,
         ]);
     }
 }

@@ -411,6 +411,7 @@ class BookingReschedule extends Component
             // submitCustomerReschedule() expects a single seeded option.
             
             $this->booking->update([
+                'status' => 'operator_rebooking',
                 'preferred_replacement_schedule_id' => $this->dep_schedule_id,
                 'preferred_replacement_date' => $this->dep_date,
                 'rebooking_departure_date' => $this->dep_date,
@@ -435,7 +436,7 @@ class BookingReschedule extends Component
 
             $this->loadBooking();
             $this->submitted = true;
-            $this->feedback = 'Your new travel dates and accommodations have been submitted successfully and are awaiting staff approval.';
+            $this->feedback = 'Your replacement travel selection has been submitted and is awaiting staff approval. You can track this under your booking status.';
         } catch (\Exception $e) {
             $this->feedback = $e->getMessage();
         }
@@ -482,13 +483,14 @@ class BookingReschedule extends Component
         $destinationParts[] = "Name: " . $this->refund_account_name;
         
         $refundDestination = implode(' | ', $destinationParts);
+        $netRefund = $this->booking->getTicketBase();
 
         try {
             $this->booking->update([
-                'status' => 'cancelled',
+                'status' => 'operator_cancelled',
                 'disruption_status' => 'refund_requested',
                 'refund_destination' => $refundDestination,
-                'refund_amount' => $this->booking->total_price, // 100% full refund
+                'refund_amount' => $netRefund,
             ]);
 
             if ($this->booking->transaction) {
@@ -498,7 +500,7 @@ class BookingReschedule extends Component
             $this->loadBooking();
             $this->closeRefundForm();
             $this->submitted = true;
-            $this->feedback = 'Your booking has been cancelled and a full 100% refund has been requested. Our team will process it shortly to your provided account.';
+            $this->feedback = 'Your cancellation has been recorded and a refund of ₱' . number_format($netRefund, 2) . ' has been requested. Our team will disburse it to your provided account within 24 to 48 hours.';
         } catch (\Exception $e) {
             $this->feedback = $e->getMessage();
         }

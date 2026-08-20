@@ -12,9 +12,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('passengers', function (Blueprint $table) {
+        if (DB::getDriverName() === 'mysql') {
             DB::statement("ALTER TABLE passengers MODIFY COLUMN type ENUM('adult', 'child', 'infant', 'senior', 'pwd', 'student', 'minor') NOT NULL");
-        });
+        }
     }
 
     /**
@@ -22,8 +22,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('passengers', function (Blueprint $table) {
+        if (DB::getDriverName() === 'mysql') {
             DB::statement("ALTER TABLE passengers MODIFY COLUMN type ENUM('adult', 'child', 'infant') NOT NULL");
-        });
+        }
     }
 };

@@ -1,1 +1,0 @@
-<?php require "vendor/autoload.php"; $app = require_once "bootstrap/app.php"; $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap(); try { $m = app(\Kreait\Firebase\Contract\Messaging::class); echo "FCM instantiated correctly.\n"; } catch (\Exception $e) { echo "ERROR: " . $e->getMessage() . "\n"; }

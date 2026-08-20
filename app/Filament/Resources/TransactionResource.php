@@ -220,6 +220,15 @@ class TransactionResource extends Resource
                                 $breakdown = $booking->getPriceBreakdown();
                                 $total = (float) $booking->total_price;
 
+                                // Reconcile computed sum with stored total_price
+                                $computedSum = array_sum(array_column($breakdown, 'amount'));
+                                $diff = round($total - $computedSum, 2);
+                                if (abs($diff) >= 0.01) {
+                                    $breakdown[] = $diff > 0
+                                        ? ['label' => 'Service Fees & Adjustments', 'amount' => $diff, 'class' => 'text-slate-500']
+                                        : ['label' => 'Discount / Adjustment', 'amount' => $diff, 'class' => 'text-green-600'];
+                                }
+
                                 $html = '<div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">';
                                 $html .= '<table class="w-full text-sm text-left text-gray-700 dark:text-gray-200">';
                                 $html .= '<thead class="text-xs uppercase bg-gray-50 dark:bg-gray-700/50 text-gray-500 border-b border-gray-200 dark:border-gray-700">';
@@ -231,12 +240,15 @@ class TransactionResource extends Resource
                                     $label = htmlspecialchars($item['label'] ?? '');
                                     $amount = (float) ($item['amount'] ?? 0);
                                     $isDiscount = $amount < 0;
-                                    $class = $isDiscount ? 'text-green-600 font-medium' : '';
+                                    $rowClass = $item['class'] ?? '';
+                                    if ($isDiscount && !$rowClass) {
+                                        $rowClass = 'text-green-600 font-medium';
+                                    }
                                     $displayAmount = ($isDiscount ? '-₱' : '₱') . number_format(abs($amount), 2);
 
                                     $html .= '<tr class="hover:bg-gray-50/50 dark:hover:bg-gray-700/20">';
-                                    $html .= '<td class="py-2 px-3">' . $label . '</td>';
-                                    $html .= '<td class="py-2 px-3 text-right font-medium ' . $class . '">' . $displayAmount . '</td>';
+                                    $html .= '<td class="py-2 px-3 ' . htmlspecialchars($rowClass) . '">' . $label . '</td>';
+                                    $html .= '<td class="py-2 px-3 text-right font-medium ' . htmlspecialchars($rowClass) . '">' . $displayAmount . '</td>';
                                     $html .= '</tr>';
                                 }
 
@@ -255,45 +267,73 @@ class TransactionResource extends Resource
                             ->columnSpanFull(),
                     ]),
 
-                Section::make('Passengers')
+                Section::make('Passenger Items & Financial Breakdown')
                     ->schema([
                         TextEntry::make('passengers_summary')
                             ->label('')
-                            ->state(function (Transaction $record): array {
-                                $passengers = $record->booking?->passengers ?? collect();
-
+                            ->html()
+                            ->state(function (Transaction $record): HtmlString {
+                                $passengers = $record->booking?->passengers?->sortBy('item_number') ?? collect();
                                 if ($passengers->isEmpty()) {
-                                    return ['No passengers recorded.'];
+                                    return new HtmlString('<span class="text-gray-500">No passenger items recorded.</span>');
                                 }
 
-                                return $passengers
-                                    ->map(function ($passenger) {
-                                        $label = ucfirst($passenger->type);
+                                $html  = '<div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 space-y-4">';
+                                $html .= '<div class="overflow-x-auto">';
+                                $html .= '<table class="w-full text-sm text-left text-gray-700 dark:text-gray-200">';
+                                $html .= '<thead class="text-xs uppercase bg-gray-50 dark:bg-gray-700/50 text-gray-500 border-b border-gray-200 dark:border-gray-700">';
+                                $html .= '<tr>';
+                                $html .= '<th class="py-2.5 px-3">Item #</th>';
+                                $html .= '<th class="py-2.5 px-3">Passenger</th>';
+                                $html .= '<th class="py-2.5 px-3">Status</th>';
+                                $html .= '<th class="py-2.5 px-3 text-right">Fare & Transport Class</th>';
+                                $html .= '<th class="py-2.5 px-3 text-right">Web Admin Fee</th>';
+                                $html .= '<th class="py-2.5 px-3 text-right">Transaction Fee</th>';
+                                $html .= '<th class="py-2.5 px-3 text-right">Item Total</th>';
+                                $html .= '</tr>';
+                                $html .= '</thead>';
+                                $html .= '<tbody class="divide-y divide-gray-100 dark:divide-gray-700/50">';
 
-                                        if ($passenger->name) {
-                                            $label .= " — {$passenger->name}";
-                                        }
+                                foreach ($passengers as $p) {
+                                    $itemNum = $p->item_number ?? 1;
+                                    $name = htmlspecialchars($p->name ?? 'Passenger');
+                                    $type = htmlspecialchars(ucfirst($p->type ?? 'adult'));
+                                    $ticket = $p->ticket_number ? '<div class="text-xs text-gray-400 font-mono">' . htmlspecialchars($p->ticket_number) . '</div>' : '';
+                                    $statusLabel = htmlspecialchars($p->getStatusLabel());
+                                    $statusColor = $p->getStatusColor();
+                                    $badgeColorClass = match($statusColor) {
+                                        'success' => 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
+                                        'danger'  => 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
+                                        'warning' => 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
+                                        'info'    => 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
+                                        'primary' => 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300',
+                                        default   => 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+                                    };
 
-                                        $discount = $passenger->discount?->name ?? 'No discount';
-                                        $details = "{$label} ({$discount})";
-                                        if ($passenger->birthdate) {
-                                            $details .= " | Bday: " . $passenger->birthdate->format('Y-m-d');
-                                        }
-                                        if ($passenger->id_number) {
-                                            $details .= " | ID: " . $passenger->id_number;
-                                        }
-                                        if ($passenger->id_image_front) {
-                                            $details .= " | [Front ID Attached]";
-                                        }
-                                        if ($passenger->id_image_back) {
-                                            $details .= " | [Back ID Attached]";
-                                        }
+                                    $fareAndClass = $p->getEffectiveFareAndClass();
+                                    $webFee = $p->getEffectiveWebAdminFee();
+                                    $txFee = $p->getEffectiveTransactionFee();
+                                    $itemTotal = $p->getEffectiveItemTotal();
 
-                                        return $details;
-                                    })
-                                    ->all();
+                                    $html .= '<tr class="hover:bg-gray-50/50 dark:hover:bg-gray-700/20">';
+                                    $html .= '<td class="py-2.5 px-3 font-bold text-gray-900 dark:text-white">Item ' . $itemNum . '</td>';
+                                    $html .= '<td class="py-2.5 px-3"><span class="font-medium text-gray-900 dark:text-white">' . $name . '</span> <span class="text-xs text-gray-500">(' . $type . ')</span>' . $ticket . '</td>';
+                                    $html .= '<td class="py-2.5 px-3"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ' . $badgeColorClass . '">' . $statusLabel . '</span></td>';
+                                    $html .= '<td class="py-2.5 px-3 text-right font-medium">₱' . number_format($fareAndClass, 2) . '</td>';
+                                    $html .= '<td class="py-2.5 px-3 text-right text-gray-500">₱' . number_format($webFee, 2) . '</td>';
+                                    $html .= '<td class="py-2.5 px-3 text-right text-gray-500">₱' . number_format($txFee, 2) . '</td>';
+                                    $html .= '<td class="py-2.5 px-3 text-right font-bold text-primary-600 dark:text-primary-400">₱' . number_format($itemTotal, 2) . '</td>';
+                                    $html .= '</tr>';
+                                }
+
+                                $html .= '</tbody>';
+                                $html .= '</table>';
+                                $html .= '</div>';
+                                $html .= '</div>';
+
+                                return new HtmlString($html);
                             })
-                            ->listWithLineBreaks(),
+                            ->columnSpanFull(),
                     ]),
 
                 Section::make('Accommodations')

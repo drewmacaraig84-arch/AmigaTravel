@@ -22,13 +22,13 @@
                 <div class="mb-8">
                     @php
                         $isTourPackage = $tour_id || $prefilled_from_package;
-                        $steps = $isTourPackage ? ['Route','Discount','Stay','Submit'] : ['Route','Schedule','Discount','Stay','Submit'];
+                        $steps = $isTourPackage ? ['Route','Details','Stay','Submit'] : ['Route','Schedule','Details','Stay','Submit'];
 
                         $getIcon = function($label) {
                             return match($label) {
                                 'Route' => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 sm:w-6 sm:h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" /></svg>',
                                 'Schedule' => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 sm:w-6 sm:h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>',
-                                'Discount' => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 sm:w-6 sm:h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" /><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6z" /></svg>',
+                                'Details' => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 sm:w-6 sm:h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>',
                                 'Stay' => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 sm:w-6 sm:h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" /></svg>',
                                 'Submit' => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 sm:w-6 sm:h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>',
                                 default => ''
@@ -382,7 +382,7 @@
                             <div class="grid gap-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm lg:grid-cols-[1fr_auto] lg:items-center">
                                 <div>
                                     <p class="text-slate-900 font-semibold">Travelers</p>
-                                    <p class="mt-2 text-sm text-slate-600">Limit 8 travelers total for adults and children combined.</p>
+                                    <p class="mt-2 text-sm text-slate-600">Limit {{ $this->getMaxPassengers() }} travelers total for adults and children combined.</p>
                                 </div>
                                 <button type="button" wire:click.prevent="togglePassengerInfoModal" class="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
                                     Learn more
@@ -400,7 +400,7 @@
                                             <div class="flex items-center gap-2">
                                                 <button type="button" wire:click.prevent="decrementAdults" @if($adults <= 1) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14"/></svg></button>
                                                 <span class="min-w-[3rem] text-center text-lg font-semibold text-slate-900">{{ $adults }}</span>
-                                                <button type="button" wire:click.prevent="incrementAdults" @if($adults + $children + ($mode === 'airline' ? $minors + $infants : 0) >= 8) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400">+</button>
+                                                <button type="button" wire:click.prevent="incrementAdults" @if($adults + $children + ($mode === 'airline' ? $minors + $infants : 0) >= $this->getMaxPassengers()) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400">+</button>
                                             </div>
                                         </div>
                                         @error('adults')<p class="mt-3 text-sm text-rose-600">{{ $message }}</p>@enderror
@@ -415,7 +415,7 @@
                                             <div class="flex items-center gap-2">
                                                 <button type="button" wire:click.prevent="decrementMinors" @if($minors <= 0) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14"/></svg></button>
                                                 <span class="min-w-[3rem] text-center text-lg font-semibold text-slate-900">{{ $minors }}</span>
-                                                <button type="button" wire:click.prevent="incrementMinors" @if($adults + $children + ($mode === 'airline' ? $minors + $infants : 0) >= 8) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400">+</button>
+                                                <button type="button" wire:click.prevent="incrementMinors" @if($adults + $children + ($mode === 'airline' ? $minors + $infants : 0) >= $this->getMaxPassengers()) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400">+</button>
                                             </div>
                                         </div>
                                         @error('minors')<p class="mt-3 text-sm text-rose-600">{{ $message }}</p>@enderror
@@ -430,7 +430,7 @@
                                             <div class="flex items-center gap-2">
                                                 <button type="button" wire:click.prevent="decrementChildren" @if($children <= 0) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14"/></svg></button>
                                                 <span class="min-w-[3rem] text-center text-lg font-semibold text-slate-900">{{ $children }}</span>
-                                                <button type="button" wire:click.prevent="incrementChildren" @if($adults + $children + ($mode === 'airline' ? $minors + $infants : 0) >= 8) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400">+</button>
+                                                <button type="button" wire:click.prevent="incrementChildren" @if($adults + $children + ($mode === 'airline' ? $minors + $infants : 0) >= $this->getMaxPassengers()) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400">+</button>
                                             </div>
                                         </div>
                                         @error('children')<p class="mt-3 text-sm text-rose-600">{{ $message }}</p>@enderror
@@ -445,7 +445,7 @@
                                             <div class="flex items-center gap-2">
                                                 <button type="button" wire:click.prevent="decrementInfants" @if($infants <= 0) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14"/></svg></button>
                                                 <span class="min-w-[3rem] text-center text-lg font-semibold text-slate-900">{{ $infants }}</span>
-                                                <button type="button" wire:click.prevent="incrementInfants" @if($infants >= $adults || $adults + $children + ($mode === 'airline' ? $minors + $infants : 0) >= 8) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400">+</button>
+                                                <button type="button" wire:click.prevent="incrementInfants" @if($infants >= $adults || $adults + $children + ($mode === 'airline' ? $minors + $infants : 0) >= $this->getMaxPassengers()) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400">+</button>
                                             </div>
                                         </div>
                                         @error('infants')<p class="mt-3 text-sm text-rose-600">{{ $message }}</p>@enderror
@@ -462,7 +462,7 @@
                                             <div class="flex items-center gap-2">
                                                 <button type="button" wire:click.prevent="decrementAdults" @if($adults <= 1) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14"/></svg></button>
                                                 <span class="min-w-[3rem] text-center text-lg font-semibold text-slate-900">{{ $adults }}</span>
-                                                <button type="button" wire:click.prevent="incrementAdults" @if($adults + $children + ($mode === 'airline' ? $minors + $infants : 0) >= 8) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400">+</button>
+                                                <button type="button" wire:click.prevent="incrementAdults" @if($adults + $children + ($mode === 'airline' ? $minors + $infants : 0) >= $this->getMaxPassengers()) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400">+</button>
                                             </div>
                                         </div>
                                         @error('adults')<p class="mt-3 text-sm text-rose-600">{{ $message }}</p>@enderror
@@ -477,7 +477,7 @@
                                             <div class="flex items-center gap-2">
                                                 <button type="button" wire:click.prevent="decrementChildren" @if($children <= 0) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14"/></svg></button>
                                                 <span class="min-w-[3rem] text-center text-lg font-semibold text-slate-900">{{ $children }}</span>
-                                                <button type="button" wire:click.prevent="incrementChildren" @if($adults + $children + ($mode === 'airline' ? $minors + $infants : 0) >= 8) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400">+</button>
+                                                <button type="button" wire:click.prevent="incrementChildren" @if($adults + $children + ($mode === 'airline' ? $minors + $infants : 0) >= $this->getMaxPassengers()) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400">+</button>
                                             </div>
                                         </div>
                                         @error('children')<p class="mt-3 text-sm text-rose-600">{{ $message }}</p>@enderror
@@ -486,7 +486,7 @@
                             @endif
 
                             <div class="rounded-xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-700">
-                                Total travelers: <span class="font-bold text-slate-900">{{ $adults + $children + ($mode === 'airline' ? $minors + $infants : 0) }}</span> / 8 
+                                Total travelers: <span class="font-bold text-slate-900">{{ $adults + $children + ($mode === 'airline' ? $minors + $infants : 0) }}</span> / {{ $this->getMaxPassengers() }}
                             </div>
 
                             @if($mode === 'ferry' && stripos($operator ?? '', 'Starlite') !== false)
@@ -790,86 +790,171 @@
                                     @endif
 
                                         @if($mode === 'airline')
-                                            {{-- Extra Baggage section (bottom of schedule phase) --}}
+                                            {{-- Remodeled Per-Passenger Extra Baggage section --}}
+                                            @php
+                                                $baggageRates = $this->getAirlineExtraBaggageRates();
+                                                $currentAirlineKey = $selected_baggage_airline ?: $this->autoDetectBaggageAirline();
+                                                $selectedAirlineData = $baggageRates[$currentAirlineKey] ?? reset($baggageRates);
+                                                $passengersCount = max(1, count($passengers));
+                                                $totalBaggageFee = $this->getExtraBaggageTotalPrice();
+                                                $paxWithBaggage = $this->getPassengersWithBaggageCount();
+                                                $isScopeIntl = ($this->autoDetectBaggageScope() === 'international');
+                                            @endphp
+
                                             <div class="mt-8 border-t border-slate-200 pt-6">
-                                                <div class="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">
-                                                    <div class="flex flex-wrap items-center justify-between gap-4">
-                                                        <div class="flex items-center gap-3">
-                                                            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-[#216417]">
+                                                <div class="rounded-3xl border border-slate-200 bg-white p-5 sm:p-7 shadow-sm transition-all">
+                                                    {{-- Header --}}
+                                                    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-5">
+                                                        <div class="flex items-center gap-3.5">
+                                                            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-[#216417] shadow-sm">
                                                                 <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
                                                                 </svg>
                                                             </div>
                                                             <div>
-                                                                <p class="text-slate-900 font-bold text-lg">Prepaid Extra Baggage</p>
-                                                                <p class="text-xs text-slate-500">Add prepaid check-in baggage per passenger for your flight</p>
+                                                                <div class="flex flex-wrap items-center gap-2">
+                                                                    <p class="text-slate-900 font-bold text-lg">Prepaid Extra Baggage</p>
+                                                                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wider {{ $isScopeIntl ? 'bg-sky-100 text-sky-800' : 'bg-emerald-100 text-emerald-800' }}">
+                                                                        {{ $isScopeIntl ? '✈️ International Rates' : '🇵🇭 Domestic Rates' }}
+                                                                    </span>
+                                                                </div>
+                                                                <p class="text-xs text-slate-500 mt-0.5">Select check-in baggage allowance for each passenger individually</p>
                                                             </div>
                                                         </div>
-                                                        <label class="relative inline-flex cursor-pointer items-center gap-3">
-                                                            <input type="checkbox" wire:model.live="hasExtraBaggage" class="peer sr-only">
-                                                            <span class="relative h-7 w-12 shrink-0 rounded-full bg-slate-200 transition peer-checked:bg-[#216417] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#216417]/30 after:absolute after:left-0.5 after:top-0.5 after:h-6 after:w-6 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-5"></span>
-                                                            <span class="text-sm font-bold text-slate-900">{{ $hasExtraBaggage ? 'Extra Baggage Added' : 'No Extra Baggage' }}</span>
-                                                        </label>
+
+                                                        <div class="flex items-center gap-2">
+                                                            @if($paxWithBaggage > 0)
+                                                                <button
+                                                                    type="button"
+                                                                    wire:click="clearAllBaggage"
+                                                                    class="inline-flex items-center gap-1 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm hover:bg-slate-50 transition"
+                                                                >
+                                                                    <svg class="h-3.5 w-3.5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                                                    </svg>
+                                                                    Clear All
+                                                                </button>
+                                                            @endif
+                                                        </div>
                                                     </div>
 
-                                                    @if($hasExtraBaggage)
-                                                        @php
-                                                            $baggageRates = $this->getAirlineExtraBaggageRates();
-                                                            $currentAirlineKey = $selected_baggage_airline ?: $this->autoDetectBaggageAirline();
-                                                            $selectedAirlineData = $baggageRates[$currentAirlineKey] ?? reset($baggageRates);
-                                                            $passengersCount = max(1, count($passengers));
-                                                        @endphp
-                                                        <div class="mt-5 border-t border-slate-200 pt-5">
-                                                            <div class="flex flex-wrap items-center justify-between gap-4">
-                                                                <div>
-                                                                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Select Extra Baggage (kg)</label>
-                                                                    <select
-                                                                        wire:change="selectBaggageOption($event.target.options[$event.target.selectedIndex].dataset.weight, $event.target.value)"
-                                                                        class="w-full sm:w-64 rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-900 shadow-sm focus:border-[#216417] focus:outline-none focus:ring-2 focus:ring-[#216417]/20"
-                                                                    >
-                                                                        @foreach($selectedAirlineData['options'] as $opt)
-                                                                            @php
-                                                                                $isSelected = ($extra_baggage_weight === $opt['weight']);
-                                                                            @endphp
-                                                                            <option
-                                                                                value="{{ $opt['price'] }}"
-                                                                                data-weight="{{ $opt['weight'] }}"
-                                                                                {{ $isSelected ? 'selected' : '' }}
-                                                                            >
-                                                                                {{ $opt['weight'] }} &mdash; &#8369;{{ number_format($opt['price']) }} per pax
-                                                                            </option>
-                                                                        @endforeach
-                                                                    </select>
-                                                                </div>
-                                                                <div class="rounded-xl bg-emerald-50/70 border border-emerald-200 px-4 py-3 text-right">
-                                                                    <div class="text-xs text-slate-600">
-                                                                        Selected Allowance:
-                                                                        <span class="rounded-full bg-[#216417] px-2.5 py-0.5 text-xs font-extrabold text-white">{{ $extra_baggage_weight ?: '20 kg' }}</span>
-                                                                    </div>
-                                                                    <div class="text-xs text-slate-500 mt-1">
-                                                                        Rate: &#8369;{{ number_format($extra_baggage_price ?? 0) }} per passenger &times; {{ $passengersCount }} traveler{{ $passengersCount > 1 ? 's' : '' }}
-                                                                    </div>
-                                                                </div>
+                                                    {{-- Quick Apply Toolbar --}}
+                                                    @if(!empty($selectedAirlineData['options']))
+                                                        <div class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-slate-50 border border-slate-200/80 p-3.5">
+                                                            <div class="flex items-center gap-2 text-xs font-bold text-slate-700">
+                                                                <span class="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-slate-700 text-[10px]">⚡</span>
+                                                                Quick apply to all {{ $passengersCount }} traveler{{ $passengersCount > 1 ? 's' : '' }}:
                                                             </div>
-
-                                                            <div class="mt-4 rounded-xl bg-[#216417]/5 border border-[#216417]/20 p-4">
-                                                                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                                                                    <div class="flex items-center gap-2">
-                                                                        <svg class="h-5 w-5 text-[#216417]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                                                        </svg>
-                                                                        <span class="text-xs font-semibold text-slate-700">Applied to all {{ $passengersCount }} passenger(s) on your flight.</span>
-                                                                    </div>
-                                                                    <div class="text-left sm:text-right border-t sm:border-t-0 border-emerald-200/60 pt-3 sm:pt-0">
-                                                                        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Added Baggage Fee</div>
-                                                                        <div class="text-xl font-extrabold text-[#216417] mt-0.5">
-                                                                            +&#8369;{{ number_format($this->getExtraBaggageTotalPrice(), 2) }}
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
+                                                            <div class="flex flex-wrap items-center gap-1.5">
+                                                                @foreach(array_slice($selectedAirlineData['options'], 0, 4) as $opt)
+                                                                    <button
+                                                                        type="button"
+                                                                        wire:click="applyBaggageToAllPassengers('{{ $opt['weight'] }}', {{ $opt['price'] }})"
+                                                                        class="inline-flex items-center gap-1 rounded-xl bg-white border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-emerald-500 hover:text-emerald-700 shadow-2xs transition"
+                                                                    >
+                                                                        <span>{{ $opt['weight'] }}</span>
+                                                                        <span class="text-slate-400 font-normal">(&#8369;{{ number_format($opt['price']) }})</span>
+                                                                    </button>
+                                                                @endforeach
                                                             </div>
                                                         </div>
                                                     @endif
+
+                                                    {{-- Per-Passenger Selection Cards --}}
+                                                    <div class="mt-5 space-y-3">
+                                                        @foreach($passengers as $idx => $pax)
+                                                            @php
+                                                                $paxWeight = $pax['extra_baggage_weight'] ?? '';
+                                                                $paxPrice = floatval($pax['extra_baggage_price'] ?? 0);
+                                                                $hasBaggage = !empty($paxWeight) && $paxPrice > 0;
+                                                                $paxType = ucfirst($pax['type'] ?? 'Adult');
+                                                                $paxDisplayName = !empty($pax['name']) ? $pax['name'] : (!empty($pax['first_name']) ? trim($pax['first_name'] . ' ' . ($pax['last_name'] ?? '')) : "Traveler #" . ($idx + 1) . " ({$paxType})");
+                                                            @endphp
+
+                                                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 rounded-2xl border p-4 transition-all {{ $hasBaggage ? 'border-emerald-300 bg-emerald-50/30 ring-1 ring-emerald-400/20' : 'border-slate-200 bg-white hover:border-slate-300' }}">
+                                                                {{-- Passenger Info --}}
+                                                                <div class="flex items-center gap-3">
+                                                                    <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl font-bold text-xs {{ $hasBaggage ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700' }}">
+                                                                        {{ $idx + 1 }}
+                                                                    </span>
+                                                                    <div>
+                                                                        <p class="text-sm font-bold text-slate-900 leading-snug">{{ $paxDisplayName }}</p>
+                                                                        <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">{{ $paxType }}</span>
+                                                                    </div>
+                                                                </div>
+
+                                                                {{-- Selection Dropdown & Badge --}}
+                                                                <div class="flex flex-wrap items-center gap-3 sm:justify-end">
+                                                                    <div class="w-full sm:w-auto">
+                                                                        <select
+                                                                            wire:change="setPassengerBaggage({{ $idx }}, $event.target.options[$event.target.selectedIndex].dataset.weight, $event.target.value)"
+                                                                            class="w-full sm:w-64 rounded-xl border px-3.5 py-2 text-xs font-bold shadow-2xs focus:outline-none transition {{ $hasBaggage ? 'border-emerald-400 bg-white text-emerald-900 focus:ring-2 focus:ring-emerald-500/20' : 'border-slate-300 bg-slate-50 text-slate-700 focus:border-slate-400' }}"
+                                                                        >
+                                                                            <option value="0" data-weight="" {{ empty($paxWeight) ? 'selected' : '' }}>
+                                                                                No Extra Baggage (0 kg) &mdash; &#8369;0
+                                                                            </option>
+                                                                            @if(!empty($selectedAirlineData['options']))
+                                                                                @foreach($selectedAirlineData['options'] as $opt)
+                                                                                    <option
+                                                                                        value="{{ $opt['price'] }}"
+                                                                                        data-weight="{{ $opt['weight'] }}"
+                                                                                        {{ $paxWeight === $opt['weight'] ? 'selected' : '' }}
+                                                                                    >
+                                                                                        {{ $opt['weight'] }} &mdash; &#8369;{{ number_format($opt['price']) }}
+                                                                                    </option>
+                                                                                @endforeach
+                                                                            @endif
+                                                                        </select>
+                                                                    </div>
+
+                                                                    <div class="shrink-0">
+                                                                        @if($hasBaggage)
+                                                                            <span class="inline-flex items-center gap-1.5 rounded-xl bg-emerald-100 border border-emerald-300 px-3 py-1.5 text-xs font-extrabold text-emerald-800">
+                                                                                <span>🧳 {{ $paxWeight }}</span>
+                                                                                <span>&bull;</span>
+                                                                                <span>+&#8369;{{ number_format($paxPrice, 2) }}</span>
+                                                                            </span>
+                                                                        @else
+                                                                            <span class="inline-flex items-center rounded-xl bg-slate-100 px-2.5 py-1.5 text-xs font-medium text-slate-500">
+                                                                                0 kg added
+                                                                            </span>
+                                                                        @endif
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+
+                                                    {{-- Summary Footer --}}
+                                                    <div class="mt-5 rounded-2xl bg-gradient-to-r from-emerald-50/80 to-teal-50/50 border border-emerald-200/80 p-4">
+                                                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                                            <div class="flex items-center gap-2.5">
+                                                                <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white text-xs">
+                                                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                                                                    </svg>
+                                                                </div>
+                                                                <div>
+                                                                    <p class="text-xs font-bold text-emerald-950">
+                                                                        @if($paxWithBaggage > 0)
+                                                                            Extra baggage added for {{ $paxWithBaggage }} of {{ $passengersCount }} traveler{{ $passengersCount > 1 ? 's' : '' }}
+                                                                        @else
+                                                                            No extra baggage selected
+                                                                        @endif
+                                                                    </p>
+                                                                    <p class="text-[11px] text-emerald-800/80">
+                                                                        Check-in baggage allowance will be confirmed and printed on the boarding vouchers.
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                            <div class="text-left sm:text-right border-t sm:border-t-0 border-emerald-200 pt-2.5 sm:pt-0">
+                                                                <span class="text-[10px] font-extrabold uppercase tracking-wider text-emerald-800">Total Baggage Fee</span>
+                                                                <p class="text-xl font-extrabold text-[#216417] leading-none mt-0.5">
+                                                                    +&#8369;{{ number_format($totalBaggageFee, 2) }}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         @endif
@@ -1254,17 +1339,121 @@
                                         </label>
                                     @endif
 
+                                    @if($this->isInternational)
+                                        @php
+                                            $passportCountries = [
+                                                'Philippines', 'India', 'Japan', 'Singapore', 'South Korea', 'Hong Kong', 'United States',
+                                                'Australia', 'Canada', 'United Kingdom', 'China', 'Taiwan', 'Malaysia', 'Indonesia',
+                                                'Thailand', 'Vietnam', 'United Arab Emirates', 'Saudi Arabia', 'Qatar', 'Kuwait',
+                                                'Germany', 'France', 'Italy', 'Spain', 'Switzerland', 'Netherlands', 'New Zealand',
+                                                'Brazil', 'Mexico', 'South Africa', 'Egypt', 'Turkey', 'Russia'
+                                            ];
+                                            $passportMonths = [
+                                                '01' => 'Jan', '02' => 'Feb', '03' => 'Mar', '04' => 'Apr',
+                                                '05' => 'May', '06' => 'Jun', '07' => 'Jul', '08' => 'Aug',
+                                                '09' => 'Sep', '10' => 'Oct', '11' => 'Nov', '12' => 'Dec'
+                                            ];
+                                            $pCurrentYear = (int) date('Y');
+                                        @endphp
+                                        <div class="col-span-full mt-4 rounded-2xl border-2 border-emerald-500/40 bg-emerald-50/40 p-5 space-y-4 shadow-sm" x-data="{ open: true }">
+                                            <div class="flex items-center justify-between cursor-pointer select-none" @click="open = !open">
+                                                <div class="flex items-center gap-2 text-emerald-800 font-bold text-xs sm:text-sm tracking-wider uppercase">
+                                                    <span class="text-emerald-600 text-base" x-text="open ? '▲' : '▼'">▲</span>
+                                                    <span>ADD PASSPORT INFORMATION <span class="text-rose-500 font-bold" aria-hidden="true">*</span></span>
+                                                    <span class="ml-2 text-[11px] font-normal normal-case text-emerald-700 bg-emerald-100/90 px-2.5 py-0.5 rounded-full border border-emerald-200">Required for international flight</span>
+                                                </div>
+                                                <span class="text-xs text-emerald-700 font-medium hover:underline" x-text="open ? 'Collapse' : 'Expand'"></span>
+                                            </div>
 
-                                    </div>
+                                            <div x-show="open" x-transition class="space-y-4 pt-1">
+                                                <div class="grid gap-4 sm:grid-cols-1 md:grid-cols-2">
+                                                    {{-- Issuing Country --}}
+                                                    <label class="block min-w-0">
+                                                        <span class="text-slate-700 font-semibold text-xs uppercase tracking-wider">Country of Issue / Nationality <span class="text-rose-500 font-bold" aria-hidden="true">*</span></span>
+                                                        <select wire:model.blur="passengers.{{ $index }}.passport_country" class="mt-2 block w-full rounded-xl border border-slate-300 bg-white px-4 py-3 shadow-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-sm font-medium transition-all">
+                                                            <option value="">Select Country</option>
+                                                            @foreach($passportCountries as $country)
+                                                                <option value="{{ $country }}">{{ $country }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                        @error('passengers.' . $index . '.passport_country')<p class="mt-1 text-xs text-rose-600 font-medium">{{ $message }}</p>@enderror
+                                                    </label>
+
+                                                    {{-- Passport Number --}}
+                                                    <label class="block min-w-0">
+                                                        <span class="text-slate-700 font-semibold text-xs uppercase tracking-wider">Passport Number <span class="text-rose-500 font-bold" aria-hidden="true">*</span></span>
+                                                        <input type="text" wire:model.blur="passengers.{{ $index }}.passport_number" placeholder="Passport Number" class="mt-2 block w-full rounded-xl border border-slate-300 bg-white px-4 py-3 shadow-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-sm uppercase font-mono tracking-wider transition-all" />
+                                                        @error('passengers.' . $index . '.passport_number')<p class="mt-1 text-xs text-rose-600 font-medium">{{ $message }}</p>@enderror
+                                                    </label>
+                                                </div>
+
+                                                <div class="grid gap-4 sm:grid-cols-1 md:grid-cols-2">
+                                                    {{-- Date of Issuance --}}
+                                                    <div class="block min-w-0">
+                                                        <span class="text-slate-700 font-semibold text-xs uppercase tracking-wider">Date of Issuance <span class="text-rose-500 font-bold" aria-hidden="true">*</span></span>
+                                                        <div class="mt-2 grid grid-cols-3 gap-2">
+                                                            <select wire:model.live="passengers.{{ $index }}.passport_issuance_day" class="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20">
+                                                                <option value="">Day</option>
+                                                                @for($d = 1; $d <= 31; $d++)
+                                                                    <option value="{{ sprintf('%02d', $d) }}">{{ sprintf('%02d', $d) }}</option>
+                                                                @endfor
+                                                            </select>
+                                                            <select wire:model.live="passengers.{{ $index }}.passport_issuance_month" class="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20">
+                                                                <option value="">Month</option>
+                                                                @foreach($passportMonths as $num => $mon)
+                                                                    <option value="{{ $num }}">{{ $mon }} ({{ $num }})</option>
+                                                                @endforeach
+                                                            </select>
+                                                            <select wire:model.live="passengers.{{ $index }}.passport_issuance_year" class="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20">
+                                                                <option value="">Year</option>
+                                                                @for($y = $pCurrentYear; $y >= 1970; $y--)
+                                                                    <option value="{{ $y }}">{{ $y }}</option>
+                                                                @endfor
+                                                            </select>
+                                                        </div>
+                                                        @error('passengers.' . $index . '.passport_issuance_date')<p class="mt-1 text-xs text-rose-600 font-medium">{{ $message }}</p>@enderror
+                                                    </div>
+
+                                                    {{-- Date of Expiry --}}
+                                                    <div class="block min-w-0">
+                                                        <span class="text-slate-700 font-semibold text-xs uppercase tracking-wider">Date of Expiry <span class="text-rose-500 font-bold" aria-hidden="true">*</span></span>
+                                                        <div class="mt-2 grid grid-cols-3 gap-2">
+                                                            <select wire:model.live="passengers.{{ $index }}.passport_expiry_day" class="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20">
+                                                                <option value="">Day</option>
+                                                                @for($d = 1; $d <= 31; $d++)
+                                                                    <option value="{{ sprintf('%02d', $d) }}">{{ sprintf('%02d', $d) }}</option>
+                                                                @endfor
+                                                            </select>
+                                                            <select wire:model.live="passengers.{{ $index }}.passport_expiry_month" class="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20">
+                                                                <option value="">Month</option>
+                                                                @foreach($passportMonths as $num => $mon)
+                                                                    <option value="{{ $num }}">{{ $mon }} ({{ $num }})</option>
+                                                                @endforeach
+                                                            </select>
+                                                            <select wire:model.live="passengers.{{ $index }}.passport_expiry_year" class="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20">
+                                                                <option value="">Year</option>
+                                                                @for($y = $pCurrentYear; $y <= $pCurrentYear + 15; $y++)
+                                                                    <option value="{{ $y }}">{{ $y }}</option>
+                                                                @endfor
+                                                            </select>
+                                                        </div>
+                                                        @error('passengers.' . $index . '.passport_expiry_date')<p class="mt-1 text-xs text-rose-600 font-medium">{{ $message }}</p>@enderror
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endif
+
                                 </div>
-                            @endforeach
-                        </div>
-                    @endif
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
 
-                    @if ($step === 4)
-                        <div class="space-y-6">
-                            <div class="space-y-4">
-                                <p class="text-black font-bold">Choose a place to stay in {{ $destination }} (optional).</p>
+                @if ($step === 4)
+                    <div class="space-y-6">
+                        <div class="space-y-4">
+                            <p class="text-black font-bold">Choose a place to stay in {{ $destination }} (optional).</p>
                                 @php
                                     $currentDestination = $destination;
                                     $filteredHotels = $accommodationCatalog->filter(function ($acc) use ($currentDestination) {
@@ -1312,20 +1501,20 @@
                     @if ($step === 5)
                         <div class="grid gap-6 lg:grid-cols-2">
                             <label class="block" data-error="client_name">
-                                <span class="text-slate-900 font-bold text-sm">Your name</span>
-                                <input type="text" wire:model.blur="client_name" class="mt-3 block w-full rounded-xl border border-slate-300 px-4 py-3 shadow-sm focus:border-[#db2777] focus:outline-none focus:ring-2 focus:ring-[#db2777]/20 transition-all" placeholder="Jane Doe" />
+                                <span class="text-slate-900 font-bold text-sm">Your name <span class="text-rose-500 font-bold" aria-hidden="true">*</span></span>
+                                <input type="text" wire:model.live.debounce.250ms="client_name" class="mt-3 block w-full rounded-xl border border-slate-300 px-4 py-3 shadow-sm focus:border-[#db2777] focus:outline-none focus:ring-2 focus:ring-[#db2777]/20 transition-all" placeholder="Jane Doe" />
                                 @error('client_name')<p class="mt-2 text-sm text-rose-600">{{ $message }}</p>@enderror
                             </label>
 
                             <label class="block" data-error="client_email">
-                                <span class="text-slate-900 font-bold text-sm">Email address</span>
-                                <input type="email" wire:model.blur="client_email" class="mt-3 block w-full rounded-xl border border-slate-300 px-4 py-3 shadow-sm focus:border-[#db2777] focus:outline-none focus:ring-2 focus:ring-[#db2777]/20 transition-all" placeholder="you@example.com" />
+                                <span class="text-slate-900 font-bold text-sm">Email address <span class="text-rose-500 font-bold" aria-hidden="true">*</span></span>
+                                <input type="email" wire:model.live.debounce.250ms="client_email" class="mt-3 block w-full rounded-xl border border-slate-300 px-4 py-3 shadow-sm focus:border-[#db2777] focus:outline-none focus:ring-2 focus:ring-[#db2777]/20 transition-all" placeholder="you@example.com" />
                                 @error('client_email')<p class="mt-2 text-sm text-rose-600">{{ $message }}</p>@enderror
                             </label>
 
                             <label class="block lg:col-span-2" data-error="client_phone">
-                                <span class="text-slate-900 font-bold text-sm">Contact number <span class="text-rose-600">*</span></span>
-                                <input required type="tel" inputmode="tel" wire:model.blur="client_phone" oninput="this.value = this.value.replace(/[^0-9+\s()-]/g, '')" onkeypress="if(event.key.length === 1 && !/[0-9+\s()-]/.test(event.key)) event.preventDefault();" class="mt-3 block w-full rounded-xl border border-slate-300 px-4 py-3 shadow-sm focus:border-[#db2777] focus:outline-none focus:ring-2 focus:ring-[#db2777]/20 transition-all" placeholder="e.g. +63 912 345 6789" />
+                                <span class="text-slate-900 font-bold text-sm">Contact number <span class="text-rose-500 font-bold" aria-hidden="true">*</span></span>
+                                <input required type="tel" inputmode="tel" wire:model.live.debounce.250ms="client_phone" oninput="this.value = this.value.replace(/[^0-9+\s()-]/g, '')" onkeypress="if(event.key.length === 1 && !/[0-9+\s()-]/.test(event.key)) event.preventDefault();" class="mt-3 block w-full rounded-xl border border-slate-300 px-4 py-3 shadow-sm focus:border-[#db2777] focus:outline-none focus:ring-2 focus:ring-[#db2777]/20 transition-all" placeholder="e.g. +63 912 345 6789" />
                                 @error('client_phone')<p class="mt-2 text-sm text-rose-600">{{ $message }}</p>@enderror
                             </label>
                         </div>
@@ -1594,9 +1783,24 @@
 
                                 {{-- Extra Baggage --}}
                                 @if (isset($breakdown['extra_baggage']) && $breakdown['extra_baggage'] > 0)
-                                    <div class="flex justify-between items-center rounded-lg bg-white p-4 border border-slate-200">
-                                        <span class="text-slate-700 font-medium">Prepaid Extra Baggage ({{ $extra_baggage_weight }} &times; {{ $adults + $children }} pax)</span>
-                                        <span class="text-slate-900 font-bold">&#8369;{{ number_format($breakdown['extra_baggage'], 2) }}</span>
+                                    <div class="rounded-lg bg-white p-4 border border-slate-200 space-y-2">
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-slate-700 font-bold text-sm">🧳 Prepaid Extra Baggage ({{ $this->getPassengersWithBaggageCount() }} traveler{{ $this->getPassengersWithBaggageCount() > 1 ? 's' : '' }})</span>
+                                            <span class="text-slate-900 font-bold">&#8369;{{ number_format($breakdown['extra_baggage'], 2) }}</span>
+                                        </div>
+                                        <div class="text-xs text-slate-500 divide-y divide-slate-100">
+                                            @foreach($passengers as $idx => $pax)
+                                                @if(!empty($pax['extra_baggage_weight']) && (float)($pax['extra_baggage_price'] ?? 0) > 0)
+                                                    @php
+                                                        $paxName = !empty($pax['name']) ? $pax['name'] : (!empty($pax['first_name']) ? trim($pax['first_name'] . ' ' . ($pax['last_name'] ?? '')) : "Traveler #" . ($idx + 1));
+                                                    @endphp
+                                                    <div class="flex justify-between items-center py-1">
+                                                        <span>{{ $paxName }}: <span class="font-semibold text-slate-700">{{ $pax['extra_baggage_weight'] }}</span></span>
+                                                        <span class="font-semibold text-emerald-700">+&#8369;{{ number_format($pax['extra_baggage_price'], 2) }}</span>
+                                                    </div>
+                                                @endif
+                                            @endforeach
+                                        </div>
                                     </div>
                                 @endif
 
@@ -1703,49 +1907,6 @@
                             @endif
                         </div>
                     </form>
-                    
-                    <script>
-                        // Auto-scroll to first error on validation failure
-                        // Use both Livewire event and MutationObserver for maximum reliability
-                        const scrollToFirstError = () => {
-                            setTimeout(() => {
-                                const errorMessage = document.querySelector('.text-rose-600');
-                                if (errorMessage) {
-                                    const errorContainer = errorMessage.closest('[data-error]') || errorMessage.closest('label') || errorMessage.parentElement;
-                                    if (errorContainer) {
-                                        errorContainer.scrollIntoView({ 
-                                            behavior: 'smooth', 
-                                            block: 'center' 
-                                        });
-                                    }
-                                }
-                            }, 150);
-                        };
-
-                        // Listen for Livewire validation-error event
-                        if (typeof Livewire !== 'undefined') {
-                            Livewire.on('validation-error', scrollToFirstError);
-                        }
-
-                        // Also observe DOM changes for reliability
-                        const observer = new MutationObserver((mutations) => {
-                            mutations.forEach((mutation) => {
-                                if (mutation.addedNodes.length) {
-                                    mutation.addedNodes.forEach((node) => {
-                                        if (node.textContent && node.textContent.includes('field is required')) {
-                                            scrollToFirstError();
-                                        }
-                                    });
-                                }
-                            });
-                        });
-
-                        observer.observe(document.body, {
-                            childList: true,
-                            subtree: true,
-                            characterData: true
-                        });
-                    </script>
                 </div>
             </div>
         </div>
@@ -1811,10 +1972,13 @@
         @php
             $operatorLabel = !empty($operator) ? $operator : 'the selected operator';
         @endphp
-        <div x-data="{ accepted: @entangle('hasAcceptedTerms'), isSubmitting: @entangle('isSubmittingBooking'), scrolledToBottom: false }" x-init="initBookingModal($el); $nextTick(() => { const el = $refs.content; if (el) { this.scrolledToBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 150; } })" class="fixed inset-x-0 top-20 bottom-0 z-[100] flex items-center justify-center px-4 pb-4 pt-6 bg-slate-900/60 backdrop-blur-sm">
-            <div class="w-full max-w-2xl max-h-[calc(100vh-5rem)] overflow-hidden bg-white rounded-2xl shadow-2xl flex flex-col">
+        <div x-data="{ accepted: @entangle('hasAcceptedTerms'), isSubmitting: @entangle('isSubmittingBooking'), scrolledToBottom: false }" x-init="initBookingModal($el); $nextTick(() => { const el = $refs.content; if (el) { scrolledToBottom = (el.scrollHeight <= el.clientHeight + 10) || (el.scrollTop + el.clientHeight >= el.scrollHeight - 150); } })" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <div class="w-full max-w-2xl max-h-[calc(100vh-4rem)] overflow-hidden bg-white rounded-2xl shadow-2xl flex flex-col">
                 <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
                     <h2 class="text-xl font-bold text-slate-900">Amiga Gracia Terms and Agreement</h2>
+                    <button type="button" wire:click.prevent="cancelTermsModal" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
                 </div>
                 
                 <div x-ref="content" x-on:scroll.passive="scrolledToBottom = scrolledToBottom || $event.target.scrollTop + $event.target.clientHeight >= $event.target.scrollHeight - 150" class="flex-1 overflow-y-auto px-6 py-4">
@@ -2110,10 +2274,13 @@
     @endif
 
     @if ($showPrivacyModal)
-        <div x-data="{ accepted: @entangle('hasAcceptedPrivacy'), isSubmitting: @entangle('isSubmittingBooking'), scrolledToBottom: false }" x-init="initBookingModal($el); $nextTick(() => { const el = $refs.content; if (el) { this.scrolledToBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 150; } })" class="fixed inset-x-0 top-20 bottom-0 z-[100] flex items-center justify-center px-4 pb-4 pt-6 bg-slate-900/60 backdrop-blur-sm">
-            <div class="w-full max-w-2xl max-h-[calc(100vh-5rem)] overflow-hidden bg-white rounded-2xl shadow-2xl flex flex-col">
+        <div x-data="{ accepted: @entangle('hasAcceptedPrivacy'), isSubmitting: @entangle('isSubmittingBooking'), scrolledToBottom: false }" x-init="initBookingModal($el); $nextTick(() => { const el = $refs.content; if (el) { scrolledToBottom = (el.scrollHeight <= el.clientHeight + 10) || (el.scrollTop + el.clientHeight >= el.scrollHeight - 150); } })" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <div class="w-full max-w-2xl max-h-[calc(100vh-4rem)] overflow-hidden bg-white rounded-2xl shadow-2xl flex flex-col">
                 <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
                     <h2 class="text-xl font-bold text-slate-900">Amiga Gracia Travel Services Data Privacy Policy</h2>
+                    <button type="button" wire:click.prevent="cancelPrivacyModal" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
                 </div>
 
                 <div x-ref="content" x-on:scroll.passive="scrolledToBottom = scrolledToBottom || $event.target.scrollTop + $event.target.clientHeight >= $event.target.scrollHeight - 150" class="flex-1 overflow-y-auto px-6 py-4">
@@ -2261,18 +2428,19 @@
 
     <script>
         function initBookingModal(modal) {
-            const focusableElements = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-            if (!focusableElements.length) {
-                return;
-            }
-
-            const firstFocusable = focusableElements[0];
-            const lastFocusable = focusableElements[focusableElements.length - 1];
-
             const trapFocus = (event) => {
                 if (event.key !== 'Tab') {
                     return;
                 }
+
+                const focusableElements = Array.from(modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'))
+                    .filter(el => !el.disabled && el.offsetParent !== null);
+                if (!focusableElements.length) {
+                    return;
+                }
+
+                const firstFocusable = focusableElements[0];
+                const lastFocusable = focusableElements[focusableElements.length - 1];
 
                 if (event.shiftKey) {
                     if (document.activeElement === firstFocusable) {
@@ -2288,25 +2456,29 @@
             };
 
             modal.addEventListener('keydown', trapFocus);
-            firstFocusable.focus();
         }
 
         document.addEventListener('livewire:initialized', () => {
             Livewire.on('validation-error', () => {
                 setTimeout(() => {
-                    const firstError = document.querySelector('.text-rose-600');
-                    if (firstError) {
-                        // Find the closest parent section or container to scroll to
-                        const container = firstError.closest('.rounded-2xl') || firstError.closest('label') || firstError;
-                        container.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        
-                        // Add a brief highlight animation
-                        const input = container.querySelector('input, select, button');
-                        if (input) {
-                            input.classList.add('ring-2', 'ring-rose-500', 'ring-offset-2');
-                            setTimeout(() => {
-                                input.classList.remove('ring-2', 'ring-rose-500', 'ring-offset-2');
-                            }, 1500);
+                    // Find actual validation error message elements (paragraphs or error containers), strictly ignoring label asterisks
+                    const errorMessages = Array.from(document.querySelectorAll('p.text-rose-600, .field-error-message, [data-error] p.text-rose-600'))
+                        .filter(el => el.textContent && el.textContent.trim().length > 1 && el.textContent.trim() !== '*');
+                    
+                    if (errorMessages.length > 0) {
+                        const firstError = errorMessages[0];
+                        const container = firstError.closest('[data-error]') || firstError.closest('label') || firstError.closest('.rounded-2xl') || firstError.parentElement;
+                        if (container) {
+                            container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            
+                            const input = container.querySelector('input, select, textarea');
+                            if (input) {
+                                input.focus();
+                                input.classList.add('ring-2', 'ring-rose-500', 'ring-offset-2');
+                                setTimeout(() => {
+                                    input.classList.remove('ring-2', 'ring-rose-500', 'ring-offset-2');
+                                }, 1500);
+                            }
                         }
                     }
                 }, 100);

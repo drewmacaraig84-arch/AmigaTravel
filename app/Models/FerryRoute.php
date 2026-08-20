@@ -14,6 +14,7 @@ class FerryRoute extends Model
         'destination',
         'is_active',
         'mode',
+        'is_international',
         'trip_type',
         'operator',
         'operator_id',
@@ -22,7 +23,21 @@ class FerryRoute extends Model
 
     protected $casts = [
         'is_active' => 'boolean',
+        'is_international' => 'boolean',
     ];
+
+    public function isInternational(): bool
+    {
+        if ($this->is_international) {
+            return true;
+        }
+        if ($this->mode !== 'airline') {
+            return false;
+        }
+        $domesticPorts = ['manila', 'batangas', 'calapan', 'caticlan', 'boracay', 'boracay (caticlan)', 'cebu', 'davao', 'roxas', 'puerto princesa', 'el nido', 'coron', 'bacolod', 'iloilo', 'tagbilaran', 'bohol', 'siargao', 'zamboanga', 'general santos', 'clark', 'laoag', 'legazpi', 'dumaguete', 'tacloban', 'cagayan de oro', 'butuan', 'ozamiz', 'dipolog', 'pagadian', 'surigao', 'tandag', 'camiguin', 'batanes', 'basco', 'busuanga', 'san jose'];
+        return !in_array(strtolower(trim($this->origin ?? '')), $domesticPorts, true)
+            || !in_array(strtolower(trim($this->destination ?? '')), $domesticPorts, true);
+    }
 
     public function scopeActive(Builder $query): Builder
     {

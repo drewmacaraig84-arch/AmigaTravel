@@ -78,6 +78,13 @@ class CreateBookingAction
             }
         }
 
+        // --- Max passengers validation ---
+        $isRoundTrip = ! empty($data['return_schedule_id']) || ($data['trip_type'] ?? '') === 'round_trip';
+        $maxPassengers = $isRoundTrip ? 4 : 8;
+        if (isset($data['passengers']) && is_array($data['passengers']) && count($data['passengers']) > $maxPassengers) {
+            throw new \InvalidArgumentException("Maximum {$maxPassengers} passengers allowed for " . ($isRoundTrip ? 'round trip' : 'one way') . ' bookings.');
+        }
+
         // --- Voucher validation ---
         $voucher            = null;
         $voucherCalculation = null;
@@ -237,6 +244,8 @@ class CreateBookingAction
                 'client_email'                       => $data['client_email'],
                 'total_price'                        => max(0, $totalPrice),
                 'status'                             => 'pending',
+                'has_extra_baggage'                  => collect($data['passengers'])->some(fn($p) => floatval($p['extra_baggage_price'] ?? 0) > 0),
+                'extra_baggage_price'                => collect($data['passengers'])->sum(fn($p) => floatval($p['extra_baggage_price'] ?? 0)),
                 'has_vehicle'                        => $data['has_vehicle'] ?? false,
                 'vehicle_type'                       => $data['vehicle_type'] ?? null,
                 'vehicle_plate_number'               => $data['vehicle_plate_number'] ?? null,
@@ -256,21 +265,152 @@ class CreateBookingAction
                 $this->graciaPointsService->deductPointsForPayment($booking);
             }
 
-            // --- Persist Passengers ---
-            foreach ($data['passengers'] as $passengerData) {
-                $frontPath = $this->saveBase64Image($passengerData['id_image_front'] ?? null, 'id_images');
-                $backPath  = $this->saveBase64Image($passengerData['id_image_back'] ?? null, 'id_images');
+            // --- Persist Passengers with per-item financial breakdown ---
+            $settings    = PaymentSetting::current();
+            $isAirline   = strtolower($schedule->ferryRoute?->mode ?? '') === 'airline';
+            $depDuration = $schedule->duration_minutes;
+            $retDuration = $returnSchedule?->duration_minutes ?? 0;
+            $isShortHaul = ! $isAirline && ($returnSchedule
+                ? max($depDuration, $retDuration) < 300
+                : $depDuration < 300);
+
+            $webAdminFeePerPax = $settings->getWebAdminFee($isShortHaul);
+            $txFeePerPax       = $settings->getTransactionFee($isShortHaul);
+
+            // Departure TC price per pax
+            $depTcPrice = 0.0;
+            if (! empty($data['selected_transport_class_id'])) {
+                $tc = TransportClass::find($data['selected_transport_class_id']);
+                if ($tc) {
+                    $override = \Illuminate\Support\Facades\DB::table('schedule_transport_class')
+                        ->where('schedule_id', $schedule->id)
+                        ->where('transport_class_id', $tc->id)
+                        ->value('additional_price');
+                    $depTcPrice = $override !== null ? (float) $override : (float) $tc->effective_price;
+                }
+            }
+
+            // Return TC price per pax
+            $retTcPrice = 0.0;
+            if (! empty($data['selected_return_transport_class_id']) && $returnSchedule) {
+                $retTc = TransportClass::find($data['selected_return_transport_class_id']);
+                if ($retTc) {
+                    $override = \Illuminate\Support\Facades\DB::table('schedule_transport_class')
+                        ->where('schedule_id', $returnSchedule->id)
+                        ->where('transport_class_id', $retTc->id)
+                        ->value('additional_price');
+                    $retTcPrice = $override !== null ? (float) $override : (float) $retTc->effective_price;
+                }
+            }
+
+            // Schedule base prices
+            $schedBasePrice  = (float) ($schedule->price ?? 0);
+            $schedAccPrice   = $scheduleAccommodation ? (float) $scheduleAccommodation->price : 0.0;
+            $retBasePrice    = $returnSchedule ? (float) ($returnSchedule->price ?? 0) : 0.0;
+            $retAccPrice     = $returnScheduleAccommodation ? (float) $returnScheduleAccommodation->price : 0.0;
+
+            // Load discounts for calculation
+            $discounts = \Illuminate\Support\Facades\Cache::remember('discounts:all:keyed', now()->addHours(12), function () {
+                return \App\Models\Discount::all()->keyBy('id');
+            });
+
+            // Remaining voucher / points budget to allocate (applied to Item 1 first)
+            $voucherBudget = $discountAmount;  // total voucher discount
+            $pointsBudget  = $pointsDiscount;  // total points discount
+
+            foreach ($data['passengers'] as $idx => $passengerData) {
+                $itemNumber = $idx + 1;
+                $frontPath  = $this->saveBase64Image($passengerData['id_image_front'] ?? null, 'id_images');
+                $backPath   = $this->saveBase64Image($passengerData['id_image_back'] ?? null, 'id_images');
+
+                // Driver of a vehicle travels free — zero financials
+                if (($data['has_vehicle'] ?? false) && ($passengerData['type'] ?? '') === 'driver') {
+                    Passenger::create([
+                        'booking_id'         => $booking->id,
+                        'item_number'        => $itemNumber,
+                        'ticket_number'      => $booking->transaction_number . '-' . $itemNumber,
+                        'status'             => 'pending',
+                        'type'               => $passengerData['type'],
+                        'name'               => $passengerData['name'],
+                        'birthdate'          => $passengerData['birthdate'] ?? null,
+                        'discount_id'        => $passengerData['discount_id'] ?? null,
+                        'school_name'        => $passengerData['school_name'] ?? null,
+                        'id_number'          => $passengerData['id_number'] ?? null,
+                        'id_image_front'     => $frontPath,
+                        'id_image_back'      => $backPath,
+                        'fare_amount'        => 0,
+                        'accommodation_amount' => 0,
+                        'discount_amount'    => 0,
+                        'voucher_discount_share' => 0,
+                        'points_discount_share'  => 0,
+                        'web_admin_fee_share'    => $webAdminFeePerPax,
+                        'transaction_fee_share'  => $txFeePerPax,
+                        'item_total'         => 0,
+                    ]);
+                    continue;
+                }
+
+                // Gross fare per passenger (departure + return) - standard fare for all passengers
+                $grossFare = ($schedBasePrice + $depTcPrice + $retBasePrice + $retTcPrice);
+                $grossAcc  = $schedAccPrice + $retAccPrice;
+                $gross     = $grossFare + $grossAcc;
+
+                // Passenger-specific discount (senior, student, PWD…)
+                $discountAmount_item = 0.0;
+                if (! empty($passengerData['discount_id'])) {
+                    $disc = $discounts->get($passengerData['discount_id']);
+                    if ($disc) {
+                        $discountAmount_item = $gross * ((float) $disc->percentage / 100);
+                    }
+                }
+
+                $netFare = $gross - $discountAmount_item;
+
+                // Allocate voucher to this passenger (greedy: fill Item 1 first)
+                $voucherShare = 0.0;
+                if ($voucherBudget > 0) {
+                    $voucherShare  = min($voucherBudget, $netFare);
+                    $voucherBudget -= $voucherShare;
+                }
+
+                // Allocate points to this passenger (greedy)
+                $pointsShare = 0.0;
+                if ($pointsBudget > 0) {
+                    $remAfterVoucher = $netFare - $voucherShare;
+                    $pointsShare     = min($pointsBudget, $remAfterVoucher);
+                    $pointsBudget   -= $pointsShare;
+                }
+
+                $extraBaggagePricePax = floatval($passengerData['extra_baggage_price'] ?? 0);
+                $itemTotal = max(0, $netFare - $voucherShare - $pointsShare + $webAdminFeePerPax + $txFeePerPax + $extraBaggagePricePax);
 
                 Passenger::create([
-                    'booking_id'     => $booking->id,
-                    'type'           => $passengerData['type'],
-                    'name'           => $passengerData['name'],
-                    'birthdate'      => $passengerData['birthdate'] ?? null,
-                    'discount_id'    => $passengerData['discount_id'] ?? null,
-                    'school_name'    => $passengerData['school_name'] ?? null,
-                    'id_number'      => $passengerData['id_number'] ?? null,
-                    'id_image_front' => $frontPath,
-                    'id_image_back'  => $backPath,
+                    'booking_id'             => $booking->id,
+                    'item_number'            => $itemNumber,
+                    'ticket_number'          => $booking->transaction_number . '-' . $itemNumber,
+                    'status'                 => 'pending',
+                    'type'                   => $passengerData['type'],
+                    'name'                   => $passengerData['name'],
+                    'birthdate'              => !empty($passengerData['birthdate']) ? $passengerData['birthdate'] : null,
+                    'discount_id'            => $passengerData['discount_id'] ?? null,
+                    'school_name'            => !empty($passengerData['school_name']) ? $passengerData['school_name'] : null,
+                    'id_number'              => !empty($passengerData['id_number']) ? $passengerData['id_number'] : null,
+                    'id_image_front'         => $frontPath,
+                    'id_image_back'          => $backPath,
+                    'passport_country'       => !empty($passengerData['passport_country']) ? $passengerData['passport_country'] : null,
+                    'passport_number'        => !empty($passengerData['passport_number']) ? $passengerData['passport_number'] : null,
+                    'passport_issuance_date' => !empty($passengerData['passport_issuance_date']) ? $passengerData['passport_issuance_date'] : null,
+                    'passport_expiry_date'   => !empty($passengerData['passport_expiry_date']) ? $passengerData['passport_expiry_date'] : null,
+                    'extra_baggage_weight'   => !empty($passengerData['extra_baggage_weight']) ? $passengerData['extra_baggage_weight'] : null,
+                    'extra_baggage_price'    => $extraBaggagePricePax,
+                    'fare_amount'            => $grossFare,
+                    'accommodation_amount'   => $grossAcc,
+                    'discount_amount'        => $discountAmount_item,
+                    'voucher_discount_share' => $voucherShare,
+                    'points_discount_share'  => $pointsShare,
+                    'web_admin_fee_share'    => $webAdminFeePerPax,
+                    'transaction_fee_share'  => $txFeePerPax,
+                    'item_total'             => $itemTotal,
                 ]);
             }
 
@@ -430,6 +570,8 @@ class CreateBookingAction
             }
         }
 
+        $isFerry = strtolower($schedule->ferryRoute?->mode ?? '') !== 'airline';
+
         $ferryTotal = collect($passengers)->sum(function (array $passenger) use (
             $schedulePrice,
             $scheduleAccommodationPrice,
@@ -438,13 +580,17 @@ class CreateBookingAction
             $returnScheduleAccomPrice,
             $returnTransportClassTotal,
             $discounts,
-            $hasVehicle
+            $hasVehicle,
+            $isFerry
         ) {
             if ($hasVehicle && ($passenger['type'] ?? '') === 'driver') {
                 return 0.0; // Driver travels free
             }
 
-            $fare = ($schedulePrice + $scheduleAccommodationPrice + $departureTransportClassTotal) + ($returnSchedulePrice + $returnScheduleAccomPrice + $returnTransportClassTotal);
+            $ticketAndClassFare = ($schedulePrice + $departureTransportClassTotal) + ($returnSchedulePrice + $returnTransportClassTotal);
+            $accommodationFare = $scheduleAccommodationPrice + $returnScheduleAccomPrice;
+
+            $fare = $ticketAndClassFare + $accommodationFare;
 
             if (! empty($passenger['discount_id'])) {
                 $discount = $discounts->get($passenger['discount_id']);
@@ -469,6 +615,7 @@ class CreateBookingAction
         }
 
         $vehicleTotal = $hasVehicle ? (float) ($vehiclePrice ?? 0) : 0;
+        $baggageTotal = collect($passengers)->sum(fn($p) => floatval($p['extra_baggage_price'] ?? 0));
 
         $settings       = PaymentSetting::current();
         $multiplier     = max(1, count($passengers));
@@ -484,7 +631,7 @@ class CreateBookingAction
         $hotelFee       = $accommodationsTotal > 0 ? (float) ($settings->fee_per_accommodation ?? 0) : 0;
         $transactionFee = $multiplier * $txFee;
 
-        return $ferryTotal + $transportClassTotal + $accommodationsTotal + $vehicleTotal + $serviceFee + $hotelFee + $transactionFee;
+        return $ferryTotal + $transportClassTotal + $accommodationsTotal + $vehicleTotal + $baggageTotal + $serviceFee + $hotelFee + $transactionFee;
     }
 
     protected function saveBase64Image(?string $base64String, string $directory): ?string

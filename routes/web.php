@@ -254,6 +254,8 @@ Route::get('/schedules', function (\Illuminate\Http\Request $request) {
             },
             'schedules.scheduleAccommodations',
             'schedules.transportClasses',
+            'schedules.vehicle',
+            'schedules.ferryRoute',
         ])->where('is_active', true)->orderBy('origin')->orderBy('destination')->get();
         
         return $routesData->filter(fn ($route) => $route->schedules->isNotEmpty());
@@ -453,6 +455,35 @@ Route::get('/ticket/admin-pdf/{transaction_number}', function ($transaction_numb
     ]);
 })->name('ticket.admin-pdf');
 
+// Serves the official E-Refund Acknowledgement PDF for cancelled/refunded bookings
+Route::get('/ticket/refund-acknowledgement/{transaction_number}', function ($transaction_number) {
+    $booking = \App\Models\Booking::query()
+        ->where('transaction_number', $transaction_number)
+        ->orWhere('id', $transaction_number)
+        ->firstOrFail();
+
+    $refundDir = storage_path('app/refunds');
+    $path = $refundDir . '/refund-acknowledgement-' . $booking->transaction_number . '.pdf';
+
+    try {
+        if (! is_dir($refundDir)) {
+            mkdir($refundDir, 0755, true);
+        }
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.refund-acknowledgement', ['booking' => $booking]);
+        $pdf->setPaper('a4');
+        $pdf->save($path);
+    } catch (\Throwable $e) {
+        \Illuminate\Support\Facades\Log::error('Refund Acknowledgement PDF generation failed: ' . $e->getMessage());
+        return response()->view('pdf.refund-acknowledgement', ['booking' => $booking]);
+    }
+
+    return response()->file($path, [
+        'Content-Type' => 'application/pdf',
+        'Content-Disposition' => 'inline; filename="Refund_Acknowledgement_' . $booking->transaction_number . '.pdf"',
+    ]);
+})->name('ticket.refund-acknowledgement');
+
 // Serves any public storage file through the server (avoids Railway storage URL 404s)
 // Usage: /storage-file/{path} where path is the relative storage path, e.g. proofs/AGT-xxx.jpg
 Route::get('/storage-file/{path}', function (string $path) {
@@ -495,6 +526,7 @@ Route::middleware(['auth:admin,web', 'admin'])->group(function () {
     Route::post('/admin/notifications/api/mark-read', [AdminNotificationController::class, 'markRead']);
     Route::post('/admin/notifications/api/mark-unread', [AdminNotificationController::class, 'markUnread']);
     Route::delete('/admin/notifications/api', [AdminNotificationController::class, 'destroy']);
+    Route::get('/admin/manage-refunds', fn () => redirect('/admin/refunds'));
 });
 
 Route::get('/db-test', function () {

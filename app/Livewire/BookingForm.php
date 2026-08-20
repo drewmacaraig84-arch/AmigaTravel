@@ -121,6 +121,10 @@ class BookingForm extends Component
         'studentIdProofBacks.*' => 'school ID proof back',
         'passengers.*.senior_osca_number' => 'OSCA number',
         'passengers.*.pwd_id_number' => 'PWD ID number',
+        'passengers.*.passport_country' => 'passport issuing country',
+        'passengers.*.passport_number' => 'passport number',
+        'passengers.*.passport_issuance_date' => 'passport issuance date',
+        'passengers.*.passport_expiry_date' => 'passport expiry date',
         'vehicle_type' => 'vehicle type',
         'vehicle_plate_number' => 'plate number',
         'vehicle_price' => 'vehicle price',
@@ -405,6 +409,7 @@ class BookingForm extends Component
             }
         }
 
+        $this->clampPassengersToMax();
         $this->syncPassengerEntries();
     }
 
@@ -534,6 +539,10 @@ public function selectedSchedule(): ?array
             $this->trip_type = $value;
         }
 
+        if ($this->trip_type === 'round_trip') {
+            $this->clampPassengersToMax();
+        }
+
         if ($this->trip_type === 'round_trip' && !empty($this->destination)) {
             $hasReturn = FerryRoute::hasBidirectionalSchedules(
                 $this->origin,
@@ -556,6 +565,7 @@ public function selectedSchedule(): ?array
             $this->selected_return_schedule_accommodation_id = null;
             $this->availableReturnSchedules = [];
             $this->available_return_schedule_dates = [];
+            $this->syncPassengerEntries();
             $this->saveDraft();
             return;
         }
@@ -568,6 +578,7 @@ public function selectedSchedule(): ?array
             }
         }
         $this->updateAvailableScheduleDates();
+        $this->syncPassengerEntries();
         $this->saveDraft();
     }
 
@@ -583,6 +594,10 @@ public function selectedSchedule(): ?array
             $this->trip_type = $type;
         }
 
+        if ($this->trip_type === 'round_trip') {
+            $this->clampPassengersToMax();
+        }
+
         if ($this->trip_type === 'round_trip' && !empty($this->destination)) {
             $hasReturn = FerryRoute::hasBidirectionalSchedules(
                 $this->origin,
@@ -605,6 +620,7 @@ public function selectedSchedule(): ?array
             $this->selected_return_schedule_accommodation_id = null;
             $this->availableReturnSchedules = [];
             $this->available_return_schedule_dates = [];
+            $this->syncPassengerEntries();
             $this->saveDraft();
             return;
         }
@@ -617,6 +633,7 @@ public function selectedSchedule(): ?array
             }
         }
         $this->updateAvailableScheduleDates();
+        $this->syncPassengerEntries();
         $this->saveDraft();
     }
 
@@ -819,11 +836,16 @@ public function selectedSchedule(): ?array
 
     public function getAirlineExtraBaggageRates(): array
     {
-        return \App\Models\AirlineBaggageRule::getRatesForBooking($this->baggage_trip_type);
+        $scope = $this->autoDetectBaggageScope();
+        $this->baggage_trip_type = $scope;
+        return \App\Models\AirlineBaggageRule::getRatesForBooking($scope);
     }
 
     public function autoDetectBaggageScope(): string
     {
+        if ($this->isInternational) {
+            return 'international';
+        }
         if ($this->selected_schedule_id) {
             $sched = Schedule::with('ferryRoute')->find($this->selected_schedule_id);
             if ($sched?->ferryRoute?->trip_type) {
@@ -847,30 +869,28 @@ public function selectedSchedule(): ?array
     public function updateBaggagePriceFromRates(): void
     {
         $rates = $this->getAirlineExtraBaggageRates();
-        $key = $this->selected_baggage_airline;
-        if (isset($rates[$key]['options']) && ! empty($rates[$key]['options'])) {
-            $found = false;
-            if ($this->extra_baggage_weight) {
-                foreach ($rates[$key]['options'] as $opt) {
-                    if ($opt['weight'] === $this->extra_baggage_weight) {
-                        $this->extra_baggage_price = floatval($opt['price']);
-                        $this->extra_baggage_type = $opt['weight'] . ' Extra Baggage (' . ucfirst($this->baggage_trip_type) . ')';
-                        $found = true;
-                        break;
-                    }
+        $key = $this->selected_baggage_airline ?: $this->autoDetectBaggageAirline();
+        $this->selected_baggage_airline = $key;
+
+        $airlineOptions = $rates[$key]['options'] ?? [];
+        $optionsByWeight = [];
+        foreach ($airlineOptions as $opt) {
+            $optionsByWeight[$opt['weight']] = floatval($opt['price']);
+        }
+
+        // Re-sync each passenger's price to match the selected operator's rates
+        foreach ($this->passengers as $idx => $pax) {
+            if (! empty($pax['extra_baggage_weight'])) {
+                $w = $pax['extra_baggage_weight'];
+                if (isset($optionsByWeight[$w])) {
+                    $this->passengers[$idx]['extra_baggage_price'] = $optionsByWeight[$w];
+                } else {
+                    $this->passengers[$idx]['extra_baggage_weight'] = '';
+                    $this->passengers[$idx]['extra_baggage_price'] = 0.0;
                 }
             }
-            if (! $found) {
-                $first = $rates[$key]['options'][0];
-                $this->extra_baggage_weight = $first['weight'];
-                $this->extra_baggage_price = floatval($first['price']);
-                $this->extra_baggage_type = $first['weight'] . ' Extra Baggage (' . ucfirst($this->baggage_trip_type) . ')';
-            }
-        } else {
-            $this->extra_baggage_weight = '';
-            $this->extra_baggage_price = null;
-            $this->extra_baggage_type = '';
         }
+        $this->hasExtraBaggage = $this->getExtraBaggageTotalPrice() > 0;
     }
 
     public function updatedBaggageTripType($value): void
@@ -886,17 +906,17 @@ public function selectedSchedule(): ?array
     {
         $op = strtolower($this->operator ?: '');
         if (! $op && $this->selected_schedule_id) {
-            $sched = Schedule::with('ferryRoute')->find($this->selected_schedule_id);
-            $op = strtolower($sched?->ferryRoute?->operator ?: ($sched?->service_name ?: ''));
+            $sched = Schedule::with(['ferryRoute.operatorRecord'])->find($this->selected_schedule_id);
+            $op = strtolower($sched?->ferryRoute?->operatorRecord?->name ?: ($sched?->ferryRoute?->operator ?: ($sched?->service_name ?: '')));
         }
 
         if (stripos($op, 'pal') !== false || stripos($op, 'philippine') !== false) {
             return 'pal';
         }
-        if (stripos($op, 'airasia') !== false) {
+        if (stripos($op, 'airasia') !== false || stripos($op, 'air asia') !== false) {
             return 'airasia';
         }
-        if (stripos($op, 'cebu') !== false || stripos($op, 'ceb') !== false) {
+        if (stripos($op, 'cebu') !== false || stripos($op, 'ceb') !== false || stripos($op, 'pacific') !== false) {
             return 'ceb_pac';
         }
 
@@ -905,9 +925,42 @@ public function selectedSchedule(): ?array
 
     public function selectBaggageOption(string $weight, float $price): void
     {
+        $this->applyBaggageToAllPassengers($weight, $price);
+    }
+
+    public function setPassengerBaggage(int $index, ?string $weight = '', $price = 0): void
+    {
+        if (isset($this->passengers[$index])) {
+            $this->passengers[$index]['extra_baggage_weight'] = $weight ?: '';
+            $this->passengers[$index]['extra_baggage_price'] = $price ? floatval($price) : 0.0;
+            $this->hasExtraBaggage = $this->getExtraBaggageTotalPrice() > 0;
+            $this->saveDraft();
+        }
+    }
+
+    public function applyBaggageToAllPassengers(string $weight, $price): void
+    {
+        foreach ($this->passengers as $idx => $pax) {
+            $this->passengers[$idx]['extra_baggage_weight'] = $weight;
+            $this->passengers[$idx]['extra_baggage_price'] = floatval($price);
+        }
+        $this->hasExtraBaggage = true;
         $this->extra_baggage_weight = $weight;
         $this->extra_baggage_price = floatval($price);
-        $this->extra_baggage_type = $weight . ' Extra Baggage (' . ucfirst($this->baggage_trip_type) . ')';
+        $this->saveDraft();
+    }
+
+    public function clearAllBaggage(): void
+    {
+        foreach ($this->passengers as $idx => $pax) {
+            $this->passengers[$idx]['extra_baggage_weight'] = '';
+            $this->passengers[$idx]['extra_baggage_price'] = 0.0;
+        }
+        $this->hasExtraBaggage = false;
+        $this->extra_baggage_weight = '';
+        $this->extra_baggage_price = null;
+        $this->extra_baggage_type = '';
+        $this->extra_baggage_specify = '';
         $this->saveDraft();
     }
 
@@ -918,12 +971,14 @@ public function selectedSchedule(): ?array
             if (! $this->selected_baggage_airline) {
                 $this->selected_baggage_airline = $this->autoDetectBaggageAirline();
             }
-            $this->updateBaggagePriceFromRates();
+            $rates = $this->getAirlineExtraBaggageRates();
+            $key = $this->selected_baggage_airline;
+            if (! empty($rates[$key]['options'])) {
+                $first = $rates[$key]['options'][0];
+                $this->applyBaggageToAllPassengers($first['weight'], floatval($first['price']));
+            }
         } else {
-            $this->extra_baggage_weight = '';
-            $this->extra_baggage_price = null;
-            $this->extra_baggage_type = '';
-            $this->extra_baggage_specify = '';
+            $this->clearAllBaggage();
         }
         $this->saveDraft();
     }
@@ -936,12 +991,32 @@ public function selectedSchedule(): ?array
 
     public function getExtraBaggageTotalPrice(): float
     {
-        if (! $this->hasExtraBaggage || ! $this->extra_baggage_price) {
-            return 0;
+        $total = 0.0;
+        foreach ($this->passengers as $pax) {
+            if (! empty($pax['extra_baggage_price'])) {
+                $total += floatval($pax['extra_baggage_price']);
+            }
         }
+        return $total;
+    }
 
-        $passengersCount = max(1, count($this->passengers));
-        return floatval($this->extra_baggage_price) * $passengersCount;
+    public function getPassengersWithBaggageCount(): int
+    {
+        return collect($this->passengers)->filter(function ($pax) {
+            return ! empty($pax['extra_baggage_weight']) && (float) ($pax['extra_baggage_price'] ?? 0) > 0;
+        })->count();
+    }
+
+    public function getTotalBaggageWeightSummary(): string
+    {
+        $parts = [];
+        foreach ($this->passengers as $idx => $pax) {
+            if (! empty($pax['extra_baggage_weight']) && (float) ($pax['extra_baggage_price'] ?? 0) > 0) {
+                $paxName = ! empty($pax['name']) ? $pax['name'] : 'Traveler #' . ($idx + 1);
+                $parts[] = "{$paxName} ({$pax['extra_baggage_weight']})";
+            }
+        }
+        return implode(', ', $parts);
     }
 
     public function toggleOriginDropdown(): void
@@ -1182,7 +1257,7 @@ public function selectedSchedule(): ?array
             return;
         }
 
-        if (in_array($propertyName, ['has_vehicle', 'selected_vehicle_rate_id', 'vehicle_type', 'vehicle_plate_number', 'vehicle_price', 'driver_first_name', 'driver_middle_name', 'driver_last_name', 'driver_birthday'], true)) {
+        if (in_array($propertyName, ['adults', 'children', 'minors', 'infants', 'has_vehicle', 'selected_vehicle_rate_id', 'vehicle_type', 'vehicle_plate_number', 'vehicle_price', 'driver_first_name', 'driver_middle_name', 'driver_last_name', 'driver_birthday'], true)) {
             $this->syncPassengerEntries();
             $this->saveDraft();
 
@@ -1206,6 +1281,26 @@ public function selectedSchedule(): ?array
         if (str_starts_with($propertyName, 'passengers.')) {
             if (preg_match('/^passengers\.(\d+)\.(first_name|middle_name|last_name)$/', $propertyName, $matches)) {
                 $this->syncFullPassengerNames();
+            }
+
+            if (preg_match('/^passengers\.(\d+)\.(passport_issuance_day|passport_issuance_month|passport_issuance_year)$/', $propertyName, $matches)) {
+                $idx = (int) $matches[1];
+                $d = $this->passengers[$idx]['passport_issuance_day'] ?? '';
+                $m = $this->passengers[$idx]['passport_issuance_month'] ?? '';
+                $y = $this->passengers[$idx]['passport_issuance_year'] ?? '';
+                if ($d && $m && $y) {
+                    $this->passengers[$idx]['passport_issuance_date'] = sprintf('%04d-%02d-%02d', (int) $y, (int) $m, (int) $d);
+                }
+            }
+
+            if (preg_match('/^passengers\.(\d+)\.(passport_expiry_day|passport_expiry_month|passport_expiry_year)$/', $propertyName, $matches)) {
+                $idx = (int) $matches[1];
+                $d = $this->passengers[$idx]['passport_expiry_day'] ?? '';
+                $m = $this->passengers[$idx]['passport_expiry_month'] ?? '';
+                $y = $this->passengers[$idx]['passport_expiry_year'] ?? '';
+                if ($d && $m && $y) {
+                    $this->passengers[$idx]['passport_expiry_date'] = sprintf('%04d-%02d-%02d', (int) $y, (int) $m, (int) $d);
+                }
             }
 
             if (preg_match('/^passengers\.(\d+)\.discount_id$/', $propertyName, $matches)) {
@@ -1238,6 +1333,7 @@ public function selectedSchedule(): ?array
 
     public function nextStep(): void
     {
+        $this->syncFullPassengerNames();
         $rules = $this->stepRules();
 
         if (! empty($rules)) {
@@ -1415,6 +1511,11 @@ public function selectedSchedule(): ?array
                     $passenger['birthdate'] = $this->driver_birthday ?? '';
                 }
 
+                $issDate = $passenger['passport_issuance_date'] ?? '';
+                $expDate = $passenger['passport_expiry_date'] ?? '';
+                $issParts = $issDate ? explode('-', $issDate) : [];
+                $expParts = $expDate ? explode('-', $expDate) : [];
+
                 $nameParts = $this->passengerNameParts($passenger);
 
                 $rebuilt[] = array_merge([
@@ -1426,6 +1527,18 @@ public function selectedSchedule(): ?array
                     'discount_id' => $passenger['discount_id'] ?? null,
                     'use_promo' => $passenger['use_promo'] ?? false,
                     'promo_cleared_discount' => $passenger['promo_cleared_discount'] ?? false,
+                    'passport_country' => $passenger['passport_country'] ?? '',
+                    'passport_number' => $passenger['passport_number'] ?? '',
+                    'passport_issuance_date' => $issDate,
+                    'passport_expiry_date' => $expDate,
+                    'passport_issuance_day' => $passenger['passport_issuance_day'] ?? ($issParts[2] ?? ''),
+                    'passport_issuance_month' => $passenger['passport_issuance_month'] ?? ($issParts[1] ?? ''),
+                    'passport_issuance_year' => $passenger['passport_issuance_year'] ?? ($issParts[0] ?? ''),
+                    'passport_expiry_day' => $passenger['passport_expiry_day'] ?? ($expParts[2] ?? ''),
+                    'passport_expiry_month' => $passenger['passport_expiry_month'] ?? ($expParts[1] ?? ''),
+                    'passport_expiry_year' => $passenger['passport_expiry_year'] ?? ($expParts[0] ?? ''),
+                    'extra_baggage_weight' => $passenger['extra_baggage_weight'] ?? '',
+                    'extra_baggage_price' => isset($passenger['extra_baggage_price']) ? floatval($passenger['extra_baggage_price']) : 0.0,
                 ], $passenger);
             }
         }
@@ -1973,6 +2086,9 @@ public function selectedSchedule(): ?array
                     'vehicle_type' => $this->vehicle_type,
                     'vehicle_plate_number' => $this->vehicle_plate_number,
                     'vehicle_price' => $this->vehicle_price,
+                    'has_extra_baggage' => $this->getExtraBaggageTotalPrice() > 0,
+                    'extra_baggage_weight' => $this->getTotalBaggageWeightSummary(),
+                    'extra_baggage_price' => $this->getExtraBaggageTotalPrice(),
                     'driver_name' => trim(trim($this->driver_first_name) . ' ' . trim($this->driver_middle_name) . ' ' . trim($this->driver_last_name)),
                     'driver_birthday' => $this->driver_birthday,
                     'promotional_ticket_id' => $usedPromoTicket?->id,
@@ -1983,17 +2099,28 @@ public function selectedSchedule(): ?array
                     'terms_accepted_user_agent' => $termsAcceptedUserAgent,
                 ]);
 
-                foreach ($this->passengers as $passenger) {
+                foreach ($this->passengers as $idx => $passenger) {
                     $isPromo = strtolower($this->mode) === 'airline' && ! empty($passenger['use_promo']) && $usedPromoTicket;
+                    $itemNum = $idx + 1;
 
                     Passenger::create([
-                        'booking_id' => $booking->id,
-                        'type' => $passenger['type'],
-                        'name' => $passenger['name'] ?: null,
-                        'discount_id' => $isPromo ? null : ($passenger['discount_id'] ?: null),
-                        'promotional_ticket_id' => $isPromo ? $usedPromoTicket->id : null,
-                        'is_promo' => $isPromo,
-                        'promo_price' => $isPromo ? floatval($usedPromoTicket->promo_price) : null,
+                        'booking_id'             => $booking->id,
+                        'item_number'            => $itemNum,
+                        'ticket_number'          => $booking->transaction_number . '-' . $itemNum,
+                        'status'                 => 'pending',
+                        'type'                   => $passenger['type'],
+                        'name'                   => $passenger['name'] ?: null,
+                        'birthdate'              => !empty($passenger['birthdate']) ? $passenger['birthdate'] : null,
+                        'discount_id'            => $isPromo ? null : ($passenger['discount_id'] ?: null),
+                        'promotional_ticket_id'  => $isPromo ? $usedPromoTicket->id : null,
+                        'is_promo'               => $isPromo,
+                        'promo_price'            => $isPromo ? floatval($usedPromoTicket->promo_price) : null,
+                        'passport_country'       => !empty($passenger['passport_country']) ? $passenger['passport_country'] : null,
+                        'passport_number'        => !empty($passenger['passport_number']) ? $passenger['passport_number'] : null,
+                        'passport_issuance_date' => !empty($passenger['passport_issuance_date']) ? $passenger['passport_issuance_date'] : null,
+                        'passport_expiry_date'   => !empty($passenger['passport_expiry_date']) ? $passenger['passport_expiry_date'] : null,
+                        'extra_baggage_weight'   => !empty($passenger['extra_baggage_weight']) ? $passenger['extra_baggage_weight'] : null,
+                        'extra_baggage_price'    => isset($passenger['extra_baggage_price']) ? floatval($passenger['extra_baggage_price']) : 0.0,
                     ]);
                 }
 
@@ -2376,17 +2503,22 @@ public function selectedSchedule(): ?array
             2 => [
                 'selected_schedule_id' => $this->tour_id ? 'nullable' : 'required|integer|exists:schedules,id',
             ],
-            3 => [
+            3 => array_merge([
                 'passengers.*.first_name' => 'required|string|max:255',
                 'passengers.*.middle_name' => 'nullable|string|max:255',
                 'passengers.*.last_name' => 'required|string|max:255',
-                'passengers.*.name' => 'required|string|max:255',
+                'passengers.*.name' => 'nullable|string|max:255',
                 'passengers.*.discount_id' => 'nullable|exists:discounts,id',
                 'passengers.*.birthdate' => 'required|date|before:today',
                 'passengers.*.pwd_id_number' => 'nullable|string|max:255',
                 'studentIdProofFronts.*' => 'nullable|image|max:10240',
                 'studentIdProofBacks.*' => 'nullable|image|max:10240',
-            ],
+            ], $this->isInternational ? [
+                'passengers.*.passport_country' => 'required|string|max:100',
+                'passengers.*.passport_number' => 'required|string|max:50',
+                'passengers.*.passport_issuance_date' => 'required|date|before:today',
+                'passengers.*.passport_expiry_date' => 'required|date|after:today',
+            ] : []),
             4 => [],
             5 => [
                 'client_name' => 'required|string|max:255',
@@ -2397,6 +2529,16 @@ public function selectedSchedule(): ?array
             ],
             default => [],
         };
+    }
+
+    public function getIsInternationalProperty(): bool
+    {
+        if (strtolower($this->mode ?? '') !== 'airline') {
+            return false;
+        }
+        $domesticPorts = ['manila', 'batangas', 'calapan', 'caticlan', 'boracay', 'boracay (caticlan)', 'cebu', 'davao', 'roxas', 'puerto princesa', 'el nido', 'coron', 'bacolod', 'iloilo', 'tagbilaran', 'bohol', 'siargao', 'zamboanga', 'general santos', 'clark', 'laoag', 'legazpi', 'dumaguete', 'tacloban', 'cagayan de oro', 'butuan', 'ozamiz', 'dipolog', 'pagadian', 'surigao', 'tandag', 'camiguin', 'batanes', 'basco', 'busuanga', 'san jose'];
+        return !in_array(strtolower(trim($this->origin ?? '')), $domesticPorts, true)
+            || !in_array(strtolower(trim($this->destination ?? '')), $domesticPorts, true);
     }
 
     protected function allRules(): array
@@ -2433,12 +2575,16 @@ public function selectedSchedule(): ?array
             'passengers.*.first_name' => 'required|string|max:255',
             'passengers.*.middle_name' => 'nullable|string|max:255',
             'passengers.*.last_name' => 'required|string|max:255',
-            'passengers.*.name' => 'required|string|max:255',
+            'passengers.*.name' => 'nullable|string|max:255',
             'passengers.*.discount_id' => 'nullable|exists:discounts,id',
             'passengers.*.birthdate' => 'required|date|before:today',
             'passengers.*.pwd_id_number' => 'nullable|string|max:255',
             'passengers.*.student_number' => 'nullable|string|max:255',
             'passengers.*.senior_osca_number' => 'nullable|string|max:255',
+            'passengers.*.passport_country' => $this->isInternational ? 'required|string|max:100' : 'nullable|string|max:100',
+            'passengers.*.passport_number' => $this->isInternational ? 'required|string|max:50' : 'nullable|string|max:50',
+            'passengers.*.passport_issuance_date' => $this->isInternational ? 'required|date|before:today' : 'nullable|date',
+            'passengers.*.passport_expiry_date' => $this->isInternational ? 'required|date|after:today' : 'nullable|date',
             'studentIdProofFronts.*' => 'nullable|image|max:10240',
             'studentIdProofBacks.*' => 'nullable|image|max:10240',
             'client_name' => 'required|string|max:255',
@@ -2481,7 +2627,8 @@ public function selectedSchedule(): ?array
             ]);
         }
         
-        if (! $this->selected_transport_class_id) {
+        $sched = Schedule::query()->find($this->selected_schedule_id);
+        if ($sched && $sched->transportClasses()->where('transport_classes.is_active', true)->exists() && ! $this->selected_transport_class_id) {
             throw ValidationException::withMessages([
                 'selected_transport_class_id' => 'Please select a transport class for your schedule.',
             ]);
@@ -2505,7 +2652,8 @@ public function selectedSchedule(): ?array
                 ]);
             }
 
-            if (! $this->selected_return_transport_class_id) {
+            $returnSched = Schedule::query()->find($this->selected_return_schedule_id);
+            if ($returnSched && $returnSched->transportClasses()->where('transport_classes.is_active', true)->exists() && ! $this->selected_return_transport_class_id) {
                 throw ValidationException::withMessages([
                     'selected_return_transport_class_id' => 'Please select a transport class for your return schedule.',
                 ]);
@@ -2653,6 +2801,8 @@ public function selectedSchedule(): ?array
         // For airline bookings, fetch the active promo ticket once (if any)
         $activePromoTicket = (strtolower($this->mode) === 'airline') ? $this->getActivePromoTicket() : null;
 
+        $isFerry = (strtolower($this->mode ?? '') !== 'airline');
+
         $transportTotal = collect($this->passengers)->sum(function (array $passenger) use (
             $baseSchedulePrice,
             $scheduleAccommodationPrice,
@@ -2662,14 +2812,15 @@ public function selectedSchedule(): ?array
             $returnTransportClassTotal,
             $discountsById,
             $activePromoTicket,
-            $disableDiscounts
+            $disableDiscounts,
+            $isFerry
         ) {
             $scheduleAccommodationPrice_ = $scheduleAccommodationPrice;
-            $returnFare = $returnSchedulePrice + $returnScheduleAccommodationPrice + $returnTransportClassTotal;
 
             // Airline per-passenger promo: departure leg uses promo_price, no discount applied
             if ($activePromoTicket && ! empty($passenger['use_promo'])) {
                 $departureFare = floatval($activePromoTicket->promo_price) + $scheduleAccommodationPrice_ + $departureTransportClassTotal;
+                $returnFare = $returnSchedulePrice + $returnScheduleAccommodationPrice + $returnTransportClassTotal;
                 return $departureFare + $returnFare;
             }
 
@@ -2677,8 +2828,10 @@ public function selectedSchedule(): ?array
                 return 0; // Driver ticket is free
             }
 
-            $departureFare = $baseSchedulePrice + $scheduleAccommodationPrice_ + $departureTransportClassTotal;
-            $fare = $departureFare + $returnFare;
+            $depFare = ($baseSchedulePrice + $departureTransportClassTotal) + $scheduleAccommodationPrice_;
+            $retFare = ($returnSchedulePrice + $returnTransportClassTotal) + $returnScheduleAccommodationPrice;
+
+            $fare = $depFare + $retFare;
 
             if (! empty($passenger['discount_id']) && !$disableDiscounts) {
                 $discount = $discountsById->get($passenger['discount_id']);
@@ -2767,14 +2920,15 @@ public function selectedSchedule(): ?array
         $totalReturnTicket = 0;
         $totalDepartureAccommodation = 0;
         $totalReturnAccommodation = 0;
+        $isFerry = (strtolower($this->mode ?? '') !== 'airline');
 
         foreach ($this->passengers as $passenger) {
             if ($passenger['type'] === 'driver') {
                 continue; // Driver ticket and accommodation are free
             }
 
-            $depTicket = $departureTicketPrice + $departureTransportClassTotal;
-            $retTicket = $returnTicketPrice + $returnTransportClassTotal;
+            $depTicket = ($departureTicketPrice + $departureTransportClassTotal);
+            $retTicket = ($returnTicketPrice + $returnTransportClassTotal);
             
             $isAirlinePromoPassenger = (strtolower($this->mode) === 'airline' && !empty($passenger['use_promo']));
 
@@ -2867,9 +3021,39 @@ public function selectedSchedule(): ?array
         return 0;
     }
 
+    public function getMaxPassengers(): int
+    {
+        return $this->trip_type === 'round_trip' ? 4 : 8;
+    }
+
+    public function clampPassengersToMax(): void
+    {
+        $max = $this->getMaxPassengers();
+        $total = $this->adults + $this->children + (strtolower($this->mode) === 'airline' ? $this->minors + $this->infants : 0);
+        if ($total > $max) {
+            while ($this->adults + $this->children + (strtolower($this->mode) === 'airline' ? $this->minors + $this->infants : 0) > $max) {
+                if ($this->infants > 0) {
+                    $this->infants--;
+                } elseif ($this->minors > 0) {
+                    $this->minors--;
+                } elseif ($this->children > 0) {
+                    $this->children--;
+                } elseif ($this->adults > 1) {
+                    $this->adults--;
+                } else {
+                    break;
+                }
+            }
+            if ($this->infants > $this->adults) {
+                $this->infants = $this->adults;
+            }
+            $this->syncPassengerEntries();
+        }
+    }
+
     public function incrementAdults(): void
     {
-        if ($this->adults + $this->children + (strtolower($this->mode) === 'airline' ? $this->minors + $this->infants : 0) >= 8) {
+        if ($this->adults + $this->children + (strtolower($this->mode) === 'airline' ? $this->minors + $this->infants : 0) >= $this->getMaxPassengers()) {
             return;
         }
 
@@ -2895,7 +3079,7 @@ public function selectedSchedule(): ?array
 
     public function incrementChildren(): void
     {
-        if ($this->adults + $this->children + (strtolower($this->mode) === 'airline' ? $this->minors + $this->infants : 0) >= 8) {
+        if ($this->adults + $this->children + (strtolower($this->mode) === 'airline' ? $this->minors + $this->infants : 0) >= $this->getMaxPassengers()) {
             return;
         }
 
@@ -2920,7 +3104,7 @@ public function selectedSchedule(): ?array
     
     public function incrementMinors(): void
     {
-        if ($this->adults + $this->children + (strtolower($this->mode) === 'airline' ? $this->minors + $this->infants : 0) >= 8) {
+        if ($this->adults + $this->children + (strtolower($this->mode) === 'airline' ? $this->minors + $this->infants : 0) >= $this->getMaxPassengers()) {
             return;
         }
 
@@ -2943,7 +3127,7 @@ public function selectedSchedule(): ?array
         if ($this->infants >= $this->adults) {
             return; // 1 infant per adult limit
         }
-        if ($this->adults + $this->children + (strtolower($this->mode) === 'airline' ? $this->minors + $this->infants : 0) >= 8) {
+        if ($this->adults + $this->children + (strtolower($this->mode) === 'airline' ? $this->minors + $this->infants : 0) >= $this->getMaxPassengers()) {
             return;
         }
 
@@ -2968,13 +3152,15 @@ public function selectedSchedule(): ?array
 
     protected function validatePassengerExtras(): void
     {
+        $this->syncFullPassengerNames();
+
         $validator = Validator::make([
             'passengers' => $this->passengers,
         ], [
             'passengers.*.first_name' => 'required|string|max:255',
             'passengers.*.middle_name' => 'nullable|string|max:255',
             'passengers.*.last_name' => 'required|string|max:255',
-            'passengers.*.name' => 'required|string|max:255',
+            'passengers.*.name' => 'nullable|string|max:255',
             'passengers.*.discount_id' => 'nullable|exists:discounts,id',
             'passengers.*.birthdate' => 'required|date|before:today',
             'passengers.*.pwd_id_number' => 'nullable|string|max:255',

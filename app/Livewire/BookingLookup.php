@@ -36,9 +36,9 @@ class BookingLookup extends Component
     public bool $rebooking_is_round_trip = false;
     public ?string $rebooking_reference_number = null;
     public $rebookingProof;
-    public bool $isUploadingRebooking = false;
     public ?string $rebooking_departure_date = null;
     public ?string $rebooking_return_date = null;
+    public array $selectedPassengerItems = [];
 
     // Customer Rebooking Wizard State
     public string $rebooking_step = 'departure_date';
@@ -163,6 +163,16 @@ class BookingLookup extends Component
             $this->showCancellationReminder = false;
         }
 
+        if ($this->booking) {
+            // Default select all eligible passengers
+            $this->selectedPassengerItems = $this->booking->passengers
+                ->whereNotIn('status', ['cancelled', 'operator_cancelled', 'refunded'])
+                ->pluck('item_number')
+                ->map(fn ($n) => (int) $n)
+                ->values()
+                ->toArray();
+        }
+
         if ($this->booking && $this->booking->transaction) {
             $transaction = $this->booking->transaction;
             if ($transaction->payment_status === 'unpaid' &&
@@ -179,6 +189,42 @@ class BookingLookup extends Component
                 }
             }
         }
+    }
+
+    public function selectAllPassengers(): void
+    {
+        if (! $this->booking) {
+            return;
+        }
+        $this->selectedPassengerItems = $this->booking->passengers
+            ->whereNotIn('status', ['cancelled', 'operator_cancelled', 'refunded'])
+            ->pluck('item_number')
+            ->map(fn ($n) => (int) $n)
+            ->values()
+            ->toArray();
+    }
+
+    public function deselectAllPassengers(): void
+    {
+        $this->selectedPassengerItems = [];
+    }
+
+    public function togglePassengerItem(int $itemNumber): void
+    {
+        if (in_array($itemNumber, $this->selectedPassengerItems, true)) {
+            $this->selectedPassengerItems = array_values(array_diff($this->selectedPassengerItems, [$itemNumber]));
+        } else {
+            $this->selectedPassengerItems[] = $itemNumber;
+            sort($this->selectedPassengerItems);
+        }
+    }
+
+    public function getSelectedItemsLabelProperty(): string
+    {
+        if (! $this->booking) {
+            return '—';
+        }
+        return $this->booking->getAffectedItemsLabel(empty($this->selectedPassengerItems) ? null : $this->selectedPassengerItems);
     }
 
     public function showCancellationWarning(): void
@@ -205,7 +251,9 @@ class BookingLookup extends Component
         $this->resetRebookingState();
         $this->showCancellationWarning = true;
         $this->feedback = 'Please confirm that you want to start cancellation. This will begin a 5-minute confirmation timer and lock in a 50% refund.';
-    }    public function viewBooking(string $transactionNumber): void
+    }
+
+    public function viewBooking(string $transactionNumber): void
     {
         $this->transaction_number = $transactionNumber;
         $this->email = ''; // clear email so it strictly searches by transaction number
@@ -217,6 +265,10 @@ class BookingLookup extends Component
         if (! $this->booking) {
             $this->feedback = 'Booking not found.';
             return;
+        }
+
+        if (empty($this->selectedPassengerItems)) {
+            $this->selectAllPassengers();
         }
 
         if (! $this->booking->canCancel()) {
@@ -243,6 +295,10 @@ class BookingLookup extends Component
         $expiresAt = $this->booking->created_at->addMinutes(5);
         $remaining = $expiresAt->timestamp - now()->timestamp;
 
+        $selectedItems = ! empty($this->selectedPassengerItems) ? $this->selectedPassengerItems : $this->booking->passengers->pluck('item_number')->toArray();
+        $isWithinFiveMinutes = $remaining > 0;
+        $breakdown = $this->booking->getPartialRefundBreakdown($selectedItems, $isWithinFiveMinutes);
+
         if ($remaining <= 0) {
             $this->cancellationExpired = true;
             $this->cancelCountdown = 0;
@@ -252,13 +308,15 @@ class BookingLookup extends Component
                 $this->cancellationWindowActive = false;
                 return;
             }
-            $refund = $this->booking->getRefundAmount(false);
-            $fee    = $this->booking->getCancellationFeeAmount(false);
-            $this->feedback = 'Enter where you would like the refund sent. Estimated refund: ₱' . number_format($refund, 2) . ' (cancellation deductions: ₱' . number_format($fee, 2) . ').';
+            $refund = $breakdown['refundable_amount'];
+            $fee    = $breakdown['deduction_amount'];
+            $itemsLabel = $this->booking->getAffectedItemsLabel($selectedItems);
+            $this->feedback = "Enter where you would like the refund sent for {$itemsLabel}. Estimated refund: ₱" . number_format($refund, 2) . " (cancellation deductions: ₱" . number_format($fee, 2) . ").";
         } else {
             $this->cancellationExpired = false;
             $this->cancelCountdown = $remaining;
-            $this->feedback = 'Enter where you would like the refund sent. Cancellation is eligible for a 100% refund within 5 minutes of booking.';
+            $itemsLabel = $this->booking->getAffectedItemsLabel($selectedItems);
+            $this->feedback = "Enter where you would like the refund sent for {$itemsLabel}. Cancellation is eligible for a 100% refund within 5 minutes of booking.";
         }
 
         $this->refund_destination = null;
@@ -334,23 +392,65 @@ class BookingLookup extends Component
             return;
         }
 
-        // Calculate refund using the new surcharge-based formula
         $isWithinFiveMinutes = $this->booking->created_at->addMinutes(5)->isFuture();
-        $cancellationFee = $this->booking->getCancellationFeeAmount($isWithinFiveMinutes);
-        $refundAmount    = $this->booking->getRefundAmount($isWithinFiveMinutes);
 
         if (! $isWithinFiveMinutes && ! $this->booking->isRefundEligible()) {
             $this->feedback = 'You cannot request a refund as it is less than 3 hours before the departure time.';
             return;
         }
 
-        $this->booking->update([
-            'status' => 'cancelled',
-            'cancellation_fee' => $cancellationFee,
-            'refund_amount' => $refundAmount,
-            'refund_destination' => $this->refund_destination,
-        ]);
-        $this->booking->transaction->update(['payment_status' => 'cancelled']);
+        $selectedItems = ! empty($this->selectedPassengerItems)
+            ? $this->selectedPassengerItems
+            : $this->booking->passengers->pluck('item_number')->toArray();
+
+        $partialBreakdown = $this->booking->getPartialRefundBreakdown($selectedItems, $isWithinFiveMinutes);
+        $totalRefundAmount = $partialBreakdown['refundable_amount'];
+        $totalCancellationFee = $partialBreakdown['deduction_amount'];
+
+        $allPassengers = $this->booking->passengers->sortBy('item_number')->values();
+        $selectedCount = count($selectedItems);
+        $totalPaxCount = $allPassengers->count();
+        $isFullCancellation = ($selectedCount >= $totalPaxCount);
+
+        // Update each selected passenger item
+        foreach ($allPassengers as $p) {
+            if (in_array((int) $p->item_number, array_map('intval', $selectedItems), true)) {
+                $pItemTotal = $p->getEffectiveItemTotal();
+                $pRefund = $selectedCount > 0 ? round($totalRefundAmount / $selectedCount, 2) : $pItemTotal;
+                $pFee    = $selectedCount > 0 ? round($totalCancellationFee / $selectedCount, 2) : 0;
+
+                $p->update([
+                    'status'             => 'refund_pending',
+                    'refund_amount'      => $pRefund,
+                    'cancellation_fee'   => $pFee,
+                    'refund_destination' => $this->refund_destination,
+                    'refund_status'      => 'pending',
+                ]);
+            }
+        }
+
+        // Refresh passengers
+        $this->booking->load('passengers');
+        $allCancelled = $this->booking->passengers->every(fn ($p) => in_array($p->status, ['cancelled', 'refund_pending', 'refunded', 'operator_cancelled']));
+
+        if ($isFullCancellation || $allCancelled) {
+            $this->booking->update([
+                'status'             => 'cancelled',
+                'cancellation_fee'   => $totalCancellationFee,
+                'refund_amount'      => $this->booking->passengers->sum('refund_amount') ?: $totalRefundAmount,
+                'refund_destination' => $this->refund_destination,
+                'refund_status'      => 'pending',
+            ]);
+            $this->booking->transaction?->update(['payment_status' => 'cancelled']);
+        } else {
+            // Partial cancellation: booking remains active, passenger items show refund_pending
+            $this->booking->update([
+                'refund_amount'      => $this->booking->passengers->sum('refund_amount'),
+                'refund_destination' => $this->refund_destination,
+                'refund_status'      => 'pending',
+            ]);
+        }
+
         $this->booking = $this->booking->fresh(['passengers.discount', 'accommodations', 'transaction']);
 
         try {
@@ -363,7 +463,21 @@ class BookingLookup extends Component
             ]);
         }
 
-        $this->feedback = "Your booking has been refunded successfully. Cancellation fee: ₱" . number_format($cancellationFee, 2) . ", Refundable amount: ₱" . number_format($refundAmount, 2) . ". A confirmation email has been sent.";
+        $itemsLabel = $this->booking->getAffectedItemsLabel($selectedItems);
+
+        // Send User Notification & FCM push notification
+        if ($this->booking->user_id) {
+            \App\Models\UserNotification::notify(
+                $this->booking->user_id,
+                '💰 Refund Request Received',
+                "Your refund request of ₱" . number_format((float) $totalRefundAmount, 2) . " for {$itemsLabel} (booking #{$this->booking->transaction_number}) is being processed. Please allow 24–48 hours for review and disbursement.",
+                'booking',
+                'money_off',
+                ['transaction_number' => $this->booking->transaction_number, 'refund_status' => 'pending']
+            );
+        }
+
+        $this->feedback = "Your cancellation and refund request for {$itemsLabel} have been submitted successfully. Please allow 24–48 hours for our finance team to review and disburse your refund of ₱" . number_format($totalRefundAmount, 2) . " to your account. A confirmation email has been sent.";
         $this->resetCancellationState();
     }
 

@@ -3,9 +3,11 @@
 namespace Tests\Feature;
 
 use Tests\TestCase;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
 class HomePageTest extends TestCase
 {
+    use RefreshDatabase;
     public function test_homepage_renders_without_database(): void
     {
         $response = $this->get('/');
