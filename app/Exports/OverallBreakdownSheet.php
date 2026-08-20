@@ -34,7 +34,7 @@ class OverallBreakdownSheet implements FromArray, WithTitle, WithHeadings, WithS
                 $isPaid = true;
             } elseif (in_array($booking->status, [Booking::STATUS_CONFIRMED, 'rebooked'])) {
                 $isPaid = true;
-            } elseif (in_array($booking->status, [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED]) && $booking->refund_amount > 0) {
+            } elseif (in_array($booking->status, [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED])) {
                 $isPaid = true;
             }
 
@@ -43,6 +43,8 @@ class OverallBreakdownSheet implements FromArray, WithTitle, WithHeadings, WithS
             }
 
             $txId = $booking->transaction_number ?? ('AGT-' . $booking->id);
+            $clientName = $booking->client_name ?? '-';
+            $dateCreated = $booking->created_at ? $booking->created_at->format('M d, Y') : '-';
 
             // Calculate rebooking fee if applicable
             $rebookingFee = 0;
@@ -61,6 +63,8 @@ class OverallBreakdownSheet implements FromArray, WithTitle, WithHeadings, WithS
             // 1. Add the positive Verified line
             $rows[] = [
                 $txId,
+                $clientName,
+                $dateCreated,
                 'Verified',
                 (float) $booking->total_price,
             ];
@@ -70,17 +74,21 @@ class OverallBreakdownSheet implements FromArray, WithTitle, WithHeadings, WithS
             if ($rebookingFee > 0) {
                 $rows[] = [
                     $txId,
+                    $clientName,
+                    $dateCreated,
                     'Rebooked Fee',
                     (float) $rebookingFee,
                 ];
                 $total += (float) $rebookingFee;
             }
 
-            // 3. Add negative line if refunded or cancelled so only retained amount stays in total
+            // 3. Add negative line if refunded or cancelled
             if (in_array($booking->status, [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED])) {
                 if ($booking->refund_amount > 0) {
                     $rows[] = [
                         $txId,
+                        $clientName,
+                        $dateCreated,
                         'Refunded',
                         -((float) $booking->refund_amount),
                     ];
@@ -88,6 +96,8 @@ class OverallBreakdownSheet implements FromArray, WithTitle, WithHeadings, WithS
                 } else {
                     $rows[] = [
                         $txId,
+                        $clientName,
+                        $dateCreated,
                         'Cancelled',
                         -((float) $booking->total_price),
                     ];
@@ -97,11 +107,13 @@ class OverallBreakdownSheet implements FromArray, WithTitle, WithHeadings, WithS
         }
 
         // Add empty row
-        $rows[] = ['', '', ''];
+        $rows[] = ['', '', '', '', ''];
 
         // Add total row
         $rows[] = [
             'TOTAL',
+            '',
+            '',
             '',
             $total
         ];
@@ -118,6 +130,8 @@ class OverallBreakdownSheet implements FromArray, WithTitle, WithHeadings, WithS
     {
         return [
             'Transaction #',
+            'Client Name',
+            'Date Created',
             'Status',
             'Amount',
         ];

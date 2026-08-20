@@ -80,13 +80,110 @@
     </style>
 </head>
 <body>
-    <h1>Booking Report</h1>
+    <div style="margin-bottom: 15px; border-bottom: 2px solid #3498db; padding-bottom: 8px;">
+        <table style="width: 100%; border: none; margin: 0;">
+            <tr>
+                <td style="border: none; padding: 0; vertical-align: middle;">
+                    <h1 style="margin: 0; text-align: left; font-size: 16px; color: #2c3e50; border: none; padding: 0;">Amiga Gracia Travel Services</h1>
+                    <div style="font-size: 11px; font-weight: bold; color: #34495e; margin-top: 2px;">BOOKING &amp; REMITTANCE REPORT</div>
+                </td>
+                <td style="border: none; padding: 0; text-align: right; vertical-align: middle;">
+                    <div style="font-size: 8px; color: #475569; background: #f8fafc; border: 1px solid #cbd5e1; padding: 4px 8px; border-radius: 4px; display: inline-block;">
+                        <strong>Date Range:</strong> 
+                        @if(!empty($fromDate) && !empty($toDate))
+                            {{ \Carbon\Carbon::parse($fromDate)->format('M d, Y') }} — {{ \Carbon\Carbon::parse($toDate)->format('M d, Y') }}
+                        @elseif(!empty($fromDate))
+                            From {{ \Carbon\Carbon::parse($fromDate)->format('M d, Y') }}
+                        @elseif(!empty($toDate))
+                            Up to {{ \Carbon\Carbon::parse($toDate)->format('M d, Y') }}
+                        @else
+                            All Recorded Dates
+                        @endif
+                        <br>
+                        <strong>Generated On:</strong> {{ ($generatedAt ?? now())->format('M d, Y h:i A') }}
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
 
     @php
         $sections = [];
         foreach ($groupedBookings as $title => $items) {
             $sections[] = ['title' => $title, 'items' => $items];
         }
+
+        // Aggregate overall totals for Remittance & Volume summary
+        $allUniqueBookings = collect();
+        foreach ($groupedBookings as $title => $items) {
+            foreach ($items as $b) {
+                $allUniqueBookings->push($b);
+            }
+        }
+        $allUniqueBookings = $allUniqueBookings->unique('id');
+
+        $overallSales = 0.0;
+        $overallRebookingFee = 0.0;
+        $overallRefundRetained = 0.0;
+
+        $volSales = 0;
+        $volRefund = 0;
+        $volRevalidation = 0;
+        $volCancelled = 0;
+
+        foreach ($allUniqueBookings as $b) {
+            $isRefunded = in_array($b->status, ['cancelled', 'operator_cancelled']) && $b->refund_amount > 0;
+            $isCancelled100 = in_array($b->status, ['cancelled', 'operator_cancelled']) && $b->refund_amount <= 0;
+
+            if ($isCancelled100) {
+                // 100% cancellation (₱0 retained, omitted from monetary remittance)
+                $volCancelled++;
+                continue;
+            }
+
+            $isPaid = false;
+            if ($b->transaction && in_array($b->transaction->payment_status, ['paid', 'refunded'])) {
+                $isPaid = true;
+            } elseif (in_array($b->status, ['confirmed', 'rebooked'])) {
+                $isPaid = true;
+            } elseif ($isRefunded) {
+                $isPaid = true;
+            }
+
+            if (! $isPaid) {
+                continue;
+            }
+
+            if ($isRefunded) {
+                // Partial refund - only the remaining amount kept by Amiga
+                $retained = max(0, (float) $b->total_price - (float) $b->refund_amount);
+                $overallRefundRetained += $retained;
+                $volRefund++;
+            } else {
+                $overallSales += (float) $b->total_price;
+                $volSales++;
+
+                $rFee = 0;
+                if ($b->transaction && (float) $b->transaction->rebooking_fee > 0) {
+                    $notes = $b->disruption_notes ? json_decode($b->disruption_notes, true) : [];
+                    $surcharge = (float) ($notes['surcharge'] ?? 0);
+                    $reval = (float) ($notes['revalidation_fee'] ?? 0);
+                    $rateDiff = (float) ($notes['rate_diff'] ?? 0);
+                    if ($surcharge > 0 || $reval > 0 || $rateDiff > 0) {
+                        $rFee = $surcharge + $reval + $rateDiff;
+                    } else {
+                        $rFee = (float) $b->transaction->rebooking_fee;
+                    }
+                }
+                if ($rFee > 0) {
+                    $overallRebookingFee += $rFee;
+                    $volRevalidation++;
+                }
+            }
+        }
+
+        $toBeRemittedAmount = $overallSales + $overallRebookingFee + $overallRefundRetained;
+        $netSalesVolume = $volSales + $volRevalidation + $volRefund;
     @endphp
 
     @foreach($sections as $section)
@@ -312,9 +409,65 @@
         @endif
     @endforeach
 
+    {{-- ═══ Remittance Summary & Volume Breakdown (Separated Blocks) ═══ --}}
+    <div style="margin-top: 25px; page-break-inside: avoid; width: 340px;">
+        {{-- Remittance Summary Block --}}
+        <div style="border: 1px solid #bdc3c7; background: #fafafa; padding: 8px 12px; border-radius: 4px; margin-bottom: 15px;">
+            <div style="font-size: 10px; font-weight: bold; color: #2c3e50; border-bottom: 1.5px solid #2c3e50; padding-bottom: 3px; margin-bottom: 6px;">
+                Remitance Summary
+            </div>
+            <table style="width: 100%; border: none; margin: 0; font-size: 8px;">
+                <tr>
+                    <td style="border: none; padding: 2px 0;">SALES</td>
+                    <td style="border: none; padding: 2px 0; text-align: right; font-family: monospace;">{{ number_format($overallSales, 2) }}</td>
+                </tr>
+                <tr>
+                    <td style="border: none; padding: 2px 0;">REVALIDATION / REBOOK</td>
+                    <td style="border: none; padding: 2px 0; text-align: right; font-family: monospace;">{{ number_format($overallRebookingFee, 2) }}</td>
+                </tr>
+                <tr>
+                    <td style="border: none; padding: 2px 0;">REFUND RETAINED (FEES &amp; SURCHARGE)</td>
+                    <td style="border: none; padding: 2px 0; text-align: right; font-family: monospace;">{{ number_format($overallRefundRetained, 2) }}</td>
+                </tr>
+                <tr style="border-top: 1.5px solid #2c3e50; font-weight: bold; font-size: 9px; background: #edf2f7;">
+                    <td style="border: none; padding: 4px 2px;">TO BE REMITTED AMOUNT</td>
+                    <td style="border: none; padding: 4px 2px; text-align: right; font-family: monospace; color: #1e3a8a;">₱{{ number_format($toBeRemittedAmount, 2) }}</td>
+                </tr>
+            </table>
+        </div>
+
+        {{-- Volume Block --}}
+        <div style="border: 1px solid #bdc3c7; background: #fafafa; padding: 8px 12px; border-radius: 4px;">
+            <div style="font-size: 10px; font-weight: bold; color: #2c3e50; border-bottom: 1.5px solid #2c3e50; padding-bottom: 3px; margin-bottom: 6px;">
+                VOLUME
+            </div>
+            <table style="width: 100%; border: none; margin: 0; font-size: 8px;">
+                <tr>
+                    <td style="border: none; padding: 2px 0;">SALES (VERIFIED)</td>
+                    <td style="border: none; padding: 2px 0; text-align: right; font-weight: bold;">{{ $volSales }}</td>
+                </tr>
+                <tr>
+                    <td style="border: none; padding: 2px 0;">REFUND (RETAINED)</td>
+                    <td style="border: none; padding: 2px 0; text-align: right; font-weight: bold;">{{ $volRefund }}</td>
+                </tr>
+                <tr>
+                    <td style="border: none; padding: 2px 0;">REVALIDATION / REBOOK</td>
+                    <td style="border: none; padding: 2px 0; text-align: right; font-weight: bold;">{{ $volRevalidation }}</td>
+                </tr>
+                <tr>
+                    <td style="border: none; padding: 2px 0;">CANCELLED (100% REFUND / VOID)</td>
+                    <td style="border: none; padding: 2px 0; text-align: right; font-weight: bold; color: #7f8c8d;">{{ $volCancelled }}</td>
+                </tr>
+                <tr style="border-top: 1.5px solid #2c3e50; font-weight: bold; font-size: 9px; background: #edf2f7;">
+                    <td style="border: none; padding: 4px 2px;">NET SALES VOLUME</td>
+                    <td style="border: none; padding: 4px 2px; text-align: right; font-family: monospace; color: #1e3a8a;">{{ $netSalesVolume }}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
     <div class="footer">
-        <p>Generated on {{ now()->format('F d, Y \a\t H:i:s A') }}</p>
-        <p>Amiga Gracia Travel &amp; Tours</p>
+        <p>Generated on {{ ($generatedAt ?? now())->format('F d, Y \a\t h:i:s A') }} | Amiga Gracia Travel Services</p>
     </div>
 </body>
 </html>

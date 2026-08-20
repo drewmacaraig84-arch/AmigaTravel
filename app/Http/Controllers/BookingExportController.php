@@ -33,12 +33,15 @@ class BookingExportController extends Controller
     {
         $query = Booking::with(['transaction', 'schedule.ferryRoute', 'passengers.discount']);
 
-        if (request()->filled('from_date')) {
-            $query->whereDate('created_at', '>=', request()->input('from_date'));
+        $fromDate = request()->input('from_date') ?? request()->input('start') ?? request()->input('startDate') ?? request()->input('from');
+        $toDate   = request()->input('to_date') ?? request()->input('end') ?? request()->input('endDate') ?? request()->input('to');
+
+        if ($fromDate) {
+            $query->whereDate('created_at', '>=', $fromDate);
         }
 
-        if (request()->filled('to_date')) {
-            $query->whereDate('created_at', '<=', request()->input('to_date'));
+        if ($toDate) {
+            $query->whereDate('created_at', '<=', $toDate);
         }
 
         $bookings = $query->get();
@@ -82,10 +85,16 @@ class BookingExportController extends Controller
 
     protected function generatePdfResponse(string $filename, bool $inline = false): Response
     {
+        $fromDate = request()->input('from_date') ?? request()->input('start') ?? request()->input('startDate') ?? request()->input('from');
+        $toDate   = request()->input('to_date') ?? request()->input('end') ?? request()->input('endDate') ?? request()->input('to');
+
         $grouped = $this->getGroupedBookings();
 
         $html = view('exports.bookings-pdf', [
             'groupedBookings' => $grouped,
+            'fromDate'        => $fromDate,
+            'toDate'          => $toDate,
+            'generatedAt'     => now(),
         ])->render();
 
         $options = new Options();
