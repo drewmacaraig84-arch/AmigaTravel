@@ -100,10 +100,11 @@ class TransportClassSeeder extends Seeder
             }
         }
 
-        // Also ensure ferry transport classes are created from existing schedule accommodations
+        // Also ensure ferry transport classes are created for any unlinked ferry schedules
         $ferrySchedules = Schedule::query()
             ->with(['ferryRoute', 'scheduleAccommodations'])
             ->whereHas('ferryRoute', fn ($q) => $q->where('mode', 'ferry'))
+            ->doesntHave('transportClasses')
             ->get();
 
         foreach ($ferrySchedules as $schedule) {

@@ -263,11 +263,151 @@ class RouteScheduleSeeder extends Seeder
                         ['name' => 'Hot Seats', 'description' => 'Forward and exit-row seating with priority boarding.', 'price' => 3200.00, 'has_bed' => false, 'sort_order' => 2],
                     ],
                 ],
+
+                // 8. International: Manila <-> Tokyo (Narita) (Philippine Airlines)
+                [
+                    'origin' => 'Manila',
+                    'destination' => 'Tokyo (Narita)',
+                    'mode' => 'airline',
+                    'operator' => 'Philippine Airline',
+                    'trip_type' => 'international',
+                    'schedules' => [
+                        ['service_name' => 'PR 428', 'vehicle_name' => 'Airbus A321', 'plate_no' => 'RP-P4281', 'dep_time' => '06:55:00', 'duration' => 270, 'price' => 14500.00],
+                        ['service_name' => 'PR 432', 'vehicle_name' => 'Airbus A330', 'plate_no' => 'RP-P4322', 'dep_time' => '14:20:00', 'duration' => 270, 'price' => 15800.00],
+                    ],
+                    'accommodations' => [
+                        ['name' => 'Economy Class', 'description' => 'Standard international seating with meal service & baggage.', 'price' => 14500.00, 'has_bed' => false, 'sort_order' => 1],
+                        ['name' => 'Premium Economy', 'description' => 'Extra legroom, priority check-in, and premium meals.', 'price' => 22000.00, 'has_bed' => false, 'sort_order' => 2],
+                        ['name' => 'Business Class', 'description' => 'Lie-flat luxury seats, gourmet dining, and lounge access.', 'price' => 42000.00, 'has_bed' => false, 'sort_order' => 3],
+                    ],
+                ],
+                [
+                    'origin' => 'Tokyo (Narita)',
+                    'destination' => 'Manila',
+                    'mode' => 'airline',
+                    'operator' => 'Philippine Airline',
+                    'trip_type' => 'international',
+                    'schedules' => [
+                        ['service_name' => 'PR 427', 'vehicle_name' => 'Airbus A321', 'plate_no' => 'RP-P4281', 'dep_time' => '13:30:00', 'duration' => 290, 'price' => 14500.00],
+                        ['service_name' => 'PR 431', 'vehicle_name' => 'Airbus A330', 'plate_no' => 'RP-P4322', 'dep_time' => '20:15:00', 'duration' => 290, 'price' => 15800.00],
+                    ],
+                    'accommodations' => [
+                        ['name' => 'Economy Class', 'description' => 'Standard international seating with meal service & baggage.', 'price' => 14500.00, 'has_bed' => false, 'sort_order' => 1],
+                        ['name' => 'Premium Economy', 'description' => 'Extra legroom, priority check-in, and premium meals.', 'price' => 22000.00, 'has_bed' => false, 'sort_order' => 2],
+                        ['name' => 'Business Class', 'description' => 'Lie-flat luxury seats, gourmet dining, and lounge access.', 'price' => 42000.00, 'has_bed' => false, 'sort_order' => 3],
+                    ],
+                ],
+
+                // 9. International: Manila <-> Singapore (Cebu Pacific)
+                [
+                    'origin' => 'Manila',
+                    'destination' => 'Singapore',
+                    'mode' => 'airline',
+                    'operator' => 'Cebu Pacific',
+                    'trip_type' => 'international',
+                    'schedules' => [
+                        ['service_name' => '5J 813', 'vehicle_name' => 'Airbus A321', 'plate_no' => 'RP-C8131', 'dep_time' => '05:35:00', 'duration' => 230, 'price' => 5800.00],
+                        ['service_name' => '5J 805', 'vehicle_name' => 'Airbus A330neo', 'plate_no' => 'RP-C8052', 'dep_time' => '13:30:00', 'duration' => 230, 'price' => 6500.00],
+                    ],
+                    'accommodations' => [
+                        ['name' => 'Standard', 'description' => 'Regular economy seat across main cabin.', 'price' => 5800.00, 'has_bed' => false, 'sort_order' => 1],
+                        ['name' => 'Standard Plus', 'description' => 'Extra legroom seat near front cabin.', 'price' => 7200.00, 'has_bed' => false, 'sort_order' => 2],
+                        ['name' => 'Premium', 'description' => 'Priority boarding and exit row extra legroom.', 'price' => 8800.00, 'has_bed' => false, 'sort_order' => 3],
+                    ],
+                ],
+                [
+                    'origin' => 'Singapore',
+                    'destination' => 'Manila',
+                    'mode' => 'airline',
+                    'operator' => 'Cebu Pacific',
+                    'trip_type' => 'international',
+                    'schedules' => [
+                        ['service_name' => '5J 814', 'vehicle_name' => 'Airbus A321', 'plate_no' => 'RP-C8131', 'dep_time' => '10:45:00', 'duration' => 235, 'price' => 5800.00],
+                        ['service_name' => '5J 806', 'vehicle_name' => 'Airbus A330neo', 'plate_no' => 'RP-C8052', 'dep_time' => '18:50:00', 'duration' => 235, 'price' => 6500.00],
+                    ],
+                    'accommodations' => [
+                        ['name' => 'Standard', 'description' => 'Regular economy seat across main cabin.', 'price' => 5800.00, 'has_bed' => false, 'sort_order' => 1],
+                        ['name' => 'Standard Plus', 'description' => 'Extra legroom seat near front cabin.', 'price' => 7200.00, 'has_bed' => false, 'sort_order' => 2],
+                        ['name' => 'Premium', 'description' => 'Priority boarding and exit row extra legroom.', 'price' => 8800.00, 'has_bed' => false, 'sort_order' => 3],
+                    ],
+                ],
+
+                // 10. International: Manila <-> Seoul (Incheon) (AirAsia)
+                [
+                    'origin' => 'Manila',
+                    'destination' => 'Seoul (Incheon)',
+                    'mode' => 'airline',
+                    'operator' => 'AirAsia',
+                    'trip_type' => 'international',
+                    'schedules' => [
+                        ['service_name' => 'Z2 884', 'vehicle_name' => 'Airbus A320', 'plate_no' => 'RP-A8841', 'dep_time' => '07:15:00', 'duration' => 245, 'price' => 6800.00],
+                        ['service_name' => 'Z2 888', 'vehicle_name' => 'Airbus A321neo', 'plate_no' => 'RP-A8882', 'dep_time' => '17:40:00', 'duration' => 245, 'price' => 7500.00],
+                    ],
+                    'accommodations' => [
+                        ['name' => 'Economy Class', 'description' => 'Standard international budget seat.', 'price' => 6800.00, 'has_bed' => false, 'sort_order' => 1],
+                        ['name' => 'Hot Seats', 'description' => 'Forward and exit-row seating with priority boarding.', 'price' => 8500.00, 'has_bed' => false, 'sort_order' => 2],
+                        ['name' => 'Premium Flatbed', 'description' => 'Fully reclining flatbed seat with complimentary baggage and meal.', 'price' => 18500.00, 'has_bed' => false, 'sort_order' => 3],
+                    ],
+                ],
+                [
+                    'origin' => 'Seoul (Incheon)',
+                    'destination' => 'Manila',
+                    'mode' => 'airline',
+                    'operator' => 'Philippines AirAsia',
+                    'trip_type' => 'international',
+                    'schedules' => [
+                        ['service_name' => 'Z2 885', 'vehicle_name' => 'Airbus A320', 'plate_no' => 'RP-A8841', 'dep_time' => '13:05:00', 'duration' => 250, 'price' => 6800.00],
+                        ['service_name' => 'Z2 889', 'vehicle_name' => 'Airbus A321neo', 'plate_no' => 'RP-A8882', 'dep_time' => '23:25:00', 'duration' => 250, 'price' => 7500.00],
+                    ],
+                    'accommodations' => [
+                        ['name' => 'Economy Class', 'description' => 'Standard international budget seat.', 'price' => 6800.00, 'has_bed' => false, 'sort_order' => 1],
+                        ['name' => 'Hot Seats', 'description' => 'Forward and exit-row seating with priority boarding.', 'price' => 8500.00, 'has_bed' => false, 'sort_order' => 2],
+                        ['name' => 'Premium Flatbed', 'description' => 'Fully reclining flatbed seat with complimentary baggage and meal.', 'price' => 18500.00, 'has_bed' => false, 'sort_order' => 3],
+                    ],
+                ],
+
+                // 11. International: Manila <-> Hong Kong (Philippine Airlines)
+                [
+                    'origin' => 'Manila',
+                    'destination' => 'Hong Kong',
+                    'mode' => 'airline',
+                    'operator' => 'Philippine Airline',
+                    'trip_type' => 'international',
+                    'schedules' => [
+                        ['service_name' => 'PR 300', 'vehicle_name' => 'Airbus A321', 'plate_no' => 'RP-P3001', 'dep_time' => '07:55:00', 'duration' => 135, 'price' => 7800.00],
+                        ['service_name' => 'PR 310', 'vehicle_name' => 'Airbus A330', 'plate_no' => 'RP-P3102', 'dep_time' => '19:00:00', 'duration' => 135, 'price' => 8400.00],
+                    ],
+                    'accommodations' => [
+                        ['name' => 'Economy Class', 'description' => 'Standard international seating with meal service & baggage.', 'price' => 7800.00, 'has_bed' => false, 'sort_order' => 1],
+                        ['name' => 'Premium Economy', 'description' => 'Extra legroom, priority check-in, and premium meals.', 'price' => 11500.00, 'has_bed' => false, 'sort_order' => 2],
+                        ['name' => 'Business Class', 'description' => 'Luxury recliner seats, gourmet dining, and lounge access.', 'price' => 21000.00, 'has_bed' => false, 'sort_order' => 3],
+                    ],
+                ],
+                [
+                    'origin' => 'Hong Kong',
+                    'destination' => 'Manila',
+                    'mode' => 'airline',
+                    'operator' => 'Philippine Airline',
+                    'trip_type' => 'international',
+                    'schedules' => [
+                        ['service_name' => 'PR 301', 'vehicle_name' => 'Airbus A321', 'plate_no' => 'RP-P3001', 'dep_time' => '11:15:00', 'duration' => 135, 'price' => 7800.00],
+                        ['service_name' => 'PR 311', 'vehicle_name' => 'Airbus A330', 'plate_no' => 'RP-P3102', 'dep_time' => '22:20:00', 'duration' => 135, 'price' => 8400.00],
+                    ],
+                    'accommodations' => [
+                        ['name' => 'Economy Class', 'description' => 'Standard international seating with meal service & baggage.', 'price' => 7800.00, 'has_bed' => false, 'sort_order' => 1],
+                        ['name' => 'Premium Economy', 'description' => 'Extra legroom, priority check-in, and premium meals.', 'price' => 11500.00, 'has_bed' => false, 'sort_order' => 2],
+                        ['name' => 'Business Class', 'description' => 'Luxury recliner seats, gourmet dining, and lounge access.', 'price' => 21000.00, 'has_bed' => false, 'sort_order' => 3],
+                    ],
+                ],
             ];
 
-            // Generate schedules for dates from today until 30 days ahead
+            // Generate schedules for dates from today until 14 days ahead (2 weeks)
             $startDate = Carbon::today();
-            $endDate = Carbon::today()->addDays(30);
+            $endDate = Carbon::today()->addDays(14);
+
+            $allAccRecords = [];
+            $allPivotRecords = [];
+            $now = Carbon::now();
 
             foreach ($routesData as $rData) {
                 // Find matching vehicle if any
@@ -356,43 +496,47 @@ class RouteScheduleSeeder extends Seeder
                             ]
                         );
 
-                        // Attach ScheduleAccommodations & TransportClasses
-                        $pivotData = [];
+                        // Collect accommodation records for bulk insertion
                         foreach ($rData['accommodations'] as $accData) {
-                            // ScheduleAccommodation (hasMany relation)
-                            ScheduleAccommodation::updateOrCreate(
-                                [
-                                    'schedule_id' => $schedule->id,
-                                    'name' => $accData['name'],
-                                ],
-                                [
-                                    'description' => $accData['description'],
-                                    'price' => $accData['price'],
-                                    'tickets_available' => 50,
-                                    'has_bed' => $accData['has_bed'],
-                                    'is_active' => true,
-                                    'sort_order' => $accData['sort_order'],
-                                ]
-                            );
+                            $allAccRecords[] = [
+                                'schedule_id' => $schedule->id,
+                                'name' => $accData['name'],
+                                'description' => $accData['description'] ?? null,
+                                'price' => $accData['price'] ?? 0,
+                                'tickets_available' => 50,
+                                'has_bed' => $accData['has_bed'] ?? false,
+                                'is_active' => true,
+                                'sort_order' => $accData['sort_order'] ?? 1,
+                                'created_at' => $now,
+                                'updated_at' => $now,
+                            ];
 
-                            // Collect pivot data for transportClasses relation
                             if (isset($transportClasses[$accData['name']])) {
                                 $tc = $transportClasses[$accData['name']];
-                                $pivotData[$tc->id] = [
-                                    'additional_price' => $accData['price'],
+                                $allPivotRecords[] = [
+                                    'schedule_id' => $schedule->id,
+                                    'transport_class_id' => $tc->id,
+                                    'additional_price' => $accData['price'] ?? 0,
                                     'tickets_available' => 50,
-                                    'description' => $accData['description'],
-                                    'has_bed' => $accData['has_bed'],
+                                    'description' => $accData['description'] ?? null,
+                                    'has_bed' => $accData['has_bed'] ?? false,
                                     'is_active' => true,
+                                    'created_at' => $now,
+                                    'updated_at' => $now,
                                 ];
                             }
                         }
-
-                        if (!empty($pivotData)) {
-                            $schedule->transportClasses()->syncWithoutDetaching($pivotData);
-                        }
                     }
                 }
+            }
+
+            // Bulk insert all accommodations & pivot entries in chunks for maximum performance
+            foreach (array_chunk($allAccRecords, 500) as $chunk) {
+                DB::table('schedule_accommodations')->insert($chunk);
+            }
+
+            foreach (array_chunk($allPivotRecords, 500) as $chunk) {
+                DB::table('schedule_transport_class')->insert($chunk);
             }
         });
     }

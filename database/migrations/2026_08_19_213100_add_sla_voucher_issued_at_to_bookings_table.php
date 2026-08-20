@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::table('bookings', function (Blueprint $table) {
             if (! Schema::hasColumn('bookings', 'sla_voucher_issued_at')) {
-                $table->timestamp('sla_voucher_issued_at')->nullable()->after('rebooking_notes');
+                $table->timestamp('sla_voucher_issued_at')->nullable();
             }
         });
     }

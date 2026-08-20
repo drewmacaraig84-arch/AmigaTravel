@@ -36,13 +36,6 @@ class VehicleSeeder extends Seeder
             ['name' => 'MV Starlite Resilience', 'vehicle_id' => '1073561', 'operator' => 'Starlite', 'type' => 'ferry', 'is_active' => true],
         ];
 
-        foreach ($ferries as $ferry) {
-            Vehicle::updateOrCreate(
-                ['vehicle_id' => $ferry['vehicle_id']],
-                $ferry
-            );
-        }
-
         $airlines = [
             // Philippine Airlines
             ['name' => 'De Havilland Dash 8-Q400', 'vehicle_id' => 'RP-C5901', 'operator' => 'Philippine Airline', 'type' => 'airline', 'is_active' => true],
@@ -115,11 +108,19 @@ class VehicleSeeder extends Seeder
             ['name' => 'Airbus A320-200', 'vehicle_id' => 'RP-C8975', 'operator' => 'Philippine AirAsia', 'type' => 'airline', 'is_active' => true],
         ];
 
-        foreach ($airlines as $airline) {
-            Vehicle::updateOrCreate(
-                ['vehicle_id' => $airline['vehicle_id']],
-                $airline
-            );
+        $allVehicles = [];
+        $now = now();
+        foreach (array_merge($ferries, $airlines) as $v) {
+            $allVehicles[] = array_merge($v, [
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
         }
+
+        Vehicle::upsert(
+            $allVehicles,
+            ['vehicle_id'],
+            ['name', 'operator', 'type', 'is_active', 'updated_at']
+        );
     }
 }

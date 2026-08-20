@@ -392,21 +392,24 @@ class AirlineBaggageRuleSeeder extends Seeder
         $operatorMap['pal'] = $operatorMap[strtolower('Philippine Airlines')] ?? null;
         $operatorMap['ceb_pac'] = $operatorMap[strtolower('Cebu Pacific')] ?? null;
 
+        $preparedRules = [];
+        $now = now();
         foreach ($rules as $ruleData) {
             $operatorCode = $ruleData['operator'];
             $opId = $operatorMap[$operatorCode] ?? null;
 
-            AirlineBaggageRule::updateOrCreate(
-                [
-                    'operator' => $ruleData['operator'],
-                    'trip_type' => $ruleData['trip_type'],
-                    'weight' => $ruleData['weight'],
-                ],
-                array_merge($ruleData, [
-                    'is_active' => true,
-                    'operator_id' => $opId,
-                ])
-            );
+            $preparedRules[] = array_merge($ruleData, [
+                'is_active' => true,
+                'operator_id' => $opId,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
         }
+
+        AirlineBaggageRule::upsert(
+            $preparedRules,
+            ['operator', 'trip_type', 'weight'],
+            ['operator_name', 'code', 'logo', 'weight_kg', 'price', 'sort_order', 'is_active', 'operator_id', 'updated_at']
+        );
     }
 }

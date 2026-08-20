@@ -26,7 +26,7 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
 # --- Composer ---
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 ENV COMPOSER_ALLOW_SUPERUSER=1
-RUN composer config -g preferred-install source \
+RUN composer config -g preferred-install dist \
     && composer config -g store-auths false
 
 # --- Opcache tuning for production ---
@@ -47,17 +47,14 @@ WORKDIR /var/www/html
 COPY . .
 
 # --- Install PHP & Node dependencies, build frontend assets ---
-# --prefer-source forces git clone (bypasses GitHub zip download API rate limits).
-# If GITHUB_TOKEN env is set, Composer will auto-use it for authenticated clones
-# via the COMPOSER_AUTH env var that Railway passes at build time.
 RUN for i in 1 2 3 4 5; do \
       echo "composer install attempt $i"; \
-      if composer install --no-dev --prefer-source --no-interaction --optimize-autoloader; then \
+      if composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader --no-scripts; then \
         break; \
       fi; \
       if [ $i -eq 5 ]; then exit 1; fi; \
-      echo "Composer install attempt $i failed, waiting 45s for rate limit..."; \
-      sleep 45; \
+      echo "Composer install attempt $i failed, waiting 15s..."; \
+      sleep 15; \
     done \
     && npm install --legacy-peer-deps \
     && npm run build
