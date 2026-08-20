@@ -163,6 +163,11 @@ class BookingResource extends Resource
                         default => 'gray',
                     })
                     ->placeholder('—'),
+                Tables\Columns\TextColumn::make('transaction.payment_reference')
+                    ->label('Payment Ref No.')
+                    ->searchable()
+                    ->placeholder('N/A')
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('total_price')
                     ->money('PHP')

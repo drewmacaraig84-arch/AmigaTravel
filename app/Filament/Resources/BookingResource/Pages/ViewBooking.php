@@ -175,6 +175,17 @@ class ViewBooking extends ViewRecord
                             ->readOnly()
                             ->dehydrated(false)
                             ->placeholder('—'),
+                        Placeholder::make('confirmation_pdf')
+                            ->label('Confirmation PDF')
+                            ->content(function (): HtmlString {
+                                $pdf = $this->record->transaction?->confirmation_pdf;
+                                if (! $pdf) {
+                                    return new HtmlString('<span class="text-gray-500">—</span>');
+                                }
+                                $url = storage_asset_path($pdf);
+                                return new HtmlString('<a href="' . e($url) . '" target="_blank" class="inline-flex items-center gap-1 font-semibold text-primary-600 hover:underline">📄 View Uploaded Ticket PDF</a>');
+                            })
+                            ->visible(fn (): bool => filled($this->record->transaction?->confirmation_pdf)),
 
                         Placeholder::make('proof_image')
                             ->label('Proof of payment')
