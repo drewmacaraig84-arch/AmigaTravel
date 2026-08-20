@@ -222,7 +222,13 @@
                                     $adminFee = $fees;
                                 }
                             }
+                            $isRefunded = in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount > 0;
                             $totalAmount = (float) $booking->total_price;
+                            if ($isRefunded) {
+                                $totalAmount = max(0, (float) $booking->total_price - (float) $booking->refund_amount);
+                            } elseif ($rebookingFee > 0) {
+                                $totalAmount = (float) $booking->total_price + $rebookingFee;
+                            }
                             
                             $secBaseFare += $baseFare;
                             $secAccFee += $accFee;

@@ -132,12 +132,23 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
             }
         }
 
+        $isRefunded = in_array($booking->status, [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED]) && $booking->refund_amount > 0;
+        
+        $totalAmount = (float) $booking->total_price;
+        if ($isRefunded) {
+            // Net revenue retained by Amiga after refund (un-refunded fees + surcharges)
+            $totalAmount = max(0, (float) $booking->total_price - (float) $booking->refund_amount);
+        } elseif ($rebookingFee > 0) {
+            // Include additional rebooking fee collected from customer on reschedule
+            $totalAmount = (float) $booking->total_price + $rebookingFee;
+        }
+
         return [
             'baseFare' => $baseFare, 'accFee' => $accFee, 'vehicleFee' => $vehicleFee,
             'baggageFee' => $baggageFee, 'adminFee' => $adminFee, 'transactionFee' => $transactionFee,
             'hotelFee' => $hotelFee, 'rebookingFee' => $rebookingFee, 'cancellationFee' => $cancellationFee,
             'passengerDiscount' => $passengerDiscount, 'voucherDiscount' => $voucherDiscount,
-            'pointsDiscount' => $pointsDiscount, 'totalAmount' => (float) $booking->total_price,
+            'pointsDiscount' => $pointsDiscount, 'totalAmount' => $totalAmount,
         ];
     }
 

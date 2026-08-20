@@ -44,6 +44,20 @@ class OverallBreakdownSheet implements FromArray, WithTitle, WithHeadings, WithS
 
             $txId = $booking->transaction_number ?? ('AGT-' . $booking->id);
 
+            // Calculate rebooking fee if applicable
+            $rebookingFee = 0;
+            if ($booking->transaction && (float) $booking->transaction->rebooking_fee > 0) {
+                $notes = $booking->disruption_notes ? json_decode($booking->disruption_notes, true) : [];
+                $surcharge = (float) ($notes['surcharge'] ?? 0);
+                $reval = (float) ($notes['revalidation_fee'] ?? 0);
+                $rateDiff = (float) ($notes['rate_diff'] ?? 0);
+                if ($surcharge > 0 || $reval > 0 || $rateDiff > 0) {
+                    $rebookingFee = $surcharge + $reval + $rateDiff;
+                } else {
+                    $rebookingFee = (float) $booking->transaction->rebooking_fee;
+                }
+            }
+
             // 1. Add the positive Verified line
             $rows[] = [
                 $txId,
@@ -52,7 +66,17 @@ class OverallBreakdownSheet implements FromArray, WithTitle, WithHeadings, WithS
             ];
             $total += (float) $booking->total_price;
 
-            // 2. Add negative line if refunded or cancelled
+            // 2. Add positive Rebooking fee line if customer paid on reschedule
+            if ($rebookingFee > 0) {
+                $rows[] = [
+                    $txId,
+                    'Rebooked Fee',
+                    (float) $rebookingFee,
+                ];
+                $total += (float) $rebookingFee;
+            }
+
+            // 3. Add negative line if refunded or cancelled so only retained amount stays in total
             if (in_array($booking->status, [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED])) {
                 if ($booking->refund_amount > 0) {
                     $rows[] = [
