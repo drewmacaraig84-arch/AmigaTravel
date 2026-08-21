@@ -410,7 +410,25 @@ class BookingController extends Controller
                 'proof_of_payment' => $path,
                 'payment_reference' => $request->input('reference_number'),
                 'payment_status' => 'pending',
+                'payment_deadline_at' => null, // Stop countdown timer
+                'proof_submitted_at' => now(),
             ]);
+
+            if ($booking->status === 'cancelled') {
+                $booking->update(['status' => 'pending']);
+            }
+
+            try {
+                \Illuminate\Support\Facades\Mail::to($booking->client_email)
+                    ->queue(new \App\Mail\PaymentProofReceived($booking->transaction));
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('Failed queueing payment proof received email via API', [
+                    'booking_id' => $booking->id,
+                    'transaction_id' => $booking->transaction->id ?? null,
+                    'email' => $booking->client_email,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
 
         return response()->json([

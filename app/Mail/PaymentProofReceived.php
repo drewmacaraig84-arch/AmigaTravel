@@ -21,7 +21,9 @@ class PaymentProofReceived extends Mailable implements ShouldQueue
 
     public function build()
     {
-        return $this->subject('Proof Received: Your booking is under review')
+        $txNumber = $this->transaction->booking?->transaction_number ?? 'Booking';
+
+        return $this->subject("Payment Proof Received - {$txNumber} (Under Review) | Amiga Travel")
             ->view('emails.payment-proof-received');
     }
 }
