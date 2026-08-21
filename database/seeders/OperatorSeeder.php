@@ -21,9 +21,9 @@ class OperatorSeeder extends Seeder
                 'logo' => '2GO-Logo.png',
             ],
             [
-                'name' => 'Starlite Ferries',
+                'name' => 'Starlite',
                 'mode' => 'ferry',
-                'logo' => 'starlite-Logo.jfif',
+                'logo' => 'Starlite_Logo.png',
             ],
             [
                 'name' => 'Philippine Airlines',
@@ -36,7 +36,7 @@ class OperatorSeeder extends Seeder
                 'logo' => 'CebuPecific-Logo.png',
             ],
             [
-                'name' => 'Philippines AirAsia',
+                'name' => 'AirAsia',
                 'mode' => 'airline',
                 'logo' => 'AirAsia-Logo.png',
             ],
@@ -72,14 +72,23 @@ class OperatorSeeder extends Seeder
             $operatorMap[strtolower($op['name'])] = $operator->id;
         }
 
-        // Expanded alias mapping
-        $operatorMap['starlite'] = $operatorMap[strtolower('Starlite Ferries')];
+        // Expanded alias mapping for all variations
+        $operatorMap['2go travel'] = $operatorMap['2go'];
+        $operatorMap['starlite ferries'] = $operatorMap['starlite'];
+        $operatorMap['starlite ferries inc'] = $operatorMap['starlite'];
+        $operatorMap['starlite ferries inc.'] = $operatorMap['starlite'];
         $operatorMap['pal'] = $operatorMap[strtolower('Philippine Airlines')];
         $operatorMap['philippine airline'] = $operatorMap[strtolower('Philippine Airlines')];
         $operatorMap['philippines airlines(pal)'] = $operatorMap[strtolower('Philippine Airlines')];
-        $operatorMap['philippine airasia'] = $operatorMap[strtolower('Philippines AirAsia')];
-        $operatorMap['airasia'] = $operatorMap[strtolower('Philippines AirAsia')];
+        $operatorMap['philippines airlines (pal)'] = $operatorMap[strtolower('Philippine Airlines')];
+        $operatorMap['philippines airlines'] = $operatorMap[strtolower('Philippine Airlines')];
+        $operatorMap['philippine airasia'] = $operatorMap[strtolower('AirAsia')];
+        $operatorMap['philippines airasia'] = $operatorMap[strtolower('AirAsia')];
+        $operatorMap['air asia'] = $operatorMap[strtolower('AirAsia')];
         $operatorMap['ceb_pac'] = $operatorMap[strtolower('Cebu Pacific')];
+        $operatorMap['cebu pacific air'] = $operatorMap[strtolower('Cebu Pacific')];
+        $operatorMap['cebpac'] = $operatorMap[strtolower('Cebu Pacific')];
+        $operatorMap['cebgo'] = $operatorMap[strtolower('Cebu Pacific')];
 
         // Migrate existing tables
         $tablesToMigrate = [

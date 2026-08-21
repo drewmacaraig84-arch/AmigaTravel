@@ -387,8 +387,8 @@ class AirlineBaggageRuleSeeder extends Seeder
         $operatorMap = \App\Models\Operator::pluck('id', 'name')->mapWithKeys(function ($id, $name) {
             return [strtolower($name) => $id];
         })->toArray();
-        $operatorMap['philippines airasia'] = $operatorMap[strtolower('Philippines AirAsia')] ?? null;
-        $operatorMap['airasia'] = $operatorMap['philippines airasia'] ?? null;
+        $operatorMap['philippines airasia'] = $operatorMap[strtolower('AirAsia')] ?? null;
+        $operatorMap['airasia'] = $operatorMap[strtolower('AirAsia')] ?? null;
         $operatorMap['pal'] = $operatorMap[strtolower('Philippine Airlines')] ?? null;
         $operatorMap['ceb_pac'] = $operatorMap[strtolower('Cebu Pacific')] ?? null;
 
