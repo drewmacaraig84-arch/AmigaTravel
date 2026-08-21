@@ -95,7 +95,7 @@
 
             <!-- What Happens Next Section -->
             <tr>
-                <td style="padding: 12px 32px 24px 32px;">
+                <td style="padding: 12px 32px 28px 32px;">
                     <div style="font-size: 13px; font-weight: 700; color: #334155; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;">
                         What happens next?
                     </div>
@@ -115,16 +115,10 @@
                         <tr>
                             <td width="28" valign="top" style="font-weight: bold; color: #047857;">3.</td>
                             <td>
-                                <strong>Check Anytime:</strong> You can check your booking status anytime using your transaction number online.
+                                <strong>Notification:</strong> We will notify you immediately once your booking has been confirmed.
                             </td>
                         </tr>
                     </table>
-
-                    <div style="text-align: center; margin-top: 24px;">
-                        <a href="{{ url('/book/check?ref=' . urlencode($transaction->booking->transaction_number)) }}" style="display: inline-block; padding: 12px 28px; background-color: #047857; color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 14px; box-shadow: 0 2px 4px rgba(4, 120, 87, 0.2);">
-                            View / Track Booking Status &rarr;
-                        </a>
-                    </div>
                 </td>
             </tr>
 

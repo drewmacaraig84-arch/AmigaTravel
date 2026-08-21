@@ -1,61 +1,107 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="utf-8" />
-    <title>Refund Processed & Disbursed</title>
-</head>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #1f2937; background-color: #f9fafb; padding: 24px;">
-    <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; padding: 32px; border: 1px solid #e5e7eb;">
-        <div style="text-align: center; margin-bottom: 24px;">
-            <h2 style="color: #ee018d; margin: 0; font-size: 22px;">Amiga Gracia Travel Services</h2>
-            <p style="color: #6b7280; font-size: 13px; margin-top: 4px;">Refund & Disbursement Confirmation</p>
-        </div>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Refund Processed & Disbursed - Amiga Travel</title>
+    </head>
+    <body style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #1e293b; margin: 0; padding: 24px; background-color: #f8fafc;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 650px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+            <!-- Header with Logo & Brand -->
+            <tr>
+                <td style="padding: 28px 32px 20px 32px; background: linear-gradient(135deg, #064e3b 0%, #047857 100%); text-align: center;">
+                    <img src="{{ isset($message) && file_exists(public_path('images/amiga_logo_white_outline.png')) ? $message->embed(public_path('images/amiga_logo_white_outline.png')) : (file_exists(public_path('images/amiga-logo-transparent.png')) && isset($message) ? $message->embed(public_path('images/amiga-logo-transparent.png')) : 'https://www.amigagracia.com/images/amiga-logo-transparent.png') }}" alt="Amiga Gracia Travel Services" style="max-width: 200px; height: auto; margin-bottom: 12px;" />
+                    <div style="font-size: 14px; font-weight: 700; letter-spacing: 1.5px; color: #a7f3d0; text-transform: uppercase;">
+                        Refund & Disbursement Confirmation
+                    </div>
+                </td>
+            </tr>
 
-        <p style="font-size: 15px;">Dear <strong>{{ $booking->client_name }}</strong>,</p>
+            <!-- Status Banner -->
+            <tr>
+                <td style="padding: 24px 32px 12px 32px; text-align: center;">
+                    <div style="display: inline-block; padding: 8px 18px; background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 9999px; margin-bottom: 16px;">
+                        <span style="color: #166534; font-weight: 700; font-size: 13px; letter-spacing: 0.5px; text-transform: uppercase;">
+                            ✓ Refund Disbursed
+                        </span>
+                    </div>
+                    <h1 style="margin: 0 0 10px 0; font-size: 24px; font-weight: 800; color: #0f172a;">
+                        Your Refund Has Been Disbursed
+                    </h1>
+                    <p style="margin: 0; font-size: 15px; color: #475569;">
+                        Dear <strong>{{ $booking->client_name }}</strong>, we are writing to confirm that the refund for your booking (Transaction <strong>{{ $booking->transaction_number }}</strong>) has been verified and successfully disbursed to your designated account.
+                    </p>
+                </td>
+            </tr>
 
-        <p style="font-size: 14px; color: #374151;">
-            We are writing to confirm that the refund for your booking (Transaction <strong>{{ $booking->transaction_number }}</strong>) has been verified and successfully disbursed to your designated account.
-        </p>
+            <!-- Summary Details -->
+            <tr>
+                <td style="padding: 16px 32px;">
+                    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px;">
+                        <div style="font-size: 12px; font-weight: 700; color: #047857; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px;">
+                            📋 Refund Details
+                        </div>
+                        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="font-size: 14px; border-collapse: collapse;">
+                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                <td style="padding: 8px 0; color: #64748b;">Transaction No.:</td>
+                                <td style="padding: 8px 0; text-align: right; font-weight: 700; color: #0f172a; font-family: monospace; font-size: 15px;">
+                                    {{ $booking->transaction_number }}
+                                </td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                <td style="padding: 8px 0; color: #64748b;">Route:</td>
+                                <td style="padding: 8px 0; text-align: right; font-weight: 600; color: #0f172a;">
+                                    {{ $booking->origin }} &rarr; {{ $booking->destination }}
+                                </td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                <td style="padding: 8px 0; color: #64748b;">Disbursed To:</td>
+                                <td style="padding: 8px 0; text-align: right; font-weight: 700; color: #0f172a;">
+                                    {{ $booking->refund_destination ?: 'Designated Account' }}
+                                </td>
+                            </tr>
+                            @if(filled($booking->refund_reference))
+                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                <td style="padding: 8px 0; color: #64748b;">Transfer Ref No.:</td>
+                                <td style="padding: 8px 0; text-align: right; font-weight: 700; color: #047857; font-family: monospace;">
+                                    {{ $booking->refund_reference }}
+                                </td>
+                            </tr>
+                            @endif
+                            <tr>
+                                <td style="padding: 10px 0 2px 0; color: #0f172a; font-weight: 700; font-size: 15px;">Total Refund Disbursed:</td>
+                                <td style="padding: 10px 0 2px 0; text-align: right; font-weight: 800; color: #047857; font-size: 18px;">
+                                    ₱{{ number_format((float) $booking->refund_amount, 2) }}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </td>
+            </tr>
 
-        <div style="background: #fdf2f8; border: 1px solid #fbcfe8; border-radius: 12px; padding: 20px; margin: 24px 0;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-                <tr>
-                    <td style="padding: 4px 0; color: #6b7280;">Transaction Number:</td>
-                    <td style="padding: 4px 0; font-weight: bold; text-align: right; color: #111827;">{{ $booking->transaction_number }}</td>
-                </tr>
-                <tr>
-                    <td style="padding: 4px 0; color: #6b7280;">Route:</td>
-                    <td style="padding: 4px 0; font-weight: bold; text-align: right; color: #111827;">{{ $booking->origin }} → {{ $booking->destination }}</td>
-                </tr>
-                <tr>
-                    <td style="padding: 4px 0; color: #6b7280;">Disbursed To:</td>
-                    <td style="padding: 4px 0; font-weight: bold; text-align: right; color: #111827;">{{ $booking->refund_destination ?: 'Direct Account' }}</td>
-                </tr>
-                @if(filled($booking->refund_reference))
-                    <tr>
-                        <td style="padding: 4px 0; color: #6b7280;">Transfer Reference No.:</td>
-                        <td style="padding: 4px 0; font-weight: bold; text-align: right; color: #ee018d;">{{ $booking->refund_reference }}</td>
-                    </tr>
-                @endif
-                <tr style="border-top: 1px solid #f472b6; margin-top: 8px;">
-                    <td style="padding: 8px 0 4px 0; font-weight: bold; color: #9d174d; font-size: 14px;">Total Refund Amount:</td>
-                    <td style="padding: 8px 0 4px 0; font-weight: bold; text-align: right; color: #9d174d; font-size: 16px;">₱{{ number_format((float) $booking->refund_amount, 2) }}</td>
-                </tr>
-            </table>
-        </div>
+            <!-- Attached Documents Note -->
+            <tr>
+                <td style="padding: 0 32px 24px 32px;">
+                    <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 14px 18px; font-size: 13px; color: #166534;">
+                        📎 <strong>Attached:</strong> Your official <strong>Refund Acknowledgement PDF</strong> and proof of transfer receipt are attached to this email.
+                    </div>
+                </td>
+            </tr>
 
-        <p style="font-size: 14px; color: #374151;">
-            We have attached your official <strong>Refund Acknowledgement PDF</strong> and the proof of transfer receipt to this email for your records. You can also view these at any time via the <strong>My Booking</strong> section on our website or the <strong>Amiga Gracia Mobile App</strong>.
-        </p>
-
-        <p style="font-size: 14px; color: #374151;">
-            We hope to welcome you on another trip in the future!
-        </p>
-
-        <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af; text-align: center;">
-            <p style="margin: 0;">Amiga Gracia Travel Services • Authorized Ticketing Operations</p>
-            <p style="margin: 4px 0 0 0;">If you have any questions regarding your refund, contact us at <a href="mailto:support@amigatravel.com" style="color: #ee018d; text-decoration: none;">support@amigatravel.com</a>.</p>
-        </div>
-    </div>
-</body>
+            <!-- Footer Section -->
+            <tr>
+                <td style="padding: 24px 32px; background-color: #f1f5f9; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; text-align: center;">
+                    <p style="margin: 0 0 6px 0; font-weight: 700; color: #334155;">
+                        Amiga Gracia Travel Services
+                    </p>
+                    <p style="margin: 0 0 10px 0;">
+                        Kay Amiga, Hassle Free Ka! Accredited Ticketing & Travel Agency
+                    </p>
+                    <p style="margin: 0; font-size: 11px; color: #94a3b8;">
+                        If you have questions regarding your refund, contact us at support@amigatravel.com.
+                    </p>
+                </td>
+            </tr>
+        </table>
+    </body>
 </html>

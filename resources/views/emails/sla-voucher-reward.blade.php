@@ -1,38 +1,82 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="utf-8" />
-    <title>Verification Guarantee Voucher</title>
-</head>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #1f2937; background-color: #f9fafb; padding: 24px;">
-    <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; padding: 32px; border: 1px solid #e5e7eb;">
-        <div style="text-align: center; margin-bottom: 24px;">
-            <h2 style="color: #ee018d; margin: 0; font-size: 22px;">Amiga Gracia Travel Services</h2>
-            <p style="color: #6b7280; font-size: 13px; margin-top: 4px;">Service Quality & Verification Guarantee</p>
-        </div>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Verification Guarantee Voucher - Amiga Travel</title>
+    </head>
+    <body style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #1e293b; margin: 0; padding: 24px; background-color: #f8fafc;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 650px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+            <!-- Header with Logo & Brand -->
+            <tr>
+                <td style="padding: 28px 32px 20px 32px; background: linear-gradient(135deg, #064e3b 0%, #047857 100%); text-align: center;">
+                    <img src="{{ isset($message) && file_exists(public_path('images/amiga_logo_white_outline.png')) ? $message->embed(public_path('images/amiga_logo_white_outline.png')) : (file_exists(public_path('images/amiga-logo-transparent.png')) && isset($message) ? $message->embed(public_path('images/amiga-logo-transparent.png')) : 'https://www.amigagracia.com/images/amiga-logo-transparent.png') }}" alt="Amiga Gracia Travel Services" style="max-width: 200px; height: auto; margin-bottom: 12px;" />
+                    <div style="font-size: 14px; font-weight: 700; letter-spacing: 1.5px; color: #a7f3d0; text-transform: uppercase;">
+                        Service Quality & Verification Guarantee
+                    </div>
+                </td>
+            </tr>
 
-        <p style="font-size: 15px;">Dear <strong>{{ $booking->client_name }}</strong>,</p>
+            <!-- Status Banner -->
+            <tr>
+                <td style="padding: 24px 32px 12px 32px; text-align: center;">
+                    <div style="display: inline-block; padding: 8px 18px; background-color: #fdf2f8; border: 1px solid #fbcfe8; border-radius: 9999px; margin-bottom: 16px;">
+                        <span style="color: #9d174d; font-weight: 700; font-size: 13px; letter-spacing: 0.5px; text-transform: uppercase;">
+                            🎁 Special Reward Voucher
+                        </span>
+                    </div>
+                    <h1 style="margin: 0 0 10px 0; font-size: 24px; font-weight: 800; color: #0f172a;">
+                        Thank You For Your Patience
+                    </h1>
+                    <p style="margin: 0; font-size: 15px; color: #475569;">
+                        Dear <strong>{{ $booking->client_name }}</strong>, because your booking (Transaction <strong>{{ $booking->transaction_number }}</strong>) took longer than our standard verification window, we are pleased to award you a special non-expiring travel discount voucher.
+                    </p>
+                </td>
+            </tr>
 
-        <p style="font-size: 14px; color: #374151;">
-            Thank you for booking with us. We hold ourselves to high service standards and aim to verify all bookings promptly. 
-            Because your booking (Transaction <strong>{{ $booking->transaction_number }}</strong>) took longer than our guaranteed verification window to process, we are pleased to award you a special non-expiring travel voucher as a token of our appreciation for your patience.
-        </p>
+            <!-- Voucher Code Box -->
+            <tr>
+                <td style="padding: 16px 32px;">
+                    <div style="background: #f0fdf4; border: 2px dashed #86efac; border-radius: 14px; padding: 24px; text-align: center;">
+                        <div style="font-size: 12px; font-weight: 700; color: #166534; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">
+                            Your Exclusive Voucher Code
+                        </div>
+                        <div style="font-size: 28px; font-weight: 800; color: #047857; letter-spacing: 3px; font-family: monospace; margin: 4px 0;">
+                            {{ $voucher->code }}
+                        </div>
+                        <div style="font-size: 16px; font-weight: 700; color: #0f172a; margin-top: 6px;">
+                            ₱{{ number_format($voucher->discount_value, 2) }} OFF
+                        </div>
+                        <div style="font-size: 12px; color: #64748b; margin-top: 4px;">
+                            No expiration date &bull; Valid on all ferry and flight bookings
+                        </div>
+                    </div>
+                </td>
+            </tr>
 
-        <div style="background: #fdf2f8; border: 2px dashed #f472b6; border-radius: 12px; padding: 20px; text-align: center; margin: 24px 0;">
-            <p style="font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #9d174d; margin: 0 0 6px 0; font-weight: bold;">Your Voucher Code</p>
-            <p style="font-size: 24px; font-weight: 800; color: #ee018d; margin: 0; letter-spacing: 2px;">{{ $voucher->code }}</p>
-            <p style="font-size: 16px; font-weight: 600; color: #166534; margin: 8px 0 0 0;">Value: ₱{{ number_format($voucher->discount_value, 2) }} Discount</p>
-            <p style="font-size: 12px; color: #6b7280; margin: 4px 0 0 0;">No expiration date • Valid on all ferry and flight bookings</p>
-        </div>
+            <!-- Instructions -->
+            <tr>
+                <td style="padding: 12px 32px 28px 32px; font-size: 13px; color: #475569; text-align: center;">
+                    <p style="margin: 0;">
+                        Apply this voucher code during checkout on your next trip via our website or the <strong>Amiga Gracia Mobile App</strong>.
+                    </p>
+                </td>
+            </tr>
 
-        <p style="font-size: 14px; color: #374151;">
-            You can apply this code during checkout on your next trip via our website or through the <strong>Amiga Gracia Mobile App</strong>.
-        </p>
-
-        <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af; text-align: center;">
-            <p style="margin: 0;">Our team is currently finalizing your tickets and will send confirmation shortly.</p>
-            <p style="margin: 4px 0 0 0;">If you have any questions, feel free to reach out to our customer support.</p>
-        </div>
-    </div>
-</body>
+            <!-- Footer Section -->
+            <tr>
+                <td style="padding: 24px 32px; background-color: #f1f5f9; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; text-align: center;">
+                    <p style="margin: 0 0 6px 0; font-weight: 700; color: #334155;">
+                        Amiga Gracia Travel Services
+                    </p>
+                    <p style="margin: 0 0 10px 0;">
+                        Kay Amiga, Hassle Free Ka! Accredited Ticketing & Travel Agency
+                    </p>
+                    <p style="margin: 0; font-size: 11px; color: #94a3b8;">
+                        Need assistance? Contact us at support@amigatravel.com.
+                    </p>
+                </td>
+            </tr>
+        </table>
+    </body>
 </html>

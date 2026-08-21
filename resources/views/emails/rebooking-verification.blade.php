@@ -2,53 +2,120 @@
 <html lang="en">
     <head>
         <meta charset="utf-8" />
-        <title>Rebooking Confirmed</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Rebooking Confirmed - Amiga Travel</title>
     </head>
-    <body style="font-family:Arial,sans-serif;line-height:1.6;color:#1f2937; margin:0; padding:24px; background:#f8fafc;">
-        <div style="max-width:700px; margin:0 auto; background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:24px 28px;">
-            <div style="text-align:left; margin-bottom:18px;">
-                <img src="{{ isset($message) && file_exists(public_path('images/amiga-logo-transparent.png')) ? $message->embed(public_path('images/amiga-logo-transparent.png')) : 'https://www.amigagracia.com/images/amiga-logo-transparent.png' }}" alt="Amiga Gracia" style="display:block; max-width:220px; height:auto; margin:0 0 8px 0;" />
-                <div style="font-size:20px; font-weight:bold; letter-spacing:0.5px; color:#216417; text-transform:uppercase;">Rebooking Confirmed</div>
-            </div>
+    <body style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #1e293b; margin: 0; padding: 24px; background-color: #f8fafc;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 650px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+            <!-- Header with Logo & Brand -->
+            <tr>
+                <td style="padding: 28px 32px 20px 32px; background: linear-gradient(135deg, #064e3b 0%, #047857 100%); text-align: center;">
+                    <img src="{{ isset($message) && file_exists(public_path('images/amiga_logo_white_outline.png')) ? $message->embed(public_path('images/amiga_logo_white_outline.png')) : (file_exists(public_path('images/amiga-logo-transparent.png')) && isset($message) ? $message->embed(public_path('images/amiga-logo-transparent.png')) : 'https://www.amigagracia.com/images/amiga-logo-transparent.png') }}" alt="Amiga Gracia Travel Services" style="max-width: 200px; height: auto; margin-bottom: 12px;" />
+                    <div style="font-size: 14px; font-weight: 700; letter-spacing: 1.5px; color: #a7f3d0; text-transform: uppercase;">
+                        Rebooking Verification & Confirmation
+                    </div>
+                </td>
+            </tr>
 
-            <h1 style="margin:0 0 12px 0; font-size:28px; color:#0f172a;">Rebooking Confirmed</h1>
-            <p style="margin:0 0 8px 0;">Hi {{ $booking->client_name }},</p>
-            <p style="margin:0 0 18px 0;">Your rebooking request has been verified and confirmed successfully.</p>
-            <ul style="margin:0 0 18px 18px; padding:0;">
-                <li><strong>Transaction:</strong> {{ $booking->transaction_number }}</li>
-                <li><strong>Origin:</strong> {{ $booking->origin }}</li>
-                <li><strong>Destination:</strong> {{ $booking->destination }}</li>
-                <li><strong>New Departure:</strong> {{ $booking->departure_date }}</li>
-                <li><strong>New Return:</strong> {{ $booking->return_date ?? 'One-way' }}</li>
-            </ul>
-
-            @if(! empty($ticketUrl))
-                <div style="text-align:center; margin: 24px 0; padding: 18px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
-                    <p style="margin: 0 0 12px 0; font-weight: 600; color: #166534;">Your Updated E-Ticket / Confirmation Link:</p>
-                    <a href="{{ $ticketUrl }}"
-                       style="display:inline-block; padding:14px 32px; background:#216417; color:#ffffff;
-                              text-decoration:none; border-radius:12px; font-weight:bold; font-size:16px;">
-                        View / Download Your Rebooking Ticket
-                    </a>
-                    <p style="font-size:12px; color:#64748b; text-align:center; margin:12px 0 0 0;">
-                        Or copy this link: <span style="word-break: break-all;">{{ $ticketUrl }}</span>
+            <!-- Status Banner -->
+            <tr>
+                <td style="padding: 24px 32px 12px 32px; text-align: center;">
+                    <div style="display: inline-block; padding: 8px 18px; background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 9999px; margin-bottom: 16px;">
+                        <span style="color: #166534; font-weight: 700; font-size: 13px; letter-spacing: 0.5px; text-transform: uppercase;">
+                            ✓ Rebooking Confirmed
+                        </span>
+                    </div>
+                    <h1 style="margin: 0 0 10px 0; font-size: 24px; font-weight: 800; color: #0f172a;">
+                        Your New Travel Date is Confirmed!
+                    </h1>
+                    <p style="margin: 0; font-size: 15px; color: #475569;">
+                        Hi <strong>{{ $booking->client_name }}</strong>, your rebooking request has been verified and confirmed successfully.
                     </p>
-                </div>
+                </td>
+            </tr>
+
+            <!-- Summary Details -->
+            <tr>
+                <td style="padding: 16px 32px;">
+                    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px;">
+                        <div style="font-size: 12px; font-weight: 700; color: #047857; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px;">
+                            📋 Updated Itinerary Details
+                        </div>
+                        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="font-size: 14px; border-collapse: collapse;">
+                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                <td style="padding: 8px 0; color: #64748b;">Transaction No.:</td>
+                                <td style="padding: 8px 0; text-align: right; font-weight: 700; color: #0f172a; font-family: monospace; font-size: 15px;">
+                                    {{ $booking->transaction_number }}
+                                </td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                <td style="padding: 8px 0; color: #64748b;">Route:</td>
+                                <td style="padding: 8px 0; text-align: right; font-weight: 600; color: #0f172a;">
+                                    {{ $booking->origin }} &rarr; {{ $booking->destination }}
+                                </td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                <td style="padding: 8px 0; color: #64748b;">New Departure Date:</td>
+                                <td style="padding: 8px 0; text-align: right; font-weight: 700; color: #047857;">
+                                    {{ \Carbon\Carbon::parse($booking->departure_date)->format('M d, Y') }}
+                                </td>
+                            </tr>
+                            @if($booking->return_date)
+                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                <td style="padding: 8px 0; color: #64748b;">New Return Date:</td>
+                                <td style="padding: 8px 0; text-align: right; font-weight: 700; color: #047857;">
+                                    {{ \Carbon\Carbon::parse($booking->return_date)->format('M d, Y') }}
+                                </td>
+                            </tr>
+                            @endif
+                        </table>
+                    </div>
+                </td>
+            </tr>
+
+            <!-- Action / Ticket Link -->
+            @if(! empty($ticketUrl))
+            <tr>
+                <td style="padding: 0 32px 20px 32px; text-align: center;">
+                    <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 20px;">
+                        <p style="margin: 0 0 12px 0; font-weight: 700; color: #166534; font-size: 14px;">
+                            Your Updated E-Ticket / Confirmation Link:
+                        </p>
+                        <a href="{{ $ticketUrl }}" style="display: inline-block; padding: 14px 32px; background-color: #047857; color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 15px; box-shadow: 0 2px 4px rgba(4, 120, 87, 0.2);">
+                            View / Download Your Updated Ticket
+                        </a>
+                    </div>
+                </td>
+            </tr>
             @endif
 
-            <div style="margin: 20px 0; padding: 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
-                <p style="margin: 0 0 6px 0; font-weight: bold; color: #334155;">Attached Documents:</p>
-                <p style="color:#1e293b; font-size: 14px; margin:0 0 4px 0;">
-                    📎 <strong>Payment_Acknowledgement.pdf</strong> (Proof of payment & updated booking summary)
-                </p>
-                @if(! empty($hasTicketAttachment))
-                    <p style="color:#166534; font-size: 14px; font-weight:600; margin:0;">
-                        📎 <strong>Ticket_Confirmation.pdf</strong> (Official E-Ticket / Itinerary from Admin)
-                    </p>
-                @endif
-            </div>
+            <!-- Attached Documents Note -->
+            <tr>
+                <td style="padding: 0 32px 24px 32px;">
+                    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 18px; font-size: 13px; color: #334155;">
+                        <div style="font-weight: 700; margin-bottom: 4px;">📎 Attached Documents:</div>
+                        <div>&bull; <strong>Payment_Acknowledgement.pdf</strong> (Proof of payment & updated booking summary)</div>
+                        @if(! empty($hasTicketAttachment))
+                        <div>&bull; <strong>Ticket_Confirmation.pdf</strong> (Official E-Ticket / Travel Itinerary)</div>
+                        @endif
+                    </div>
+                </td>
+            </tr>
 
-            <p style="margin:18px 0 0 0; color:#475569;">Thank you for choosing Amiga Gracia Travel.</p>
-        </div>
+            <!-- Footer Section -->
+            <tr>
+                <td style="padding: 24px 32px; background-color: #f1f5f9; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; text-align: center;">
+                    <p style="margin: 0 0 6px 0; font-weight: 700; color: #334155;">
+                        Amiga Gracia Travel Services
+                    </p>
+                    <p style="margin: 0 0 10px 0;">
+                        Kay Amiga, Hassle Free Ka! Accredited Ticketing & Travel Agency
+                    </p>
+                    <p style="margin: 0; font-size: 11px; color: #94a3b8;">
+                        Need assistance? Contact us at support@amigatravel.com.
+                    </p>
+                </td>
+            </tr>
+        </table>
     </body>
 </html>
