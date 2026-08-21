@@ -1256,6 +1256,96 @@ class Booking extends Model
         return round(($fullFee / $totalCount) * $selectedCount, 2);
     }
 
+    public function getPartialRebookingCalculation(?array $itemNumbers = null, ?int $depScheduleId = null, ?int $depAccommodationId = null, ?int $retScheduleId = null, ?int $retAccommodationId = null): array
+    {
+        $allPassengers = $this->passengers->sortBy('item_number')->values();
+        if (!empty($itemNumbers)) {
+            $selectedPassengers = $allPassengers->filter(fn ($p) => in_array((int) $p->item_number, array_map('intval', $itemNumbers), true))->values();
+        } else {
+            $selectedPassengers = $allPassengers;
+        }
+
+        if ($selectedPassengers->isEmpty()) {
+            $selectedPassengers = $allPassengers;
+        }
+
+        $selectedCount = max(1, $selectedPassengers->count());
+        $isFerry = $this->getMode() === 'ferry';
+        $settings = \App\Models\PaymentSetting::current();
+
+        $created_at = $this->created_at ? \Carbon\Carbon::parse($this->created_at) : now();
+        $isWithin5Mins = $created_at->copy()->addMinutes(5)->isFuture();
+
+        // 1. Original fare base for selected passengers
+        $originalFareBase = (float) $selectedPassengers->sum(function ($p) {
+            return (float) $p->getEffectiveFareAndClass();
+        });
+
+        // Fallback if passenger fields are 0
+        if ($originalFareBase <= 0) {
+            $totalBase = $this->getTicketBase();
+            $originalFareBase = round(($totalBase / max(1, $allPassengers->count())) * $selectedCount, 2);
+        }
+
+        // 2. Rebooking Surcharge
+        $surchargePct = 0;
+        if (! $isWithin5Mins) {
+            if ($this->getMode() === 'airline') {
+                $surchargePct = (float) $settings->rebook_airline_before_departure_surcharge_pct;
+            } else {
+                if ($this->isAfterDeparture()) {
+                    $surchargePct = (float) $settings->rebook_ferry_after_departure_surcharge_pct;
+                } else {
+                    $surchargePct = (float) $settings->rebook_ferry_before_departure_surcharge_pct;
+                }
+            }
+        }
+        $surcharge = round($originalFareBase * ($surchargePct / 100), 2);
+
+        // 3. Revalidation fee
+        $multiplier = $selectedCount + ($isFerry ? $selectedCount : 0);
+        $revalidationFee = $isWithin5Mins ? 0.0 : round(floatval($settings->revalidation_fee ?? 0) * $multiplier, 2);
+
+        // 4. Rate Difference calculation if replacement schedules provided
+        $newFare = 0.0;
+        if ($depScheduleId) {
+            $depSched = \App\Models\Schedule::find($depScheduleId);
+            $depSchedPrice = (float) ($depSched?->price ?? 0);
+            $depAccPrice = 0.0;
+            if ($depAccommodationId) {
+                $acc = \App\Models\ScheduleAccommodation::find($depAccommodationId);
+                $depAccPrice = (float) ($acc?->price ?? 0);
+            }
+            $newFare += ($depSchedPrice + $depAccPrice) * $selectedCount;
+        }
+
+        if ($retScheduleId) {
+            $retSched = \App\Models\Schedule::find($retScheduleId);
+            $retSchedPrice = (float) ($retSched?->price ?? 0);
+            $retAccPrice = 0.0;
+            if ($retAccommodationId) {
+                $rAcc = \App\Models\ScheduleAccommodation::find($retAccommodationId);
+                $retAccPrice = (float) ($rAcc?->price ?? 0);
+            }
+            $newFare += ($retSchedPrice + $retAccPrice) * $selectedCount;
+        }
+
+        $rateDiff = max(0.0, round($newFare - $originalFareBase, 2));
+        $totalToPay = round($rateDiff + $surcharge + $revalidationFee, 2);
+
+        return [
+            'original_fare'         => $originalFareBase,
+            'new_fare'              => $newFare,
+            'rate_diff'             => $rateDiff,
+            'surcharge_pct'         => $surchargePct,
+            'surcharge'             => $surcharge,
+            'revalidation_fee'      => $revalidationFee,
+            'total_rebooking_fee'   => $totalToPay,
+            'selected_count'        => $selectedCount,
+            'affected_items'        => $this->getAffectedItemsLabel($selectedPassengers->pluck('item_number')->toArray()),
+        ];
+    }
+
     public function getRebookingFeeAmount(): float
     {
         $created_at = $this->created_at ? \Carbon\Carbon::parse($this->created_at) : now();
@@ -1336,6 +1426,16 @@ class Booking extends Model
         }
 
         $this->update($updateData);
+
+        foreach ($this->passengers as $p) {
+            if ($p->is_rebooked || in_array($p->status, ['rebooking_pending', 'operator_rebooking'], true) || $p->rebooking_status === 'pending') {
+                $p->update([
+                    'status'           => self::STATUS_CONFIRMED,
+                    'is_rebooked'      => true,
+                    'rebooking_status' => 'verified',
+                ]);
+            }
+        }
 
         app(\App\Services\GraciaPointsService::class)->awardPointsForBooking($this, \App\Models\User::find($staffId));
         

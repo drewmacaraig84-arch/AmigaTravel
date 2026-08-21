@@ -57,6 +57,41 @@ class BookingReschedule extends Component
     public $paymentProof;
     public bool $isUploading = false;
 
+    // Passenger Items Selection
+    public array $selectedPassengerItems = [];
+
+    public function selectAllPassengers(): void
+    {
+        if (! $this->booking) return;
+        $this->selectedPassengerItems = $this->booking->passengers
+            ->whereNotIn('status', ['cancelled', 'operator_cancelled', 'refunded'])
+            ->pluck('item_number')
+            ->map(fn ($n) => (int) $n)
+            ->values()
+            ->toArray();
+    }
+
+    public function deselectAllPassengers(): void
+    {
+        $this->selectedPassengerItems = [];
+    }
+
+    public function togglePassengerItem(int $itemNumber): void
+    {
+        if (in_array($itemNumber, $this->selectedPassengerItems, true)) {
+            $this->selectedPassengerItems = array_values(array_diff($this->selectedPassengerItems, [$itemNumber]));
+        } else {
+            $this->selectedPassengerItems[] = $itemNumber;
+            sort($this->selectedPassengerItems);
+        }
+    }
+
+    public function getSelectedItemsLabelProperty(): string
+    {
+        if (! $this->booking) return '—';
+        return $this->booking->getAffectedItemsLabel(empty($this->selectedPassengerItems) ? null : $this->selectedPassengerItems);
+    }
+
     public function mount(string $transaction_number): void
     {
         $this->transaction_number = ltrim(trim($transaction_number), '#');
@@ -65,6 +100,8 @@ class BookingReschedule extends Component
         if (! $this->booking || ! $this->booking->serviceCancellation) {
             abort(403, 'Unauthorized access. This page is only for bookings affected by service disruptions.');
         }
+
+        $this->selectAllPassengers();
 
         if ($this->booking && $this->booking->serviceCancellation) {
             $resumeDate = $this->booking->serviceCancellation->resume_date;
@@ -81,7 +118,9 @@ class BookingReschedule extends Component
 
         $this->booking = Booking::with([
             'serviceCancellation',
-            'passengers',
+            'passengers.discount',
+            'transportClasses',
+            'accommodations',
         ])
         ->where(function ($query) use ($cleanNumber) {
             $query->where('transaction_number', $cleanNumber)
@@ -297,41 +336,36 @@ class BookingReschedule extends Component
     {
         if (!$this->booking) return;
 
-        $settings = \App\Models\PaymentSetting::current();
-        $mode = $this->booking->getMode();
-        $isAfterDeparture = $this->booking->isAfterDeparture();
-        $passengerCount = max(1, $this->booking->passengers()->count());
+        try {
+            $selectedItems = !empty($this->selectedPassengerItems)
+                ? $this->selectedPassengerItems
+                : $this->booking->passengers->whereNotIn('status', ['cancelled', 'operator_cancelled', 'refunded'])->pluck('item_number')->toArray();
 
-        $originalFare = $this->originalFare;
-        $newFare = $this->newFare;
-
-        if ($newFare < $originalFare) {
-            $this->feedback = "You cannot rebook to a ticket that is cheaper than your original booking.";
-            $this->rebookRateDiff = 0;
-            $this->totalRebookFee = 0;
-            $this->priceDiff = 0;
-            return;
-        }
-
-        $this->rebookRevalidationFee = (floatval($settings->revalidation_fee) * $passengerCount);
-
-        $surchargePct = 0;
-        if ($mode === 'airline') {
-            $surchargePct = (float) $settings->rebook_airline_before_departure_surcharge_pct;
-        } else {
-            if ($isAfterDeparture) {
-                $surchargePct = (float) $settings->rebook_ferry_after_departure_surcharge_pct;
-            } else {
-                $surchargePct = (float) $settings->rebook_ferry_before_departure_surcharge_pct;
+            $depAccId = null;
+            if ($this->dep_accommodation_id) {
+                $depAccId = (int) str_replace(['acc_', 'tc_'], '', (string) $this->dep_accommodation_id);
             }
+            $retAccId = null;
+            if ($this->ret_accommodation_id) {
+                $retAccId = (int) str_replace(['acc_', 'tc_'], '', (string) $this->ret_accommodation_id);
+            }
+
+            $calc = $this->booking->getPartialRebookingCalculation(
+                $selectedItems,
+                $this->dep_schedule_id,
+                $depAccId,
+                $this->ret_schedule_id,
+                $retAccId
+            );
+
+            $this->rebookRateDiff = $calc['rate_diff'];
+            $this->rebookSurcharge = $calc['surcharge'];
+            $this->rebookRevalidationFee = $calc['revalidation_fee'];
+            $this->totalRebookFee = $calc['total_rebooking_fee'];
+            $this->priceDiff = $calc['rate_diff'];
+        } catch (\Exception $e) {
+            $this->feedback = "Error calculating price difference: " . $e->getMessage();
         }
-        $this->rebookSurcharge = $originalFare * ($surchargePct / 100);
-
-        // 3. Rate Diff
-        $this->rebookRateDiff = max(0, $newFare - $originalFare);
-
-        $this->totalRebookFee = $this->rebookSurcharge + $this->rebookRevalidationFee + $this->rebookRateDiff;
-        $this->priceDiff = $this->totalRebookFee;
     }
 
     public function getOriginalFareProperty(): float
@@ -339,28 +373,26 @@ class BookingReschedule extends Component
         if (! $this->booking) {
             return 0.0;
         }
-        return $this->booking->getTicketBase();
+
+        $selectedItems = !empty($this->selectedPassengerItems)
+            ? $this->selectedPassengerItems
+            : $this->booking->passengers->pluck('item_number')->toArray();
+
+        $selectedPax = $this->booking->passengers->filter(fn ($p) => in_array((int) $p->item_number, array_map('intval', $selectedItems), true));
+        return (float) $selectedPax->sum(fn ($p) => $p->getEffectiveFareAndClass()) ?: (float) $this->booking->getTicketBase();
     }
 
     public function getNewFareProperty(): float
     {
-        $passengerCount = $this->booking->passengers()->count();
-        if ($passengerCount === 0) {
-            $passengerCount = 1;
+        if (! $this->booking) {
+            return 0.0;
         }
 
-        $newFare = 0.0;
-        $newFare += ($this->dep_schedule_price ?? 0) * $passengerCount;
-        $newFare += $this->getSelectedAccommodationCost($this->dep_accommodation_id, $this->dep_accommodation_price, $passengerCount);
+        $selectedCount = max(1, count($this->selectedPassengerItems ?: $this->booking->passengers));
+        $depPrice = (float)($this->dep_schedule_price ?? 0) + (float)($this->dep_accommodation_price ?? 0);
+        $retPrice = (float)($this->ret_schedule_price ?? 0) + (float)($this->ret_accommodation_price ?? 0);
 
-        if ($this->isRoundTrip()) {
-            $newFare += ($this->ret_schedule_price ?? 0) * $passengerCount;
-            $newFare += $this->getSelectedAccommodationCost($this->ret_accommodation_id, $this->ret_accommodation_price, $passengerCount);
-        }
-
-        $newFare += $this->booking->has_vehicle ? $this->booking->vehicle_price : 0;
-
-        return $newFare;
+        return ($depPrice + $retPrice) * $selectedCount;
     }
 
     protected function getSelectedAccommodationCost(?string $accommodationId, ?float $price, int $passengerCount): float
@@ -398,7 +430,6 @@ class BookingReschedule extends Component
         }
 
         try {
-            // Save proof if required
             $proofPath = null;
             if ($this->priceDiff > 0 && $this->paymentProof) {
                 $extension = $this->paymentProof->extension();
@@ -406,10 +437,31 @@ class BookingReschedule extends Component
                 $proofPath = $this->paymentProof->storeAs('proofs', $filename, 'public');
             }
 
-            // Ideally, we'd have a method in ServiceCancellationManager to handle this custom free-pick reschedule + payment diff.
-            // For now, we will update the booking record directly to reflect the custom selections, since the original method 
-            // submitCustomerReschedule() expects a single seeded option.
-            
+            $selectedItems = !empty($this->selectedPassengerItems)
+                ? $this->selectedPassengerItems
+                : $this->booking->passengers->whereNotIn('status', ['cancelled', 'operator_cancelled', 'refunded'])->pluck('item_number')->toArray();
+
+            foreach ($this->booking->passengers as $p) {
+                if (in_array((int) $p->item_number, array_map('intval', $selectedItems), true)) {
+                    $p->update([
+                        'status'                            => \App\Models\Passenger::STATUS_OPERATOR_REBOOKING,
+                        'is_rebooked'                       => true,
+                        'rebooking_status'                  => 'reschedule_requested',
+                        'preferred_replacement_schedule_id' => $this->dep_schedule_id,
+                        'rebooking_departure_date'          => $this->dep_date,
+                        'rebooking_return_date'             => $this->isRoundTrip() ? $this->ret_date : null,
+                        'disruption_notes'                  => json_encode([
+                            'dep_schedule_id'      => $this->dep_schedule_id,
+                            'dep_accommodation_id' => $this->dep_accommodation_id,
+                            'ret_schedule_id'      => $this->ret_schedule_id,
+                            'ret_accommodation_id' => $this->ret_accommodation_id,
+                            'price_diff'           => $this->priceDiff,
+                            'proof_path'           => $proofPath,
+                        ]),
+                    ]);
+                }
+            }
+
             $this->booking->update([
                 'status' => 'operator_rebooking',
                 'preferred_replacement_schedule_id' => $this->dep_schedule_id,
@@ -424,7 +476,8 @@ class BookingReschedule extends Component
                     'ret_schedule_id' => $this->ret_schedule_id,
                     'ret_accommodation_id' => $this->ret_accommodation_id,
                     'price_diff' => $this->priceDiff,
-                    'proof_path' => $proofPath
+                    'proof_path' => $proofPath,
+                    'affected_items' => $this->booking->getAffectedItemsLabel($selectedItems),
                 ])
             ]);
 
@@ -483,24 +536,42 @@ class BookingReschedule extends Component
         $destinationParts[] = "Name: " . $this->refund_account_name;
         
         $refundDestination = implode(' | ', $destinationParts);
-        $netRefund = $this->booking->getTicketBase();
+
+        $selectedItems = !empty($this->selectedPassengerItems)
+            ? $this->selectedPassengerItems
+            : $this->booking->passengers->whereNotIn('status', ['cancelled', 'operator_cancelled', 'refunded'])->pluck('item_number')->toArray();
+
+        $selectedPassengers = $this->booking->passengers->filter(fn ($p) => in_array((int) $p->item_number, array_map('intval', $selectedItems), true));
+        $netRefund = $selectedPassengers->sum(fn ($p) => $p->getRefundableBase()) ?: ($this->booking->getTicketBase() * (count($selectedItems) / max(1, $this->booking->passengers()->count())));
 
         try {
+            foreach ($selectedPassengers as $p) {
+                $pRefund = $p->getRefundableBase();
+                $p->update([
+                    'status'             => \App\Models\Passenger::STATUS_OPERATOR_CANCELLED,
+                    'refund_status'      => 'pending',
+                    'refund_amount'      => $pRefund,
+                    'refund_destination' => $refundDestination,
+                ]);
+            }
+
+            $allCancelled = $this->booking->passengers->every(fn ($p) => in_array($p->status, ['cancelled', 'operator_cancelled', 'refund_pending', 'refunded'], true));
+
             $this->booking->update([
-                'status' => 'operator_cancelled',
+                'status' => $allCancelled ? 'operator_cancelled' : $this->booking->status,
                 'disruption_status' => 'refund_requested',
                 'refund_destination' => $refundDestination,
-                'refund_amount' => $netRefund,
+                'refund_amount' => $this->booking->passengers->sum('refund_amount') ?: $netRefund,
             ]);
 
-            if ($this->booking->transaction) {
+            if ($allCancelled && $this->booking->transaction) {
                 $this->booking->transaction->update(['payment_status' => 'cancelled']);
             }
 
             $this->loadBooking();
             $this->closeRefundForm();
             $this->submitted = true;
-            $this->feedback = 'Your cancellation has been recorded and a refund of ₱' . number_format($netRefund, 2) . ' has been requested. Our team will disburse it to your provided account within 24 to 48 hours.';
+            $this->feedback = 'Your cancellation has been recorded and a refund of ₱' . number_format($netRefund, 2) . ' has been requested for ' . $this->booking->getAffectedItemsLabel($selectedItems) . '. Our team will disburse it to your provided account within 24 to 48 hours.';
         } catch (\Exception $e) {
             $this->feedback = $e->getMessage();
         }

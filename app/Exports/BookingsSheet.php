@@ -67,7 +67,9 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
                 $baseFare += $grossTicket;
                 $accFee += $grossAcc;
 
-                if ($p->discount) {
+                if ((float) $p->discount_amount > 0) {
+                    $passengerDiscount += (float) $p->discount_amount;
+                } elseif ($p->discount) {
                     $multiplier = ((float) $p->discount->percentage / 100);
                     $passengerDiscount += ($grossTicket + $grossAcc) * $multiplier;
                 }
@@ -160,7 +162,7 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
     public function headings(): array
     {
         return [
-            'Transaction #', 'Client Name', 'Contact #', 'Origin', 'Destination', 'Departure Date', 'Return Date',
+            'Transaction #', 'Item No.', 'Client Name', 'Contact #', 'Origin', 'Destination', 'Departure Date', 'Return Date',
             'Mode', 'Operator', 'Booking Status', 'Ref # (Payment)',
             'Base Fare (₱)', 'Accommodation / Class Fee (₱)', 'Vehicle Freight Fee (₱)', 'Extra Baggage Fee (₱)',
             'Web Admin Fee (₱)', 'Transaction Fee (₱)', 'Hotel Service Fee (₱)', 'Rebooking Fee (₱)', 'Cancellation Deduction (₱)',
@@ -173,7 +175,7 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
     {
         if (isset($booking->is_total_row)) {
             return [
-                '', '', '', '', '', '', '', '', '', '', 'GRAND TOTAL',
+                '', '', '', '', '', '', '', '', '', '', '', 'GRAND TOTAL',
                 number_format($booking->baseFare, 2),
                 number_format($booking->accFee, 2),
                 number_format($booking->vehicleFee, 2),
@@ -205,10 +207,16 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
             return $p->discount->name;
         })->unique()->implode(', ');
 
+        $itemNos = $booking->passengers->sortBy('item_number')->map(function($p) {
+            $num = $p->item_number ?? 1;
+            return "Item {$num}";
+        })->implode(', ');
+
         $fin = $this->extractFinancials($booking);
 
         return [
             $booking->transaction_number,
+            filled($itemNos) ? $itemNos : 'Item 1',
             $booking->client_name,
             $booking->client_phone,
             $booking->origin,
@@ -243,9 +251,9 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
     public function columnWidths(): array
     {
         return [
-            'A' => 20, 'B' => 25, 'C' => 15, 'D' => 15, 'E' => 15, 'F' => 15, 'G' => 15, 'H' => 10, 'I' => 15, 'J' => 20, 'K' => 15,
-            'L' => 15, 'M' => 15, 'N' => 15, 'O' => 15, 'P' => 15, 'Q' => 15, 'R' => 15, 'S' => 15, 'T' => 15, 'U' => 15, 'V' => 15,
-            'W' => 15, 'X' => 15, 'Y' => 15, 'Z' => 15, 'AA' => 15,
+            'A' => 20, 'B' => 15, 'C' => 25, 'D' => 15, 'E' => 15, 'F' => 15, 'G' => 15, 'H' => 15, 'I' => 10, 'J' => 15, 'K' => 20, 'L' => 15,
+            'M' => 15, 'N' => 15, 'O' => 15, 'P' => 15, 'Q' => 15, 'R' => 15, 'S' => 15, 'T' => 15, 'U' => 15, 'V' => 15, 'W' => 15,
+            'X' => 15, 'Y' => 15, 'Z' => 15, 'AA' => 15, 'AB' => 15,
         ];
     }
 

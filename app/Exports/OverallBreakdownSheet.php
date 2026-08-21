@@ -60,9 +60,12 @@ class OverallBreakdownSheet implements FromArray, WithTitle, WithHeadings, WithS
                 }
             }
 
+            $itemNos = $booking->passengers->sortBy('item_number')->map(fn($p) => 'Item ' . ($p->item_number ?? 1))->implode(', ') ?: 'Item 1';
+
             // 1. Add the positive Verified line
             $rows[] = [
                 $txId,
+                $itemNos,
                 $clientName,
                 $dateCreated,
                 'Verified',
@@ -74,6 +77,7 @@ class OverallBreakdownSheet implements FromArray, WithTitle, WithHeadings, WithS
             if ($rebookingFee > 0) {
                 $rows[] = [
                     $txId,
+                    $itemNos,
                     $clientName,
                     $dateCreated,
                     'Rebooked Fee',
@@ -87,6 +91,7 @@ class OverallBreakdownSheet implements FromArray, WithTitle, WithHeadings, WithS
                 if ($booking->refund_amount > 0) {
                     $rows[] = [
                         $txId,
+                        $itemNos,
                         $clientName,
                         $dateCreated,
                         'Refunded',
@@ -96,6 +101,7 @@ class OverallBreakdownSheet implements FromArray, WithTitle, WithHeadings, WithS
                 } else {
                     $rows[] = [
                         $txId,
+                        $itemNos,
                         $clientName,
                         $dateCreated,
                         'Cancelled',
@@ -107,11 +113,12 @@ class OverallBreakdownSheet implements FromArray, WithTitle, WithHeadings, WithS
         }
 
         // Add empty row
-        $rows[] = ['', '', '', '', ''];
+        $rows[] = ['', '', '', '', '', ''];
 
         // Add total row
         $rows[] = [
             'TOTAL',
+            '',
             '',
             '',
             '',
@@ -130,6 +137,7 @@ class OverallBreakdownSheet implements FromArray, WithTitle, WithHeadings, WithS
     {
         return [
             'Transaction #',
+            'Item No.',
             'Client Name',
             'Date Created',
             'Status',

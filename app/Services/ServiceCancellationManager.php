@@ -325,6 +325,16 @@ class ServiceCancellationManager
                             'verified_at'         => now(),
                         ]);
                     }
+
+                    foreach ($booking->passengers as $p) {
+                        if ($p->is_rebooked || in_array($p->status, ['operator_rebooking', 'rebooking_pending'], true) || $p->rebooking_status === 'reschedule_requested') {
+                            $p->update([
+                                'status'           => 'confirmed',
+                                'is_rebooked'      => true,
+                                'rebooking_status' => 'verified',
+                            ]);
+                        }
+                    }
                 });
 
             // ---- PATH B: Legacy preferred_replacement_schedule_id ----
@@ -361,6 +371,16 @@ class ServiceCancellationManager
                             'verified_by_user_id' => $staffUser->id,
                             'verified_at'         => now(),
                         ]);
+                    }
+
+                    foreach ($booking->passengers as $p) {
+                        if ($p->is_rebooked || in_array($p->status, ['operator_rebooking', 'rebooking_pending'], true) || $p->rebooking_status === 'reschedule_requested') {
+                            $p->update([
+                                'status'           => 'confirmed',
+                                'is_rebooked'      => true,
+                                'rebooking_status' => 'verified',
+                            ]);
+                        }
                     }
                 });
             }

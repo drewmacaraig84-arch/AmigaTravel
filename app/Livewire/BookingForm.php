@@ -2099,9 +2099,55 @@ public function selectedSchedule(): ?array
                     'terms_accepted_user_agent' => $termsAcceptedUserAgent,
                 ]);
 
+                $settings = PaymentSetting::current();
+                $isShortHaul = $schedule ? (bool) ($schedule->is_short_haul ?? false) : false;
+                $webAdminFeePerPax = (float) $settings->getWebAdminFee($isShortHaul);
+                $txFeePerPax = (float) $settings->getTransactionFee($isShortHaul);
+
+                $depTcPrice = 0.0;
+                if ($this->selected_transport_class_id && $schedule) {
+                    $stc = \App\Models\ScheduleTransportClass::where('schedule_id', $schedule->id)
+                        ->where('transport_class_id', $this->selected_transport_class_id)
+                        ->first();
+                    $depTcPrice = (float) ($stc?->additional_price ?? $stc?->transportClass?->price ?? 0);
+                }
+
+                $retTcPrice = 0.0;
+                if ($this->selected_return_transport_class_id && $returnSchedule) {
+                    $rstc = \App\Models\ScheduleTransportClass::where('schedule_id', $returnSchedule->id)
+                        ->where('transport_class_id', $this->selected_return_transport_class_id)
+                        ->first();
+                    $retTcPrice = (float) ($rstc?->additional_price ?? $rstc?->transportClass?->price ?? 0);
+                }
+
+                $schedBasePrice = (float) ($usedSchedulePrice ?? $schedule?->price ?? 0);
+                $schedAccPrice = $scheduleAccommodation ? (float) $scheduleAccommodation->price : 0.0;
+                $retBasePrice = $returnSchedule ? (float) ($returnSchedule->price ?? 0) : 0.0;
+                $retAccPrice = $returnScheduleAccommodation ? (float) $returnScheduleAccommodation->price : 0.0;
+
+                $discountsKeyed = \App\Models\Discount::all()->keyBy('id');
+
                 foreach ($this->passengers as $idx => $passenger) {
                     $isPromo = strtolower($this->mode) === 'airline' && ! empty($passenger['use_promo']) && $usedPromoTicket;
                     $itemNum = $idx + 1;
+
+                    if ($isPromo) {
+                        $grossFare = floatval($usedPromoTicket->promo_price);
+                        $grossAcc = 0.0;
+                        $discAmount = 0.0;
+                    } else {
+                        $grossFare = $schedBasePrice + $depTcPrice + $retBasePrice + $retTcPrice;
+                        $grossAcc = $schedAccPrice + $retAccPrice;
+                        $discAmount = 0.0;
+                        if (!empty($passenger['discount_id'])) {
+                            $disc = $discountsKeyed->get($passenger['discount_id']);
+                            if ($disc) {
+                                $discAmount = ($grossFare + $grossAcc) * ((float) $disc->percentage / 100);
+                            }
+                        }
+                    }
+                    $extraBaggagePricePax = isset($passenger['extra_baggage_price']) ? floatval($passenger['extra_baggage_price']) : 0.0;
+                    $itemTotal = max(0, ($grossFare + $grossAcc) - $discAmount + $webAdminFeePerPax + $txFeePerPax + $extraBaggagePricePax);
 
                     Passenger::create([
                         'booking_id'             => $booking->id,
@@ -2120,7 +2166,15 @@ public function selectedSchedule(): ?array
                         'passport_issuance_date' => !empty($passenger['passport_issuance_date']) ? $passenger['passport_issuance_date'] : null,
                         'passport_expiry_date'   => !empty($passenger['passport_expiry_date']) ? $passenger['passport_expiry_date'] : null,
                         'extra_baggage_weight'   => !empty($passenger['extra_baggage_weight']) ? $passenger['extra_baggage_weight'] : null,
-                        'extra_baggage_price'    => isset($passenger['extra_baggage_price']) ? floatval($passenger['extra_baggage_price']) : 0.0,
+                        'extra_baggage_price'    => $extraBaggagePricePax,
+                        'fare_amount'            => $grossFare,
+                        'accommodation_amount'   => $grossAcc,
+                        'discount_amount'        => $discAmount,
+                        'voucher_discount_share' => 0,
+                        'points_discount_share'  => 0,
+                        'web_admin_fee_share'    => $webAdminFeePerPax,
+                        'transaction_fee_share'  => $txFeePerPax,
+                        'item_total'             => $itemTotal,
                     ]);
                 }
 

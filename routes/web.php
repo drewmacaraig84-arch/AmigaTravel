@@ -484,6 +484,41 @@ Route::get('/ticket/refund-acknowledgement/{transaction_number}', function ($tra
     ]);
 })->name('ticket.refund-acknowledgement');
 
+// Serves dedicated single-passenger E-ticket PDF
+Route::get('/ticket/passenger/{passenger_id}', function ($passenger_id) {
+    $passenger = \App\Models\Passenger::query()
+        ->where('id', $passenger_id)
+        ->orWhere('ticket_number', $passenger_id)
+        ->with(['booking.schedule.ferryRoute.operatorRecord', 'booking.returnSchedule.ferryRoute.operatorRecord', 'booking.transportClasses', 'booking.accommodations', 'discount'])
+        ->firstOrFail();
+
+    $booking = $passenger->booking;
+
+    $ticketDir = storage_path('app/tickets');
+    $path = $ticketDir . '/ticket-item-' . ($passenger->ticket_number ?: ($booking->transaction_number . '-' . $passenger->item_number)) . '.pdf';
+
+    try {
+        if (! is_dir($ticketDir)) {
+            mkdir($ticketDir, 0755, true);
+        }
+        if (file_exists($path)) {
+            @unlink($path);
+        }
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.passenger-ticket', ['passenger' => $passenger, 'booking' => $booking]);
+        $pdf->setPaper('a4');
+        $pdf->save($path);
+    } catch (\Throwable $e) {
+        \Illuminate\Support\Facades\Log::error('Passenger Ticket PDF generation failed: ' . $e->getMessage());
+        return response()->view('pdf.passenger-ticket', ['passenger' => $passenger, 'booking' => $booking]);
+    }
+
+    return response()->file($path, [
+        'Content-Type' => 'application/pdf',
+        'Content-Disposition' => 'inline; filename="Ticket_' . ($passenger->ticket_number ?: $booking->transaction_number) . '.pdf"',
+    ]);
+})->name('ticket.passenger-pdf');
+
 // Serves any public storage file through the server (avoids Railway storage URL 404s)
 // Usage: /storage-file/{path} where path is the relative storage path, e.g. proofs/AGT-xxx.jpg
 Route::get('/storage-file/{path}', function (string $path) {

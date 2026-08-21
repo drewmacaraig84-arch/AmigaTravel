@@ -679,15 +679,51 @@ class BookingController extends Controller
             $proofPath = $request->file('proof')->storeAs('rebooking_proofs', $filename, 'public');
         }
         $rebookingFee = $request->input('total_paid');
-
         $transaction->update([
             'rebooking_fee' => $rebookingFee,
             'rebooking_proof_of_payment' => $proofPath,
             'payment_status' => 'pending',
             'proof_submitted_at' => now(),
         ]);
+        $passengerItems = $request->input('passenger_items');
+        if (is_string($passengerItems)) {
+            $passengerItems = array_filter(array_map('intval', explode(',', $passengerItems)));
+        }
+        $selectedItems = (is_array($passengerItems) && !empty($passengerItems))
+            ? $passengerItems
+            : $booking->passengers->pluck('item_number')->toArray();
+
+        $selectedCount = count($selectedItems);
+        $totalPaxCount = $booking->passengers()->count();
+        $isFullRebook = ($selectedCount >= $totalPaxCount);
+
+        // Update selected passenger items
+        foreach ($booking->passengers as $p) {
+            if (in_array((int) $p->item_number, array_map('intval', $selectedItems), true)) {
+                $p->update([
+                    'status'                            => \App\Models\Passenger::STATUS_REBOOKING_PENDING,
+                    'is_rebooked'                       => true,
+                    'rebooking_status'                  => 'pending',
+                    'rebooking_departure_date'          => $request->input('departure_date'),
+                    'rebooking_return_date'             => $request->input('return_date'),
+                    'preferred_replacement_schedule_id' => $request->input('dep_schedule_id'),
+                    'disruption_notes'                  => json_encode([
+                        'dep_schedule_id'      => $request->input('dep_schedule_id'),
+                        'dep_accommodation_id' => $request->input('dep_accommodation_id'),
+                        'ret_schedule_id'      => $request->input('ret_schedule_id'),
+                        'ret_accommodation_id' => $request->input('ret_accommodation_id'),
+                        'rate_diff'            => $request->input('rate_diff'),
+                        'surcharge'            => $request->input('surcharge'),
+                        'revalidation_fee'     => $request->input('revalidation_fee'),
+                        'total_paid'           => $request->input('total_paid'),
+                        'proof_path'           => $proofPath,
+                    ]),
+                ]);
+            }
+        }
+
         $booking->update([
-            'status' => Booking::STATUS_PENDING_REBOOKING,
+            'status' => $isFullRebook ? Booking::STATUS_PENDING_REBOOKING : $booking->status,
             'is_rebooked' => true,
             'rebooking_status' => 'pending',
             'preferred_replacement_schedule_id' => $request->input('dep_schedule_id'),
@@ -704,6 +740,7 @@ class BookingController extends Controller
                 'revalidation_fee' => $request->input('revalidation_fee'),
                 'total_paid' => $request->input('total_paid'),
                 'proof_path' => $proofPath,
+                'affected_items' => $booking->getAffectedItemsLabel($selectedItems),
             ]),
         ]);
 
@@ -712,6 +749,7 @@ class BookingController extends Controller
             'message' => 'Rebooking request submitted for verification.',
             'rebooking_fee' => (float) $rebookingFee,
             'rebooking_status' => 'pending',
+            'affected_items' => $booking->getAffectedItemsLabel($selectedItems),
         ]);
     }
 
@@ -723,42 +761,14 @@ class BookingController extends Controller
             'dep_accommodation_id' => 'nullable|integer',
             'ret_schedule_id' => 'nullable|exists:schedules,id',
             'ret_accommodation_id' => 'nullable|integer',
-            'is_round_trip' => 'required|boolean'
+            'is_round_trip' => 'required|boolean',
+            'passenger_items' => 'nullable',
         ]);
 
         $booking = Booking::whereKey($id)
             ->where('client_email', $request->input('email'))
             ->firstOrFail();
 
-        $passengerCount = $booking->passengers()->count() ?: 1;
-        $mode = $booking->getMode();
-        $isAirline = $mode === 'airline';
-
-        $booking->loadMissing('transportClasses');
-        $tcs = $booking->transportClasses->values();
-        // Filter by is_return flag with bidirectional fallback: handle both
-        // (a) old bookings where both TCs defaulted is_return=false, and
-        // (b) bugged bookings where both TCs got is_return=true.
-        $depTcs = $tcs->filter(fn ($tc) => ! (bool) $tc->pivot->is_return);
-        $retTcs = $tcs->filter(fn ($tc) => (bool) $tc->pivot->is_return);
-        if ($tcs->count() === 2 && ($depTcs->isEmpty() || $retTcs->isEmpty())) {
-            $arr = $tcs->values();
-            $depTcs = collect([$arr[0]]);
-            $retTcs = collect([$arr[1]]);
-        }
-        $depTCPerPax = (float) $depTcs->sum(fn ($tc) => (float)($tc->pivot->price ?? 0));
-        $retTCPerPax = (float) $retTcs->sum(fn ($tc) => (float)($tc->pivot->price ?? 0));
-        $origDepPerPax = (float)($booking->schedule_price ?? 0)
-                       + $depTCPerPax
-                       + (float)($booking->schedule_accommodation_price ?? 0);
-        $origRetPerPax = (float)($booking->return_schedule_price ?? 0)
-                       + $retTCPerPax
-                       + (float)($booking->return_schedule_accommodation_price ?? 0);
-
-        $originalFare = ($origDepPerPax + $origRetPerPax) * $passengerCount;
-
-        $newTotal = 0.0;
-        
         $depSchedule = \App\Models\Schedule::with('ferryRoute.operatorRecord')->findOrFail($request->input('dep_schedule_id'));
         if (! $booking->matchesOperator($depSchedule, false)) {
             $expectedOp = $booking->getOperatorName() ?? 'original operator';
@@ -776,156 +786,95 @@ class BookingController extends Controller
                 'message' => "Return rebooking is only permitted with the same operator ({$expectedOp}).",
             ], 422);
         }
-        
-        $depAccPrice = 0;
-        if ($request->input('dep_accommodation_id') && $depSchedule) {
-            if ($isAirline) {
-                $tc = $depSchedule->transportClasses()->where('transport_classes.id', $request->input('dep_accommodation_id'))->first();
-                if ($tc) {
-                    $pivotPrice = (float)($tc->pivot->additional_price ?? 0);
-                    $depAccPrice = $pivotPrice > 0 ? $pivotPrice : ((float)($tc->is_on_sale && $tc->sale_price ? $tc->sale_price : $tc->price));
-                } else {
-                    $depAccPrice = 0;
-                }
-            } else {
-                $acc = $depSchedule->scheduleAccommodations()->where('schedule_accommodations.id', $request->input('dep_accommodation_id'))->first();
-                $depAccPrice = $acc ? $acc->price : 0;
-            }
-        }
 
-        $retAccPrice = 0;
-        if ($request->input('ret_accommodation_id') && $retSchedule) {
-            if ($isAirline) {
-                $tc = $retSchedule->transportClasses()->where('transport_classes.id', $request->input('ret_accommodation_id'))->first();
-                if ($tc) {
-                    $pivotPrice = (float)($tc->pivot->additional_price ?? 0);
-                    $retAccPrice = $pivotPrice > 0 ? $pivotPrice : ((float)($tc->is_on_sale && $tc->sale_price ? $tc->sale_price : $tc->price));
-                } else {
-                    $retAccPrice = 0;
-                }
-            } else {
-                $acc = $retSchedule->scheduleAccommodations()->where('schedule_accommodations.id', $request->input('ret_accommodation_id'))->first();
-                $retAccPrice = $acc ? $acc->price : 0;
-            }
+        $passengerItems = $request->input('passenger_items');
+        if (is_string($passengerItems)) {
+            $passengerItems = array_filter(array_map('intval', explode(',', $passengerItems)));
         }
+        $selectedItems = (is_array($passengerItems) && !empty($passengerItems))
+            ? $passengerItems
+            : $booking->passengers->pluck('item_number')->toArray();
 
-        if ($isAirline) {
-            $depPerPax = (($depSchedule->price ?? 0) + $depAccPrice) * 1.5;
-            $newTotal += $depPerPax * $passengerCount;
-            if ($request->input('is_round_trip')) {
-                $retPerPax = (($retSchedule->price ?? 0) + $retAccPrice) * 1.5;
-                $newTotal += $retPerPax * $passengerCount;
-            }
-        } else {
-            $depPerPax = ($depSchedule->price ?? 0) + $depAccPrice;
-            $newTotal += $depPerPax * $passengerCount;
-            if ($request->input('is_round_trip')) {
-                $retPerPax = ($retSchedule->price ?? 0) + $retAccPrice;
-                $newTotal += $retPerPax * $passengerCount;
-            }
-        }
-
-        if ($booking->has_vehicle) {
-            $newTotal += $booking->vehicle_price;
-        }
-
-        if ($newTotal < $originalFare) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Reminder: To proceed with rebooking, please select an accommodation or transport class that is equal to or higher than your original booking. Downgrades are not permitted.',
-            ], 400);
-        }
+        $calc = $booking->getPartialRebookingCalculation(
+            $selectedItems,
+            (int) $request->input('dep_schedule_id'),
+            $request->input('dep_accommodation_id') ? (int) $request->input('dep_accommodation_id') : null,
+            $request->input('ret_schedule_id') ? (int) $request->input('ret_schedule_id') : null,
+            $request->input('ret_accommodation_id') ? (int) $request->input('ret_accommodation_id') : null
+        );
 
         $settings = \App\Models\PaymentSetting::current();
-        $isAfterDeparture = $booking->isAfterDeparture();
-
-        $revalidation_fee = floatval($settings->revalidation_fee) * $passengerCount;
-
-        $surchargePct = 0;
-        if ($isAirline) {
-            $surchargePct = (float)$settings->rebook_airline_before_departure_surcharge_pct;
-        } elseif ($isAfterDeparture) {
-            $surchargePct = (float)$settings->rebook_ferry_after_departure_surcharge_pct;
-        } else {
-            $surchargePct = (float)$settings->rebook_ferry_before_departure_surcharge_pct;
-        }
-        
-        $surcharge = $originalFare * ($surchargePct / 100);
-        $rate_diff = max(0, $newTotal - $originalFare);
-        $total_to_pay = $surcharge + $revalidation_fee + $rate_diff;
 
         return response()->json([
             'status' => 'success',
             'breakdown' => [
-                'original_ticket_price' => (float) $originalFare,
-                'new_ticket_price' => (float) $newTotal,
-                'rate_diff' => (float) $rate_diff,
-                'surcharge' => (float) $surcharge,
-                'revalidation_fee' => (float) $revalidation_fee,
-                'total_to_pay' => (float) $total_to_pay,
+                'original_ticket_price' => (float) $calc['original_fare'],
+                'new_ticket_price'      => (float) $calc['new_fare'],
+                'rate_diff'             => (float) $calc['rate_diff'],
+                'surcharge'             => (float) $calc['surcharge'],
+                'revalidation_fee'      => (float) $calc['revalidation_fee'],
+                'total_to_pay'          => (float) $calc['total_rebooking_fee'],
+                'selected_count'        => (int) $calc['selected_count'],
+                'affected_items'        => $calc['affected_items'],
             ],
             'qr_code_url' => $settings->qr_code_path ? asset('storage/' . $settings->qr_code_path) : null,
         ]);
     }
     public function eligibleReplacements(Request $request, $id)
     {
-        $booking = Booking::with('serviceCancellation')->findOrFail($id);
-        
-        // Ensure email matches to authorize
-        if ($request->has('email') && $booking->client_email !== $request->input('email')) {
-            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
+        $booking = Booking::whereKey($id)
+            ->where('client_email', $request->input('email'))
+            ->with(['serviceCancellation', 'schedule.ferryRoute'])
+            ->firstOrFail();
+
+        $targetDate = $request->input('date');
+        if (!$targetDate) {
+            $resumeDate = $booking->serviceCancellation?->resume_date;
+            $targetDate = $resumeDate ?: ($booking->departure_date ? $booking->departure_date->format('Y-m-d') : now()->format('Y-m-d'));
         }
 
-        if (!$booking->serviceCancellation) {
-             return response()->json([
-                 'status' => 'error',
-                 'message' => 'This booking does not have an active disruption.'
-             ], 400);
-        }
+        $origin = $booking->origin;
+        $destination = $booking->destination;
+        $mode = $booking->schedule?->ferryRoute?->mode ?? 'ferry';
+        $operator = $booking->getOperatorName();
 
-        $cancellationId = $booking->serviceCancellation->id;
-        
-        $eligibleSchedules = \App\Models\Schedule::whereIn('id', function ($query) use ($cancellationId) {
-            $query->select('schedule_id')
-                  ->from('cancellation_replacements')
-                  ->where('service_cancellation_id', $cancellationId);
-        })->with(['ferryRoute', 'vehicle', 'scheduleAccommodations', 'transportClasses'])->get();
+        $query = \App\Models\Schedule::with(['ferryRoute.operatorRecord', 'scheduleAccommodations.accommodation'])
+            ->whereHas('ferryRoute', function ($q) use ($origin, $destination, $mode, $operator) {
+                $q->where('origin', $origin)
+                  ->where('destination', $destination);
+                if ($mode) {
+                    $q->where('mode', $mode);
+                }
+                if ($operator) {
+                    $q->where(function($opQ) use ($operator) {
+                        $opQ->where('operator', $operator)
+                            ->orWhereHas('operatorRecord', function($sub) use ($operator) {
+                                $sub->where('name', $operator);
+                            });
+                    });
+                }
+            })
+            ->whereDate('departure_time', $targetDate)
+            ->where('status', 'active');
 
-        $isAirline = $booking->getMode() === 'airline';
-        
+        $schedules = $query->get();
+
         $results = [];
-        foreach ($eligibleSchedules as $schedule) {
-            $accommodations = [];
-            $schedulePrice = (float)($schedule->price ?? 0);
-            
-            $hasAccs = false;
-            if (!$isAirline) {
-                foreach ($schedule->scheduleAccommodations->where('is_active', true) as $acc) {
-                    $hasAccs = true;
-                    $price = $schedulePrice + (float)$acc->price;
-                    $accommodations[] = [
-                        'id' => 'acc_' . $acc->id,
-                        'name' => $acc->name,
-                        'price' => (float)$price
-                    ];
-                }
-            }
-            
-            if ($isAirline || !$hasAccs) {
-                foreach ($schedule->transportClasses->where('pivot.is_active', true) as $tc) {
-                    $price = $schedulePrice + (float)$tc->pivot->additional_price;
-                    $accommodations[] = [
-                        'id' => 'tc_' . $tc->id,
-                        'name' => $tc->name,
-                        'price' => (float)$price
-                    ];
-                }
-            }
-            
+        foreach ($schedules as $schedule) {
+            $accommodations = $schedule->scheduleAccommodations->map(function ($sa) {
+                return [
+                    'id' => $sa->id,
+                    'name' => $sa->accommodation?->name ?? 'Standard',
+                    'price' => (float)($sa->price ?? 0),
+                    'available' => $sa->tickets_available > 0
+                ];
+            });
+
             $results[] = [
                 'id' => $schedule->id,
-                'service_name' => $schedule->service_name,
-                'departure_time' => $schedule->departure_time,
+                'vessel_name' => $schedule->ferryRoute?->operatorRecord?->name ?? $schedule->ferryRoute?->operator ?? 'Vessel',
+                'departure_time' => $schedule->departure_time->format('H:i'),
+                'arrival_time' => $schedule->arrival_time ? $schedule->arrival_time->format('H:i') : null,
                 'formatted_departure' => $schedule->formatted_departure,
                 'formatted_arrival' => $schedule->formatted_arrival,
                 'price' => (float)$schedule->price,
@@ -951,7 +900,8 @@ class BookingController extends Controller
             'ret_date' => 'nullable|date',
             'ret_schedule_id' => 'nullable|integer',
             'ret_accommodation_id' => 'nullable|string',
-            'price_diff' => 'nullable|numeric'
+            'price_diff' => 'nullable|numeric',
+            'passenger_items' => 'nullable',
         ]);
 
         $booking = Booking::whereKey($id)
@@ -1000,6 +950,35 @@ class BookingController extends Controller
             }
         }
 
+        $passengerItems = $request->input('passenger_items');
+        if (is_string($passengerItems)) {
+            $passengerItems = array_filter(array_map('intval', explode(',', $passengerItems)));
+        }
+        $selectedItems = (is_array($passengerItems) && !empty($passengerItems))
+            ? $passengerItems
+            : $booking->passengers->pluck('item_number')->toArray();
+
+        foreach ($booking->passengers as $p) {
+            if (in_array((int) $p->item_number, array_map('intval', $selectedItems), true)) {
+                $p->update([
+                    'status'                            => \App\Models\Passenger::STATUS_OPERATOR_REBOOKING,
+                    'is_rebooked'                       => true,
+                    'rebooking_status'                  => 'reschedule_requested',
+                    'preferred_replacement_schedule_id' => $request->dep_schedule_id,
+                    'rebooking_departure_date'          => $request->dep_date,
+                    'rebooking_return_date'             => $request->input('ret_date'),
+                    'disruption_notes'                  => json_encode([
+                        'dep_schedule_id'      => $request->dep_schedule_id,
+                        'dep_accommodation_id' => $request->dep_accommodation_id,
+                        'ret_schedule_id'      => $request->input('ret_schedule_id'),
+                        'ret_accommodation_id' => $request->input('ret_accommodation_id'),
+                        'price_diff'           => $request->input('price_diff', 0),
+                        'proof_path'           => $proofPath
+                    ])
+                ]);
+            }
+        }
+
         $booking->update([
             'status' => Booking::STATUS_OPERATOR_REBOOKING,
             'preferred_replacement_schedule_id' => $request->dep_schedule_id,
@@ -1014,13 +993,15 @@ class BookingController extends Controller
                 'ret_schedule_id' => $request->input('ret_schedule_id'),
                 'ret_accommodation_id' => $request->input('ret_accommodation_id'),
                 'price_diff' => $request->input('price_diff', 0),
-                'proof_path' => $proofPath
+                'proof_path' => $proofPath,
+                'affected_items' => $booking->getAffectedItemsLabel($selectedItems),
             ])
         ]);
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Your replacement travel selection has been submitted successfully and is awaiting staff approval.'
+            'message' => 'Your replacement travel selection has been submitted successfully and is awaiting staff approval.',
+            'affected_items' => $booking->getAffectedItemsLabel($selectedItems),
         ]);
     }
 
@@ -1029,11 +1010,12 @@ class BookingController extends Controller
         $request->validate([
             'email' => 'required|email',
             'refund_destination' => 'required|string|max:255',
+            'passenger_items' => 'nullable',
         ]);
 
         $booking = Booking::whereKey($id)
             ->where('client_email', $request->input('email'))
-            ->with('transaction')
+            ->with(['transaction', 'passengers'])
             ->firstOrFail();
 
         if (!$booking->serviceCancellation) {
@@ -1043,17 +1025,38 @@ class BookingController extends Controller
              ], 400);
         }
 
-        $netRefund = $booking->getTicketBase();
+        $passengerItems = $request->input('passenger_items');
+        if (is_string($passengerItems)) {
+            $passengerItems = array_filter(array_map('intval', explode(',', $passengerItems)));
+        }
+        $selectedItems = (is_array($passengerItems) && !empty($passengerItems))
+            ? $passengerItems
+            : $booking->passengers->pluck('item_number')->toArray();
+
+        $selectedPassengers = $booking->passengers->filter(fn ($p) => in_array((int) $p->item_number, array_map('intval', $selectedItems), true));
+        $netRefund = $selectedPassengers->sum(fn ($p) => $p->getRefundableBase()) ?: ($booking->getTicketBase() * (count($selectedItems) / max(1, $booking->passengers()->count())));
         $nonRefundable = $booking->getNonRefundableFees();
 
+        foreach ($selectedPassengers as $p) {
+            $pRefund = $p->getRefundableBase();
+            $p->update([
+                'status'             => \App\Models\Passenger::STATUS_OPERATOR_CANCELLED,
+                'refund_status'      => 'pending',
+                'refund_amount'      => $pRefund,
+                'refund_destination' => $request->refund_destination,
+            ]);
+        }
+
+        $allRefundedOrCancelled = $booking->passengers->every(fn ($p) => in_array($p->status, ['cancelled', 'operator_cancelled', 'refund_pending', 'refunded'], true));
+
         $booking->update([
-            'status' => Booking::STATUS_OPERATOR_CANCELLED,
+            'status' => $allRefundedOrCancelled ? Booking::STATUS_OPERATOR_CANCELLED : $booking->status,
             'disruption_status' => 'refund_requested',
             'refund_destination' => $request->refund_destination,
-            'refund_amount' => $netRefund,
+            'refund_amount' => $booking->passengers->sum('refund_amount') ?: $netRefund,
         ]);
 
-        if ($booking->transaction) {
+        if ($allRefundedOrCancelled && $booking->transaction) {
             $booking->transaction->update(['payment_status' => 'cancelled']);
         }
 
@@ -1062,7 +1065,7 @@ class BookingController extends Controller
             'message' => 'Your cancellation has been recorded and a refund of ₱' . number_format($netRefund, 2) . ' has been requested. Our team will disburse it to your provided account within 24 to 48 hours.',
             'refund_amount' => $netRefund,
             'non_refundable_fees' => $nonRefundable,
+            'affected_items' => $booking->getAffectedItemsLabel($selectedItems),
         ]);
     }
 }
-

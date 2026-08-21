@@ -31,7 +31,13 @@ class BookingExportController extends Controller
 
     protected function getGroupedBookings(): array
     {
-        $query = Booking::with(['transaction', 'schedule.ferryRoute', 'passengers.discount']);
+        $query = Booking::with([
+            'transaction',
+            'schedule.ferryRoute',
+            'returnSchedule.ferryRoute',
+            'passengers.discount',
+            'accommodations',
+        ]);
 
         $fromDate = request()->input('from_date') ?? request()->input('start') ?? request()->input('startDate') ?? request()->input('from');
         $toDate   = request()->input('to_date') ?? request()->input('end') ?? request()->input('endDate') ?? request()->input('to');

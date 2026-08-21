@@ -854,83 +854,35 @@ class BookingLookup extends Component
     public function calculateRebookingPriceDiff(): void
     {
         try {
-            $passengerCount = max(1, $this->booking->passengers()->count());
-            $isAirline = $this->booking->getMode() === 'airline';
+            $selectedItems = !empty($this->selectedPassengerItems)
+                ? $this->selectedPassengerItems
+                : $this->booking->passengers->whereNotIn('status', ['cancelled', 'operator_cancelled', 'refunded'])->pluck('item_number')->toArray();
 
-            $tcs = $this->booking->transportClasses->values();
-            // Filter by is_return flag with bidirectional fallback: handle both
-            // (a) old bookings where both TCs defaulted is_return=false, and
-            // (b) bugged bookings where both TCs got is_return=true.
-            $depTcs = $tcs->filter(fn ($tc) => ! (bool) $tc->pivot->is_return);
-            $retTcs = $tcs->filter(fn ($tc) => (bool) $tc->pivot->is_return);
-            if ($tcs->count() === 2 && ($depTcs->isEmpty() || $retTcs->isEmpty())) {
-                $arr = $tcs->values();
-                $depTcs = collect([$arr[0]]);
-                $retTcs = collect([$arr[1]]);
+            $depAccId = null;
+            if ($this->rebooking_dep_accommodation_id) {
+                $depAccId = (int) str_replace(['acc_', 'tc_'], '', (string) $this->rebooking_dep_accommodation_id);
             }
-            $depTCPerPax = (float) $depTcs->sum(fn ($tc) => $tc->pivot->price);
-            $retTCPerPax = (float) $retTcs->sum(fn ($tc) => $tc->pivot->price);
-
-            $origDepPerPax = (float)($this->booking->schedule_price ?? 0)
-                        + $depTCPerPax
-                        + (float)($this->booking->schedule_accommodation_price ?? 0);
-            $origRetPerPax = (float)($this->booking->return_schedule_price ?? 0)
-                        + $retTCPerPax
-                        + (float)($this->booking->return_schedule_accommodation_price ?? 0);
-            $originalFare  = ($origDepPerPax + $origRetPerPax) * $passengerCount;
-
-            // ── New total ──
-            $newTotal = 0.0;
-
-            if ($isAirline) {
-                $depPerPax = ($this->rebooking_dep_accommodation_price ?? 0);
-                $newTotal  += $depPerPax * $passengerCount;
-                if ($this->rebooking_is_round_trip) {
-                    $retPerPax = ($this->rebooking_ret_accommodation_price ?? 0);
-                    $newTotal += $retPerPax * $passengerCount;
-                }
-            } else {
-                // Ferry: schedule price is stored separately; acc price is per pax
-                $depPerPax = ($this->rebooking_dep_schedule_price ?? 0)
-                        + ($this->rebooking_dep_accommodation_price ?? 0);
-                $newTotal += $depPerPax * $passengerCount;
-                if ($this->rebooking_is_round_trip) {
-                    $retPerPax = ($this->rebooking_ret_schedule_price ?? 0)
-                            + ($this->rebooking_ret_accommodation_price ?? 0);
-                    $newTotal += $retPerPax * $passengerCount;
-                }
+            $retAccId = null;
+            if ($this->rebooking_ret_accommodation_id) {
+                $retAccId = (int) str_replace(['acc_', 'tc_'], '', (string) $this->rebooking_ret_accommodation_id);
             }
 
-            if ($this->booking->has_vehicle) {
-                $newTotal += $this->booking->vehicle_price;
-            }
-            $this->rebooking_new_total = $newTotal;
+            $calc = $this->booking->getPartialRebookingCalculation(
+                $selectedItems,
+                $this->rebooking_dep_schedule_id,
+                $depAccId,
+                $this->rebooking_ret_schedule_id,
+                $retAccId
+            );
 
-            $settings = \App\Models\PaymentSetting::current();
-            $isAfterDeparture = $this->booking->isAfterDeparture();
-
-            // 1. Revalidation Fee
-            $this->rebooking_revalidation_fee = floatval($settings->revalidation_fee) * $passengerCount;
-
-            // 2. Surcharge applied on the original fare base
-            $surchargePct = 0;
-            if ($isAirline) {
-                $surchargePct = (float)$settings->rebook_airline_before_departure_surcharge_pct;
-            } elseif ($isAfterDeparture) {
-                $surchargePct = (float)$settings->rebook_ferry_after_departure_surcharge_pct;
-            } else {
-                $surchargePct = (float)$settings->rebook_ferry_before_departure_surcharge_pct;
-            }
-            $this->rebooking_surcharge = $originalFare * ($surchargePct / 100);
-
-            // 3. Rate Difference (only charged if upgrading; downgrade is already blocked at selection)
-            $this->rebooking_rate_diff  = max(0, $newTotal - $originalFare);
-            $this->rebooking_price_diff = $this->rebooking_rate_diff;
-            $this->rebooking_total_to_pay = $this->rebooking_surcharge
-                                        + $this->rebooking_revalidation_fee
-                                        + $this->rebooking_rate_diff;
+            $this->rebooking_new_total = $calc['new_fare'];
+            $this->rebooking_revalidation_fee = $calc['revalidation_fee'];
+            $this->rebooking_surcharge = $calc['surcharge'];
+            $this->rebooking_rate_diff = $calc['rate_diff'];
+            $this->rebooking_price_diff = $calc['rate_diff'];
+            $this->rebooking_total_to_pay = $calc['total_rebooking_fee'];
         } catch (\Exception $e) {
-            $this->feedback = "Error in computeRebookingTotals: " . $e->getMessage();
+            $this->feedback = "Error in calculateRebookingPriceDiff: " . $e->getMessage();
         }
     }
 
@@ -970,6 +922,36 @@ class BookingLookup extends Component
             'payment_reference' => $this->rebooking_reference_number,
         ]);
 
+        $selectedItems = !empty($this->selectedPassengerItems)
+            ? $this->selectedPassengerItems
+            : $this->booking->passengers->whereNotIn('status', ['cancelled', 'operator_cancelled', 'refunded'])->pluck('item_number')->toArray();
+
+        foreach ($this->booking->passengers as $p) {
+            if (in_array((int) $p->item_number, array_map('intval', $selectedItems), true)) {
+                $p->update([
+                    'status'                            => \App\Models\Passenger::STATUS_REBOOKING_PENDING,
+                    'is_rebooked'                       => true,
+                    'rebooking_status'                  => 'pending',
+                    'rebooking_departure_date'          => $this->rebooking_departure_date,
+                    'rebooking_return_date'             => $this->rebooking_is_round_trip ? $this->rebooking_return_date : null,
+                    'preferred_replacement_schedule_id' => $this->rebooking_dep_schedule_id,
+                    'disruption_notes'                  => json_encode([
+                        'dep_schedule_id'      => $this->rebooking_dep_schedule_id,
+                        'dep_accommodation_id' => $this->rebooking_dep_accommodation_id,
+                        'ret_schedule_id'      => $this->rebooking_ret_schedule_id,
+                        'ret_accommodation_id' => $this->rebooking_ret_accommodation_id,
+                        'rate_diff'            => $this->rebooking_rate_diff,
+                        'surcharge'            => $this->rebooking_surcharge,
+                        'revalidation_fee'     => $this->rebooking_revalidation_fee,
+                        'total_paid'           => $this->rebooking_total_to_pay,
+                        'proof_path'           => $path,
+                    ]),
+                ]);
+            }
+        }
+
+        $allRebooked = $this->booking->passengers->every(fn ($p) => in_array($p->status, ['rebooking_pending', 'rebooked', 'cancelled', 'refunded'], true));
+
         $this->booking->update([
             'is_rebooked' => true,
             'rebooking_status' => 'pending',
@@ -987,6 +969,7 @@ class BookingLookup extends Component
                 'revalidation_fee' => $this->rebooking_revalidation_fee,
                 'total_paid' => $this->rebooking_total_to_pay,
                 'proof_path' => $path,
+                'affected_items' => $this->booking->getAffectedItemsLabel($selectedItems),
             ]),
         ]);
 

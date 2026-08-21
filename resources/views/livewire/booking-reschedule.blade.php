@@ -67,6 +67,54 @@
             </div>
         @else
 
+            {{-- Passenger Items Selection Card --}}
+            <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm mb-6">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-slate-100">
+                    <div>
+                        <h3 class="text-base font-extrabold text-slate-900">Select Passenger(s) for this Action</h3>
+                        <p class="text-xs text-slate-500 mt-0.5">Choose which passenger items you wish to reschedule or refund.</p>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <button type="button" wire:click="selectAllPassengers" class="text-xs font-semibold text-pink-600 hover:text-pink-700 bg-pink-50 hover:bg-pink-100 px-3 py-1.5 rounded-lg border border-pink-200 transition">
+                            Select All
+                        </button>
+                        <button type="button" wire:click="deselectAllPassengers" class="text-xs font-semibold text-slate-600 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg border border-slate-200 transition">
+                            Deselect All
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                    @foreach($booking->passengers->sortBy('item_number') as $passenger)
+                        @php
+                            $pItemNum = (int) ($passenger->item_number ?? 1);
+                            $isSelected = in_array($pItemNum, array_map('intval', $selectedPassengerItems), true);
+                            $pStatus = $passenger->status ?? 'pending';
+                            $pStatusLabel = $passenger->getStatusLabel();
+                        @endphp
+                        <label for="reschedule_pax_{{ $pItemNum }}" class="flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer transition {{ $isSelected ? 'border-pink-500 bg-pink-50/40 ring-1 ring-pink-500' : 'border-slate-200 bg-slate-50/50 hover:border-slate-300' }}">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <input type="checkbox"
+                                    wire:model.live="selectedPassengerItems"
+                                    value="{{ $pItemNum }}"
+                                    id="reschedule_pax_{{ $pItemNum }}"
+                                    class="w-4 h-4 rounded text-pink-600 focus:ring-pink-500 border-slate-300 cursor-pointer">
+                                <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-900 text-white text-xs font-bold shrink-0">
+                                    {{ $pItemNum }}
+                                </span>
+                                <div class="min-w-0">
+                                    <p class="font-bold text-slate-900 text-xs truncate">{{ $passenger->name ?? 'Passenger' }}</p>
+                                    <p class="text-[11px] text-slate-500 capitalize">{{ $passenger->type ?? 'adult' }} &bull; ₱{{ number_format($passenger->getEffectiveItemTotal(), 2) }}</p>
+                                </div>
+                            </div>
+                            <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 shrink-0">
+                                {{ $pStatusLabel }}
+                            </span>
+                        </label>
+                    @endforeach
+                </div>
+            </div>
+
             {{-- Cancel & Refund Form --}}
             @if($showRefundForm)
                 <div class="rounded-3xl border border-rose-200 bg-white p-6 shadow-xl mb-8 relative">

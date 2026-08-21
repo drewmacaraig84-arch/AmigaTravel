@@ -11764,7 +11764,6 @@ class _PassengerItemsCard extends StatefulWidget {
   final bool showSelection;
 
   const _PassengerItemsCard({
-    super.key,
     required this.passengers,
     this.selectedItemNumbers,
     this.onSelectionChanged,
@@ -12111,6 +12110,31 @@ class _PassengerItemsCardState extends State<_PassengerItemsCard> {
                           ],
                         ),
                       ),
+                      if (status == 'confirmed' || status == 'rebooked' || (p['is_rebooked'] == true)) ...[
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              visualDensity: VisualDensity.compact,
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              side: const BorderSide(color: Color(0xFF1E293B)),
+                            ),
+                            icon: const Icon(Icons.picture_as_pdf, size: 14, color: Color(0xFF16A34A)),
+                            label: Text('Download Ticket (Item $itemNum)', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                            onPressed: () async {
+                              final pId = p['id'] ?? p['ticket_number'];
+                              if (pId != null) {
+                                final baseUrl = UserSession.getBaseUrl();
+                                final url = Uri.parse('$baseUrl/ticket/passenger/$pId');
+                                if (await canLaunchUrl(url)) {
+                                  await launchUrl(url, mode: LaunchMode.externalApplication);
+                                }
+                              }
+                            },
+                          ),
+                        ),
+                      ],
                     ],
                   ],
                 ),
@@ -17057,6 +17081,7 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
   bool _isSubmitting = false;
   bool _submitted = false;
   String _feedback = '';
+  List<int> _selectedPassengerItems = [];
 
   // Reschedule state
   String _depDate = '';
@@ -17086,6 +17111,17 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
   @override
   void initState() {
     super.initState();
+    final pax = widget.booking['passengers'];
+    if (pax is List && pax.isNotEmpty) {
+      _selectedPassengerItems = pax.map<int>((p) {
+        if (p is Map) {
+          return int.tryParse(p['item_number']?.toString() ?? '1') ?? 1;
+        }
+        return 1;
+      }).toList();
+    } else {
+      _selectedPassengerItems = [1];
+    }
     final resume = _resumeDate;
     if (resume != null && resume.isNotEmpty) {
       _depDate = resume;
@@ -17161,6 +17197,10 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
   }
 
   Future<void> _submitRefund() async {
+    if (_selectedPassengerItems.isEmpty) {
+      setState(() => _feedback = 'Please select at least one passenger item to refund.');
+      return;
+    }
     if (_accountNumberCtrl.text.trim().isEmpty ||
         _accountNameCtrl.text.trim().isEmpty) {
       setState(() => _feedback = 'Please fill in all refund fields.');
@@ -17181,6 +17221,7 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
         body: jsonEncode({
           'email': widget.booking['client_email'],
           'refund_destination': _refundDestination,
+          'passenger_items': _selectedPassengerItems,
         }),
       );
       final data = jsonDecode(res.body);
@@ -17201,6 +17242,9 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
   }
 
   int get _passengerCount {
+    if (_selectedPassengerItems.isNotEmpty) {
+      return _selectedPassengerItems.length;
+    }
     final passengers = widget.booking['passengers'];
     if (passengers is List) return passengers.length;
     final adults = widget.booking['adults'] as int? ?? 0;
@@ -17353,6 +17397,10 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
   }
 
   Future<void> _submitReschedule() async {
+    if (_selectedPassengerItems.isEmpty) {
+      setState(() => _feedback = 'Please select at least one passenger item to reschedule.');
+      return;
+    }
     if (_isResumeTba) {
       setState(() => _feedback =
           'Rescheduling is temporarily unavailable until the operator publishes a resume date.');
@@ -17387,11 +17435,6 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
       setState(() => _feedback = 'Please select a return accommodation.');
       return;
     }
-    if (_newTotalPrice != _oldTotalPrice) {
-      setState(() => _feedback =
-          'For service cancellations, you can only select a replacement of the exact same price as your original ticket.');
-      return;
-    }
 
     setState(() => _isSubmitting = true);
     try {
@@ -17407,6 +17450,7 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
           widget.booking['client_email']?.toString() ?? '';
       request.fields['dep_date'] = _depDate;
       request.fields['dep_schedule_id'] = _selectedScheduleId.toString();
+      request.fields['passenger_items'] = _selectedPassengerItems.join(',');
       if (_selectedAccommodationId != null) {
         request.fields['dep_accommodation_id'] =
             _selectedAccommodationId.toString();
@@ -17454,6 +17498,7 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
     final reason = cancellation?['reason_category'] ?? 'service disruption';
     final customerMsg = cancellation?['customer_message'];
     final totalPrice = widget.booking['total_price'];
+    final paxList = widget.booking['passengers'] is List ? (widget.booking['passengers'] as List) : [];
 
     return Scaffold(
       backgroundColor: kBgLight,
@@ -17465,6 +17510,15 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          if (paxList.isNotEmpty) ...[
+            _PassengerItemsCard(
+              passengers: paxList,
+              showSelection: true,
+              selectedItemNumbers: _selectedPassengerItems,
+              onSelectionChanged: (items) => setState(() => _selectedPassengerItems = items),
+            ),
+            const SizedBox(height: 16),
+          ],
           // ── Disruption Banner ──
           Container(
             padding: const EdgeInsets.all(20),
@@ -18999,6 +19053,7 @@ class _RebookScreenState extends State<RebookScreen> {
       0; // 0=dates, 1=dep_schedule, 2=ret_schedule, 3=breakdown, 4=proof
   bool _isLoading = false;
   String _error = '';
+  List<int> _selectedPassengerItems = [];
 
   DateTime? _depDate;
   DateTime? _retDate;
@@ -19015,6 +19070,28 @@ class _RebookScreenState extends State<RebookScreen> {
   String? _qrUrl;
   XFile? _proof;
   final TextEditingController _rebookingReferenceCtrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    final pax = widget.booking['passengers'];
+    if (pax is List && pax.isNotEmpty) {
+      _selectedPassengerItems = pax.where((p) {
+        if (p is Map) {
+          final s = p['status']?.toString();
+          return s != 'cancelled' && s != 'operator_cancelled' && s != 'refunded';
+        }
+        return true;
+      }).map<int>((p) {
+        if (p is Map) {
+          return int.tryParse(p['item_number']?.toString() ?? '1') ?? 1;
+        }
+        return 1;
+      }).toList();
+    } else {
+      _selectedPassengerItems = [1];
+    }
+  }
 
   bool get _isAirline {
     final m = (widget.booking['mode'] ??
@@ -19122,6 +19199,10 @@ class _RebookScreenState extends State<RebookScreen> {
   }
 
   Future<void> _calcBreakdown() async {
+    if (_selectedPassengerItems.isEmpty) {
+      setState(() => _error = 'Please select at least one passenger to rebook.');
+      return;
+    }
     setState(() {
       _isLoading = true;
       _error = '';
@@ -19142,6 +19223,7 @@ class _RebookScreenState extends State<RebookScreen> {
           'ret_schedule_id': _selRetSchId,
           'ret_accommodation_id': _selRetAccId,
           'is_round_trip': _isRoundTrip,
+          'passenger_items': _selectedPassengerItems,
         }),
       );
       final data = jsonDecode(res.body);
@@ -19163,6 +19245,10 @@ class _RebookScreenState extends State<RebookScreen> {
   }
 
   Future<void> _submitRebook() async {
+    if (_selectedPassengerItems.isEmpty) {
+      setState(() => _error = 'Please select at least one passenger item.');
+      return;
+    }
     final reference = _rebookingReferenceCtrl.text.trim();
     if (_proof == null) {
       setState(() => _error = 'Please upload a proof of payment first.');
@@ -19187,6 +19273,7 @@ class _RebookScreenState extends State<RebookScreen> {
       if (_isRoundTrip)
         req.fields['return_date'] = _retDate!.toIso8601String().split('T')[0];
       req.fields['dep_schedule_id'] = _selDepSchId.toString();
+      req.fields['passenger_items'] = _selectedPassengerItems.join(',');
       if (_selDepAccId != null)
         req.fields['dep_accommodation_id'] = _selDepAccId.toString();
       if (_selRetSchId != null)
@@ -19226,9 +19313,19 @@ class _RebookScreenState extends State<RebookScreen> {
 
   Widget _buildDateStep() {
     final op = (widget.booking['operator_name'] ?? widget.booking['schedule']?['route']?['operator'] ?? '').toString().trim();
+    final paxList = widget.booking['passengers'] is List ? (widget.booking['passengers'] as List) : [];
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        if (paxList.isNotEmpty) ...[
+          _PassengerItemsCard(
+            passengers: paxList,
+            showSelection: true,
+            selectedItemNumbers: _selectedPassengerItems,
+            onSelectionChanged: (items) => setState(() => _selectedPassengerItems = items),
+          ),
+          const SizedBox(height: 12),
+        ],
         const Text('Select New Travel Dates',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         if (op.isNotEmpty) ...[
@@ -19292,7 +19389,7 @@ class _RebookScreenState extends State<RebookScreen> {
           ),
         const SizedBox(height: 24),
         FilledButton(
-          onPressed: _depDate != null && (!_isRoundTrip || _retDate != null)
+          onPressed: _depDate != null && (!_isRoundTrip || _retDate != null) && _selectedPassengerItems.isNotEmpty
               ? _fetchDepSchedules
               : null,
           child: const Text('Next'),

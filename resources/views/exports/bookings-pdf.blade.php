@@ -203,6 +203,7 @@
                 <thead>
                     <tr>
                         <th>Transaction #</th>
+                        <th>Item #</th>
                         <th>Client Name</th>
                         <th>Contact #</th>
                         <th>Origin</th>
@@ -241,6 +242,10 @@
                                 return $p->discount->name;
                             })->unique()->implode(', ');
 
+                            $itemNosPdf = $booking->passengers->sortBy('item_number')->map(function($p) {
+                                return 'Item ' . ($p->item_number ?? 1);
+                            })->implode(', ');
+
                             $baseFare = 0; $accFee = 0; $passengerDiscount = 0;
                             foreach ($booking->passengers as $p) {
                                 if ($p->is_promo) {
@@ -257,7 +262,9 @@
                                     $baseFare += $grossTicket;
                                     $accFee += $grossAcc;
 
-                                    if ($p->discount) {
+                                    if ((float) $p->discount_amount > 0) {
+                                        $passengerDiscount += (float) $p->discount_amount;
+                                    } elseif ($p->discount) {
                                         $multiplier = ((float) $p->discount->percentage / 100);
                                         $passengerDiscount += ($grossTicket + $grossAcc) * $multiplier;
                                     }
@@ -319,12 +326,10 @@
                                     $adminFee = $fees;
                                 }
                             }
-                            $isRefunded = in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount > 0;
-                            $totalAmount = (float) $booking->total_price;
-                            if ($isRefunded) {
-                                $totalAmount = max(0, (float) $booking->total_price - (float) $booking->refund_amount);
-                            } elseif ($rebookingFee > 0) {
-                                $totalAmount = (float) $booking->total_price + $rebookingFee;
+                            
+                            $totalAmount = (float) ($booking->transaction?->amount_paid ?: $booking->total_price);
+                            if (in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount > 0) {
+                                $totalAmount = (float) $booking->refund_amount;
                             }
                             
                             $secBaseFare += $baseFare;
@@ -343,6 +348,7 @@
                         @endphp
                         <tr>
                             <td>{{ $booking->transaction_number }}</td>
+                            <td>{{ filled($itemNosPdf) ? $itemNosPdf : 'Item 1' }}</td>
                             <td>{{ $booking->client_name }}</td>
                             <td>{{ $booking->client_phone }}</td>
                             <td>{{ $booking->origin }}</td>
@@ -384,7 +390,7 @@
 
                     {{-- Totals row --}}
                     <tr class="totals-row">
-                        <td colspan="11" style="text-align:right;">GRAND TOTAL</td>
+                        <td colspan="12" style="text-align:right;">GRAND TOTAL</td>
                         <td>{{ number_format($secBaseFare, 2) }}</td>
                         <td>{{ number_format($secAccFee, 2) }}</td>
                         <td>{{ number_format($secVehicleFee, 2) }}</td>
