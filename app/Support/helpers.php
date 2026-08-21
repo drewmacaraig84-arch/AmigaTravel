@@ -64,7 +64,7 @@ if (! function_exists('normalize_operator_name')) {
         }
 
         if (str_contains($lower, 'philippine') || str_contains($lower, 'pal')) {
-            return 'Philippine Airline';
+            return 'Philippine Airlines';
         }
 
         return $clean;

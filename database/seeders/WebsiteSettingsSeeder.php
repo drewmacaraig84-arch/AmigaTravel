@@ -50,12 +50,12 @@ class WebsiteSettingsSeeder extends Seeder
                     'color' => 'text-blue-600',
                 ],
                 [
-                    'title' => 'Philippine Airline',
-                    'description' => 'Philippine Airline flights with premium support and flexible fare options.',
+                    'title' => 'Philippine Airlines',
+                    'description' => 'Philippine Airlines flights with premium support and flexible fare options.',
                     'note' => 'PAL & International',
                     'image' => 'images/Pal-Logo.jfif',
                     'button_text' => 'Book Now',
-                    'link' => '/book/new?operator=' . urlencode('Philippine Airline') . '&trip_type=one_way&mode=airline',
+                    'link' => '/book/new?operator=' . urlencode('Philippine Airlines') . '&trip_type=one_way&mode=airline',
                     'color' => 'text-purple-600',
                 ],
                 [

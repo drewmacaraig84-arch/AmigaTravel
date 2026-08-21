@@ -40,7 +40,7 @@ class ManageTransportAccommodation extends Page implements HasForms, HasTable
     public ?string $mode = null; // 'airline' or 'ferry'
     public ?string $selectedOperator = null;
     public array $ferryOperators = ['2GO', 'Starlite'];
-    public array $airlineOperators = ['AirAsia', 'Cebu Pacific', 'Philippine Airline'];
+    public array $airlineOperators = ['AirAsia', 'Cebu Pacific', 'Philippine Airlines'];
 
     public function mount(): void
     {

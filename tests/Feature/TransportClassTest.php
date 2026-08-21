@@ -12,7 +12,7 @@ class TransportClassTest extends TestCase
         $airline = TransportClass::make([
             'name' => 'Economy',
             'mode' => 'airline',
-            'operator' => 'Philippine Airline',
+            'operator' => 'Philippine Airlines',
             'price' => 1500,
             'is_active' => true,
         ]);
@@ -26,7 +26,7 @@ class TransportClassTest extends TestCase
         ]);
 
         $this->assertSame('airline', $airline->mode);
-        $this->assertSame('Philippine Airline', $airline->operator);
+        $this->assertSame('Philippine Airlines', $airline->operator);
         $this->assertSame('ferry', $ferry->mode);
         $this->assertSame('2GO', $ferry->operator);
     }

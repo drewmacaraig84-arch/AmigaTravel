@@ -1724,11 +1724,11 @@
                         'link' => '/book/new?operator=' . urlencode('Cebu Pacific') . '&trip_type=one_way&mode=airline',
                     ],
                     [
-                        'title' => 'Philippine Airline',
-                        'description' => 'Book Philippine Airline flights with premium support and flexible fare options.',
+                        'title' => 'Philippine Airlines',
+                        'description' => 'Book Philippine Airlines flights with premium support and flexible fare options.',
                         'image' => 'images/Pal-Logo.jfif',
                         'booking_button_text' => 'Book Now',
-                        'link' => '/book/new?operator=' . urlencode('Philippine Airline') . '&trip_type=one_way&mode=airline',
+                        'link' => '/book/new?operator=' . urlencode('Philippine Airlines') . '&trip_type=one_way&mode=airline',
                     ],
                     [
                         'title' => 'AirAsia',
@@ -1777,7 +1777,7 @@
             @endphp
             <a href="{{ url($cardLink) }}" class="group rounded-xl sm:rounded-[2rem] bg-white border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-200 flex flex-col overflow-hidden">
                 @php
-                    $isSmallLogo = in_array($cardTitle, ['Cebu Pacific', 'Philippine Airline', 'AirAsia']);
+                    $isSmallLogo = in_array($cardTitle, ['Cebu Pacific', 'Philippine Airlines', 'Philippine Airline', 'AirAsia']);
                     $paddingClass = $isSmallLogo ? 'p-2 sm:p-4' : 'p-2 sm:p-8';
                 @endphp
                 <div class="h-20 sm:h-36 w-full bg-white flex items-center justify-center {{ $paddingClass }} border-b border-slate-100">

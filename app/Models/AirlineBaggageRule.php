@@ -73,7 +73,7 @@ class AirlineBaggageRule extends Model
         if ($tripType === 'international') {
             return [
                 'pal' => [
-                    'name' => 'Philippine Airline',
+                    'name' => 'Philippine Airlines',
                     'code' => 'PAL',
                     'logo' => 'Pal-Logo.jfif',
                     'options' => [
@@ -96,8 +96,8 @@ class AirlineBaggageRule extends Model
                     ],
                 ],
                 'airasia' => [
-                    'name' => 'Philippines AirAsia International',
-                    'code' => 'Philippines AirAsia',
+                    'name' => 'AirAsia',
+                    'code' => 'AirAsia',
                     'logo' => 'AirAsia-Logo.png',
                     'options' => [
                         ['weight' => '20 kg', 'price' => 1470],
@@ -125,7 +125,7 @@ class AirlineBaggageRule extends Model
                 ],
             ],
             'pal' => [
-                'name' => 'Philippine Airline',
+                'name' => 'Philippine Airlines',
                 'code' => 'PAL',
                 'logo' => 'Pal-Logo.jfif',
                 'options' => [

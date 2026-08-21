@@ -203,7 +203,7 @@ class RouteScheduleSeeder extends Seeder
                     'origin' => 'Manila',
                     'destination' => 'Davao',
                     'mode' => 'airline',
-                    'operator' => 'Philippine Airline',
+                    'operator' => 'Philippine Airlines',
                     'trip_type' => 'local',
                     'schedules' => [
                         ['service_name' => 'PR 1813', 'vehicle_name' => 'Airbus A320', 'plate_no' => 'RP-P3201', 'dep_time' => '06:00:00', 'duration' => 110, 'price' => 3500.00],
@@ -219,7 +219,7 @@ class RouteScheduleSeeder extends Seeder
                     'origin' => 'Davao',
                     'destination' => 'Manila',
                     'mode' => 'airline',
-                    'operator' => 'Philippine Airline',
+                    'operator' => 'Philippine Airlines',
                     'trip_type' => 'local',
                     'schedules' => [
                         ['service_name' => 'PR 1814', 'vehicle_name' => 'Airbus A320', 'plate_no' => 'RP-P3201', 'dep_time' => '08:30:00', 'duration' => 110, 'price' => 3500.00],
@@ -240,27 +240,27 @@ class RouteScheduleSeeder extends Seeder
                     'operator' => 'AirAsia',
                     'trip_type' => 'local',
                     'schedules' => [
-                        ['service_name' => 'Z2 221', 'vehicle_name' => 'Airbus A320', 'plate_no' => 'RP-A3201', 'dep_time' => '09:15:00', 'duration' => 65, 'price' => 2200.00],
-                        ['service_name' => 'Z2 223', 'vehicle_name' => 'Airbus A320', 'plate_no' => 'RP-A3202', 'dep_time' => '16:45:00', 'duration' => 65, 'price' => 2400.00],
+                        ['service_name' => 'Z2 221', 'vehicle_name' => 'Airbus A320', 'plate_no' => 'RP-A2211', 'dep_time' => '08:00:00', 'duration' => 65, 'price' => 2400.00],
+                        ['service_name' => 'Z2 225', 'vehicle_name' => 'Airbus A320', 'plate_no' => 'RP-A2252', 'dep_time' => '14:30:00', 'duration' => 65, 'price' => 2600.00],
                     ],
                     'accommodations' => [
-                        ['name' => 'Economy Class', 'description' => 'Budget-friendly standard seating.', 'price' => 2200.00, 'has_bed' => false, 'sort_order' => 1],
-                        ['name' => 'Hot Seats', 'description' => 'Forward and exit-row seating with priority boarding.', 'price' => 3200.00, 'has_bed' => false, 'sort_order' => 2],
+                        ['name' => 'Standard Seat', 'description' => 'Standard seating with 7kg cabin baggage included.', 'price' => 2400.00, 'has_bed' => false, 'sort_order' => 1],
+                        ['name' => 'Hot Seat', 'description' => 'Extra legroom in rows 1-5 and exit rows + priority boarding.', 'price' => 3200.00, 'has_bed' => false, 'sort_order' => 2],
                     ],
                 ],
                 [
                     'origin' => 'Boracay (Caticlan)',
                     'destination' => 'Manila',
                     'mode' => 'airline',
-                    'operator' => 'Philippine AirAsia',
+                    'operator' => 'AirAsia',
                     'trip_type' => 'local',
                     'schedules' => [
-                        ['service_name' => 'Z2 222', 'vehicle_name' => 'Airbus A320', 'plate_no' => 'RP-A3201', 'dep_time' => '11:00:00', 'duration' => 65, 'price' => 2200.00],
-                        ['service_name' => 'Z2 224', 'vehicle_name' => 'Airbus A320', 'plate_no' => 'RP-A3202', 'dep_time' => '18:30:00', 'duration' => 65, 'price' => 2400.00],
+                        ['service_name' => 'Z2 222', 'vehicle_name' => 'Airbus A320', 'plate_no' => 'RP-A2211', 'dep_time' => '10:00:00', 'duration' => 65, 'price' => 2400.00],
+                        ['service_name' => 'Z2 226', 'vehicle_name' => 'Airbus A320', 'plate_no' => 'RP-A2252', 'dep_time' => '16:30:00', 'duration' => 65, 'price' => 2600.00],
                     ],
                     'accommodations' => [
-                        ['name' => 'Economy Class', 'description' => 'Budget-friendly standard seating.', 'price' => 2200.00, 'has_bed' => false, 'sort_order' => 1],
-                        ['name' => 'Hot Seats', 'description' => 'Forward and exit-row seating with priority boarding.', 'price' => 3200.00, 'has_bed' => false, 'sort_order' => 2],
+                        ['name' => 'Standard Seat', 'description' => 'Standard seating with 7kg cabin baggage included.', 'price' => 2400.00, 'has_bed' => false, 'sort_order' => 1],
+                        ['name' => 'Hot Seat', 'description' => 'Extra legroom in rows 1-5 and exit rows + priority boarding.', 'price' => 3200.00, 'has_bed' => false, 'sort_order' => 2],
                     ],
                 ],
 
@@ -269,7 +269,7 @@ class RouteScheduleSeeder extends Seeder
                     'origin' => 'Manila',
                     'destination' => 'Tokyo (Narita)',
                     'mode' => 'airline',
-                    'operator' => 'Philippine Airline',
+                    'operator' => 'Philippine Airlines',
                     'trip_type' => 'international',
                     'schedules' => [
                         ['service_name' => 'PR 428', 'vehicle_name' => 'Airbus A321', 'plate_no' => 'RP-P4281', 'dep_time' => '06:55:00', 'duration' => 270, 'price' => 14500.00],
@@ -285,7 +285,7 @@ class RouteScheduleSeeder extends Seeder
                     'origin' => 'Tokyo (Narita)',
                     'destination' => 'Manila',
                     'mode' => 'airline',
-                    'operator' => 'Philippine Airline',
+                    'operator' => 'Philippine Airlines',
                     'trip_type' => 'international',
                     'schedules' => [
                         ['service_name' => 'PR 427', 'vehicle_name' => 'Airbus A321', 'plate_no' => 'RP-P4281', 'dep_time' => '13:30:00', 'duration' => 290, 'price' => 14500.00],
@@ -353,7 +353,7 @@ class RouteScheduleSeeder extends Seeder
                     'origin' => 'Seoul (Incheon)',
                     'destination' => 'Manila',
                     'mode' => 'airline',
-                    'operator' => 'Philippines AirAsia',
+                    'operator' => 'AirAsia',
                     'trip_type' => 'international',
                     'schedules' => [
                         ['service_name' => 'Z2 885', 'vehicle_name' => 'Airbus A320', 'plate_no' => 'RP-A8841', 'dep_time' => '13:05:00', 'duration' => 250, 'price' => 6800.00],
@@ -371,7 +371,7 @@ class RouteScheduleSeeder extends Seeder
                     'origin' => 'Manila',
                     'destination' => 'Hong Kong',
                     'mode' => 'airline',
-                    'operator' => 'Philippine Airline',
+                    'operator' => 'Philippine Airlines',
                     'trip_type' => 'international',
                     'schedules' => [
                         ['service_name' => 'PR 300', 'vehicle_name' => 'Airbus A321', 'plate_no' => 'RP-P3001', 'dep_time' => '07:55:00', 'duration' => 135, 'price' => 7800.00],
@@ -387,7 +387,7 @@ class RouteScheduleSeeder extends Seeder
                     'origin' => 'Hong Kong',
                     'destination' => 'Manila',
                     'mode' => 'airline',
-                    'operator' => 'Philippine Airline',
+                    'operator' => 'Philippine Airlines',
                     'trip_type' => 'international',
                     'schedules' => [
                         ['service_name' => 'PR 301', 'vehicle_name' => 'Airbus A321', 'plate_no' => 'RP-P3001', 'dep_time' => '11:15:00', 'duration' => 135, 'price' => 7800.00],

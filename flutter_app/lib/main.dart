@@ -8966,7 +8966,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
         (matchedOperator == 'pal'
             ? 'Philippine Airlines'
             : matchedOperator == 'airasia'
-                ? 'Philippines AirAsia'
+                ? 'AirAsia'
                 : 'Cebu Pacific');
     final totalBaggage = widget.booking.totalExtraBaggagePrice;
     final paxWithBaggage = widget.booking.passengersWithBaggageCount;

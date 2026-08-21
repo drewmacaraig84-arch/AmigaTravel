@@ -44,7 +44,7 @@ class ListAirlineBaggageRules extends ListRecords
             'ceb_pac' => \Filament\Resources\Components\Tab::make('Cebu Pacific')
                 ->badge(\App\Models\AirlineBaggageRule::where('operator', 'ceb_pac')->count())
                 ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => $query->where('operator', 'ceb_pac')),
-            'pal' => \Filament\Resources\Components\Tab::make('Philippine Airline')
+            'pal' => \Filament\Resources\Components\Tab::make('Philippine Airlines')
                 ->badge(\App\Models\AirlineBaggageRule::where('operator', 'pal')->count())
                 ->modifyQueryUsing(fn (\Illuminate\Database\Eloquent\Builder $query) => $query->where('operator', 'pal')),
             'airasia' => \Filament\Resources\Components\Tab::make('AirAsia')

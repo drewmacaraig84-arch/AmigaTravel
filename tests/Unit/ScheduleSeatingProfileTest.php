@@ -43,7 +43,7 @@ class ScheduleSeatingProfileTest extends TestCase
     {
         $schedule = new Schedule();
         $schedule->vehicle_name = null;
-        $schedule->setRelation('ferryRoute', new FerryRoute(['operator' => 'Philippine Airline']));
+        $schedule->setRelation('ferryRoute', new FerryRoute(['operator' => 'Philippine Airlines']));
 
         $schedule->setRelation('transportClasses', collect([
             new \App\Models\TransportClass(['code' => 'economy', 'name' => 'Economy Class']),
@@ -61,7 +61,7 @@ class ScheduleSeatingProfileTest extends TestCase
     {
         $schedule = new Schedule();
         $schedule->vehicle_name = null;
-        $schedule->setRelation('ferryRoute', new FerryRoute(['operator' => 'Philippine Airline']));
+        $schedule->setRelation('ferryRoute', new FerryRoute(['operator' => 'Philippine Airlines']));
 
         $schedule->setRelation('transportClasses', collect([
             new \App\Models\TransportClass(['code' => 'economy', 'name' => 'Economy Class']),

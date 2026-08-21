@@ -138,7 +138,7 @@ class TransportClassResource extends Resource
                     ->options([
                         'AirAsia' => 'AirAsia',
                         'Cebu Pacific' => 'Cebu Pacific',
-                        'Philippine Airline' => 'Philippine Airline',
+                        'Philippine Airlines' => 'Philippine Airlines',
                         '2GO' => '2GO',
                         'Starlite' => 'Starlite',
                     ])
@@ -162,7 +162,7 @@ class TransportClassResource extends Resource
                             ->options([
                                 'AirAsia' => 'AirAsia',
                                 'Cebu Pacific' => 'Cebu Pacific',
-                                'Philippine Airline' => 'Philippine Airline',
+                                'Philippine Airlines' => 'Philippine Airlines',
                                 '2GO' => '2GO',
                                 'Starlite' => 'Starlite',
                             ])

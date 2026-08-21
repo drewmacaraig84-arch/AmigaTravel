@@ -509,7 +509,7 @@ class ScheduleCsvImportService
                 return 'Cebu Pacific';
             }
             if (str_contains($lower, 'philippine') || str_contains($lower, 'pal')) {
-                return 'Philippine Airline';
+                return 'Philippine Airlines';
             }
         }
 

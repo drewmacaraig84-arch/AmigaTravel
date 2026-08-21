@@ -91,7 +91,7 @@ return [
                 ],
             ],
         ],
-        'Philippine Airline' => [
+        'Philippine Airlines' => [
             'classes' => [
                 'business' => [
                     'name' => 'Business Class',

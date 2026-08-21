@@ -65,7 +65,7 @@ class AirlineBaggageRuleSeeder extends Seeder
             // Philippine Airlines (Local)
             [
                 'operator' => 'pal',
-                'operator_name' => 'Philippine Airline',
+                'operator_name' => 'Philippine Airlines',
                 'code' => 'PAL',
                 'logo' => 'Pal-Logo.jfif',
                 'trip_type' => 'local',
@@ -76,7 +76,7 @@ class AirlineBaggageRuleSeeder extends Seeder
             ],
             [
                 'operator' => 'pal',
-                'operator_name' => 'Philippine Airline',
+                'operator_name' => 'Philippine Airlines',
                 'code' => 'PAL',
                 'logo' => 'Pal-Logo.jfif',
                 'trip_type' => 'local',
@@ -87,7 +87,7 @@ class AirlineBaggageRuleSeeder extends Seeder
             ],
             [
                 'operator' => 'pal',
-                'operator_name' => 'Philippine Airline',
+                'operator_name' => 'Philippine Airlines',
                 'code' => 'PAL',
                 'logo' => 'Pal-Logo.jfif',
                 'trip_type' => 'local',
@@ -98,7 +98,7 @@ class AirlineBaggageRuleSeeder extends Seeder
             ],
             [
                 'operator' => 'pal',
-                'operator_name' => 'Philippine Airline',
+                'operator_name' => 'Philippine Airlines',
                 'code' => 'PAL',
                 'logo' => 'Pal-Logo.jfif',
                 'trip_type' => 'local',
@@ -109,7 +109,7 @@ class AirlineBaggageRuleSeeder extends Seeder
             ],
             [
                 'operator' => 'pal',
-                'operator_name' => 'Philippine Airline',
+                'operator_name' => 'Philippine Airlines',
                 'code' => 'PAL',
                 'logo' => 'Pal-Logo.jfif',
                 'trip_type' => 'local',
@@ -120,7 +120,7 @@ class AirlineBaggageRuleSeeder extends Seeder
             ],
             [
                 'operator' => 'pal',
-                'operator_name' => 'Philippine Airline',
+                'operator_name' => 'Philippine Airlines',
                 'code' => 'PAL',
                 'logo' => 'Pal-Logo.jfif',
                 'trip_type' => 'local',
@@ -215,7 +215,7 @@ class AirlineBaggageRuleSeeder extends Seeder
             // Philippine Airlines (International)
             [
                 'operator' => 'pal',
-                'operator_name' => 'Philippine Airline',
+                'operator_name' => 'Philippine Airlines',
                 'code' => 'PAL',
                 'logo' => 'Pal-Logo.jfif',
                 'trip_type' => 'international',
@@ -226,7 +226,7 @@ class AirlineBaggageRuleSeeder extends Seeder
             ],
             [
                 'operator' => 'pal',
-                'operator_name' => 'Philippine Airline',
+                'operator_name' => 'Philippine Airlines',
                 'code' => 'PAL',
                 'logo' => 'Pal-Logo.jfif',
                 'trip_type' => 'international',
@@ -237,7 +237,7 @@ class AirlineBaggageRuleSeeder extends Seeder
             ],
             [
                 'operator' => 'pal',
-                'operator_name' => 'Philippine Airline',
+                'operator_name' => 'Philippine Airlines',
                 'code' => 'PAL',
                 'logo' => 'Pal-Logo.jfif',
                 'trip_type' => 'international',
@@ -248,7 +248,7 @@ class AirlineBaggageRuleSeeder extends Seeder
             ],
             [
                 'operator' => 'pal',
-                'operator_name' => 'Philippine Airline',
+                'operator_name' => 'Philippine Airlines',
                 'code' => 'PAL',
                 'logo' => 'Pal-Logo.jfif',
                 'trip_type' => 'international',
@@ -259,7 +259,7 @@ class AirlineBaggageRuleSeeder extends Seeder
             ],
             [
                 'operator' => 'pal',
-                'operator_name' => 'Philippine Airline',
+                'operator_name' => 'Philippine Airlines',
                 'code' => 'PAL',
                 'logo' => 'Pal-Logo.jfif',
                 'trip_type' => 'international',

@@ -351,18 +351,19 @@ class Schedule extends Model
 
         $normalizedOperator = strtolower(trim($operator));
         $operatorAliases = [
-            'pal' => 'Philippine Airline',
-            'philippine airline' => 'Philippine Airline',
-            'philippine airline (pal)' => 'Philippine Airline',
-            'philippine airlines' => 'Philippine Airline',
-            'philippine airlines (pal)' => 'Philippine Airline',   // <-- ADD
+            'pal' => 'Philippine Airlines',
+            'philippine airline' => 'Philippine Airlines',
+            'philippine airline (pal)' => 'Philippine Airlines',
+            'philippine airlines' => 'Philippine Airlines',
+            'philippine airlines (pal)' => 'Philippine Airlines',
             'cebu pacific' => 'Cebu Pacific',
-            'cebu pacific air' => 'Cebu Pacific',                   // <-- ADD
-            'philippine airasia' => 'AirAsia',
-            'philippines airasia' => 'AirAsia',          // <-- ADD
-            'airasia' => 'AirAsia',
+            'cebu pacific air' => 'Cebu Pacific',
             'cebpac' => 'Cebu Pacific',
             'cebgo' => 'Cebu Pacific',
+            'philippine airasia' => 'AirAsia',
+            'philippines airasia' => 'AirAsia',
+            'airasia' => 'AirAsia',
+            'air asia' => 'AirAsia',
         ];
 
         return $operatorAliases[$normalizedOperator] ?? null;
