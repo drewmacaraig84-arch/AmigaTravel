@@ -208,13 +208,13 @@ class ManageRefunds extends Page implements HasTable
                                 TextEntry::make('transaction_number')
                                     ->label('Booking Reference')
                                     ->weight('bold')
-                                    ->size(Infolists\Components\TextEntry\TextEntrySize::Large),
+                                    ->size('lg'),
                                 TextEntry::make('refund_status')
                                     ->label('Disbursement Status')
                                     ->badge()
                                     ->formatStateUsing(fn ($state) => $state === 'completed' ? 'Disbursed' : 'Pending Processing')
                                     ->color(fn ($state) => $state === 'completed' ? 'success' : 'warning')
-                                    ->size(Infolists\Components\TextEntry\TextEntrySize::Large),
+                                    ->size('lg'),
                                 TextEntry::make('cancellation_reason_type')
                                     ->label('Cancellation Type')
                                     ->state(fn (Booking $record) => filled($record->service_cancellation_id) ? '100% Service Disruption' : 'Customer Requested')
@@ -234,13 +234,13 @@ class ManageRefunds extends Page implements HasTable
                                     ->money('PHP')
                                     ->color('success')
                                     ->weight('bold')
-                                    ->size(Infolists\Components\TextEntry\TextEntrySize::Large),
+                                    ->size('lg'),
                                 TextEntry::make('refund_amount')
                                     ->label('Customer Refund Payout')
                                     ->money('PHP')
                                     ->color('danger')
                                     ->weight('semibold')
-                                    ->size(Infolists\Components\TextEntry\TextEntrySize::Large),
+                                    ->size('lg'),
                             ])
                             ->columns(3),
 
@@ -265,7 +265,7 @@ class ManageRefunds extends Page implements HasTable
                                     ->state(fn (Booking $record): string => $record->getParsedRefundDestination()['account_number'] ?? ($record->refund_destination ?? '—'))
                                     ->copyable()
                                     ->weight('bold')
-                                    ->fontFamily(Infolists\Components\TextEntry\TextEntryFontFamily::Mono),
+                                    ->fontFamily('mono'),
                                 TextEntry::make('refund_account_name')
                                     ->label('Account Holder Name')
                                     ->state(fn (Booking $record): string => $record->getParsedRefundDestination()['account_name'] ?? '—')
