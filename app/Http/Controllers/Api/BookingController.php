@@ -487,13 +487,36 @@ class BookingController extends Controller
 
         $isWithinFiveMinutes = $booking->created_at->addMinutes(5)->isFuture();
 
+        $eligiblePassengers = $booking->passengers->filter(function ($p) {
+            return ! in_array($p->status, ['refund_pending', 'refunded', 'rebooking_pending', 'rebooked', 'cancelled', 'operator_cancelled'], true);
+        });
+
+        if ($eligiblePassengers->isEmpty()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No active passenger items are eligible for cancellation or refund on this booking.'
+            ], 400);
+        }
+
         $passengerItems = $request->input('passenger_items');
         if (is_string($passengerItems)) {
             $passengerItems = array_filter(array_map('intval', explode(',', $passengerItems)));
         }
-        $selectedItems = (is_array($passengerItems) && !empty($passengerItems))
+        $rawSelected = (is_array($passengerItems) && !empty($passengerItems))
             ? $passengerItems
-            : $booking->passengers->pluck('item_number')->toArray();
+            : $eligiblePassengers->pluck('item_number')->toArray();
+
+        $selectedItems = array_values(array_intersect(
+            array_map('intval', $rawSelected),
+            $eligiblePassengers->pluck('item_number')->map(fn ($n) => (int) $n)->toArray()
+        ));
+
+        if (empty($selectedItems)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'The selected passenger item(s) cannot be cancelled because their refund or rebooking is already pending or completed.'
+            ], 400);
+        }
 
         if ($request->input('action', 'confirm') === 'start') {
             if (! $isWithinFiveMinutes && ! $booking->isRefundEligible()) {

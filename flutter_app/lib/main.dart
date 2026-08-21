@@ -11778,12 +11778,25 @@ class _PassengerItemsCardState extends State<_PassengerItemsCard> {
   final Set<int> _expandedItems = {};
   late List<int> _selected;
 
+  bool _isItemLocked(dynamic p) {
+    if (p is! Map) return false;
+    final status = (p['status']?.toString() ?? 'pending').toLowerCase();
+    return status == 'refund_pending' ||
+        status == 'refunded' ||
+        status == 'rebooking_pending' ||
+        status == 'rebooked' ||
+        status == 'cancelled' ||
+        status == 'operator_cancelled';
+  }
+
   @override
   void initState() {
     super.initState();
     _selected = List<int>.from(widget.selectedItemNumbers ?? []);
     if (_selected.isEmpty && widget.showSelection) {
-      _selected = widget.passengers.map<int>((p) {
+      _selected = widget.passengers
+          .where((p) => !_isItemLocked(p))
+          .map<int>((p) {
         if (p is Map) {
           return int.tryParse(p['item_number']?.toString() ?? '1') ?? 1;
         }
@@ -11848,22 +11861,27 @@ class _PassengerItemsCardState extends State<_PassengerItemsCard> {
   }
 
   void _toggleSelectAll() {
+    final eligible = widget.passengers
+        .where((p) => !_isItemLocked(p))
+        .map<int>((p) {
+      if (p is Map) {
+        return int.tryParse(p['item_number']?.toString() ?? '1') ?? 1;
+      }
+      return 1;
+    }).toList();
+
     setState(() {
-      if (_selected.length == widget.passengers.length) {
+      if (_selected.length >= eligible.length && eligible.isNotEmpty) {
         _selected.clear();
       } else {
-        _selected = widget.passengers.map<int>((p) {
-          if (p is Map) {
-            return int.tryParse(p['item_number']?.toString() ?? '1') ?? 1;
-          }
-          return 1;
-        }).toList();
+        _selected = List<int>.from(eligible);
       }
     });
     widget.onSelectionChanged?.call(_selected);
   }
 
-  void _toggleItem(int itemNum) {
+  void _toggleItem(int itemNum, {bool isLocked = false}) {
+    if (isLocked) return;
     setState(() {
       if (_selected.contains(itemNum)) {
         _selected.remove(itemNum);
@@ -11886,6 +11904,8 @@ class _PassengerItemsCardState extends State<_PassengerItemsCard> {
         return ia.compareTo(ib);
       });
 
+    final eligibleCount = widget.passengers.where((p) => !_isItemLocked(p)).length;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -11897,7 +11917,7 @@ class _PassengerItemsCardState extends State<_PassengerItemsCard> {
               'Passenger Items',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
             ),
-            if (widget.showSelection)
+            if (widget.showSelection && eligibleCount > 0)
               TextButton(
                 onPressed: _toggleSelectAll,
                 style: TextButton.styleFrom(
@@ -11906,7 +11926,7 @@ class _PassengerItemsCardState extends State<_PassengerItemsCard> {
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 child: Text(
-                  _selected.length == widget.passengers.length ? 'Deselect All' : 'Select All',
+                  _selected.length >= eligibleCount ? 'Deselect All' : 'Select All',
                   style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: kPink),
                 ),
               ),
@@ -11915,6 +11935,7 @@ class _PassengerItemsCardState extends State<_PassengerItemsCard> {
         const SizedBox(height: 8),
         ...sorted.map((p) {
           if (p is! Map) return const SizedBox.shrink();
+          final isLocked = _isItemLocked(p);
           final itemNumInt = int.tryParse(p['item_number']?.toString() ?? '1') ?? 1;
           final itemNum    = itemNumInt.toString();
           final ticketNum  = p['ticket_number']?.toString() ?? '';
@@ -11941,7 +11962,7 @@ class _PassengerItemsCardState extends State<_PassengerItemsCard> {
               : (fareAndClass - discAmt - voucherAmt - pointsAmt + webFee + txFee);
 
           final isExpanded = _expandedItems.contains(itemNumInt);
-          final isSelected = _selected.contains(itemNumInt);
+          final isSelected = _selected.contains(itemNumInt) && !isLocked;
 
           return Card(
             margin: const EdgeInsets.only(bottom: 10),
@@ -11981,7 +12002,7 @@ class _PassengerItemsCardState extends State<_PassengerItemsCard> {
                               child: Checkbox(
                                 value: isSelected,
                                 activeColor: kPink,
-                                onChanged: (_) => _toggleItem(itemNumInt),
+                                onChanged: isLocked ? null : (_) => _toggleItem(itemNumInt, isLocked: isLocked),
                               ),
                             ),
                           ),
@@ -18639,7 +18660,18 @@ class _RefundScreenState extends State<RefundScreen> {
     super.initState();
     final pax = widget.booking['passengers'];
     if (pax is List && pax.isNotEmpty) {
-      _selectedPassengerItems = pax.map<int>((p) {
+      _selectedPassengerItems = pax.where((p) {
+        if (p is Map) {
+          final s = (p['status']?.toString() ?? '').toLowerCase();
+          return s != 'refund_pending' &&
+              s != 'refunded' &&
+              s != 'rebooking_pending' &&
+              s != 'rebooked' &&
+              s != 'cancelled' &&
+              s != 'operator_cancelled';
+        }
+        return true;
+      }).map<int>((p) {
         if (p is Map) {
           return int.tryParse(p['item_number']?.toString() ?? '1') ?? 1;
         }
@@ -19078,8 +19110,13 @@ class _RebookScreenState extends State<RebookScreen> {
     if (pax is List && pax.isNotEmpty) {
       _selectedPassengerItems = pax.where((p) {
         if (p is Map) {
-          final s = p['status']?.toString();
-          return s != 'cancelled' && s != 'operator_cancelled' && s != 'refunded';
+          final s = (p['status']?.toString() ?? '').toLowerCase();
+          return s != 'refund_pending' &&
+              s != 'refunded' &&
+              s != 'rebooking_pending' &&
+              s != 'rebooked' &&
+              s != 'cancelled' &&
+              s != 'operator_cancelled';
         }
         return true;
       }).map<int>((p) {

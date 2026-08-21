@@ -378,8 +378,9 @@
                                     @foreach($booking->passengers->sortBy('item_number') as $passenger)
                                         @php
                                             $pItemNum = (int) ($passenger->item_number ?? 1);
-                                            $isSelected = in_array($pItemNum, array_map('intval', $selectedPassengerItems), true);
                                             $pStatus = $passenger->status ?? 'pending';
+                                            $isActionLocked = in_array($pStatus, ['refund_pending', 'refunded', 'rebooking_pending', 'rebooked', 'cancelled', 'operator_cancelled'], true);
+                                            $isSelected = in_array($pItemNum, array_map('intval', $selectedPassengerItems), true) && ! $isActionLocked;
                                             $pStatusLabel = $passenger->getStatusLabel();
                                             $itemStatusConfig = [
                                                 'pending'            => ['bg' => '#fef3c7', 'text' => '#92400e', 'border' => '#fde68a'],
@@ -408,7 +409,9 @@
                                                             wire:model.live="selectedPassengerItems"
                                                             value="{{ $pItemNum }}"
                                                             id="pax_item_{{ $pItemNum }}"
-                                                            class="w-4 h-4 rounded text-pink-600 focus:ring-pink-500 border-slate-300 cursor-pointer">
+                                                            @if($isActionLocked) disabled @endif
+                                                            class="w-4 h-4 rounded text-pink-600 focus:ring-pink-500 border-slate-300 {{ $isActionLocked ? 'opacity-35 cursor-not-allowed bg-slate-100' : 'cursor-pointer' }}"
+                                                            @if($isActionLocked) title="This passenger is already {{ $pStatusLabel }} and cannot be cancelled or rebooked." @endif>
                                                     </div>
                                                     {{-- Item Number badge --}}
                                                     <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-900 text-white text-xs font-bold shrink-0">
@@ -417,7 +420,7 @@
                                                     {{-- Name and Ticket # --}}
                                                     <div class="min-w-0">
                                                         <div class="flex items-center gap-2">
-                                                            <label for="pax_item_{{ $pItemNum }}" @click.stop class="font-semibold text-slate-900 text-sm leading-tight truncate cursor-pointer hover:text-pink-600">
+                                                            <label for="{{ $isActionLocked ? '' : 'pax_item_' . $pItemNum }}" @click.stop class="font-semibold {{ $isActionLocked ? 'text-slate-500 cursor-not-allowed' : 'text-slate-900 cursor-pointer hover:text-pink-600' }} text-sm leading-tight truncate">
                                                                 {{ $passenger->name ?? 'Passenger' }}
                                                             </label>
                                                             <span class="text-[11px] font-medium px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">

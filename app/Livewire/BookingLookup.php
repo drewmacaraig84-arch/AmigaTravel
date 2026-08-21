@@ -197,7 +197,7 @@ class BookingLookup extends Component
             return;
         }
         $this->selectedPassengerItems = $this->booking->passengers
-            ->whereNotIn('status', ['cancelled', 'operator_cancelled', 'refunded'])
+            ->filter(fn ($p) => ! in_array($p->status, ['refund_pending', 'refunded', 'rebooking_pending', 'rebooked', 'cancelled', 'operator_cancelled'], true))
             ->pluck('item_number')
             ->map(fn ($n) => (int) $n)
             ->values()
@@ -211,6 +211,16 @@ class BookingLookup extends Component
 
     public function togglePassengerItem(int $itemNumber): void
     {
+        if (! $this->booking) {
+            return;
+        }
+
+        $pax = $this->booking->passengers->firstWhere('item_number', $itemNumber);
+        if ($pax && in_array($pax->status, ['refund_pending', 'refunded', 'rebooking_pending', 'rebooked', 'cancelled', 'operator_cancelled'], true)) {
+            // Cannot toggle locked items
+            return;
+        }
+
         if (in_array($itemNumber, $this->selectedPassengerItems, true)) {
             $this->selectedPassengerItems = array_values(array_diff($this->selectedPassengerItems, [$itemNumber]));
         } else {
@@ -399,9 +409,28 @@ class BookingLookup extends Component
             return;
         }
 
-        $selectedItems = ! empty($this->selectedPassengerItems)
+        $eligiblePassengers = $this->booking->passengers->filter(function ($p) {
+            return ! in_array($p->status, ['refund_pending', 'refunded', 'rebooking_pending', 'rebooked', 'cancelled', 'operator_cancelled'], true);
+        });
+
+        if ($eligiblePassengers->isEmpty()) {
+            $this->feedback = 'No eligible passenger items can be cancelled or refunded on this booking.';
+            return;
+        }
+
+        $rawSelected = ! empty($this->selectedPassengerItems)
             ? $this->selectedPassengerItems
-            : $this->booking->passengers->pluck('item_number')->toArray();
+            : $eligiblePassengers->pluck('item_number')->toArray();
+
+        $selectedItems = array_values(array_intersect(
+            array_map('intval', $rawSelected),
+            $eligiblePassengers->pluck('item_number')->map(fn ($n) => (int) $n)->toArray()
+        ));
+
+        if (empty($selectedItems)) {
+            $this->feedback = 'Selected passenger item(s) cannot be cancelled because their refund or rebooking is already pending or completed.';
+            return;
+        }
 
         $partialBreakdown = $this->booking->getPartialRefundBreakdown($selectedItems, $isWithinFiveMinutes);
         $totalRefundAmount = $partialBreakdown['refundable_amount'];
@@ -1068,3 +1097,4 @@ class BookingLookup extends Component
         return view('livewire.booking-lookup');
     }
 }
+
