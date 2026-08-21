@@ -58,9 +58,21 @@ class ManageRefunds extends Page implements HasTable
         return $table
             ->query(
                 Booking::query()
-                    ->whereIn('status', [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED])
-                    ->where('refund_amount', '>', 0)
-                    ->with(['transaction', 'user', 'refundProcessedByUser'])
+                    ->where(function (Builder $query) {
+                        $query->whereIn('status', [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED])
+                            ->orWhere('refund_status', 'pending')
+                            ->orWhere('refund_status', 'completed')
+                            ->orWhere('refund_amount', '>', 0)
+                            ->orWhereHas('passengers', function (Builder $pq) {
+                                $pq->where('refund_amount', '>', 0)
+                                   ->orWhereIn('status', [\App\Models\Passenger::STATUS_REFUND_PENDING, \App\Models\Passenger::STATUS_REFUNDED]);
+                            });
+                    })
+                    ->where(function (Builder $query) {
+                        $query->where('refund_amount', '>', 0)
+                            ->orWhereHas('passengers', fn (Builder $pq) => $pq->where('refund_amount', '>', 0));
+                    })
+                    ->with(['transaction', 'user', 'refundProcessedByUser', 'passengers'])
             )
             ->defaultSort('updated_at', 'desc')
             ->poll('10s')

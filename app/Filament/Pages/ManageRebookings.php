@@ -51,9 +51,13 @@ class ManageRebookings extends Page implements HasTable
                         $query->where('is_rebooked', true)
                             ->orWhere('status', 'operator_rebooking')
                             ->orWhereNotNull('rebooking_status')
-                            ->orWhereNotNull('disruption_status');
+                            ->orWhereNotNull('disruption_status')
+                            ->orWhereHas('passengers', function (Builder $pq) {
+                                $pq->whereNotNull('rebooking_status')
+                                   ->orWhereIn('status', ['rebooked', 'rebook_pending']);
+                            });
                     })
-                    ->with(['transaction', 'user', 'schedule.ferryRoute'])
+                    ->with(['transaction', 'user', 'schedule.ferryRoute', 'passengers'])
             )
             ->defaultSort('updated_at', 'desc')
             ->poll('10s')

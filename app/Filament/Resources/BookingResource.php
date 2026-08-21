@@ -92,10 +92,6 @@ class BookingResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $query) => $query->where(function (Builder $q) {
-                $q->whereNull('refund_amount')
-                  ->orWhere('refund_amount', '<=', 0);
-            }))
             ->defaultSort('created_at', 'desc')
             ->poll('10s')
             ->columns([

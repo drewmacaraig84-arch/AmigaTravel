@@ -66,6 +66,19 @@ class PassengersRelationManager extends RelationManager
                     ->label('Transaction Fee')
                     ->state(fn (Passenger $record): string => '₱' . number_format($record->getEffectiveTransactionFee(), 2))
                     ->color('gray'),
+                Tables\Columns\TextColumn::make('refund_amount')
+                    ->label('Refund / Fee')
+                    ->state(function (Passenger $record): string {
+                        if ((float) $record->refund_amount > 0) {
+                            return 'Refund: ₱' . number_format((float) $record->refund_amount, 2);
+                        }
+                        if ((float) $record->cancellation_fee > 0) {
+                            return 'Fee: ₱' . number_format((float) $record->cancellation_fee, 2);
+                        }
+                        return '—';
+                    })
+                    ->color(fn (Passenger $record) => (float) $record->refund_amount > 0 ? 'danger' : 'gray')
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('item_total')
                     ->label('Item Total')
                     ->state(fn (Passenger $record): string => '₱' . number_format($record->getEffectiveItemTotal(), 2))
@@ -79,6 +92,13 @@ class PassengersRelationManager extends RelationManager
                 Tables\Actions\CreateAction::make(),
             ])
             ->actions([
+                Tables\Actions\Action::make('view_ticket')
+                    ->label('E-Ticket')
+                    ->icon('heroicon-m-ticket')
+                    ->color('success')
+                    ->url(fn (Passenger $record): string => route('ticket.passenger', ['id' => $record->id]))
+                    ->openUrlInNewTab()
+                    ->visible(fn (Passenger $record): bool => ! in_array($record->status, ['cancelled', 'refunded', 'operator_cancelled'])),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])
