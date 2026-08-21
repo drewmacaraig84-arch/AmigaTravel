@@ -111,11 +111,36 @@ class ManageRefunds extends Page implements HasTable
                     ->label('Requested Date')
                     ->dateTime('M d, Y g:i A')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('refund_destination')
-                    ->label('Refund Destination')
-                    ->searchable()
+                Tables\Columns\TextColumn::make('refund_method')
+                    ->label('Method')
+                    ->badge()
+                    ->state(fn (Booking $record): string => $record->getParsedRefundDestination()['method'] ?? ($record->refund_destination ? 'Other' : '—'))
+                    ->color(fn (Booking $record): string => match (strtolower($record->getParsedRefundDestination()['method'] ?? '')) {
+                        'gcash' => 'info',
+                        'maya', 'paymaya', 'online wallet' => 'success',
+                        'bank account', 'bank' => 'warning',
+                        default => 'gray',
+                    }),
+                Tables\Columns\TextColumn::make('refund_account')
+                    ->label('Account / Recipient')
+                    ->state(function (Booking $record): string {
+                        $parsed = $record->getParsedRefundDestination();
+                        $parts = [];
+                        if (filled($parsed['institution'])) {
+                            $parts[] = $parsed['institution'];
+                        }
+                        if (filled($parsed['account_number'])) {
+                            $parts[] = $parsed['account_number'];
+                        }
+                        if (filled($parsed['account_name'])) {
+                            $parts[] = '(' . $parsed['account_name'] . ')';
+                        }
+                        return !empty($parts) ? implode(' • ', $parts) : ($record->refund_destination ?? '—');
+                    })
+                    ->searchable(query: fn (Builder $query, string $search) => $query->where('refund_destination', 'like', "%{$search}%"))
                     ->wrap()
-                    ->placeholder('—'),
+                    ->copyable()
+                    ->copyableState(fn (Booking $record) => $record->getParsedRefundDestination()['account_number'] ?? $record->refund_destination),
                 Tables\Columns\TextColumn::make('total_price')
                     ->label('Original Total')
                     ->money('PHP')
@@ -163,50 +188,38 @@ class ManageRefunds extends Page implements HasTable
             ])
             ->filters([
                 SelectFilter::make('refund_status')
-                    ->label('Refund Status')
+                    ->label('Processing Status')
                     ->options([
                         'pending' => 'Pending Processing',
                         'completed' => 'Disbursed',
-                    ])
-                    ->query(function (Builder $query, array $data) {
-                        if (blank($data['value'] ?? null)) {
-                            return $query;
-                        }
-                        if ($data['value'] === 'completed') {
-                            return $query->where('refund_status', 'completed');
-                        }
-                        if ($data['value'] === 'pending') {
-                            return $query->where(function (Builder $q) {
-                                $q->where('refund_status', 'pending')
-                                  ->orWhereNull('refund_status');
-                            });
-                        }
-                        return $query;
-                    }),
+                    ]),
             ])
             ->actions([
                 Action::make('viewRefund')
-                    ->label('View')
+                    ->label('View Details')
                     ->icon('heroicon-m-eye')
                     ->color('gray')
-                    ->modalHeading(fn (Booking $record) => "Refund Details — {$record->transaction_number}")
-                    ->modalWidth('4xl')
-                    ->slideOver()
+                    ->modalHeading(fn (Booking $record) => "Refund Details — #{$record->transaction_number}")
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Close')
                     ->infolist([
-                        Infolists\Components\Section::make('Refund & Disbursement Status')
+                        Infolists\Components\Section::make('Refund Overview')
                             ->schema([
                                 TextEntry::make('transaction_number')
-                                    ->label('Transaction #')
+                                    ->label('Booking Reference')
                                     ->weight('bold')
-                                    ->copyable(),
-                                TextEntry::make('refund_type')
-                                    ->label('Cancellation Type')
-                                    ->state(fn (Booking $record): string => filled($record->service_cancellation_id) ? 'Service Cancellation (100% Full Refund)' : 'Customer Cancellation (50% Refund)'),
+                                    ->size(Infolists\Components\TextEntry\TextEntrySize::Large),
                                 TextEntry::make('refund_status')
                                     ->label('Disbursement Status')
                                     ->badge()
-                                    ->formatStateUsing(fn (?string $state, Booking $record) => $state === 'completed' ? 'Disbursed' : 'Pending Processing')
-                                    ->color(fn (?string $state): string => $state === 'completed' ? 'success' : 'warning'),
+                                    ->formatStateUsing(fn ($state) => $state === 'completed' ? 'Disbursed' : 'Pending Processing')
+                                    ->color(fn ($state) => $state === 'completed' ? 'success' : 'warning')
+                                    ->size(Infolists\Components\TextEntry\TextEntrySize::Large),
+                                TextEntry::make('cancellation_reason_type')
+                                    ->label('Cancellation Type')
+                                    ->state(fn (Booking $record) => filled($record->service_cancellation_id) ? '100% Service Disruption' : 'Customer Requested')
+                                    ->badge()
+                                    ->color(fn (Booking $record) => filled($record->service_cancellation_id) ? 'danger' : 'gray'),
                             ])
                             ->columns(3),
 
@@ -233,10 +246,31 @@ class ManageRefunds extends Page implements HasTable
 
                         Infolists\Components\Section::make('Recipient & Transfer Info')
                             ->schema([
-                                TextEntry::make('refund_destination')
-                                    ->label('Destination Account (Bank / GCash / Maya)')
-                                    ->columnSpanFull()
-                                    ->placeholder('No destination account provided'),
+                                TextEntry::make('refund_method')
+                                    ->label('Payout Method')
+                                    ->badge()
+                                    ->state(fn (Booking $record): string => $record->getParsedRefundDestination()['method'] ?? '—')
+                                    ->color(fn (Booking $record): string => match (strtolower($record->getParsedRefundDestination()['method'] ?? '')) {
+                                        'gcash' => 'info',
+                                        'maya', 'paymaya', 'online wallet' => 'success',
+                                        'bank account', 'bank' => 'warning',
+                                        default => 'gray',
+                                    }),
+                                TextEntry::make('refund_institution')
+                                    ->label('Bank / Institution')
+                                    ->state(fn (Booking $record): string => $record->getParsedRefundDestination()['institution'] ?? '—')
+                                    ->placeholder('—'),
+                                TextEntry::make('refund_account_number')
+                                    ->label('Account / Mobile No.')
+                                    ->state(fn (Booking $record): string => $record->getParsedRefundDestination()['account_number'] ?? ($record->refund_destination ?? '—'))
+                                    ->copyable()
+                                    ->weight('bold')
+                                    ->fontFamily(Infolists\Components\TextEntry\TextEntryFontFamily::Mono),
+                                TextEntry::make('refund_account_name')
+                                    ->label('Account Holder Name')
+                                    ->state(fn (Booking $record): string => $record->getParsedRefundDestination()['account_name'] ?? '—')
+                                    ->weight('bold')
+                                    ->placeholder('—'),
                                 TextEntry::make('refund_reference')
                                     ->label('Disbursement Transfer Ref No.')
                                     ->placeholder('Not yet disbursed')

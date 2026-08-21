@@ -217,6 +217,69 @@ class Booking extends Model
         return "Your refund request of {$amountFormatted} is currently being processed by our finance team. Please allow 24–48 hours for review and disbursement{$destText}. You will receive an email confirmation and notification once completed.";
     }
 
+    /**
+     * Parse structured refund destination details.
+     *
+     * @return array{method: ?string, institution: ?string, account_number: ?string, account_name: ?string, raw: ?string}
+     */
+    public function getParsedRefundDestination(): array
+    {
+        $raw = trim($this->refund_destination ?? '');
+        if (blank($raw)) {
+            return [
+                'method' => null,
+                'institution' => null,
+                'account_number' => null,
+                'account_name' => null,
+                'raw' => null,
+            ];
+        }
+
+        $result = [
+            'method' => null,
+            'institution' => null,
+            'account_number' => null,
+            'account_name' => null,
+            'raw' => $raw,
+        ];
+
+        if (str_contains($raw, '|')) {
+            $parts = array_map('trim', explode('|', $raw));
+            foreach ($parts as $part) {
+                if (preg_match('/^Method:\s*(.+)$/i', $part, $m)) {
+                    $result['method'] = trim($m[1]);
+                } elseif (preg_match('/^Institution:\s*(.+)$/i', $part, $m)) {
+                    $result['institution'] = trim($m[1]);
+                } elseif (preg_match('/^Account\s*(?:No|Number)?:\s*(.+)$/i', $part, $m)) {
+                    $result['account_number'] = trim($m[1]);
+                } elseif (preg_match('/^Name:\s*(.+)$/i', $part, $m)) {
+                    $result['account_name'] = trim($m[1]);
+                }
+            }
+        } else {
+            // Regex fallbacks for freeform text (e.g. "GCash - 09123456789 (Macaraig)")
+            if (preg_match('/(gcash|maya|paymaya|bank\s*transfer|bank|bdo|bpi|metrobank|unionbank|landbank|rcbc|pnb)/i', $raw, $m)) {
+                $matchedMethod = trim($m[1]);
+                if (in_array(strtolower($matchedMethod), ['bdo', 'bpi', 'metrobank', 'unionbank', 'landbank', 'rcbc', 'pnb'], true)) {
+                    $result['method'] = 'Bank Account';
+                    $result['institution'] = strtoupper($matchedMethod);
+                } else {
+                    $result['method'] = ucfirst(strtolower($matchedMethod));
+                }
+            }
+            if (preg_match('/(\d{9,16})/', $raw, $m)) {
+                $result['account_number'] = $m[1];
+            }
+            $clean = preg_replace('/(gcash|maya|paymaya|bank\s*transfer|bank|bdo|bpi|metrobank|unionbank|landbank|rcbc|pnb|\d{9,16}|[-:|,()])/i', ' ', $raw);
+            $cleanName = trim(preg_replace('/\s+/', ' ', $clean));
+            if (! empty($cleanName) && strlen($cleanName) > 2) {
+                $result['account_name'] = $cleanName;
+            }
+        }
+
+        return $result;
+    }
+
     protected $casts = [
         'departure_date' => 'date',
         'return_date' => 'date',

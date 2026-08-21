@@ -459,8 +459,21 @@ class ViewBooking extends ViewRecord
                             ->label('Disbursement Status')
                             ->content(fn () => new HtmlString('<span class="font-bold ' . ($this->record->isRefundCompleted() ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-500') . '">' . e($this->record->getRefundStatusLabel()) . '</span>')),
                         Placeholder::make('cancellation_refund_destination')
-                            ->label('Destination Account')
-                            ->content(fn () => $this->record->refund_destination ?? '—')
+                            ->label('Destination Account Details')
+                            ->content(function () {
+                                $parsed = $this->record->getParsedRefundDestination();
+                                if (blank($parsed['method']) && blank($parsed['account_number']) && blank($parsed['account_name'])) {
+                                    return $this->record->refund_destination ?? '—';
+                                }
+
+                                $html = '<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 text-xs">';
+                                $html .= '<div><span class="text-gray-500 block font-semibold">Payout Method:</span><span class="font-bold text-primary-600 dark:text-primary-400">' . e($parsed['method'] ?? '—') . (filled($parsed['institution']) ? ' (' . e($parsed['institution']) . ')' : '') . '</span></div>';
+                                $html .= '<div><span class="text-gray-500 block font-semibold">Account / Mobile No:</span><span class="font-mono font-bold text-gray-900 dark:text-white">' . e($parsed['account_number'] ?? '—') . '</span></div>';
+                                $html .= '<div><span class="text-gray-500 block font-semibold">Account Holder Name:</span><span class="font-bold text-gray-900 dark:text-white">' . e($parsed['account_name'] ?? '—') . '</span></div>';
+                                $html .= '</div>';
+
+                                return new HtmlString($html);
+                            })
                             ->columnSpanFull(),
                         Placeholder::make('cancellation_refund_reference')
                             ->label('Transfer Reference Number')
