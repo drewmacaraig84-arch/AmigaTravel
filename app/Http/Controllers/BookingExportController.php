@@ -53,12 +53,12 @@ class BookingExportController extends Controller
         $bookings = $query->get();
 
         $refundedBookings = $bookings->filter(function ($booking) {
-            return in_array($booking->status, [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED]) 
-                && $booking->refund_amount > 0;
+            return (in_array($booking->status, [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED]) && (float) $booking->refund_amount > 0)
+                || $booking->passengers->contains(fn ($p) => (float) $p->refund_amount > 0 || in_array($p->status, ['refund_pending', 'refunded']));
         });
 
         $rebookedBookings = $bookings->filter(function ($booking) use ($refundedBookings) {
-            return ($booking->is_rebooked || filled($booking->rebooking_status))
+            return ($booking->is_rebooked || filled($booking->rebooking_status) || $booking->passengers->contains(fn ($p) => $p->is_rebooked || in_array($p->status, ['rebooked', 'rebooking_pending'])))
                 && ! $refundedBookings->contains('id', $booking->id);
         });
 

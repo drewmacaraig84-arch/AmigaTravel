@@ -142,28 +142,16 @@ class ViewBooking extends ViewRecord
 
     private function renderPassengerItemsContent(): HtmlString
     {
-        $passengers = $this->record->passengers->sortBy('item_number');
-        if ($passengers->isEmpty()) {
+        $allPassengers = $this->record->passengers->sortBy('item_number');
+        if ($allPassengers->isEmpty()) {
             return new HtmlString('<span class="text-gray-500">No passenger items recorded.</span>');
         }
 
-        $html  = '<div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 space-y-4">';
-        $html .= '<div class="overflow-x-auto">';
-        $html .= '<table class="w-full text-sm text-left text-gray-700 dark:text-gray-200">';
-        $html .= '<thead class="text-xs uppercase bg-gray-50 dark:bg-gray-700/50 text-gray-500 border-b border-gray-200 dark:border-gray-700">';
-        $html .= '<tr>';
-        $html .= '<th class="py-2.5 px-3">Item #</th>';
-        $html .= '<th class="py-2.5 px-3">Passenger</th>';
-        $html .= '<th class="py-2.5 px-3">Status</th>';
-        $html .= '<th class="py-2.5 px-3 text-right">Fare & Transport Class</th>';
-        $html .= '<th class="py-2.5 px-3 text-right">Web Admin Fee</th>';
-        $html .= '<th class="py-2.5 px-3 text-right">Transaction Fee</th>';
-        $html .= '<th class="py-2.5 px-3 text-right">Item Total</th>';
-        $html .= '</tr>';
-        $html .= '</thead>';
-        $html .= '<tbody class="divide-y divide-gray-100 dark:divide-gray-700/50">';
+        $activePax = $this->record->getActivePassengers();
+        $refundedPax = $this->record->getRefundedPassengers();
+        $rebookedPax = $this->record->getRebookedHistoryPassengers();
 
-        foreach ($passengers as $p) {
+        $renderRow = function ($p, $isArchived = false) {
             $itemNum = $p->item_number ?? 1;
             $name = htmlspecialchars($p->name ?? 'Passenger');
             $type = htmlspecialchars(ucfirst($p->type ?? 'adult'));
@@ -184,20 +172,81 @@ class ViewBooking extends ViewRecord
             $txFee = $p->getEffectiveTransactionFee();
             $itemTotal = $p->getEffectiveItemTotal();
 
-            $html .= '<tr class="hover:bg-gray-50/50 dark:hover:bg-gray-700/20">';
-            $html .= '<td class="py-2.5 px-3 font-bold text-gray-900 dark:text-white">Item ' . $itemNum . '</td>';
-            $html .= '<td class="py-2.5 px-3"><span class="font-medium text-gray-900 dark:text-white">' . $name . '</span> <span class="text-xs text-gray-500">(' . $type . ')</span>' . $ticket . '</td>';
-            $html .= '<td class="py-2.5 px-3"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ' . $badgeColorClass . '">' . $statusLabel . '</span></td>';
-            $html .= '<td class="py-2.5 px-3 text-right font-medium">₱' . number_format($fareAndClass, 2) . '</td>';
-            $html .= '<td class="py-2.5 px-3 text-right text-gray-500">₱' . number_format($webFee, 2) . '</td>';
-            $html .= '<td class="py-2.5 px-3 text-right text-gray-500">₱' . number_format($txFee, 2) . '</td>';
-            $html .= '<td class="py-2.5 px-3 text-right font-bold text-primary-600 dark:text-primary-400">₱' . number_format($itemTotal, 2) . '</td>';
-            $html .= '</tr>';
+            $rowOpacity = $isArchived ? 'opacity-70 bg-gray-50/50 dark:bg-gray-800/30' : '';
+
+            $row  = '<tr class="hover:bg-gray-50/50 dark:hover:bg-gray-700/20 ' . $rowOpacity . '">';
+            $row .= '<td class="py-2.5 px-3 font-bold text-gray-900 dark:text-white">Item ' . $itemNum . '</td>';
+            $row .= '<td class="py-2.5 px-3"><span class="font-medium text-gray-900 dark:text-white">' . $name . '</span> <span class="text-xs text-gray-500">(' . $type . ')</span>' . $ticket . '</td>';
+            $row .= '<td class="py-2.5 px-3"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ' . $badgeColorClass . '">' . $statusLabel . '</span></td>';
+            $row .= '<td class="py-2.5 px-3 text-right font-medium">₱' . number_format($fareAndClass, 2) . '</td>';
+            $row .= '<td class="py-2.5 px-3 text-right text-gray-500">₱' . number_format($webFee, 2) . '</td>';
+            $row .= '<td class="py-2.5 px-3 text-right text-gray-500">₱' . number_format($txFee, 2) . '</td>';
+            $row .= '<td class="py-2.5 px-3 text-right font-bold text-primary-600 dark:text-primary-400">₱' . number_format($itemTotal, 2) . '</td>';
+            $row .= '</tr>';
+            return $row;
+        };
+
+        $html  = '<div class="space-y-4">';
+
+        // 1. Active Passengers Table
+        $html .= '<div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 space-y-2">';
+        $html .= '<div class="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-700"><h4 class="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">🟢 Active Boarding Manifest (' . $activePax->count() . ')</h4></div>';
+        if ($activePax->isEmpty()) {
+            $html .= '<p class="text-xs text-gray-500 italic py-2">All original items on this booking have been refunded or rescheduled.</p>';
+        } else {
+            $html .= '<div class="overflow-x-auto"><table class="w-full text-sm text-left text-gray-700 dark:text-gray-200">';
+            $html .= '<thead class="text-xs uppercase bg-gray-50 dark:bg-gray-700/50 text-gray-500 border-b border-gray-200 dark:border-gray-700"><tr><th class="py-2.5 px-3">Item #</th><th class="py-2.5 px-3">Passenger</th><th class="py-2.5 px-3">Status</th><th class="py-2.5 px-3 text-right">Fare & Class</th><th class="py-2.5 px-3 text-right">Web Fee</th><th class="py-2.5 px-3 text-right">Tx Fee</th><th class="py-2.5 px-3 text-right">Total</th></tr></thead>';
+            $html .= '<tbody class="divide-y divide-gray-100 dark:divide-gray-700/50">';
+            foreach ($activePax as $p) {
+                $html .= $renderRow($p, false);
+            }
+            $html .= '</tbody></table></div>';
+        }
+        $html .= '</div>';
+
+        // 2. Refunded Items
+        if ($refundedPax->isNotEmpty()) {
+            $html .= '<div class="rounded-xl border border-amber-200 bg-amber-50/30 p-4 shadow-sm dark:border-amber-900/50 dark:bg-amber-950/20 space-y-2">';
+            $html .= '<div class="flex items-center justify-between pb-2 border-b border-amber-200/50"><h4 class="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">💰 Cancelled & Refunded Items (' . $refundedPax->count() . ')</h4></div>';
+            $html .= '<div class="overflow-x-auto"><table class="w-full text-sm text-left text-gray-700 dark:text-gray-200">';
+            $html .= '<thead class="text-xs uppercase bg-amber-100/50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 border-b border-amber-200"><tr><th class="py-2 px-3">Item #</th><th class="py-2 px-3">Passenger</th><th class="py-2 px-3">Status</th><th class="py-2 px-3 text-right">Refund Amount</th><th class="py-2 px-3 text-right">Fee Deduction</th><th class="py-2 px-3">Destination</th></tr></thead>';
+            $html .= '<tbody class="divide-y divide-amber-100 dark:divide-amber-900/30">';
+            foreach ($refundedPax as $rp) {
+                $statusBadge = $rp->refund_status === 'completed'
+                    ? '<span class="px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-800">Disbursed</span>'
+                    : '<span class="px-2 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-800">Pending Review</span>';
+                $html .= '<tr>';
+                $html .= '<td class="py-2 px-3 font-bold">Item ' . $rp->item_number . '</td>';
+                $html .= '<td class="py-2 px-3">' . htmlspecialchars($rp->name ?? 'Passenger') . '</td>';
+                $html .= '<td class="py-2 px-3">' . $statusBadge . '</td>';
+                $html .= '<td class="py-2 px-3 text-right font-bold text-amber-700">₱' . number_format((float) $rp->refund_amount, 2) . '</td>';
+                $html .= '<td class="py-2 px-3 text-right text-gray-500">₱' . number_format((float) $rp->cancellation_fee, 2) . '</td>';
+                $html .= '<td class="py-2 px-3 text-xs text-gray-600">' . htmlspecialchars($rp->refund_destination ?? '—') . '</td>';
+                $html .= '</tr>';
+            }
+            $html .= '</tbody></table></div>';
+            $html .= '</div>';
         }
 
-        $html .= '</tbody>';
-        $html .= '</table>';
-        $html .= '</div>';
+        // 3. Rebooked History
+        if ($rebookedPax->isNotEmpty()) {
+            $html .= '<div class="rounded-xl border border-purple-200 bg-purple-50/30 p-4 shadow-sm dark:border-purple-900/50 dark:bg-purple-950/20 space-y-2">';
+            $html .= '<div class="flex items-center justify-between pb-2 border-b border-purple-200/50"><h4 class="text-xs font-bold uppercase tracking-wider text-purple-700 dark:text-purple-400">🔄 Rescheduled / Rebooked History (' . $rebookedPax->count() . ')</h4></div>';
+            $html .= '<div class="overflow-x-auto"><table class="w-full text-sm text-left text-gray-700 dark:text-gray-200">';
+            $html .= '<thead class="text-xs uppercase bg-purple-100/50 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border-b border-purple-200"><tr><th class="py-2 px-3">Old Item #</th><th class="py-2 px-3">Passenger</th><th class="py-2 px-3">Status</th><th class="py-2 px-3">History Note</th></tr></thead>';
+            $html .= '<tbody class="divide-y divide-purple-100 dark:divide-purple-900/30">';
+            foreach ($rebookedPax as $reb) {
+                $html .= '<tr>';
+                $html .= '<td class="py-2 px-3 font-bold">Item ' . $reb->item_number . '</td>';
+                $html .= '<td class="py-2 px-3">' . htmlspecialchars($reb->name ?? 'Passenger') . '</td>';
+                $html .= '<td class="py-2 px-3"><span class="px-2 py-0.5 rounded text-xs font-bold bg-purple-100 text-purple-800">Rescheduled</span></td>';
+                $html .= '<td class="py-2 px-3 text-xs text-purple-700">Replaced by active itinerary replacement item</td>';
+                $html .= '</tr>';
+            }
+            $html .= '</tbody></table></div>';
+            $html .= '</div>';
+        }
+
         $html .= '</div>';
 
         return new HtmlString($html);

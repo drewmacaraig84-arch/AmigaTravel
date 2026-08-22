@@ -171,6 +171,47 @@ class Passenger extends Model
         ], true);
     }
 
+    public function isActiveBookingItem(): bool
+    {
+        if (in_array($this->status, [
+            self::STATUS_CANCELLED,
+            self::STATUS_OPERATOR_CANCELLED,
+            self::STATUS_REFUND_PENDING,
+            self::STATUS_REFUNDED,
+            self::STATUS_REBOOKED,
+        ], true)) {
+            return false;
+        }
+
+        if ($this->refund_status === 'pending' || $this->refund_status === 'completed') {
+            return false;
+        }
+
+        return in_array($this->status, [
+            self::STATUS_PENDING,
+            self::STATUS_CONFIRMED,
+            self::STATUS_OPERATOR_REBOOKING,
+        ], true);
+    }
+
+    public function isRefundItem(): bool
+    {
+        return in_array($this->status, [
+            self::STATUS_REFUND_PENDING,
+            self::STATUS_REFUNDED,
+            self::STATUS_CANCELLED,
+            self::STATUS_OPERATOR_CANCELLED,
+        ], true) || (float) $this->refund_amount > 0 || in_array($this->refund_status, ['pending', 'completed'], true);
+    }
+
+    public function isRebookingHistoryItem(): bool
+    {
+        return in_array($this->status, [
+            self::STATUS_REBOOKED,
+            self::STATUS_REBOOKING_PENDING,
+        ], true) || $this->rebooking_status === 'pending' || ($this->is_rebooked && $this->status === self::STATUS_REBOOKED);
+    }
+
     public function isCancelled(): bool
     {
         return in_array($this->status, [

@@ -88,17 +88,19 @@
                     @foreach($booking->passengers->sortBy('item_number') as $passenger)
                         @php
                             $pItemNum = (int) ($passenger->item_number ?? 1);
-                            $isSelected = in_array($pItemNum, array_map('intval', $selectedPassengerItems), true);
+                            $isLocked = ! $passenger->isActiveBookingItem();
+                            $isSelected = in_array($pItemNum, array_map('intval', $selectedPassengerItems), true) && ! $isLocked;
                             $pStatus = $passenger->status ?? 'pending';
                             $pStatusLabel = $passenger->getStatusLabel();
                         @endphp
-                        <label for="reschedule_pax_{{ $pItemNum }}" class="flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer transition {{ $isSelected ? 'border-pink-500 bg-pink-50/40 ring-1 ring-pink-500' : 'border-slate-200 bg-slate-50/50 hover:border-slate-300' }}">
+                        <label for="{{ $isLocked ? '' : 'reschedule_pax_' . $pItemNum }}" class="flex items-center justify-between p-3.5 rounded-2xl border transition {{ $isLocked ? 'opacity-50 bg-slate-100 border-slate-200 cursor-not-allowed' : ($isSelected ? 'border-pink-500 bg-pink-50/40 ring-1 ring-pink-500 cursor-pointer' : 'border-slate-200 bg-slate-50/50 hover:border-slate-300 cursor-pointer') }}">
                             <div class="flex items-center gap-3 min-w-0">
                                 <input type="checkbox"
                                     wire:model.live="selectedPassengerItems"
                                     value="{{ $pItemNum }}"
                                     id="reschedule_pax_{{ $pItemNum }}"
-                                    class="w-4 h-4 rounded text-pink-600 focus:ring-pink-500 border-slate-300 cursor-pointer">
+                                    @if($isLocked) disabled @endif
+                                    class="w-4 h-4 rounded text-pink-600 focus:ring-pink-500 border-slate-300 {{ $isLocked ? 'cursor-not-allowed opacity-40' : 'cursor-pointer' }}">
                                 <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-900 text-white text-xs font-bold shrink-0">
                                     {{ $pItemNum }}
                                 </span>

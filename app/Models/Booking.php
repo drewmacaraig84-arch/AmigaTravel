@@ -1245,6 +1245,45 @@ class Booking extends Model
     }
 
     /**
+     * Get active travelling passengers on the current itinerary.
+     */
+    public function getActivePassengers(): \Illuminate\Support\Collection
+    {
+        return $this->passengers
+            ->filter(fn ($p) => $p->isActiveBookingItem())
+            ->values();
+    }
+
+    /**
+     * Get cancelled or refunded passenger items.
+     */
+    public function getRefundedPassengers(): \Illuminate\Support\Collection
+    {
+        return $this->passengers
+            ->filter(fn ($p) => $p->isRefundItem())
+            ->values();
+    }
+
+    /**
+     * Get historical rebooked items that were replaced by a new item.
+     */
+    public function getRebookedHistoryPassengers(): \Illuminate\Support\Collection
+    {
+        return $this->passengers
+            ->filter(fn ($p) => $p->isRebookingHistoryItem())
+            ->values();
+    }
+
+    /**
+     * Get the next item number for this booking.
+     */
+    public function getNextItemNumber(): int
+    {
+        $max = (int) ($this->passengers()->max('item_number') ?? 0);
+        return max(1, $max + 1);
+    }
+
+    /**
      * Calculate refund breakdown for a specific subset of passenger item numbers.
      */
     public function getPartialRefundBreakdown(array $itemNumbers, bool $isWithinGracePeriod = false): array
@@ -1491,11 +1530,13 @@ class Booking extends Model
         $this->update($updateData);
 
         foreach ($this->passengers as $p) {
-            if ($p->is_rebooked || in_array($p->status, ['rebooking_pending', 'operator_rebooking'], true) || $p->rebooking_status === 'pending') {
+            if ($p->status === Passenger::STATUS_REBOOKING_PENDING || $p->rebooking_status === 'pending' || $p->status === Passenger::STATUS_OPERATOR_REBOOKING) {
                 $p->update([
-                    'status'           => self::STATUS_CONFIRMED,
-                    'is_rebooked'      => true,
-                    'rebooking_status' => 'verified',
+                    'status'              => self::STATUS_CONFIRMED,
+                    'is_rebooked'         => true,
+                    'rebooking_status'    => 'verified',
+                    'verified_by_user_id' => $staffId,
+                    'verified_at'         => $now,
                 ]);
             }
         }

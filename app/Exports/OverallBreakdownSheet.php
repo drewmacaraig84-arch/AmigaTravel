@@ -87,28 +87,28 @@ class OverallBreakdownSheet implements FromArray, WithTitle, WithHeadings, WithS
             }
 
             // 3. Add negative line if refunded or cancelled
-            if (in_array($booking->status, [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED])) {
-                if ($booking->refund_amount > 0) {
-                    $rows[] = [
-                        $txId,
-                        $itemNos,
-                        $clientName,
-                        $dateCreated,
-                        'Refunded',
-                        -((float) $booking->refund_amount),
-                    ];
-                    $total -= (float) $booking->refund_amount;
-                } else {
-                    $rows[] = [
-                        $txId,
-                        $itemNos,
-                        $clientName,
-                        $dateCreated,
-                        'Cancelled',
-                        -((float) $booking->total_price),
-                    ];
-                    $total -= (float) $booking->total_price;
-                }
+            $refundAmount = (float) ($booking->refund_amount > 0 ? $booking->refund_amount : $booking->passengers->sum('refund_amount'));
+            if ($refundAmount > 0) {
+                $refundedItems = $booking->getRefundedPassengers()->map(fn($p) => 'Item ' . ($p->item_number ?? 1))->implode(', ') ?: $itemNos;
+                $rows[] = [
+                    $txId,
+                    $refundedItems,
+                    $clientName,
+                    $dateCreated,
+                    'Refunded',
+                    -$refundAmount,
+                ];
+                $total -= $refundAmount;
+            } elseif (in_array($booking->status, [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED])) {
+                $rows[] = [
+                    $txId,
+                    $itemNos,
+                    $clientName,
+                    $dateCreated,
+                    'Cancelled',
+                    -((float) $booking->total_price),
+                ];
+                $total -= (float) $booking->total_price;
             }
         }
 

@@ -100,7 +100,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.123+134';
+  static const String appVersion = '1.0.124+135';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -11906,16 +11906,265 @@ class _PassengerItemsCardState extends State<_PassengerItemsCard> {
 
     final eligibleCount = widget.passengers.where((p) => !_isItemLocked(p)).length;
 
+    // Categorized lists for structured view
+    final activeItems = sorted.where((p) => !_isItemLocked(p)).toList();
+    final refundedItems = sorted.where((p) {
+      if (p is! Map) return false;
+      final s = (p['status']?.toString() ?? '').toLowerCase();
+      final refStatus = (p['refund_status']?.toString() ?? '').toLowerCase();
+      return s == 'refund_pending' || s == 'refunded' || s == 'cancelled' || s == 'operator_cancelled' || refStatus == 'pending' || refStatus == 'completed';
+    }).toList();
+    final rebookedHistoryItems = sorted.where((p) {
+      if (p is! Map) return false;
+      final s = (p['status']?.toString() ?? '').toLowerCase();
+      final rebStatus = (p['rebooking_status']?.toString() ?? '').toLowerCase();
+      return s == 'rebooked' || rebStatus == 'rescheduled' || rebStatus == 'rebooked_to_new_item';
+    }).toList();
+
+    Widget renderItemCard(dynamic p, {bool isHistorical = false}) {
+      if (p is! Map) return const SizedBox.shrink();
+      final isLocked = _isItemLocked(p);
+      final itemNumInt = int.tryParse(p['item_number']?.toString() ?? '1') ?? 1;
+      final itemNum    = itemNumInt.toString();
+      final ticketNum  = p['ticket_number']?.toString() ?? '';
+      final name       = p['name']?.toString() ?? 'Passenger';
+      final type       = (p['type']?.toString() ?? 'adult').toUpperCase();
+      final bday       = p['birthdate']?.toString() ?? '';
+      final idNum      = p['id_number']?.toString() ?? '';
+      final discount   = p['discount']?['name']?.toString() ?? '';
+      final status     = p['status']?.toString() ?? 'pending';
+      final statusLabel = _statusLabel(status);
+      final bg         = _statusBg(status);
+      final fg         = _statusFg(status);
+
+      final fareAmt    = _pd(p['fare_amount']);
+      final accAmt     = _pd(p['accommodation_amount']);
+      final fareAndClass = _pd(p['fare_and_class']) > 0 ? _pd(p['fare_and_class']) : (fareAmt + accAmt);
+      final discAmt    = _pd(p['discount_amount']);
+      final voucherAmt = _pd(p['voucher_discount_share']);
+      final pointsAmt  = _pd(p['points_discount_share']);
+      final webFee     = _pd(p['web_admin_fee_share']) > 0 ? _pd(p['web_admin_fee_share']) : 25.0;
+      final txFee      = _pd(p['transaction_fee_share']) > 0 ? _pd(p['transaction_fee_share']) : 50.0;
+      final itemTotal  = _pd(p['item_total']) > 0
+          ? _pd(p['item_total'])
+          : (fareAndClass - discAmt - voucherAmt - pointsAmt + webFee + txFee);
+
+      final isExpanded = _expandedItems.contains(itemNumInt);
+      final isSelected = _selected.contains(itemNumInt) && !isLocked;
+
+      final isActiveItem = !isLocked && (status == 'confirmed' || status == 'pending' || status == 'operator_rebooking');
+
+      return Card(
+        margin: const EdgeInsets.only(bottom: 10),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(
+            color: isSelected && widget.showSelection ? kPink : bg.withOpacity(0.6),
+            width: isSelected && widget.showSelection ? 1.5 : 1.0,
+          ),
+        ),
+        color: bg.withOpacity(0.12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () {
+            setState(() {
+              if (isExpanded) {
+                _expandedItems.remove(itemNumInt);
+              } else {
+                _expandedItems.add(itemNumInt);
+              }
+            });
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Header: Checkbox + item badge + name + status chip + chevron ─────
+                Row(
+                  children: [
+                    if (widget.showSelection)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: Checkbox(
+                            value: isSelected,
+                            activeColor: kPink,
+                            onChanged: isLocked ? null : (_) => _toggleItem(itemNumInt, isLocked: isLocked),
+                          ),
+                        ),
+                      ),
+                    CircleAvatar(
+                      radius: 13,
+                      backgroundColor: const Color(0xFF1E293B),
+                      child: Text(
+                        itemNum,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  name,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold, fontSize: 13),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.7),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  type,
+                                  style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: kSlate600),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (ticketNum.isNotEmpty)
+                            Text(
+                              ticketNum,
+                              style: TextStyle(
+                                  fontFamily: 'monospace',
+                                  fontSize: 10,
+                                  color: Colors.grey.shade500),
+                            ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: bg,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: fg.withOpacity(0.3)),
+                      ),
+                      child: Text(
+                        statusLabel,
+                        style: TextStyle(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.bold,
+                            color: fg),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      isExpanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                      color: Colors.grey.shade600,
+                      size: 20,
+                    ),
+                  ],
+                ),
+
+                // ── Collapsible Body ──────────────────────────────────────────
+                if (isExpanded) ...[
+                  const SizedBox(height: 10),
+                  // Detail pills
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      _detailPill('Type', type),
+                      if (bday.isNotEmpty) _detailPill('Bday', bday),
+                      if (discount.isNotEmpty) _detailPill('Discount', discount),
+                      if (idNum.isNotEmpty) _detailPill('ID#', idNum),
+                      if (p['passport_number'] != null && p['passport_number'].toString().isNotEmpty)
+                        _detailPill('Passport', p['passport_number'].toString()),
+                      if (p['extra_baggage_weight'] != null && p['extra_baggage_weight'].toString().isNotEmpty)
+                        _detailPill('Baggage', '${p['extra_baggage_weight']} (+₱${_pd(p['extra_baggage_price']).toStringAsFixed(2)})'),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // Individual Financial breakdown
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.85),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'ITEM PRICE BREAKDOWN',
+                          style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 0.5),
+                        ),
+                        const SizedBox(height: 4),
+                        _finRow('Ticket & Transport Class', fareAndClass),
+                        if (discAmt > 0) _finRow('Discount ($discount)', -discAmt, color: const Color(0xFF16A34A)),
+                        if (voucherAmt > 0) _finRow('Voucher Share', -voucherAmt, color: const Color(0xFF16A34A)),
+                        if (pointsAmt > 0) _finRow('Gracia Points', -pointsAmt, color: const Color(0xFF16A34A)),
+                        if (webFee > 0) _finRow('Web Admin Fee', webFee, color: Colors.grey.shade700),
+                        if (txFee > 0) _finRow('Transaction Fee', txFee, color: Colors.grey.shade700),
+                        if (_pd(p['extra_baggage_price']) > 0) _finRow('Extra Baggage Fee', _pd(p['extra_baggage_price']), color: Colors.grey.shade700),
+                        const Divider(height: 10, thickness: 0.5),
+                        _finRow('Item Total', itemTotal,
+                            color: const Color(0xFFEE018D), bold: true),
+                      ],
+                    ),
+                  ),
+                  if (isActiveItem && status == 'confirmed') ...[
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          side: const BorderSide(color: Color(0xFF1E293B)),
+                        ),
+                        icon: const Icon(Icons.picture_as_pdf, size: 14, color: Color(0xFF16A34A)),
+                        label: Text('Download Ticket (Item $itemNum)', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                        onPressed: () async {
+                          final pId = p['id'] ?? p['ticket_number'];
+                          if (pId != null) {
+                            final baseUrl = UserSession.getBaseUrl();
+                            final url = Uri.parse('$baseUrl/ticket/passenger/$pId');
+                            if (await canLaunchUrl(url)) {
+                              await launchUrl(url, mode: LaunchMode.externalApplication);
+                            }
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ],
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 12),
+        // ── Section 1: Active Manifest ──
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'Passenger Items',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+            Text(
+              widget.showSelection ? 'Select Passenger(s)' : 'Active Travelling Manifest',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
             ),
             if (widget.showSelection && eligibleCount > 0)
               TextButton(
@@ -11933,236 +12182,109 @@ class _PassengerItemsCardState extends State<_PassengerItemsCard> {
           ],
         ),
         const SizedBox(height: 8),
-        ...sorted.map((p) {
-          if (p is! Map) return const SizedBox.shrink();
-          final isLocked = _isItemLocked(p);
-          final itemNumInt = int.tryParse(p['item_number']?.toString() ?? '1') ?? 1;
-          final itemNum    = itemNumInt.toString();
-          final ticketNum  = p['ticket_number']?.toString() ?? '';
-          final name       = p['name']?.toString() ?? 'Passenger';
-          final type       = (p['type']?.toString() ?? 'adult').toUpperCase();
-          final bday       = p['birthdate']?.toString() ?? '';
-          final idNum      = p['id_number']?.toString() ?? '';
-          final discount   = p['discount']?['name']?.toString() ?? '';
-          final status     = p['status']?.toString() ?? 'pending';
-          final statusLabel = _statusLabel(status);
-          final bg         = _statusBg(status);
-          final fg         = _statusFg(status);
-
-          final fareAmt    = _pd(p['fare_amount']);
-          final accAmt     = _pd(p['accommodation_amount']);
-          final fareAndClass = _pd(p['fare_and_class']) > 0 ? _pd(p['fare_and_class']) : (fareAmt + accAmt);
-          final discAmt    = _pd(p['discount_amount']);
-          final voucherAmt = _pd(p['voucher_discount_share']);
-          final pointsAmt  = _pd(p['points_discount_share']);
-          final webFee     = _pd(p['web_admin_fee_share']) > 0 ? _pd(p['web_admin_fee_share']) : 25.0;
-          final txFee      = _pd(p['transaction_fee_share']) > 0 ? _pd(p['transaction_fee_share']) : 50.0;
-          final itemTotal  = _pd(p['item_total']) > 0
-              ? _pd(p['item_total'])
-              : (fareAndClass - discAmt - voucherAmt - pointsAmt + webFee + txFee);
-
-          final isExpanded = _expandedItems.contains(itemNumInt);
-          final isSelected = _selected.contains(itemNumInt) && !isLocked;
-
-          return Card(
-            margin: const EdgeInsets.only(bottom: 10),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-              side: BorderSide(
-                color: isSelected && widget.showSelection ? kPink : bg.withOpacity(0.6),
-                width: isSelected && widget.showSelection ? 1.5 : 1.0,
+        if (widget.showSelection)
+          ...sorted.map((p) => renderItemCard(p))
+        else ...[
+          if (activeItems.isEmpty)
+            Card(
+              color: Colors.grey.shade100,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: const Padding(
+                padding: EdgeInsets.all(12),
+                child: Center(
+                  child: Text('All passenger items have been refunded or rescheduled.', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                ),
               ),
-            ),
-            color: bg.withOpacity(0.12),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(14),
-              onTap: () {
-                setState(() {
-                  if (isExpanded) {
-                    _expandedItems.remove(itemNumInt);
-                  } else {
-                    _expandedItems.add(itemNumInt);
-                  }
-                });
-              },
+            )
+          else
+            ...activeItems.map((p) => renderItemCard(p)),
+
+          // ── Section 2: Cancelled & Refunded Items ──
+          if (refundedItems.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Card(
+              color: const Color(0xFFFFFBEB),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+                side: const BorderSide(color: Color(0xFFFDE68A)),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // ── Header: Checkbox + item badge + name + status chip + chevron ─────
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        if (widget.showSelection)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 6),
-                            child: SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: Checkbox(
-                                value: isSelected,
-                                activeColor: kPink,
-                                onChanged: isLocked ? null : (_) => _toggleItem(itemNumInt, isLocked: isLocked),
-                              ),
-                            ),
-                          ),
-                        CircleAvatar(
-                          radius: 13,
-                          backgroundColor: const Color(0xFF1E293B),
-                          child: Text(
-                            itemNum,
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      name,
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold, fontSize: 13),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.7),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      type,
-                                      style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: kSlate600),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              if (ticketNum.isNotEmpty)
-                                Text(
-                                  ticketNum,
-                                  style: TextStyle(
-                                      fontFamily: 'monospace',
-                                      fontSize: 10,
-                                      color: Colors.grey.shade500),
-                                ),
-                            ],
-                          ),
+                        const Row(
+                          children: [
+                            Text('💰', style: TextStyle(fontSize: 16)),
+                            SizedBox(width: 6),
+                            Text('Cancelled & Refunded Items', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF92400E))),
+                          ],
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: bg,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: fg.withOpacity(0.3)),
+                            color: const Color(0xFFFEF3C7),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFFCD34D)),
                           ),
-                          child: Text(
-                            statusLabel,
-                            style: TextStyle(
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.bold,
-                                color: fg),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Icon(
-                          isExpanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
-                          color: Colors.grey.shade600,
-                          size: 20,
+                          child: Text('${refundedItems.length} item(s)', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF92400E))),
                         ),
                       ],
                     ),
-
-                    // ── Collapsible Body ──────────────────────────────────────────
-                    if (isExpanded) ...[
-                      const SizedBox(height: 10),
-                      // Detail pills
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 4,
-                        children: [
-                          _detailPill('Type', type),
-                          if (bday.isNotEmpty) _detailPill('Bday', bday),
-                          if (discount.isNotEmpty) _detailPill('Discount', discount),
-                          if (idNum.isNotEmpty) _detailPill('ID#', idNum),
-                          if (p['passport_number'] != null && p['passport_number'].toString().isNotEmpty)
-                            _detailPill('Passport', p['passport_number'].toString()),
-                          if (p['extra_baggage_weight'] != null && p['extra_baggage_weight'].toString().isNotEmpty)
-                            _detailPill('Baggage', '${p['extra_baggage_weight']} (+₱${_pd(p['extra_baggage_price']).toStringAsFixed(2)})'),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      // Individual Financial breakdown
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.85),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.grey.shade200),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'ITEM PRICE BREAKDOWN',
-                              style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 0.5),
-                            ),
-                            const SizedBox(height: 4),
-                            _finRow('Ticket & Transport Class', fareAndClass),
-                            if (discAmt > 0) _finRow('Discount ($discount)', -discAmt, color: const Color(0xFF16A34A)),
-                            if (voucherAmt > 0) _finRow('Voucher Share', -voucherAmt, color: const Color(0xFF16A34A)),
-                            if (pointsAmt > 0) _finRow('Gracia Points', -pointsAmt, color: const Color(0xFF16A34A)),
-                            if (webFee > 0) _finRow('Web Admin Fee', webFee, color: Colors.grey.shade700),
-                            if (txFee > 0) _finRow('Transaction Fee', txFee, color: Colors.grey.shade700),
-                            if (_pd(p['extra_baggage_price']) > 0) _finRow('Extra Baggage Fee', _pd(p['extra_baggage_price']), color: Colors.grey.shade700),
-                            const Divider(height: 10, thickness: 0.5),
-                            _finRow('Item Total', itemTotal,
-                                color: const Color(0xFFEE018D), bold: true),
-                          ],
-                        ),
-                      ),
-                      if (status == 'confirmed' || status == 'rebooked' || (p['is_rebooked'] == true)) ...[
-                        const SizedBox(height: 8),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              visualDensity: VisualDensity.compact,
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              side: const BorderSide(color: Color(0xFF1E293B)),
-                            ),
-                            icon: const Icon(Icons.picture_as_pdf, size: 14, color: Color(0xFF16A34A)),
-                            label: Text('Download Ticket (Item $itemNum)', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
-                            onPressed: () async {
-                              final pId = p['id'] ?? p['ticket_number'];
-                              if (pId != null) {
-                                final baseUrl = UserSession.getBaseUrl();
-                                final url = Uri.parse('$baseUrl/ticket/passenger/$pId');
-                                if (await canLaunchUrl(url)) {
-                                  await launchUrl(url, mode: LaunchMode.externalApplication);
-                                }
-                              }
-                            },
-                          ),
-                        ),
-                      ],
-                    ],
+                    const SizedBox(height: 8),
+                    ...refundedItems.map((p) => renderItemCard(p)),
                   ],
                 ),
               ),
             ),
-          );
-        }),
+          ],
+
+          // ── Section 3: Reschedule History ──
+          if (rebookedHistoryItems.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Card(
+              color: const Color(0xFFFAF5FF),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+                side: const BorderSide(color: Color(0xFFE9D5FF)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Row(
+                          children: [
+                            Text('🔄', style: TextStyle(fontSize: 16)),
+                            SizedBox(width: 6),
+                            Text('Rebooking & Reschedule History', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF6B21A8))),
+                          ],
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF3E8FF),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFD8B4FE)),
+                          ),
+                          child: Text('${rebookedHistoryItems.length} replaced', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF6B21A8))),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ...rebookedHistoryItems.map((p) => renderItemCard(p, isHistorical: true)),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
       ],
     );
   }

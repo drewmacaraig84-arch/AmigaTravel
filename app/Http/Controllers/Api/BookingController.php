@@ -382,8 +382,32 @@ class BookingController extends Controller
             $pArr['item_total'] = $p->getEffectiveItemTotal();
             $pArr['status_label'] = $p->getStatusLabel();
             $pArr['status_color'] = $p->getStatusColor();
+            $pArr['is_active_item'] = $p->isActiveBookingItem();
+            $pArr['is_refund_item'] = $p->isRefundItem();
+            $pArr['is_rebooked_history'] = $p->isRebookingHistoryItem();
             return $pArr;
         })->toArray();
+
+        $data['active_passengers'] = $booking->getActivePassengers()->map(function ($p) {
+            $pArr = $p->toArray();
+            $pArr['status_label'] = $p->getStatusLabel();
+            $pArr['status_color'] = $p->getStatusColor();
+            return $pArr;
+        })->values()->toArray();
+
+        $data['refunded_passengers'] = $booking->getRefundedPassengers()->map(function ($p) {
+            $pArr = $p->toArray();
+            $pArr['status_label'] = $p->getStatusLabel();
+            $pArr['status_color'] = $p->getStatusColor();
+            return $pArr;
+        })->values()->toArray();
+
+        $data['rebooked_passengers'] = $booking->getRebookedHistoryPassengers()->map(function ($p) {
+            $pArr = $p->toArray();
+            $pArr['status_label'] = $p->getStatusLabel();
+            $pArr['status_color'] = $p->getStatusColor();
+            return $pArr;
+        })->values()->toArray();
 
         return response()->json([
             'status' => 'success',

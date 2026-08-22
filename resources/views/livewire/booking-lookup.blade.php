@@ -359,176 +359,253 @@
                                 </div>
                             </div>
 
+                            @php
+                                $activePax = $booking->getActivePassengers();
+                                $refundedPax = $booking->getRefundedPassengers();
+                                $rebookedPax = $booking->getRebookedHistoryPassengers();
+                            @endphp
+
+                            {{-- 🟢 SECTION 1: ACTIVE PASSENGERS & BOARDING PASSES --}}
                             <div>
                                 <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
                                     <div>
-                                        <h3 class="font-semibold text-slate-900 text-base">Passenger Items</h3>
-                                        <p class="text-xs text-slate-500">Select specific passenger(s) to cancel, refund, or rebook</p>
+                                        <h3 class="font-semibold text-slate-900 text-base flex items-center gap-2">
+                                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
+                                            Active Travel Itinerary & Boarding Passes
+                                        </h3>
+                                        <p class="text-xs text-slate-500">Active passengers travelling on this schedule</p>
                                     </div>
-                                    <div class="flex items-center gap-2">
-                                        <button type="button" wire:click="selectAllPassengers" class="text-xs font-semibold text-pink-600 hover:text-pink-700 bg-pink-50 hover:bg-pink-100 px-3 py-1.5 rounded-lg border border-pink-200 transition">
-                                            Select All
-                                        </button>
-                                        <button type="button" wire:click="deselectAllPassengers" class="text-xs font-semibold text-slate-600 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg border border-slate-200 transition">
-                                            Deselect
-                                        </button>
-                                    </div>
+                                    @if($activePax->isNotEmpty())
+                                        <div class="flex items-center gap-2">
+                                            <button type="button" wire:click="selectAllPassengers" class="text-xs font-semibold text-pink-600 hover:text-pink-700 bg-pink-50 hover:bg-pink-100 px-3 py-1.5 rounded-lg border border-pink-200 transition">
+                                                Select All
+                                            </button>
+                                            <button type="button" wire:click="deselectAllPassengers" class="text-xs font-semibold text-slate-600 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg border border-slate-200 transition">
+                                                Deselect
+                                            </button>
+                                        </div>
+                                    @endif
                                 </div>
-                                <div class="space-y-3">
-                                    @foreach($booking->passengers->sortBy('item_number') as $passenger)
-                                        @php
-                                            $pItemNum = (int) ($passenger->item_number ?? 1);
-                                            $pStatus = $passenger->status ?? 'pending';
-                                            $isActionLocked = in_array($pStatus, ['refund_pending', 'refunded', 'rebooking_pending', 'rebooked', 'cancelled', 'operator_cancelled'], true);
-                                            $isSelected = in_array($pItemNum, array_map('intval', $selectedPassengerItems), true) && ! $isActionLocked;
-                                            $pStatusLabel = $passenger->getStatusLabel();
-                                            $itemStatusConfig = [
-                                                'pending'            => ['bg' => '#fef3c7', 'text' => '#92400e', 'border' => '#fde68a'],
-                                                'confirmed'          => ['bg' => '#dcfce7', 'text' => '#166534', 'border' => '#86efac'],
-                                                'cancelled'          => ['bg' => '#fee2e2', 'text' => '#991b1b', 'border' => '#fca5a5'],
-                                                'operator_cancelled' => ['bg' => '#fee2e2', 'text' => '#991b1b', 'border' => '#fca5a5'],
-                                                'refund_pending'     => ['bg' => '#ffedd5', 'text' => '#9a3412', 'border' => '#fdba74'],
-                                                'refunded'           => ['bg' => '#dbeafe', 'text' => '#1e40af', 'border' => '#93c5fd'],
-                                                'rebooking_pending'  => ['bg' => '#ede9fe', 'text' => '#5b21b6', 'border' => '#c4b5fd'],
-                                                'rebooked'           => ['bg' => '#ccfbf1', 'text' => '#134e4a', 'border' => '#6ee7b7'],
-                                                'operator_rebooking' => ['bg' => '#e0e7ff', 'text' => '#3730a3', 'border' => '#a5b4fc'],
-                                            ];
-                                            $pStyle = $itemStatusConfig[$pStatus] ?? $itemStatusConfig['pending'];
-                                            $fareAndClass = $passenger->getEffectiveFareAndClass();
-                                            $webFee = $passenger->getEffectiveWebAdminFee();
-                                            $txFee = $passenger->getEffectiveTransactionFee();
-                                            $itemTotal = $passenger->getEffectiveItemTotal();
-                                        @endphp
-                                        <div x-data="{ expanded: false }" class="rounded-2xl border transition-all duration-200 {{ $isSelected ? 'ring-2 ring-pink-500 shadow-sm' : '' }}" style="background: {{ $pStyle['bg'] }}18; border-color: {{ $isSelected ? '#ec4899' : $pStyle['border'] }};">
-                                            {{-- Header row: Checkbox + Item # + Name + Status + Collapse Toggle --}}
-                                            <div class="p-3.5 sm:p-4 flex items-center justify-between gap-2 border-b border-black/5 cursor-pointer" @click="expanded = !expanded">
-                                                <div class="flex items-center gap-3 min-w-0">
-                                                    {{-- Checkbox --}}
-                                                    <div @click.stop class="flex items-center">
-                                                        <input type="checkbox"
-                                                            wire:model.live="selectedPassengerItems"
-                                                            value="{{ $pItemNum }}"
-                                                            id="pax_item_{{ $pItemNum }}"
-                                                            @if($isActionLocked) disabled @endif
-                                                            class="w-4 h-4 rounded text-pink-600 focus:ring-pink-500 border-slate-300 {{ $isActionLocked ? 'opacity-35 cursor-not-allowed bg-slate-100' : 'cursor-pointer' }}"
-                                                            @if($isActionLocked) title="This passenger is already {{ $pStatusLabel }} and cannot be cancelled or rebooked." @endif>
-                                                    </div>
-                                                    {{-- Item Number badge --}}
-                                                    <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-900 text-white text-xs font-bold shrink-0">
-                                                        {{ $pItemNum }}
-                                                    </span>
-                                                    {{-- Name and Ticket # --}}
-                                                    <div class="min-w-0">
-                                                        <div class="flex items-center gap-2">
-                                                            <label for="{{ $isActionLocked ? '' : 'pax_item_' . $pItemNum }}" @click.stop class="font-semibold {{ $isActionLocked ? 'text-slate-500 cursor-not-allowed' : 'text-slate-900 cursor-pointer hover:text-pink-600' }} text-sm leading-tight truncate">
-                                                                {{ $passenger->name ?? 'Passenger' }}
-                                                            </label>
-                                                            <span class="text-[11px] font-medium px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
-                                                                {{ ucfirst($passenger->type ?? 'adult') }}
-                                                            </span>
+
+                                @if($activePax->isEmpty())
+                                    <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 text-center text-sm text-slate-500">
+                                        All passenger items on this booking have been refunded or rescheduled.
+                                    </div>
+                                @else
+                                    <div class="space-y-3">
+                                        @foreach($activePax->sortBy('item_number') as $passenger)
+                                            @php
+                                                $pItemNum = (int) ($passenger->item_number ?? 1);
+                                                $pStatus = $passenger->status ?? 'pending';
+                                                $isActionLocked = ! $passenger->isActiveBookingItem();
+                                                $isSelected = in_array($pItemNum, array_map('intval', $selectedPassengerItems), true) && ! $isActionLocked;
+                                                $pStatusLabel = $passenger->getStatusLabel();
+                                                $itemStatusConfig = [
+                                                    'pending'            => ['bg' => '#fef3c7', 'text' => '#92400e', 'border' => '#fde68a'],
+                                                    'confirmed'          => ['bg' => '#dcfce7', 'text' => '#166534', 'border' => '#86efac'],
+                                                    'operator_rebooking' => ['bg' => '#e0e7ff', 'text' => '#3730a3', 'border' => '#a5b4fc'],
+                                                ];
+                                                $pStyle = $itemStatusConfig[$pStatus] ?? ['bg' => '#dcfce7', 'text' => '#166534', 'border' => '#86efac'];
+                                                $fareAndClass = $passenger->getEffectiveFareAndClass();
+                                                $webFee = $passenger->getEffectiveWebAdminFee();
+                                                $txFee = $passenger->getEffectiveTransactionFee();
+                                                $itemTotal = $passenger->getEffectiveItemTotal();
+                                            @endphp
+                                            <div x-data="{ expanded: false }" class="rounded-2xl border transition-all duration-200 {{ $isSelected ? 'ring-2 ring-pink-500 shadow-sm' : '' }}" style="background: {{ $pStyle['bg'] }}18; border-color: {{ $isSelected ? '#ec4899' : $pStyle['border'] }};">
+                                                {{-- Header row --}}
+                                                <div class="p-3.5 sm:p-4 flex items-center justify-between gap-2 border-b border-black/5 cursor-pointer" @click="expanded = !expanded">
+                                                    <div class="flex items-center gap-3 min-w-0">
+                                                        {{-- Checkbox --}}
+                                                        <div @click.stop class="flex items-center">
+                                                            <input type="checkbox"
+                                                                wire:model.live="selectedPassengerItems"
+                                                                value="{{ $pItemNum }}"
+                                                                id="pax_item_{{ $pItemNum }}"
+                                                                @if($isActionLocked) disabled @endif
+                                                                class="w-4 h-4 rounded text-pink-600 focus:ring-pink-500 border-slate-300 {{ $isActionLocked ? 'opacity-35 cursor-not-allowed bg-slate-100' : 'cursor-pointer' }}">
                                                         </div>
-                                                        @if($passenger->ticket_number)
-                                                            <p class="text-xs text-slate-400 font-mono leading-tight mt-0.5">{{ $passenger->ticket_number }}</p>
-                                                        @endif
+                                                        {{-- Item Number badge --}}
+                                                        <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-900 text-white text-xs font-bold shrink-0">
+                                                            {{ $pItemNum }}
+                                                        </span>
+                                                        {{-- Name and Ticket # --}}
+                                                        <div class="min-w-0">
+                                                            <div class="flex items-center gap-2">
+                                                                <label for="{{ $isActionLocked ? '' : 'pax_item_' . $pItemNum }}" @click.stop class="font-semibold text-slate-900 cursor-pointer hover:text-pink-600 text-sm leading-tight truncate">
+                                                                    {{ $passenger->name ?? 'Passenger' }}
+                                                                </label>
+                                                                <span class="text-[11px] font-medium px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                                                                    {{ ucfirst($passenger->type ?? 'adult') }}
+                                                                </span>
+                                                            </div>
+                                                            @if($passenger->ticket_number)
+                                                                <p class="text-xs text-slate-400 font-mono leading-tight mt-0.5">{{ $passenger->ticket_number }}</p>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                    <div class="flex items-center gap-2 shrink-0">
+                                                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold" style="background: {{ $pStyle['bg'] }}; color: {{ $pStyle['text'] }}; border: 1px solid {{ $pStyle['border'] }};">
+                                                            {{ $pStatusLabel }}
+                                                        </span>
+                                                        <span class="text-xs font-bold text-slate-900 hidden sm:inline-block">
+                                                            ₱{{ number_format($itemTotal, 2) }}
+                                                        </span>
+                                                        <button type="button" @click.stop="expanded = !expanded" class="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-black/5 transition">
+                                                            <svg class="w-4 h-4 transition-transform duration-200" :class="expanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                                            </svg>
+                                                        </button>
                                                     </div>
                                                 </div>
-                                                <div class="flex items-center gap-2 shrink-0">
-                                                    {{-- Status Chip --}}
-                                                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold" style="background: {{ $pStyle['bg'] }}; color: {{ $pStyle['text'] }}; border: 1px solid {{ $pStyle['border'] }};">
-                                                        {{ $pStatusLabel }}
-                                                    </span>
-                                                    {{-- Item Total Preview --}}
-                                                    <span class="text-xs font-bold text-slate-900 hidden sm:inline-block">
-                                                        ₱{{ number_format($itemTotal, 2) }}
-                                                    </span>
-                                                    {{-- Expand/Collapse Toggle Button --}}
-                                                    <button type="button" @click.stop="expanded = !expanded" class="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-black/5 transition">
-                                                        <svg class="w-4 h-4 transition-transform duration-200" :class="expanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                                        </svg>
-                                                    </button>
-                                                </div>
-                                            </div>
 
-                                            {{-- Collapsible Body --}}
-                                            <div x-show="expanded" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" class="p-3.5 sm:p-4 pt-3 space-y-3">
-                                                {{-- Details row --}}
-                                                <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600 bg-white/50 p-2.5 rounded-xl border border-black/5">
-                                                    <span><span class="font-medium text-slate-500">Type:</span> {{ ucfirst($passenger->type ?? 'adult') }}</span>
-                                                    @if($passenger->birthdate)
-                                                        <span><span class="font-medium text-slate-500">Bday:</span> {{ $passenger->birthdate->format('Y-m-d') }}</span>
-                                                    @endif
-                                                    @if($passenger->discount?->name)
-                                                        <span><span class="font-medium text-slate-500">Discount:</span> {{ $passenger->discount->name }}</span>
-                                                    @endif
-                                                    @if($passenger->id_number)
-                                                        <span><span class="font-medium text-slate-500">ID#:</span> {{ $passenger->id_number }}</span>
-                                                    @endif
-                                                    @if($passenger->hasPassportInfo())
-                                                        <span class="inline-flex items-center gap-1 font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                                                            <span>🛂 Passport:</span>
-                                                            <span class="font-mono">{{ $passenger->passport_number }}</span>
-                                                            @if($passenger->passport_country)
-                                                                <span class="font-normal text-emerald-600">({{ $passenger->passport_country }})</span>
-                                                            @endif
-                                                            @if($passenger->passport_expiry_date)
-                                                                <span class="font-normal text-emerald-600">&bull; Exp: {{ $passenger->passport_expiry_date->format('Y-m-d') }}</span>
-                                                            @endif
-                                                        </span>
-                                                    @endif
-                                                    @if($passenger->hasExtraBaggage())
-                                                        <span class="inline-flex items-center gap-1 font-semibold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-md border border-sky-200">
-                                                            <span>🧳 Baggage:</span>
-                                                            <span>{{ $passenger->extra_baggage_weight }}</span>
-                                                            <span class="font-normal text-sky-600">(+₱{{ number_format($passenger->extra_baggage_price, 2) }})</span>
-                                                        </span>
-                                                    @endif
-                                                </div>
-
-                                                {{-- Individual Financial breakdown --}}
-                                                <div class="rounded-xl bg-white/90 border border-slate-200 px-3.5 py-2.5 space-y-1 shadow-sm">
-                                                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Item Price Breakdown</p>
-                                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-xs text-slate-600">
-                                                        <div class="flex justify-between"><span class="text-slate-500">Ticket & Transport Class</span><span class="font-medium">₱{{ number_format($fareAndClass, 2) }}</span></div>
-                                                        @if($passenger->discount_amount > 0)
-                                                            <div class="flex justify-between"><span class="text-slate-500">Discount ({{ $passenger->discount?->name ?? 'Discount' }})</span><span class="text-green-600 font-medium">-₱{{ number_format($passenger->discount_amount, 2) }}</span></div>
+                                                {{-- Collapsible Body --}}
+                                                <div x-show="expanded" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" class="p-3.5 sm:p-4 pt-3 space-y-3">
+                                                    {{-- Details row --}}
+                                                    <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600 bg-white/50 p-2.5 rounded-xl border border-black/5">
+                                                        <span><span class="font-medium text-slate-500">Type:</span> {{ ucfirst($passenger->type ?? 'adult') }}</span>
+                                                        @if($passenger->birthdate)
+                                                            <span><span class="font-medium text-slate-500">Bday:</span> {{ $passenger->birthdate->format('Y-m-d') }}</span>
                                                         @endif
-                                                        @if($passenger->voucher_discount_share > 0)
-                                                            <div class="flex justify-between"><span class="text-slate-500">Voucher Share</span><span class="text-green-600 font-medium">-₱{{ number_format($passenger->voucher_discount_share, 2) }}</span></div>
+                                                        @if($passenger->discount?->name)
+                                                            <span><span class="font-medium text-slate-500">Discount:</span> {{ $passenger->discount->name }}</span>
                                                         @endif
-                                                        @if($passenger->points_discount_share > 0)
-                                                            <div class="flex justify-between"><span class="text-slate-500">Gracia Points</span><span class="text-green-600 font-medium">-₱{{ number_format($passenger->points_discount_share, 2) }}</span></div>
+                                                        @if($passenger->id_number)
+                                                            <span><span class="font-medium text-slate-500">ID#:</span> {{ $passenger->id_number }}</span>
                                                         @endif
-                                                        @if($webFee > 0)
-                                                            <div class="flex justify-between"><span class="text-slate-500">Web Admin Fee</span><span class="font-medium text-slate-600">₱{{ number_format($webFee, 2) }}</span></div>
-                                                        @endif
-                                                        @if($txFee > 0)
-                                                            <div class="flex justify-between"><span class="text-slate-500">Transaction Fee</span><span class="font-medium text-slate-600">₱{{ number_format($txFee, 2) }}</span></div>
+                                                        @if($passenger->hasPassportInfo())
+                                                            <span class="inline-flex items-center gap-1 font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                                                                <span>🛂 Passport:</span>
+                                                                <span class="font-mono">{{ $passenger->passport_number }}</span>
+                                                            </span>
                                                         @endif
                                                         @if($passenger->hasExtraBaggage())
-                                                            <div class="flex justify-between"><span class="text-slate-500">Extra Baggage Fee</span><span class="font-medium text-slate-600">₱{{ number_format($passenger->extra_baggage_price, 2) }}</span></div>
+                                                            <span class="inline-flex items-center gap-1 font-semibold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-md border border-sky-200">
+                                                                <span>🧳 Baggage:</span>
+                                                                <span>{{ $passenger->extra_baggage_weight }}</span>
+                                                                <span class="font-normal text-sky-600">(+₱{{ number_format($passenger->extra_baggage_price, 2) }})</span>
+                                                            </span>
                                                         @endif
                                                     </div>
-                                                    <div class="flex justify-between font-bold text-slate-900 text-xs pt-1.5 mt-1 border-t border-slate-100">
-                                                        <span>Item Total</span>
-                                                        <span style="color:#ee018d;" class="text-sm">₱{{ number_format($itemTotal, 2) }}</span>
+
+                                                    {{-- Individual Financial breakdown --}}
+                                                    <div class="rounded-xl bg-white/90 border border-slate-200 px-3.5 py-2.5 space-y-1 shadow-sm">
+                                                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Item Price Breakdown</p>
+                                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-xs text-slate-600">
+                                                            <div class="flex justify-between"><span class="text-slate-500">Ticket & Transport Class</span><span class="font-medium">₱{{ number_format($fareAndClass, 2) }}</span></div>
+                                                            @if($passenger->discount_amount > 0)
+                                                                <div class="flex justify-between"><span class="text-slate-500">Discount ({{ $passenger->discount?->name ?? 'Discount' }})</span><span class="text-green-600 font-medium">-₱{{ number_format($passenger->discount_amount, 2) }}</span></div>
+                                                            @endif
+                                                            @if($passenger->voucher_discount_share > 0)
+                                                                <div class="flex justify-between"><span class="text-slate-500">Voucher Share</span><span class="text-green-600 font-medium">-₱{{ number_format($passenger->voucher_discount_share, 2) }}</span></div>
+                                                            @endif
+                                                            @if($passenger->points_discount_share > 0)
+                                                                <div class="flex justify-between"><span class="text-slate-500">Gracia Points</span><span class="text-green-600 font-medium">-₱{{ number_format($passenger->points_discount_share, 2) }}</span></div>
+                                                            @endif
+                                                            @if($webFee > 0)
+                                                                <div class="flex justify-between"><span class="text-slate-500">Web Admin Fee</span><span class="font-medium text-slate-600">₱{{ number_format($webFee, 2) }}</span></div>
+                                                            @endif
+                                                            @if($txFee > 0)
+                                                                <div class="flex justify-between"><span class="text-slate-500">Transaction Fee</span><span class="font-medium text-slate-600">₱{{ number_format($txFee, 2) }}</span></div>
+                                                            @endif
+                                                        </div>
+                                                        <div class="flex justify-between font-bold text-slate-900 text-xs pt-1.5 mt-1 border-t border-slate-100">
+                                                            <span>Item Total</span>
+                                                            <span style="color:#ee018d;" class="text-sm">₱{{ number_format($itemTotal, 2) }}</span>
+                                                        </div>
+                                                    </div>
+
+                                                    {{-- Action buttons for this active passenger item --}}
+                                                    @if(in_array($passenger->status, ['rebooked', 'confirmed']) && ($booking->status === 'confirmed' || $passenger->is_rebooked))
+                                                        <div class="flex items-center justify-end pt-1">
+                                                            <a href="{{ route('ticket.passenger-pdf', $passenger->id) }}" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white shadow-sm transition">
+                                                                <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                                                Download Ticket (Item {{ $pItemNum }})
+                                                            </a>
+                                                        </div>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @endif
+                            </div>
+
+                            {{-- 💰 SECTION 2: CANCELLED & REFUNDED ITEMS (IF ANY) --}}
+                            @if($refundedPax->isNotEmpty())
+                                <div class="rounded-2xl border border-amber-200 bg-amber-50/40 p-4 sm:p-5 space-y-3">
+                                    <div class="flex items-center justify-between flex-wrap gap-2">
+                                        <h3 class="font-semibold text-slate-900 text-base flex items-center gap-2">
+                                            <span class="text-amber-600">💰</span> Cancelled & Refunded Items
+                                        </h3>
+                                        <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                                            {{ $refundedPax->count() }} item(s) refunded
+                                        </span>
+                                    </div>
+                                    <p class="text-xs text-slate-600">These passenger items were cancelled and are no longer valid for travel.</p>
+                                    <div class="space-y-2">
+                                        @foreach($refundedPax->sortBy('item_number') as $rp)
+                                            <div class="rounded-xl bg-white p-3 border border-amber-200/80 flex items-center justify-between flex-wrap gap-3">
+                                                <div class="flex items-center gap-3">
+                                                    <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-100 text-amber-900 text-xs font-bold shrink-0 border border-amber-300">
+                                                        {{ $rp->item_number }}
+                                                    </span>
+                                                    <div>
+                                                        <p class="font-semibold text-slate-900 text-sm">{{ $rp->name ?? 'Passenger' }} <span class="text-xs text-slate-500 font-normal">({{ ucfirst($rp->type ?? 'adult') }})</span></p>
+                                                        <p class="text-xs text-slate-500">
+                                                            Refund: <strong class="text-amber-700">₱{{ number_format((float) $rp->refund_amount, 2) }}</strong>
+                                                            @if($rp->refund_destination) &bull; Sent to: {{ $rp->refund_destination }} @endif
+                                                            @if($rp->refund_reference) &bull; Ref: <strong class="text-slate-800">{{ $rp->refund_reference }}</strong> @endif
+                                                        </p>
                                                     </div>
                                                 </div>
-
-                                                {{-- Action buttons for this passenger item --}}
-                                                @if(in_array($passenger->status, ['rebooked', 'confirmed']) && ($booking->status === 'confirmed' || $passenger->is_rebooked))
-                                                    <div class="flex items-center justify-end pt-1">
-                                                        <a href="{{ route('ticket.passenger-pdf', $passenger->id) }}" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white shadow-sm transition">
-                                                            <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                                                            Download Ticket (Item {{ $pItemNum }})
+                                                <div class="flex items-center gap-2">
+                                                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold {{ $rp->refund_status === 'completed' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-amber-100 text-amber-800 border border-amber-300' }}">
+                                                        {{ $rp->refund_status === 'completed' ? 'Refund Disbursed' : 'Refund Pending' }}
+                                                    </span>
+                                                    @if($booking->transaction_number)
+                                                        <a href="{{ route('ticket.refund-acknowledgement', $booking->transaction_number) }}" target="_blank" class="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-white transition">
+                                                            Receipt
                                                         </a>
-                                                    </div>
-                                                @endif
+                                                    @endif
+                                                </div>
                                             </div>
-                                        </div>
-                                    @endforeach
+                                        @endforeach
+                                    </div>
                                 </div>
-                            </div>
+                            @endif
+
+                            {{-- 🔄 SECTION 3: RESCHEDULE / REBOOKING HISTORY (IF ANY) --}}
+                            @if($rebookedPax->isNotEmpty())
+                                <div class="rounded-2xl border border-purple-200 bg-purple-50/40 p-4 sm:p-5 space-y-3">
+                                    <div class="flex items-center justify-between flex-wrap gap-2">
+                                        <h3 class="font-semibold text-slate-900 text-base flex items-center gap-2">
+                                            <span class="text-purple-600">🔄</span> Rebooking & Reschedule History
+                                        </h3>
+                                        <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-purple-100 text-purple-800 border border-purple-300">
+                                            {{ $rebookedPax->count() }} item(s) replaced
+                                        </span>
+                                    </div>
+                                    <p class="text-xs text-slate-600">Original schedule tickets that have been rescheduled to a new itinerary.</p>
+                                    <div class="space-y-2">
+                                        @foreach($rebookedPax->sortBy('item_number') as $reb)
+                                            <div class="rounded-xl bg-white p-3 border border-purple-200/80 flex items-center justify-between flex-wrap gap-3">
+                                                <div class="flex items-center gap-3">
+                                                    <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-purple-100 text-purple-900 text-xs font-bold shrink-0 border border-purple-300">
+                                                        {{ $reb->item_number }}
+                                                    </span>
+                                                    <div>
+                                                        <p class="font-semibold text-slate-900 text-sm">{{ $reb->name ?? 'Passenger' }} <span class="text-xs text-slate-500 font-normal">({{ ucfirst($reb->type ?? 'adult') }})</span></p>
+                                                        <p class="text-xs text-purple-700 font-medium">Original ticket replaced & rescheduled to active journey</p>
+                                                    </div>
+                                                </div>
+                                                <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-purple-100 text-purple-800 border border-purple-300">
+                                                    Rescheduled
+                                                </span>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
 
                             @if($booking->accommodations->isNotEmpty())
                                 <div>

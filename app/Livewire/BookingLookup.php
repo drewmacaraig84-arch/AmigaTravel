@@ -164,9 +164,8 @@ class BookingLookup extends Component
         }
 
         if ($this->booking) {
-            // Default select all eligible passengers
-            $this->selectedPassengerItems = $this->booking->passengers
-                ->whereNotIn('status', ['cancelled', 'operator_cancelled', 'refunded'])
+            // Default select all active travelling passengers
+            $this->selectedPassengerItems = $this->booking->getActivePassengers()
                 ->pluck('item_number')
                 ->map(fn ($n) => (int) $n)
                 ->values()
@@ -196,8 +195,7 @@ class BookingLookup extends Component
         if (! $this->booking) {
             return;
         }
-        $this->selectedPassengerItems = $this->booking->passengers
-            ->filter(fn ($p) => ! in_array($p->status, ['refund_pending', 'refunded', 'rebooking_pending', 'rebooked', 'cancelled', 'operator_cancelled'], true))
+        $this->selectedPassengerItems = $this->booking->getActivePassengers()
             ->pluck('item_number')
             ->map(fn ($n) => (int) $n)
             ->values()
@@ -216,8 +214,8 @@ class BookingLookup extends Component
         }
 
         $pax = $this->booking->passengers->firstWhere('item_number', $itemNumber);
-        if ($pax && in_array($pax->status, ['refund_pending', 'refunded', 'rebooking_pending', 'rebooked', 'cancelled', 'operator_cancelled'], true)) {
-            // Cannot toggle locked items
+        if (! $pax || ! $pax->isActiveBookingItem()) {
+            // Cannot toggle locked/inactive items
             return;
         }
 
@@ -953,33 +951,56 @@ class BookingLookup extends Component
 
         $selectedItems = !empty($this->selectedPassengerItems)
             ? $this->selectedPassengerItems
-            : $this->booking->passengers->whereNotIn('status', ['cancelled', 'operator_cancelled', 'refunded'])->pluck('item_number')->toArray();
+            : $this->booking->getActivePassengers()->pluck('item_number')->toArray();
 
-        foreach ($this->booking->passengers as $p) {
-            if (in_array((int) $p->item_number, array_map('intval', $selectedItems), true)) {
+        $newlyCreatedItems = [];
+        $currentPassengers = $this->booking->passengers->values();
+
+        foreach ($currentPassengers as $p) {
+            if (in_array((int) $p->item_number, array_map('intval', $selectedItems), true) && $p->isActiveBookingItem()) {
+                $oldItemNumber = $p->item_number;
+
+                // 1. Mark original passenger item as rebooked/rescheduled (historical archive)
                 $p->update([
-                    'status'                            => \App\Models\Passenger::STATUS_REBOOKING_PENDING,
-                    'is_rebooked'                       => true,
-                    'rebooking_status'                  => 'pending',
-                    'rebooking_departure_date'          => $this->rebooking_departure_date,
-                    'rebooking_return_date'             => $this->rebooking_is_round_trip ? $this->rebooking_return_date : null,
-                    'preferred_replacement_schedule_id' => $this->rebooking_dep_schedule_id,
-                    'disruption_notes'                  => json_encode([
-                        'dep_schedule_id'      => $this->rebooking_dep_schedule_id,
-                        'dep_accommodation_id' => $this->rebooking_dep_accommodation_id,
-                        'ret_schedule_id'      => $this->rebooking_ret_schedule_id,
-                        'ret_accommodation_id' => $this->rebooking_ret_accommodation_id,
-                        'rate_diff'            => $this->rebooking_rate_diff,
-                        'surcharge'            => $this->rebooking_surcharge,
-                        'revalidation_fee'     => $this->rebooking_revalidation_fee,
-                        'total_paid'           => $this->rebooking_total_to_pay,
-                        'proof_path'           => $path,
-                    ]),
+                    'status'           => \App\Models\Passenger::STATUS_REBOOKED,
+                    'is_rebooked'      => true,
+                    'rebooking_status' => 'rescheduled',
                 ]);
+
+                // 2. Create the replacement passenger item (e.g. Item 3)
+                $nextItemNumber = $this->booking->getNextItemNumber();
+                $newPassenger = $p->replicate([
+                    'ticket_pdf_path', 'verified_at', 'verified_by_user_id',
+                ]);
+                $newPassenger->item_number = $nextItemNumber;
+                $newPassenger->ticket_number = null;
+                $newPassenger->status = \App\Models\Passenger::STATUS_REBOOKING_PENDING;
+                $newPassenger->is_rebooked = true;
+                $newPassenger->rebooking_status = 'pending';
+                $newPassenger->rebooking_departure_date = $this->rebooking_departure_date;
+                $newPassenger->rebooking_return_date = $this->rebooking_is_round_trip ? $this->rebooking_return_date : null;
+                $newPassenger->preferred_replacement_schedule_id = $this->rebooking_dep_schedule_id;
+                $newPassenger->disruption_notes = json_encode([
+                    'rebooked_from_item'   => $oldItemNumber,
+                    'rebooked_from_id'     => $p->id,
+                    'dep_schedule_id'      => $this->rebooking_dep_schedule_id,
+                    'dep_accommodation_id' => $this->rebooking_dep_accommodation_id,
+                    'ret_schedule_id'      => $this->rebooking_ret_schedule_id,
+                    'ret_accommodation_id' => $this->rebooking_ret_accommodation_id,
+                    'rate_diff'            => $this->rebooking_rate_diff,
+                    'surcharge'            => $this->rebooking_surcharge,
+                    'revalidation_fee'     => $this->rebooking_revalidation_fee,
+                    'total_paid'           => $this->rebooking_total_to_pay,
+                    'proof_path'           => $path,
+                ]);
+                $newPassenger->save();
+                $newlyCreatedItems[] = $nextItemNumber;
             }
         }
 
-        $allRebooked = $this->booking->passengers->every(fn ($p) => in_array($p->status, ['rebooking_pending', 'rebooked', 'cancelled', 'refunded'], true));
+        $allRebooked = $this->booking->passengers()->whereNotIn('status', ['cancelled', 'refunded'])->get()->every(fn ($p) => in_array($p->status, ['rebooking_pending', 'rebooked'], true));
+
+        $affectedDisplayItems = !empty($newlyCreatedItems) ? $newlyCreatedItems : $selectedItems;
 
         $this->booking->update([
             'is_rebooked' => true,
@@ -998,7 +1019,7 @@ class BookingLookup extends Component
                 'revalidation_fee' => $this->rebooking_revalidation_fee,
                 'total_paid' => $this->rebooking_total_to_pay,
                 'proof_path' => $path,
-                'affected_items' => $this->booking->getAffectedItemsLabel($selectedItems),
+                'affected_items' => $this->booking->getAffectedItemsLabel($affectedDisplayItems),
             ]),
         ]);
 

@@ -63,8 +63,7 @@ class BookingReschedule extends Component
     public function selectAllPassengers(): void
     {
         if (! $this->booking) return;
-        $this->selectedPassengerItems = $this->booking->passengers
-            ->whereNotIn('status', ['cancelled', 'operator_cancelled', 'refunded'])
+        $this->selectedPassengerItems = $this->booking->getActivePassengers()
             ->pluck('item_number')
             ->map(fn ($n) => (int) $n)
             ->values()
@@ -78,6 +77,11 @@ class BookingReschedule extends Component
 
     public function togglePassengerItem(int $itemNumber): void
     {
+        $targetPax = $this->booking?->passengers->firstWhere('item_number', $itemNumber);
+        if ($targetPax && ! $targetPax->isActiveBookingItem()) {
+            return;
+        }
+
         if (in_array($itemNumber, $this->selectedPassengerItems, true)) {
             $this->selectedPassengerItems = array_values(array_diff($this->selectedPassengerItems, [$itemNumber]));
         } else {

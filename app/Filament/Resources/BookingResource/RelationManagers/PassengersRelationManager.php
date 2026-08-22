@@ -86,7 +86,18 @@ class PassengersRelationManager extends RelationManager
                     ->color('primary'),
             ])
             ->filters([
-                //
+                Tables\Filters\SelectFilter::make('status')
+                    ->label('Item Status')
+                    ->options([
+                        'confirmed'          => 'Confirmed (Active)',
+                        'pending'            => 'Pending',
+                        'refund_pending'     => 'Refund Pending',
+                        'refunded'           => 'Refunded',
+                        'rebooking_pending'  => 'Rebooking Pending',
+                        'rebooked'           => 'Rebooked (Historical)',
+                        'cancelled'          => 'Cancelled',
+                        'operator_cancelled' => 'Cancelled by Operator',
+                    ]),
             ])
             ->headerActions([
                 Tables\Actions\CreateAction::make(),
@@ -98,7 +109,7 @@ class PassengersRelationManager extends RelationManager
                     ->color('success')
                     ->url(fn (Passenger $record): string => route('ticket.passenger', ['id' => $record->id]))
                     ->openUrlInNewTab()
-                    ->visible(fn (Passenger $record): bool => ! in_array($record->status, ['cancelled', 'refunded', 'operator_cancelled'])),
+                    ->visible(fn (Passenger $record): bool => $record->isActiveBookingItem() && in_array($record->status, ['confirmed', 'rebooked'])),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])
