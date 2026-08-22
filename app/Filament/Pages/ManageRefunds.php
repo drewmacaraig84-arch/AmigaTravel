@@ -14,6 +14,8 @@ use Filament\Infolists;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\ViewEntry;
 use Filament\Infolists\Infolist;
+use Filament\Infolists\Contracts\HasInfolists;
+use Filament\Infolists\Concerns\InteractsWithInfolists;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Tables;
@@ -28,9 +30,10 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
 
-class ManageRefunds extends Page implements HasTable
+class ManageRefunds extends Page implements HasTable, HasInfolists
 {
     use InteractsWithTable;
+    use InteractsWithInfolists;
 
     protected static ?string $navigationIcon = 'heroicon-o-banknotes';
 
@@ -82,7 +85,7 @@ class ManageRefunds extends Page implements HasTable
                     ->label('Transaction #')
                     ->searchable()
                     ->sortable()
-                    ->action('viewRefund')
+                    ->action(fn (Booking $record) => $this->mountTableAction('viewRefund', $record))
                     ->color('primary')
                     ->weight('bold'),
                 Tables\Columns\TextColumn::make('affected_items')
@@ -444,4 +447,10 @@ class ManageRefunds extends Page implements HasTable
                     ->openUrlInNewTab(),
             ]);
     }
+
+    public function viewRefund(Booking $record): void
+    {
+        $this->mountTableAction('viewRefund', $record);
+    }
 }
+
