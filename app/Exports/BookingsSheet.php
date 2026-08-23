@@ -54,6 +54,17 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
             $calcHotelFee = $booking->accommodations->count() > 0 ? (float) $settings->fee_per_accommodation : 0;
 
             if ($passengers->isEmpty()) {
+                $matches = false;
+                if ($this->title === 'Verified Bookings' && $booking->status === 'confirmed') $matches = true;
+                elseif ($this->title === 'Refunded Bookings' && in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount > 0) $matches = true;
+                elseif ($this->title === 'Rebooked Bookings' && ($booking->is_rebooked || filled($booking->rebooking_status))) $matches = true;
+                elseif ($this->title === 'Pending Bookings' && $booking->status === 'pending') $matches = true;
+                elseif ($this->title === 'Cancelled Bookings' && in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount <= 0) $matches = true;
+
+                if (! $matches) {
+                    continue;
+                }
+
                 $bTotal = (float) ($booking->transaction?->amount_paid ?: $booking->total_price);
                 if (in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount > 0) {
                     $bTotal = (float) $booking->refund_amount;
@@ -83,6 +94,23 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
                 }
             } else {
                 foreach ($passengers as $pIndex => $p) {
+                    $matches = false;
+                    if ($this->title === 'Verified Bookings') {
+                        $matches = $p->isActiveBookingItem() && in_array($p->status, ['confirmed']);
+                    } elseif ($this->title === 'Refunded Bookings') {
+                        $matches = $p->isRefundItem();
+                    } elseif ($this->title === 'Rebooked Bookings') {
+                        $matches = $p->isRebookingHistoryItem();
+                    } elseif ($this->title === 'Pending Bookings') {
+                        $matches = $p->status === 'pending';
+                    } elseif ($this->title === 'Cancelled Bookings') {
+                        $matches = $p->isCancelled() && (float) $p->refund_amount <= 0;
+                    }
+
+                    if (! $matches) {
+                        continue;
+                    }
+
                     $pBaseFare = $p->getEffectiveFareAmount();
                     $pAccFee = $p->getEffectiveAccommodationAmount();
                     $pVehFee = ($pIndex === 0 && $booking->has_vehicle ? (float) $booking->vehicle_price : 0.0);

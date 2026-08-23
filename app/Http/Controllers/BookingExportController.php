@@ -52,38 +52,35 @@ class BookingExportController extends Controller
 
         $bookings = $query->get();
 
+        $verifiedBookings = $bookings->filter(function ($booking) {
+            return ($booking->status === Booking::STATUS_CONFIRMED && !in_array($booking->status, [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED]))
+                || $booking->passengers->contains(fn ($p) => $p->isActiveBookingItem() && in_array($p->status, ['confirmed']));
+        });
+
+        $rebookedBookings = $bookings->filter(function ($booking) {
+            return $booking->is_rebooked || filled($booking->rebooking_status) || $booking->passengers->contains(fn ($p) => $p->isRebookingHistoryItem());
+        });
+
         $refundedBookings = $bookings->filter(function ($booking) {
             return (in_array($booking->status, [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED]) && (float) $booking->refund_amount > 0)
-                || $booking->passengers->contains(fn ($p) => (float) $p->refund_amount > 0 || in_array($p->status, ['refund_pending', 'refunded']));
+                || $booking->passengers->contains(fn ($p) => $p->isRefundItem());
         });
 
-        $rebookedBookings = $bookings->filter(function ($booking) use ($refundedBookings) {
-            return ($booking->is_rebooked || filled($booking->rebooking_status) || $booking->passengers->contains(fn ($p) => $p->is_rebooked || in_array($p->status, ['rebooked', 'rebooking_pending'])))
-                && ! $refundedBookings->contains('id', $booking->id);
-        });
-
-        $verifiedBookings = $bookings->filter(function ($booking) use ($refundedBookings, $rebookedBookings) {
-            return $booking->status === Booking::STATUS_CONFIRMED 
-                && ! $refundedBookings->contains('id', $booking->id)
-                && ! $rebookedBookings->contains('id', $booking->id);
-        });
-
-        $pendingBookings = $bookings->filter(function ($booking) use ($refundedBookings, $rebookedBookings) {
+        $pendingBookings = $bookings->filter(function ($booking) {
             return $booking->status === Booking::STATUS_PENDING 
-                && ! $refundedBookings->contains('id', $booking->id)
-                && ! $rebookedBookings->contains('id', $booking->id);
+                || $booking->passengers->contains(fn ($p) => $p->status === 'pending');
         });
 
-        $cancelledBookings = $bookings->filter(function ($booking) use ($refundedBookings, $rebookedBookings) {
+        $cancelledBookings = $bookings->filter(function ($booking) {
             return in_array($booking->status, [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED]) 
-                && ! $refundedBookings->contains('id', $booking->id)
-                && ! $rebookedBookings->contains('id', $booking->id);
+                && (float) $booking->refund_amount <= 0 
+                && ($booking->passengers->isEmpty() || $booking->passengers->every(fn($p) => $p->isCancelled() && (float)$p->refund_amount <= 0));
         });
 
         return [
-            'Refunded Bookings'  => $refundedBookings,
             'Verified Bookings'  => $verifiedBookings,
             'Rebooked Bookings'  => $rebookedBookings,
+            'Refunded Bookings'  => $refundedBookings,
             'Pending Bookings'   => $pendingBookings,
             'Cancelled Bookings' => $cancelledBookings,
         ];

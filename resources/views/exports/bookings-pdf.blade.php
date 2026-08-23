@@ -197,13 +197,56 @@
 
     @foreach($sections as $section)
         @php
-            $totalSectionItems = $section['items']->sum(function($b) {
-                return max(1, $b->passengers->count());
-            });
-        @endphp
-        <h2 class="{{ !$loop->first ? 'page-break' : '' }}">{{ $section['title'] }} ({{ $totalSectionItems }} items)</h2>
+            $sectionTitle = $section['title'];
+            $validSectionRows = collect();
 
-        @if($section['items']->count() > 0)
+            foreach ($section['items'] as $booking) {
+                $rawPassengers = $booking->passengers->sortBy('item_number');
+
+                if ($rawPassengers->isEmpty()) {
+                    $matches = false;
+                    if ($sectionTitle === 'Verified Bookings' && $booking->status === 'confirmed') $matches = true;
+                    elseif ($sectionTitle === 'Refunded Bookings' && in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount > 0) $matches = true;
+                    elseif ($sectionTitle === 'Rebooked Bookings' && ($booking->is_rebooked || filled($booking->rebooking_status))) $matches = true;
+                    elseif ($sectionTitle === 'Pending Bookings' && $booking->status === 'pending') $matches = true;
+                    elseif ($sectionTitle === 'Cancelled Bookings' && in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount <= 0) $matches = true;
+
+                    if ($matches) {
+                        $validSectionRows->push((object)[
+                            'booking' => $booking,
+                            'passenger' => null,
+                            'pIndex' => 0,
+                        ]);
+                    }
+                } else {
+                    foreach ($rawPassengers as $pIndex => $p) {
+                        $matches = false;
+                        if ($sectionTitle === 'Verified Bookings') {
+                            $matches = $p->isActiveBookingItem() && in_array($p->status, ['confirmed']);
+                        } elseif ($sectionTitle === 'Refunded Bookings') {
+                            $matches = $p->isRefundItem();
+                        } elseif ($sectionTitle === 'Rebooked Bookings') {
+                            $matches = $p->isRebookingHistoryItem();
+                        } elseif ($sectionTitle === 'Pending Bookings') {
+                            $matches = $p->status === 'pending';
+                        } elseif ($sectionTitle === 'Cancelled Bookings') {
+                            $matches = $p->isCancelled() && (float) $p->refund_amount <= 0;
+                        }
+
+                        if ($matches) {
+                            $validSectionRows->push((object)[
+                                'booking' => $booking,
+                                'passenger' => $p,
+                                'pIndex' => $pIndex,
+                            ]);
+                        }
+                    }
+                }
+            }
+        @endphp
+        <h2 class="{{ !$loop->first ? 'page-break' : '' }}">{{ $section['title'] }} ({{ $validSectionRows->count() }} items)</h2>
+
+        @if($validSectionRows->count() > 0)
             @php
                 $secTotal          = 0;
                 $secVoucherTotal   = 0;
@@ -247,10 +290,12 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($section['items'] as $booking)
+                    @foreach($validSectionRows as $row)
                         @php
+                            $booking = $row->booking;
+                            $p = $row->passenger;
+                            $pIndex = $row->pIndex;
                             $ferryRoute = $booking->schedule?->ferryRoute;
-                            $passengers = $booking->passengers->sortBy('item_number');
 
                             $rebookingFee = 0;
                             if ($booking->transaction && (float) $booking->transaction->rebooking_fee > 0) {
@@ -269,7 +314,7 @@
                             $calcHotelFee = $booking->accommodations->count() > 0 ? (float) $settings->fee_per_accommodation : 0;
                         @endphp
 
-                        @if($passengers->isEmpty())
+                        @if(! $p)
                             @php
                                 $bTotal = (float) ($booking->transaction?->amount_paid ?: $booking->total_price);
                                 if (in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount > 0) {
@@ -318,79 +363,77 @@
                                 <td>{{ number_format($bTotal, 2) }}</td>
                             </tr>
                         @else
-                            @foreach($passengers as $pIndex => $p)
-                                @php
-                                    $pBaseFare = $p->getEffectiveFareAmount();
-                                    $pAccFee = $p->getEffectiveAccommodationAmount();
-                                    $pVehFee = ($pIndex === 0 && $booking->has_vehicle ? (float) $booking->vehicle_price : 0.0);
-                                    $pBagFee = (float) $p->extra_baggage_price;
-                                    $pAdminFee = $p->getEffectiveWebAdminFee();
-                                    $pTxnFee = $p->getEffectiveTransactionFee();
-                                    $pHotelFee = ($pIndex === 0 ? $calcHotelFee : 0.0);
-                                    $pRebookFee = ($pIndex === 0 ? $rebookingFee : 0.0);
-                                    $pCancelFee = ((float) $p->cancellation_fee > 0 ? (float) $p->cancellation_fee : ($pIndex === 0 ? (float) $booking->cancellation_fee : 0.0));
-                                    $pPaxDisc = (float) $p->discount_amount;
-                                    $pVoucherDisc = (float) $p->voucher_discount_share;
-                                    $pPointsDisc = (float) $p->points_discount_share;
-                                    
-                                    $pItemTotal = $p->getEffectiveItemTotal() + $pVehFee + $pHotelFee + $pRebookFee;
-                                    if ((float) $p->refund_amount > 0) {
-                                        $pItemTotal = (float) $p->refund_amount;
-                                    } elseif (in_array($booking->status, ['cancelled', 'operator_cancelled']) && (float) $booking->refund_amount > 0 && (float) $p->refund_amount <= 0) {
-                                        $pItemTotal = (float) ($booking->refund_amount / max(1, $passengers->count()));
-                                    }
+                            @php
+                                $pBaseFare = $p->getEffectiveFareAmount();
+                                $pAccFee = $p->getEffectiveAccommodationAmount();
+                                $pVehFee = ($pIndex === 0 && $booking->has_vehicle ? (float) $booking->vehicle_price : 0.0);
+                                $pBagFee = (float) $p->extra_baggage_price;
+                                $pAdminFee = $p->getEffectiveWebAdminFee();
+                                $pTxnFee = $p->getEffectiveTransactionFee();
+                                $pHotelFee = ($pIndex === 0 ? $calcHotelFee : 0.0);
+                                $pRebookFee = ($pIndex === 0 ? $rebookingFee : 0.0);
+                                $pCancelFee = ((float) $p->cancellation_fee > 0 ? (float) $p->cancellation_fee : ($pIndex === 0 ? (float) $booking->cancellation_fee : 0.0));
+                                $pPaxDisc = (float) $p->discount_amount;
+                                $pVoucherDisc = (float) $p->voucher_discount_share;
+                                $pPointsDisc = (float) $p->points_discount_share;
+                                
+                                $pItemTotal = $p->getEffectiveItemTotal() + $pVehFee + $pHotelFee + $pRebookFee;
+                                if ((float) $p->refund_amount > 0) {
+                                    $pItemTotal = (float) $p->refund_amount;
+                                } elseif (in_array($booking->status, ['cancelled', 'operator_cancelled']) && (float) $booking->refund_amount > 0 && (float) $p->refund_amount <= 0) {
+                                    $pItemTotal = (float) ($booking->refund_amount / max(1, $booking->passengers->count()));
+                                }
 
-                                    $statusStr = $p->getStatusLabel();
+                                $statusStr = $p->getStatusLabel();
 
-                                    $secBaseFare += $pBaseFare;
-                                    $secAccFee += $pAccFee;
-                                    $secVehicleFee += $pVehFee;
-                                    $secBaggageFee += $pBagFee;
-                                    $secAdminFee += $pAdminFee;
-                                    $secTransactionFee += $pTxnFee;
-                                    $secHotelFee += $pHotelFee;
-                                    $secRebookingFee += $pRebookFee;
-                                    $secCancellationFee += $pCancelFee;
-                                    $secPassengerDiscount += $pPaxDisc;
-                                    $secVoucherTotal += $pVoucherDisc;
-                                    $secPointsTotal += $pPointsDisc;
-                                    $secTotal += $pItemTotal;
-                                @endphp
-                                <tr>
-                                    <td>{{ $booking->transaction_number }}</td>
-                                    <td>Item {{ $p->item_number ?? ($pIndex + 1) }}</td>
-                                    <td>{{ $p->name ?? $booking->client_name }}</td>
-                                    <td>{{ $booking->client_phone }}</td>
-                                    <td>{{ $booking->origin }}</td>
-                                    <td>{{ $booking->destination }}</td>
-                                    <td>{{ $booking->departure_date?->format('M d, y') }}</td>
-                                    <td>{{ $booking->return_date?->format('M d, y') ?? '-' }}</td>
-                                    <td>{{ $ferryRoute?->mode ?? $booking->schedule_service ?? '-' }}</td>
-                                    <td>{{ $ferryRoute?->operator ?? '-' }}</td>
-                                    <td>
-                                        <span class="status status-{{ strtolower(str_replace(' ', '-', $statusStr)) }}">
-                                            {{ $statusStr }}
-                                        </span>
-                                    </td>
-                                    <td>{{ $booking->transaction?->payment_reference ?? '-' }}</td>
-                                    <td>{{ number_format($pBaseFare, 2) }}</td>
-                                    <td>{{ number_format($pAccFee, 2) }}</td>
-                                    <td>{{ number_format($pVehFee, 2) }}</td>
-                                    <td>{{ number_format($pBagFee, 2) }}</td>
-                                    <td>{{ number_format($pAdminFee, 2) }}</td>
-                                    <td>{{ number_format($pTxnFee, 2) }}</td>
-                                    <td>{{ number_format($pHotelFee, 2) }}</td>
-                                    <td>{{ number_format($pRebookFee, 2) }}</td>
-                                    <td>{{ number_format($pCancelFee, 2) }}</td>
-                                    <td>{{ $p->discount?->name ?? '-' }}</td>
-                                    <td>{{ number_format($pPaxDisc, 2) }}</td>
-                                    <td>{{ $pIndex === 0 ? ($booking->voucher_code ?? '-') : '-' }}</td>
-                                    <td>{{ number_format($pVoucherDisc, 2) }}</td>
-                                    <td>{{ $pIndex === 0 ? ($booking->points_redeemed ?? '-') : '-' }}</td>
-                                    <td>{{ number_format($pPointsDisc, 2) }}</td>
-                                    <td>{{ number_format($pItemTotal, 2) }}</td>
-                                </tr>
-                            @endforeach
+                                $secBaseFare += $pBaseFare;
+                                $secAccFee += $pAccFee;
+                                $secVehicleFee += $pVehFee;
+                                $secBaggageFee += $pBagFee;
+                                $secAdminFee += $pAdminFee;
+                                $secTransactionFee += $pTxnFee;
+                                $secHotelFee += $pHotelFee;
+                                $secRebookingFee += $pRebookFee;
+                                $secCancellationFee += $pCancelFee;
+                                $secPassengerDiscount += $pPaxDisc;
+                                $secVoucherTotal += $pVoucherDisc;
+                                $secPointsTotal += $pPointsDisc;
+                                $secTotal += $pItemTotal;
+                            @endphp
+                            <tr>
+                                <td>{{ $booking->transaction_number }}</td>
+                                <td>Item {{ $p->item_number ?? ($pIndex + 1) }}</td>
+                                <td>{{ $p->name ?? $booking->client_name }}</td>
+                                <td>{{ $booking->client_phone }}</td>
+                                <td>{{ $booking->origin }}</td>
+                                <td>{{ $booking->destination }}</td>
+                                <td>{{ $booking->departure_date?->format('M d, y') }}</td>
+                                <td>{{ $booking->return_date?->format('M d, y') ?? '-' }}</td>
+                                <td>{{ $ferryRoute?->mode ?? $booking->schedule_service ?? '-' }}</td>
+                                <td>{{ $ferryRoute?->operator ?? '-' }}</td>
+                                <td>
+                                    <span class="status status-{{ strtolower(str_replace(' ', '-', $statusStr)) }}">
+                                        {{ $statusStr }}
+                                    </span>
+                                </td>
+                                <td>{{ $booking->transaction?->payment_reference ?? '-' }}</td>
+                                <td>{{ number_format($pBaseFare, 2) }}</td>
+                                <td>{{ number_format($pAccFee, 2) }}</td>
+                                <td>{{ number_format($pVehFee, 2) }}</td>
+                                <td>{{ number_format($pBagFee, 2) }}</td>
+                                <td>{{ number_format($pAdminFee, 2) }}</td>
+                                <td>{{ number_format($pTxnFee, 2) }}</td>
+                                <td>{{ number_format($pHotelFee, 2) }}</td>
+                                <td>{{ number_format($pRebookFee, 2) }}</td>
+                                <td>{{ number_format($pCancelFee, 2) }}</td>
+                                <td>{{ $p->discount?->name ?? '-' }}</td>
+                                <td>{{ number_format($pPaxDisc, 2) }}</td>
+                                <td>{{ $pIndex === 0 ? ($booking->voucher_code ?? '-') : '-' }}</td>
+                                <td>{{ number_format($pVoucherDisc, 2) }}</td>
+                                <td>{{ $pIndex === 0 ? ($booking->points_redeemed ?? '-') : '-' }}</td>
+                                <td>{{ number_format($pPointsDisc, 2) }}</td>
+                                <td>{{ number_format($pItemTotal, 2) }}</td>
+                            </tr>
                         @endif
                     @endforeach
 
