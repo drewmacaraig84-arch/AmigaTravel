@@ -108,8 +108,8 @@ class BookingExportController extends Controller
         $options->set('defaultFont', 'DejaVu Sans');
 
         $dompdf = new Dompdf($options);
-        $dompdf->loadHtml($html);
-        $dompdf->setPaper('A4', 'landscape');
+        $dompdf->loadHtml($html, 'UTF-8');
+        $dompdf->setPaper('legal', 'landscape');
         $dompdf->render();
 
         $output = $dompdf->output();

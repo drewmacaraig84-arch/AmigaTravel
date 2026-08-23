@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <meta charset="UTF-8">
     <style>
         @page {
@@ -8,7 +9,7 @@
             margin: 8mm;
         }
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'DejaVu Sans', Arial, sans-serif;
             margin: 0;
             color: #333;
             font-size: 8px; /* Reduced font size to fit 27 columns */
@@ -425,19 +426,19 @@
             <table style="width: 100%; border: none; margin: 0; font-size: 8px;">
                 <tr>
                     <td style="border: none; padding: 2px 0;">SALES</td>
-                    <td style="border: none; padding: 2px 0; text-align: right; font-family: monospace;">{{ number_format($overallSales, 2) }}</td>
+                    <td style="border: none; padding: 2px 0; text-align: right;">{{ number_format($overallSales, 2) }}</td>
                 </tr>
                 <tr>
                     <td style="border: none; padding: 2px 0;">REVALIDATION / REBOOK</td>
-                    <td style="border: none; padding: 2px 0; text-align: right; font-family: monospace;">{{ number_format($overallRebookingFee, 2) }}</td>
+                    <td style="border: none; padding: 2px 0; text-align: right;">{{ number_format($overallRebookingFee, 2) }}</td>
                 </tr>
                 <tr>
                     <td style="border: none; padding: 2px 0;">REFUND RETAINED (FEES &amp; SURCHARGE)</td>
-                    <td style="border: none; padding: 2px 0; text-align: right; font-family: monospace;">{{ number_format($overallRefundRetained, 2) }}</td>
+                    <td style="border: none; padding: 2px 0; text-align: right;">{{ number_format($overallRefundRetained, 2) }}</td>
                 </tr>
                 <tr style="border-top: 1.5px solid #2c3e50; font-weight: bold; font-size: 9px; background: #edf2f7;">
                     <td style="border: none; padding: 4px 2px;">TO BE REMITTED AMOUNT</td>
-                    <td style="border: none; padding: 4px 2px; text-align: right; font-family: monospace; color: #1e3a8a;">₱{{ number_format($toBeRemittedAmount, 2) }}</td>
+                    <td style="border: none; padding: 4px 2px; text-align: right; color: #1e3a8a;">&#8369;{{ number_format($toBeRemittedAmount, 2) }}</td>
                 </tr>
             </table>
         </div>
@@ -466,7 +467,7 @@
                 </tr>
                 <tr style="border-top: 1.5px solid #2c3e50; font-weight: bold; font-size: 9px; background: #edf2f7;">
                     <td style="border: none; padding: 4px 2px;">NET SALES VOLUME</td>
-                    <td style="border: none; padding: 4px 2px; text-align: right; font-family: monospace; color: #1e3a8a;">{{ $netSalesVolume }}</td>
+                    <td style="border: none; padding: 4px 2px; text-align: right; color: #1e3a8a;">{{ $netSalesVolume }}</td>
                 </tr>
             </table>
         </div>
