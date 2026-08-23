@@ -57,11 +57,15 @@
             font-weight: bold;
             font-size: 6px;
         }
-        .status-confirmed        { background-color: #27ae60; color: white; }
-        .status-pending          { background-color: #f39c12; color: white; }
-        .status-cancelled        { background-color: #e74c3c; color: white; }
-        .status-operator-cancelled { background-color: #c0392b; color: white; }
-        .status-refunded         { background-color: #8e44ad; color: white; }
+        .status-confirmed          { background-color: #27ae60; color: #ffffff; }
+        .status-rebooked           { background-color: #2980b9; color: #ffffff; }
+        .status-rebooking-pending  { background-color: #0284c7; color: #ffffff; }
+        .status-operator-rebooking { background-color: #0369a1; color: #ffffff; }
+        .status-pending            { background-color: #f39c12; color: #ffffff; }
+        .status-refund-pending     { background-color: #d97706; color: #ffffff; }
+        .status-refunded           { background-color: #8e44ad; color: #ffffff; }
+        .status-cancelled          { background-color: #e74c3c; color: #ffffff; }
+        .status-operator-cancelled { background-color: #c0392b; color: #ffffff; }
         .totals-row td {
             background-color: #ecf0f1;
             font-weight: bold;
