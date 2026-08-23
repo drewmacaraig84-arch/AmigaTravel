@@ -66,6 +66,8 @@ class Passenger extends Model
         'refund_amount',
         'refund_status',
         'refund_destination',
+        'refund_id_image',
+        'refund_ticket_file',
         'refund_reference',
         'refund_proof',
         'refund_processed_at',

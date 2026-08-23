@@ -65,6 +65,8 @@ class Booking extends Model
         'cancellation_fee',
         'refund_amount',
         'refund_destination',
+        'refund_id_image',
+        'refund_ticket_file',
         'cancellation_window_expires_at',
         'is_rebooked',
         'rebooking_status',

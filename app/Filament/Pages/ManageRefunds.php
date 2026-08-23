@@ -175,6 +175,15 @@ class ManageRefunds extends Page implements HasTable, HasInfolists
                         'rejected' => 'danger',
                         default => 'warning',
                     }),
+                Tables\Columns\IconColumn::make('has_customer_docs')
+                    ->label('ID / Ticket')
+                    ->boolean()
+                    ->state(fn (Booking $record): bool => filled($record->refund_id_image) || filled($record->refund_ticket_file))
+                    ->trueIcon('heroicon-o-document-check')
+                    ->falseIcon('heroicon-o-minus')
+                    ->trueColor('success')
+                    ->falseColor('gray')
+                    ->tooltip(fn (Booking $record): string => (filled($record->refund_id_image) || filled($record->refund_ticket_file)) ? 'Customer uploaded ID or Original Ticket' : 'No customer documents uploaded'),
                 Tables\Columns\TextColumn::make('refund_reference')
                     ->label('Transfer Ref No.')
                     ->searchable()
@@ -225,6 +234,14 @@ class ManageRefunds extends Page implements HasTable, HasInfolists
                                     ->color(fn (Booking $record) => filled($record->service_cancellation_id) ? 'danger' : 'gray'),
                             ])
                             ->columns(3),
+
+                        Infolists\Components\Section::make('Customer Verification Documents (Valid ID & Ticket)')
+                            ->description('Documents submitted by the customer when requesting cancellation & refund.')
+                            ->schema([
+                                ViewEntry::make('customer_refund_docs_view')
+                                    ->label('')
+                                    ->view('filament.infolists.entries.refund-customer-docs'),
+                            ]),
 
                         Infolists\Components\Section::make('Financial Calculation')
                             ->schema([

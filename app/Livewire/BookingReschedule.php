@@ -29,6 +29,8 @@ class BookingReschedule extends Component
     public string $refund_bank_name = '';
     public string $refund_account_number = '';
     public string $refund_account_name = '';
+    public $refund_id_image = null;
+    public $refund_ticket_file = null;
 
     // Wizard State
     // Steps: departure_date, departure_schedule, departure_accommodation, return_date, return_schedule, return_accommodation, confirm
@@ -523,6 +525,8 @@ class BookingReschedule extends Component
             'refund_method' => 'required|string|in:GCash,Online Wallet,Bank Account',
             'refund_account_number' => 'required|string|max:50',
             'refund_account_name' => 'required|string|max:100',
+            'refund_id_image' => 'nullable|file|mimes:jpeg,png,jpg,webp,pdf|max:10240',
+            'refund_ticket_file' => 'nullable|file|mimes:jpeg,png,jpg,webp,pdf|max:10240',
         ];
 
         if (in_array($this->refund_method, ['Bank Account', 'Online Wallet'], true)) {
@@ -530,6 +534,16 @@ class BookingReschedule extends Component
         }
 
         $this->validate($rules);
+
+        $idImagePath = null;
+        if ($this->refund_id_image) {
+            $idImagePath = $this->refund_id_image->store('refund_docs/ids', 'public');
+        }
+
+        $ticketFilePath = null;
+        if ($this->refund_ticket_file) {
+            $ticketFilePath = $this->refund_ticket_file->store('refund_docs/tickets', 'public');
+        }
 
         $destinationParts = [];
         $destinationParts[] = "Method: " . $this->refund_method;
@@ -556,6 +570,8 @@ class BookingReschedule extends Component
                     'refund_status'      => 'pending',
                     'refund_amount'      => $pRefund,
                     'refund_destination' => $refundDestination,
+                    'refund_id_image'    => $idImagePath ?: $p->refund_id_image,
+                    'refund_ticket_file' => $ticketFilePath ?: $p->refund_ticket_file,
                 ]);
             }
 
@@ -565,12 +581,17 @@ class BookingReschedule extends Component
                 'status' => $allCancelled ? 'operator_cancelled' : $this->booking->status,
                 'disruption_status' => 'refund_requested',
                 'refund_destination' => $refundDestination,
+                'refund_id_image'    => $idImagePath ?: $this->booking->refund_id_image,
+                'refund_ticket_file' => $ticketFilePath ?: $this->booking->refund_ticket_file,
                 'refund_amount' => $this->booking->passengers->sum('refund_amount') ?: $netRefund,
             ]);
 
             if ($allCancelled && $this->booking->transaction) {
                 $this->booking->transaction->update(['payment_status' => 'cancelled']);
             }
+
+            $this->refund_id_image = null;
+            $this->refund_ticket_file = null;
 
             $this->loadBooking();
             $this->closeRefundForm();

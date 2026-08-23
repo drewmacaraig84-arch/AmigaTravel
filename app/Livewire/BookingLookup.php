@@ -31,6 +31,8 @@ class BookingLookup extends Component
     public string $refund_bank_name = '';
     public string $refund_account_number = '';
     public string $refund_account_name = '';
+    public $refund_id_image = null;
+    public $refund_ticket_file = null;
     public bool $rebookingRequested = false;
     public bool $rebookingPaid = false;
     public bool $rebooking_is_round_trip = false;
@@ -351,6 +353,11 @@ class BookingLookup extends Component
 
     public function confirmCancellation(): void
     {
+        $this->validate([
+            'refund_id_image' => 'nullable|file|mimes:jpeg,png,jpg,webp,pdf|max:10240',
+            'refund_ticket_file' => 'nullable|file|mimes:jpeg,png,jpg,webp,pdf|max:10240',
+        ]);
+
         if (blank($this->refund_account_number) && blank($this->refund_account_name) && filled($this->refund_destination)) {
             // Fallback for tests that set refund_destination directly
             $this->validate([
@@ -416,6 +423,16 @@ class BookingLookup extends Component
             return;
         }
 
+        $idImagePath = null;
+        if ($this->refund_id_image) {
+            $idImagePath = $this->refund_id_image->store('refund_docs/ids', 'public');
+        }
+
+        $ticketFilePath = null;
+        if ($this->refund_ticket_file) {
+            $ticketFilePath = $this->refund_ticket_file->store('refund_docs/tickets', 'public');
+        }
+
         $rawSelected = ! empty($this->selectedPassengerItems)
             ? $this->selectedPassengerItems
             : $eligiblePassengers->pluck('item_number')->toArray();
@@ -451,6 +468,8 @@ class BookingLookup extends Component
                     'refund_amount'      => $pRefund,
                     'cancellation_fee'   => $pFee,
                     'refund_destination' => $this->refund_destination,
+                    'refund_id_image'    => $idImagePath ?: $p->refund_id_image,
+                    'refund_ticket_file' => $ticketFilePath ?: $p->refund_ticket_file,
                     'refund_status'      => 'pending',
                 ]);
             }
@@ -466,6 +485,8 @@ class BookingLookup extends Component
                 'cancellation_fee'   => $totalCancellationFee,
                 'refund_amount'      => $this->booking->passengers->sum('refund_amount') ?: $totalRefundAmount,
                 'refund_destination' => $this->refund_destination,
+                'refund_id_image'    => $idImagePath ?: $this->booking->refund_id_image,
+                'refund_ticket_file' => $ticketFilePath ?: $this->booking->refund_ticket_file,
                 'refund_status'      => 'pending',
             ]);
             $this->booking->transaction?->update(['payment_status' => 'cancelled']);
@@ -474,10 +495,14 @@ class BookingLookup extends Component
             $this->booking->update([
                 'refund_amount'      => $this->booking->passengers->sum('refund_amount'),
                 'refund_destination' => $this->refund_destination,
+                'refund_id_image'    => $idImagePath ?: $this->booking->refund_id_image,
+                'refund_ticket_file' => $ticketFilePath ?: $this->booking->refund_ticket_file,
                 'refund_status'      => 'pending',
             ]);
         }
 
+        $this->refund_id_image = null;
+        $this->refund_ticket_file = null;
         $this->booking = $this->booking->fresh(['passengers.discount', 'accommodations', 'transaction']);
 
         try {

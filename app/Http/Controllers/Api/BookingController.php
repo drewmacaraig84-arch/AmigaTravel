@@ -189,7 +189,8 @@ class BookingController extends Controller
             $data['sla_voucher_note'] = $booking->getSlaVoucherNote(null, true);
             $data['refund_status'] = $booking->refund_status ?? ($booking->isRefundPending() ? 'pending' : null);
             $data['refund_message'] = $booking->getRefundMessage();
-            $data['refund_reference'] = $booking->refund_reference;
+            $data['refund_id_image_url'] = filled($booking->refund_id_image) ? storage_asset_path($booking->refund_id_image) : null;
+            $data['refund_ticket_file_url'] = filled($booking->refund_ticket_file) ? storage_asset_path($booking->refund_ticket_file) : null;
             $data['refund_proof_url'] = filled($booking->refund_proof) ? storage_asset_path($booking->refund_proof) : null;
             $data['refund_acknowledgement_url'] = (in_array($booking->status, ['cancelled', 'operator_cancelled']) && (float) $booking->refund_amount > 0)
                 ? route('ticket.refund-acknowledgement', ['transaction_number' => $booking->transaction_number])
@@ -385,6 +386,8 @@ class BookingController extends Controller
             $pArr['is_active_item'] = $p->isActiveBookingItem();
             $pArr['is_refund_item'] = $p->isRefundItem();
             $pArr['is_rebooked_history'] = $p->isRebookingHistoryItem();
+            $pArr['refund_id_image_url'] = filled($p->refund_id_image) ? storage_asset_path($p->refund_id_image) : null;
+            $pArr['refund_ticket_file_url'] = filled($p->refund_ticket_file) ? storage_asset_path($p->refund_ticket_file) : null;
             return $pArr;
         })->toArray();
 
@@ -577,7 +580,27 @@ class BookingController extends Controller
             ], 400);
         }
 
-        $request->validate(['refund_destination' => 'required|string|max:255']);
+        $request->validate([
+            'refund_destination' => 'required|string|max:255',
+            'id_image' => 'nullable|file|mimes:jpeg,png,jpg,webp,pdf|max:10240',
+            'refund_id_image' => 'nullable|file|mimes:jpeg,png,jpg,webp,pdf|max:10240',
+            'ticket_file' => 'nullable|file|mimes:jpeg,png,jpg,webp,pdf|max:10240',
+            'refund_ticket_file' => 'nullable|file|mimes:jpeg,png,jpg,webp,pdf|max:10240',
+        ]);
+
+        $idImagePath = null;
+        if ($request->hasFile('id_image')) {
+            $idImagePath = $request->file('id_image')->store('refund_docs/ids', 'public');
+        } elseif ($request->hasFile('refund_id_image')) {
+            $idImagePath = $request->file('refund_id_image')->store('refund_docs/ids', 'public');
+        }
+
+        $ticketFilePath = null;
+        if ($request->hasFile('ticket_file')) {
+            $ticketFilePath = $request->file('ticket_file')->store('refund_docs/tickets', 'public');
+        } elseif ($request->hasFile('refund_ticket_file')) {
+            $ticketFilePath = $request->file('refund_ticket_file')->store('refund_docs/tickets', 'public');
+        }
 
         $partialBreakdown = $booking->getPartialRefundBreakdown($selectedItems, $isWithinFiveMinutes);
         $totalRefundAmount = $partialBreakdown['refundable_amount'];
@@ -599,6 +622,8 @@ class BookingController extends Controller
                     'refund_amount'      => $pRefund,
                     'cancellation_fee'   => $pFee,
                     'refund_destination' => $request->input('refund_destination'),
+                    'refund_id_image'    => $idImagePath ?: $p->refund_id_image,
+                    'refund_ticket_file' => $ticketFilePath ?: $p->refund_ticket_file,
                     'refund_status'      => 'pending',
                 ]);
             }
@@ -613,6 +638,8 @@ class BookingController extends Controller
                 'cancellation_fee' => $totalCancellationFee,
                 'refund_amount' => $booking->passengers->sum('refund_amount') ?: $totalRefundAmount,
                 'refund_destination' => $request->input('refund_destination'),
+                'refund_id_image' => $idImagePath ?: $booking->refund_id_image,
+                'refund_ticket_file' => $ticketFilePath ?: $booking->refund_ticket_file,
                 'refund_status' => 'pending',
                 'cancellation_window_expires_at' => null,
             ]);
@@ -623,6 +650,8 @@ class BookingController extends Controller
             $booking->update([
                 'refund_amount'      => $booking->passengers->sum('refund_amount'),
                 'refund_destination' => $request->input('refund_destination'),
+                'refund_id_image'    => $idImagePath ?: $booking->refund_id_image,
+                'refund_ticket_file' => $ticketFilePath ?: $booking->refund_ticket_file,
                 'refund_status'      => 'pending',
             ]);
         }
