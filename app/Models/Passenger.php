@@ -218,9 +218,11 @@ class Passenger extends Model
             return true;
         }
 
-        $booking = $this->getBookingModel();
-        if ($booking && ((bool) $booking->is_rebooked || filled($booking->rebooking_status) || in_array($booking->status, ['rebooked', 'operator_rebooking'], true))) {
-            return true;
+        if ($this->relationLoaded('booking')) {
+            $booking = $this->getRelation('booking');
+            if ($booking && ((bool) $booking->is_rebooked || filled($booking->rebooking_status) || in_array($booking->status, ['rebooked', 'operator_rebooking'], true))) {
+                return true;
+            }
         }
 
         return false;
