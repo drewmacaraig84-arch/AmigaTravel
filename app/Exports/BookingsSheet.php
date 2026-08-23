@@ -16,6 +16,7 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
 {
     protected $title;
     protected $bookings;
+    protected $rowCount = 0;
 
     public function __construct(string $title, Collection $bookings)
     {
@@ -25,6 +26,7 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
 
     public function collection()
     {
+        $rows = collect();
         $totals = [
             'baseFare' => 0, 'accFee' => 0, 'vehicleFee' => 0, 'baggageFee' => 0,
             'adminFee' => 0, 'transactionFee' => 0, 'hotelFee' => 0, 'rebookingFee' => 0,
@@ -33,127 +35,108 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
         ];
 
         foreach ($this->bookings as $booking) {
-            $fin = $this->extractFinancials($booking);
-            foreach ($totals as $k => $v) {
-                $totals[$k] += $fin[$k];
+            $passengers = $booking->passengers->sortBy('item_number');
+
+            $rebookingFee = 0;
+            if ($booking->transaction && (float) $booking->transaction->rebooking_fee > 0) {
+                $notes = $booking->disruption_notes ? json_decode($booking->disruption_notes, true) : [];
+                $surcharge = (float) ($notes['surcharge'] ?? 0);
+                $reval = (float) ($notes['revalidation_fee'] ?? 0);
+                $rateDiff = (float) ($notes['rate_diff'] ?? 0);
+                if ($surcharge > 0 || $reval > 0 || $rateDiff > 0) {
+                    $rebookingFee = $surcharge + $reval + $rateDiff;
+                } else {
+                    $rebookingFee = (float) $booking->transaction->rebooking_fee;
+                }
             }
-        }
 
-        $collection = collect($this->bookings);
+            $settings = \App\Models\PaymentSetting::current();
+            $calcHotelFee = $booking->accommodations->count() > 0 ? (float) $settings->fee_per_accommodation : 0;
 
-        if ($collection->count() > 0) {
-            $collection->push((object) array_merge(['is_total_row' => true], $totals));
-        }
+            if ($passengers->isEmpty()) {
+                $bTotal = (float) ($booking->transaction?->amount_paid ?: $booking->total_price);
+                if (in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount > 0) {
+                    $bTotal = (float) $booking->refund_amount;
+                }
+                $fin = [
+                    'baseFare' => 0.0, 'accFee' => 0.0, 'vehicleFee' => (float) ($booking->vehicle_price ?? 0),
+                    'baggageFee' => 0.0, 'adminFee' => 0.0, 'transactionFee' => 0.0, 'hotelFee' => 0.0,
+                    'rebookingFee' => (float) $rebookingFee, 'cancellationFee' => (float) $booking->cancellation_fee,
+                    'passengerDiscount' => 0.0, 'voucherDiscount' => (float) $booking->voucher_discount_amount,
+                    'pointsDiscount' => (float) $booking->points_discount, 'totalAmount' => (float) $bTotal,
+                ];
 
-        return $collection;
-    }
+                $rowObj = (object) array_merge([
+                    'booking' => $booking,
+                    'passenger' => null,
+                    'item_label' => 'Item 1',
+                    'passenger_name' => $booking->client_name,
+                    'status_label' => ucfirst(str_replace('_', ' ', $booking->status)),
+                    'discount_type' => '-',
+                    'voucher_code' => $booking->voucher_code ?? '-',
+                    'points_used' => $booking->points_redeemed ?? '-',
+                ], $fin);
 
-    private function extractFinancials($booking) {
-        $baseFare = 0;
-        $accFee = 0;
-        $passengerDiscount = 0;
-
-        foreach ($booking->passengers as $p) {
-            if ($p->is_promo) {
-                $baseFare += (float) $p->promo_price;
+                $rows->push($rowObj);
+                foreach ($totals as $k => $v) {
+                    $totals[$k] += $fin[$k];
+                }
             } else {
-                $pDepTicket = (float) ($booking->schedule_price ?? 0);
-                $pDepAcc = (float) ($booking->schedule_accommodation_price ?? 0);
-                $pRetTicket = (float) ($booking->return_schedule_price ?? 0);
-                $pRetAcc = (float) ($booking->return_schedule_accommodation_price ?? 0);
-                
-                $grossTicket = $pDepTicket + $pRetTicket;
-                $grossAcc = $pDepAcc + $pRetAcc;
+                foreach ($passengers as $pIndex => $p) {
+                    $pBaseFare = $p->getEffectiveFareAmount();
+                    $pAccFee = $p->getEffectiveAccommodationAmount();
+                    $pVehFee = ($pIndex === 0 && $booking->has_vehicle ? (float) $booking->vehicle_price : 0.0);
+                    $pBagFee = (float) $p->extra_baggage_price;
+                    $pAdminFee = $p->getEffectiveWebAdminFee();
+                    $pTxnFee = $p->getEffectiveTransactionFee();
+                    $pHotelFee = ($pIndex === 0 ? $calcHotelFee : 0.0);
+                    $pRebookFee = ($pIndex === 0 ? (float) $rebookingFee : 0.0);
+                    $pCancelFee = ((float) $p->cancellation_fee > 0 ? (float) $p->cancellation_fee : ($pIndex === 0 ? (float) $booking->cancellation_fee : 0.0));
+                    $pPaxDisc = (float) $p->discount_amount;
+                    $pVoucherDisc = (float) $p->voucher_discount_share;
+                    $pPointsDisc = (float) $p->points_discount_share;
+                    
+                    $pItemTotal = $p->getEffectiveItemTotal() + $pVehFee + $pHotelFee + $pRebookFee;
+                    if ((float) $p->refund_amount > 0) {
+                        $pItemTotal = (float) $p->refund_amount;
+                    } elseif (in_array($booking->status, ['cancelled', 'operator_cancelled']) && (float) $booking->refund_amount > 0 && (float) $p->refund_amount <= 0) {
+                        $pItemTotal = (float) ($booking->refund_amount / max(1, $passengers->count()));
+                    }
 
-                $baseFare += $grossTicket;
-                $accFee += $grossAcc;
+                    $fin = [
+                        'baseFare' => $pBaseFare, 'accFee' => $pAccFee, 'vehicleFee' => $pVehFee,
+                        'baggageFee' => $pBagFee, 'adminFee' => $pAdminFee, 'transactionFee' => $pTxnFee,
+                        'hotelFee' => $pHotelFee, 'rebookingFee' => $pRebookFee, 'cancellationFee' => $pCancelFee,
+                        'passengerDiscount' => $pPaxDisc, 'voucherDiscount' => $pVoucherDisc,
+                        'pointsDiscount' => $pPointsDisc, 'totalAmount' => $pItemTotal,
+                    ];
 
-                if ((float) $p->discount_amount > 0) {
-                    $passengerDiscount += (float) $p->discount_amount;
-                } elseif ($p->discount) {
-                    $multiplier = ((float) $p->discount->percentage / 100);
-                    $passengerDiscount += ($grossTicket + $grossAcc) * $multiplier;
+                    $rowObj = (object) array_merge([
+                        'booking' => $booking,
+                        'passenger' => $p,
+                        'item_label' => 'Item ' . ($p->item_number ?? ($pIndex + 1)),
+                        'passenger_name' => $p->name ?? $booking->client_name,
+                        'status_label' => $p->getStatusLabel(),
+                        'discount_type' => $p->discount?->name ?? '-',
+                        'voucher_code' => ($pIndex === 0 ? ($booking->voucher_code ?? '-') : '-'),
+                        'points_used' => ($pIndex === 0 ? ($booking->points_redeemed ?? '-') : '-'),
+                    ], $fin);
+
+                    $rows->push($rowObj);
+                    foreach ($totals as $k => $v) {
+                        $totals[$k] += $fin[$k];
+                    }
                 }
             }
         }
 
-        foreach ($booking->transportClasses as $index => $tc) {
-            $baseFare += (float) $tc->pivot->price;
-        }
-        
-        foreach ($booking->accommodations as $acc) {
-            $accFee += (float) $acc->pivot->price;
+        if ($rows->count() > 0) {
+            $rows->push((object) array_merge(['is_total_row' => true], $totals));
         }
 
-        $vehicleFee = $booking->has_vehicle ? (float) $booking->vehicle_price : 0;
-        $baggageFee = $booking->has_extra_baggage ? (float) $booking->extra_baggage_price : 0;
-        $cancellationFee = (float) $booking->cancellation_fee;
-        
-        $rebookingFee = 0;
-        if ($booking->transaction && (float) $booking->transaction->rebooking_fee > 0) {
-            $notes = $booking->disruption_notes ? json_decode($booking->disruption_notes, true) : [];
-            $surcharge = (float) ($notes['surcharge'] ?? 0);
-            $reval = (float) ($notes['revalidation_fee'] ?? 0);
-            $rateDiff = (float) ($notes['rate_diff'] ?? 0);
-            if ($surcharge > 0 || $reval > 0 || $rateDiff > 0) {
-                $rebookingFee = $surcharge + $reval + $rateDiff;
-            } else {
-                $rebookingFee = (float) $booking->transaction->rebooking_fee;
-            }
-        }
+        $this->rowCount = $rows->count();
 
-        $voucherDiscount = (float) $booking->voucher_discount_amount;
-        $pointsDiscount = (float) $booking->points_discount;
-
-        $knownSum = $baseFare + $accFee + $vehicleFee + $baggageFee - $passengerDiscount - $voucherDiscount - $pointsDiscount;
-        $fees = max(0, (float) $booking->total_price - $knownSum);
-        
-        $transactionFee = 0;
-        $hotelFee = 0;
-        $adminFee = 0;
-
-        if ($fees > 0.01) {
-            $settings = \App\Models\PaymentSetting::current();
-            $isFerry = stripos($booking->schedule_service ?? '', 'airline') === false;
-            $paxCount = max(1, $booking->passengers->count());
-            $multiplier = $paxCount + ($isFerry ? $paxCount : 0);
-            
-            $isShortHaul = $booking->isShortHaul();
-            $calcTxFee = $multiplier * $settings->getTransactionFee($isShortHaul);
-            $calcHotelFee = $booking->accommodations->count() > 0 ? (float) $settings->fee_per_accommodation : 0;
-            
-            if ($fees >= $calcTxFee && $calcTxFee > 0) {
-                $transactionFee = $calcTxFee;
-                $fees -= $calcTxFee;
-            }
-            if ($fees >= $calcHotelFee && $calcHotelFee > 0) {
-                $hotelFee = $calcHotelFee;
-                $fees -= $calcHotelFee;
-            }
-            if ($fees > 0.01) {
-                $adminFee = $fees;
-            }
-        }
-
-        $refundAmount = (float) ($booking->refund_amount > 0 ? $booking->refund_amount : $booking->passengers->sum('refund_amount'));
-        $isRefunded = (in_array($booking->status, [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED]) || $refundAmount > 0) && $refundAmount > 0;
-        
-        $totalAmount = (float) $booking->total_price;
-        if ($isRefunded) {
-            // Net revenue retained by Amiga after refund (un-refunded fees + surcharges)
-            $totalAmount = max(0, (float) $booking->total_price - $refundAmount);
-        } elseif ($rebookingFee > 0) {
-            // Include additional rebooking fee collected from customer on reschedule
-            $totalAmount = (float) $booking->total_price + $rebookingFee;
-        }
-
-        return [
-            'baseFare' => $baseFare, 'accFee' => $accFee, 'vehicleFee' => $vehicleFee,
-            'baggageFee' => $baggageFee, 'adminFee' => $adminFee, 'transactionFee' => $transactionFee,
-            'hotelFee' => $hotelFee, 'rebookingFee' => $rebookingFee, 'cancellationFee' => $cancellationFee,
-            'passengerDiscount' => $passengerDiscount, 'voucherDiscount' => $voucherDiscount,
-            'pointsDiscount' => $pointsDiscount, 'totalAmount' => $totalAmount,
-        ];
+        return $rows;
     }
 
     public function title(): string
@@ -164,7 +147,7 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
     public function headings(): array
     {
         return [
-            'Transaction #', 'Item No.', 'Client Name', 'Contact #', 'Origin', 'Destination', 'Departure Date', 'Return Date',
+            'Transaction #', 'Item No.', 'Passenger Name', 'Contact #', 'Origin', 'Destination', 'Departure Date', 'Return Date',
             'Mode', 'Operator', 'Booking Status', 'Ref # (Payment)',
             'Base Fare (₱)', 'Accommodation / Class Fee (₱)', 'Vehicle Freight Fee (₱)', 'Extra Baggage Fee (₱)',
             'Web Admin Fee (₱)', 'Transaction Fee (₱)', 'Hotel Service Fee (₱)', 'Rebooking Fee (₱)', 'Cancellation Deduction (₱)',
@@ -173,53 +156,37 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
         ];
     }
 
-    public function map($booking): array
+    public function map($row): array
     {
-        if (isset($booking->is_total_row)) {
+        if (isset($row->is_total_row)) {
             return [
                 '', '', '', '', '', '', '', '', '', '', '', 'GRAND TOTAL',
-                number_format($booking->baseFare, 2),
-                number_format($booking->accFee, 2),
-                number_format($booking->vehicleFee, 2),
-                number_format($booking->baggageFee, 2),
-                number_format($booking->adminFee, 2),
-                number_format($booking->transactionFee, 2),
-                number_format($booking->hotelFee, 2),
-                number_format($booking->rebookingFee, 2),
-                number_format($booking->cancellationFee, 2),
+                number_format($row->baseFare, 2),
+                number_format($row->accFee, 2),
+                number_format($row->vehicleFee, 2),
+                number_format($row->baggageFee, 2),
+                number_format($row->adminFee, 2),
+                number_format($row->transactionFee, 2),
+                number_format($row->hotelFee, 2),
+                number_format($row->rebookingFee, 2),
+                number_format($row->cancellationFee, 2),
                 '', // Pass discount type
-                number_format($booking->passengerDiscount, 2),
+                number_format($row->passengerDiscount, 2),
                 '', // Voucher code
-                number_format($booking->voucherDiscount, 2),
+                number_format($row->voucherDiscount, 2),
                 '', // Points used
-                number_format($booking->pointsDiscount, 2),
-                number_format($booking->totalAmount, 2),
+                number_format($row->pointsDiscount, 2),
+                number_format($row->totalAmount, 2),
             ];
         }
 
+        $booking = $row->booking;
         $ferryRoute = $booking->schedule?->ferryRoute;
-        $statusStr = ucfirst(str_replace('_', ' ', $booking->status));
-        if (in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount > 0) {
-            $statusStr = 'Refunded';
-        }
-
-        $discountTypes = $booking->passengers->filter(function($p) {
-            return $p->discount_id !== null && $p->discount;
-        })->map(function($p) {
-            return $p->discount->name;
-        })->unique()->implode(', ');
-
-        $itemNos = $booking->passengers->sortBy('item_number')->map(function($p) {
-            $num = $p->item_number ?? 1;
-            return "Item {$num}";
-        })->implode(', ');
-
-        $fin = $this->extractFinancials($booking);
 
         return [
             $booking->transaction_number,
-            filled($itemNos) ? $itemNos : 'Item 1',
-            $booking->client_name,
+            $row->item_label,
+            $row->passenger_name,
             $booking->client_phone,
             $booking->origin,
             $booking->destination,
@@ -227,26 +194,26 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
             $booking->return_date?->format('M d, Y') ?? '-',
             $ferryRoute?->mode ?? $booking->schedule_service ?? '-',
             $ferryRoute?->operator ?? '-',
-            $statusStr,
+            $row->status_label,
             $booking->transaction?->payment_reference ?? '-',
             
-            number_format($fin['baseFare'], 2),
-            number_format($fin['accFee'], 2),
-            number_format($fin['vehicleFee'], 2),
-            number_format($fin['baggageFee'], 2),
-            number_format($fin['adminFee'], 2),
-            number_format($fin['transactionFee'], 2),
-            number_format($fin['hotelFee'], 2),
-            number_format($fin['rebookingFee'], 2),
-            number_format($fin['cancellationFee'], 2),
+            number_format($row->baseFare, 2),
+            number_format($row->accFee, 2),
+            number_format($row->vehicleFee, 2),
+            number_format($row->baggageFee, 2),
+            number_format($row->adminFee, 2),
+            number_format($row->transactionFee, 2),
+            number_format($row->hotelFee, 2),
+            number_format($row->rebookingFee, 2),
+            number_format($row->cancellationFee, 2),
             
-            filled($discountTypes) ? $discountTypes : '-',
-            number_format($fin['passengerDiscount'], 2),
-            filled($booking->voucher_code) ? $booking->voucher_code : '-',
-            number_format($fin['voucherDiscount'], 2),
-            $booking->points_used > 0 ? number_format($booking->points_used) . ' pts' : '-',
-            number_format($fin['pointsDiscount'], 2),
-            number_format($fin['totalAmount'], 2),
+            $row->discount_type,
+            number_format($row->passengerDiscount, 2),
+            $row->voucher_code,
+            number_format($row->voucherDiscount, 2),
+            $row->points_used,
+            number_format($row->pointsDiscount, 2),
+            number_format($row->totalAmount, 2),
         ];
     }
 
@@ -262,8 +229,8 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
     public function styles(Worksheet $sheet)
     {
         $sheet->getStyle('1')->getFont()->setBold(true);
-        if ($this->bookings->count() > 0) {
-            $lastRow = $this->bookings->count() + 2; 
+        if ($this->rowCount > 0) {
+            $lastRow = $this->rowCount + 1; 
             $sheet->getStyle($lastRow)->getFont()->setBold(true);
             $sheet->getStyle($lastRow)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
                   ->getStartColor()->setARGB('FFF2F2F2');
