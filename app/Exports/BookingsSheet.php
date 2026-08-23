@@ -2,6 +2,7 @@
 
 namespace App\Exports;
 
+use App\Models\Booking;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -134,12 +135,13 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
             }
         }
 
-        $isRefunded = in_array($booking->status, [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED]) && $booking->refund_amount > 0;
+        $refundAmount = (float) ($booking->refund_amount > 0 ? $booking->refund_amount : $booking->passengers->sum('refund_amount'));
+        $isRefunded = (in_array($booking->status, [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED]) || $refundAmount > 0) && $refundAmount > 0;
         
         $totalAmount = (float) $booking->total_price;
         if ($isRefunded) {
             // Net revenue retained by Amiga after refund (un-refunded fees + surcharges)
-            $totalAmount = max(0, (float) $booking->total_price - (float) $booking->refund_amount);
+            $totalAmount = max(0, (float) $booking->total_price - $refundAmount);
         } elseif ($rebookingFee > 0) {
             // Include additional rebooking fee collected from customer on reschedule
             $totalAmount = (float) $booking->total_price + $rebookingFee;
