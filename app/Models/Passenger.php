@@ -206,10 +206,24 @@ class Passenger extends Model
 
     public function isRebookingHistoryItem(): bool
     {
-        return in_array($this->status, [
+        if (in_array($this->status, [
             self::STATUS_REBOOKED,
             self::STATUS_REBOOKING_PENDING,
-        ], true) || $this->rebooking_status === 'pending' || ($this->is_rebooked && $this->status === self::STATUS_REBOOKED);
+            self::STATUS_OPERATOR_REBOOKING,
+        ], true)) {
+            return true;
+        }
+
+        if (filled($this->rebooking_status) || (bool) $this->is_rebooked) {
+            return true;
+        }
+
+        $booking = $this->getBookingModel();
+        if ($booking && ((bool) $booking->is_rebooked || filled($booking->rebooking_status) || in_array($booking->status, ['rebooked', 'operator_rebooking'], true))) {
+            return true;
+        }
+
+        return false;
     }
 
     public function isCancelled(): bool
@@ -401,6 +415,12 @@ class Passenger extends Model
 
     public function getStatusLabel(): string
     {
+        if ($this->is_rebooked || $this->rebooking_status === 'verified' || $this->status === self::STATUS_REBOOKED) {
+            return 'Rebooked';
+        }
+        if ($this->rebooking_status === 'pending' || $this->status === self::STATUS_REBOOKING_PENDING) {
+            return 'Rebooking Pending';
+        }
         return match ($this->status) {
             self::STATUS_PENDING            => 'Pending',
             self::STATUS_CONFIRMED          => 'Confirmed',

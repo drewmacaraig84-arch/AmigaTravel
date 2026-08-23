@@ -53,12 +53,15 @@ class BookingExportController extends Controller
         $bookings = $query->get();
 
         $verifiedBookings = $bookings->filter(function ($booking) {
-            return ($booking->status === Booking::STATUS_CONFIRMED && !in_array($booking->status, [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED]))
-                || $booking->passengers->contains(fn ($p) => $p->isActiveBookingItem() && in_array($p->status, ['confirmed']));
+            return ($booking->status === Booking::STATUS_CONFIRMED && ! $booking->is_rebooked && ! in_array($booking->status, [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED]))
+                || $booking->passengers->contains(fn ($p) => $p->isActiveBookingItem() && ! $p->isRebookingHistoryItem() && in_array($p->status, ['confirmed']));
         });
 
         $rebookedBookings = $bookings->filter(function ($booking) {
-            return $booking->is_rebooked || filled($booking->rebooking_status) || $booking->passengers->contains(fn ($p) => $p->isRebookingHistoryItem());
+            return (bool) $booking->is_rebooked 
+                || filled($booking->rebooking_status) 
+                || in_array($booking->status, ['rebooked', 'operator_rebooking'])
+                || $booking->passengers->contains(fn ($p) => $p->isRebookingHistoryItem());
         });
 
         $refundedBookings = $bookings->filter(function ($booking) {

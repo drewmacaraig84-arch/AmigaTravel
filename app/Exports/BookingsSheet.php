@@ -55,9 +55,9 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
 
             if ($passengers->isEmpty()) {
                 $matches = false;
-                if ($this->title === 'Verified Bookings' && $booking->status === 'confirmed') $matches = true;
+                if ($this->title === 'Verified Bookings' && $booking->status === 'confirmed' && ! $booking->is_rebooked) $matches = true;
                 elseif ($this->title === 'Refunded Bookings' && in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount > 0) $matches = true;
-                elseif ($this->title === 'Rebooked Bookings' && ($booking->is_rebooked || filled($booking->rebooking_status))) $matches = true;
+                elseif ($this->title === 'Rebooked Bookings' && ($booking->is_rebooked || filled($booking->rebooking_status) || in_array($booking->status, ['rebooked', 'operator_rebooking']))) $matches = true;
                 elseif ($this->title === 'Pending Bookings' && $booking->status === 'pending') $matches = true;
                 elseif ($this->title === 'Cancelled Bookings' && in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount <= 0) $matches = true;
 
@@ -96,13 +96,13 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
                 foreach ($passengers as $pIndex => $p) {
                     $matches = false;
                     if ($this->title === 'Verified Bookings') {
-                        $matches = $p->isActiveBookingItem() && in_array($p->status, ['confirmed']);
+                        $matches = $p->isActiveBookingItem() && ! $p->isRebookingHistoryItem() && in_array($p->status, ['confirmed']);
                     } elseif ($this->title === 'Refunded Bookings') {
                         $matches = $p->isRefundItem();
                     } elseif ($this->title === 'Rebooked Bookings') {
                         $matches = $p->isRebookingHistoryItem();
                     } elseif ($this->title === 'Pending Bookings') {
-                        $matches = $p->status === 'pending';
+                        $matches = $p->status === 'pending' && ! $p->isRebookingHistoryItem() && ! $p->isRefundItem();
                     } elseif ($this->title === 'Cancelled Bookings') {
                         $matches = $p->isCancelled() && (float) $p->refund_amount <= 0;
                     }

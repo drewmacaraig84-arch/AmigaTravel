@@ -205,9 +205,9 @@
 
                 if ($rawPassengers->isEmpty()) {
                     $matches = false;
-                    if ($sectionTitle === 'Verified Bookings' && $booking->status === 'confirmed') $matches = true;
+                    if ($sectionTitle === 'Verified Bookings' && $booking->status === 'confirmed' && ! $booking->is_rebooked) $matches = true;
                     elseif ($sectionTitle === 'Refunded Bookings' && in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount > 0) $matches = true;
-                    elseif ($sectionTitle === 'Rebooked Bookings' && ($booking->is_rebooked || filled($booking->rebooking_status))) $matches = true;
+                    elseif ($sectionTitle === 'Rebooked Bookings' && ($booking->is_rebooked || filled($booking->rebooking_status) || in_array($booking->status, ['rebooked', 'operator_rebooking']))) $matches = true;
                     elseif ($sectionTitle === 'Pending Bookings' && $booking->status === 'pending') $matches = true;
                     elseif ($sectionTitle === 'Cancelled Bookings' && in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount <= 0) $matches = true;
 
@@ -222,13 +222,13 @@
                     foreach ($rawPassengers as $pIndex => $p) {
                         $matches = false;
                         if ($sectionTitle === 'Verified Bookings') {
-                            $matches = $p->isActiveBookingItem() && in_array($p->status, ['confirmed']);
+                            $matches = $p->isActiveBookingItem() && ! $p->isRebookingHistoryItem() && in_array($p->status, ['confirmed']);
                         } elseif ($sectionTitle === 'Refunded Bookings') {
                             $matches = $p->isRefundItem();
                         } elseif ($sectionTitle === 'Rebooked Bookings') {
                             $matches = $p->isRebookingHistoryItem();
                         } elseif ($sectionTitle === 'Pending Bookings') {
-                            $matches = $p->status === 'pending';
+                            $matches = $p->status === 'pending' && ! $p->isRebookingHistoryItem() && ! $p->isRefundItem();
                         } elseif ($sectionTitle === 'Cancelled Bookings') {
                             $matches = $p->isCancelled() && (float) $p->refund_amount <= 0;
                         }
