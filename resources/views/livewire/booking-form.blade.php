@@ -2202,33 +2202,117 @@
                             </div>
                         </div>
                         
-                        <!-- Return, Refund, and Revalidation Policy -->
-                        <div>
-                            <h3 class="text-base font-bold text-slate-900 mb-2">Return, Refund, and Revalidation Policy</h3>
-                            <p class="mb-2">Customers may send refund requests to the official Amiga Gracia Travel Services support email using the registered transaction email address. The support email should be configurable via the application settings.</p>
-                            <p class="mb-2">Only original eTickets that have not been boarded, remain within ticket validity, and have not undergone rebooking may be eligible for processing.</p>
-                            <p class="mb-2">For wallet and credit-card paid transactions, refund requests may be accommodated by email from Monday to Friday, regular business days only, between 8:00 AM and 4:00 PM. Requests must be sent at least two regular days before ticket expiry.</p>
-                            <p class="mb-2">For cash and ATM-paid bookings, refunds must be processed through Amiga Gracia Travel Services corporate ticketing outlets.</p>
-                            <p class="mb-2">For direct refund requests at a corporate ticketing outlet, the account holder or passenger must submit the complete itinerary and present a valid government-issued ID.</p>
-                            <p class="mb-2">If an account holder or passenger authorizes a representative, the representative must present:</p>
-                            <ul class="list-disc pl-5 space-y-1 mb-2">
-                                <li>An original signed authorization letter.</li>
-                                <li>The actual valid government-issued ID of the account holder or passenger.</li>
-                                <li>The representative's own valid government-issued ID.</li>
-                            </ul>
-                            <p class="mb-2">Refunds are subject to the following surcharge:</p>
-                            <ul class="list-disc pl-5 space-y-1 mb-2">
-                                <li>Before vessel departure:15% Surcharge plus the applicable Web Admin Fee and Transaction Fee per ticket.</li>
-                            </ul>
-                            <p class="mb-2">No partial refunds are available for tickets purchased under room rates. Refunds are released only after surrendering all tickets issued for the relevant room.</p>
-                            <p class="mb-2">Unused and unscanned eTickets may be revalidated during the ticket-validity period. Revalidation means changing ticket details other than the passenger name or age, and the trip origin or destination. Revalidation is processed only through corporate ticketing outlets. Passengers must present the eTicket Itinerary Receipt and a valid ID.</p>
-                            <p class="mb-2">Revalidation is subject to the following surcharge:</p>
-                            <ul class="list-disc pl-5 space-y-1 mb-2">
-                                <li>Before vessel departure: 15% Surcharge + &#8369;150.00 revalidation fee + fare difference.</li>
-                            </ul>
-                            <p class="mb-2">Refund and revalidation surcharges may be waived if a trip is affected by typhoon, force majeure, technical problems, emergency or extended dry-docking, preventive maintenance, or carrier-initiated trip changes.</p>
-                            <p class="mb-2">The Web Admin Fee and Transaction Fee is non-refundable.</p>
-                            <p>Ticket validity ends on the date and time of departure printed on the ticket.</p>
+                        <!-- Refund Request and Policy -->
+                        <div class="space-y-4 text-sm text-slate-700 leading-relaxed">
+                            <h3 class="text-base font-bold text-slate-900 border-b border-slate-200 pb-2">Refund Request and Policy</h3>
+                            
+                            <p>We understand that plans can change. If you need to request a refund, we’re here to help.</p>
+
+                            <div>
+                                <h4 class="font-bold text-slate-900 mb-1">How to Request a Refund</h4>
+                                <p>Customers may send their refund request to the official Amiga Gracia Travel Services Support Email using the same email address registered with the booking or transaction.</p>
+                            </div>
+
+                            <div>
+                                <h4 class="font-bold text-slate-900 mb-1">Ticket Eligibility</h4>
+                                <p class="mb-1">A ticket may be eligible for a refund if it meets all of the following conditions:</p>
+                                <ul class="list-disc pl-5 space-y-1">
+                                    <li>The ticket is an original ticket</li>
+                                    <li>The ticket has not yet been boarded or used</li>
+                                    <li>The ticket is still within its validity period</li>
+                                    <li>The ticket has not been rebooked</li>
+                                </ul>
+                            </div>
+
+                            <div>
+                                <h4 class="font-bold text-slate-900 mb-1">Refund Requests for Wallet and Credit Cards Payment</h4>
+                                <p class="mb-1">For bookings paid through Wallet or Credit Card, refund requests may be submitted by email during our regular business hours:</p>
+                                <p class="font-semibold text-slate-800 mb-1">Monday to Saturday, 8:00 AM to 4:00 PM</p>
+                                <p>To allow enough time for processing, refund requests must be submitted at least (24) twenty four hrs before the ticket expires.</p>
+                            </div>
+
+                            <div>
+                                <h4 class="font-bold text-slate-900 mb-1">Refund Requests for Cash and ATM Payments</h4>
+                                <p class="mb-1">For bookings paid through Cash or ATM, refund requests must be processed through Amiga app or Amiga Gracia Travel Services website.</p>
+                                <p class="mb-1">Please send:</p>
+                                <ul class="list-disc pl-5 space-y-1">
+                                    <li>Your complete itinerary; and</li>
+                                    <li>A valid government-issued ID of the account holder or passenger.</li>
+                                </ul>
+                            </div>
+
+                            <div>
+                                <h4 class="font-bold text-slate-900 mb-1">If Someone Else Will Process the Refund for You</h4>
+                                <p class="mb-1">If the account holder or passenger cannot process the refund and would like to authorize a representative, the representative must send:</p>
+                                <ul class="list-disc pl-5 space-y-1">
+                                    <li>An original signed authorization letter from the account holder or passenger;</li>
+                                    <li>The actual valid government-issued ID of the account holder or passenger; and</li>
+                                    <li>The representative’s own valid government-issued ID.</li>
+                                </ul>
+                            </div>
+
+                            <div>
+                                <h4 class="font-bold text-slate-900 mb-1">Refund Surcharge</h4>
+                                <p class="mb-1">Approved refunds made before vessel departure are subject to:</p>
+                                <p class="font-semibold text-slate-900 mb-1">15% Refund Surcharge + applicable Web Admin Fee + Transaction Fee per ticket</p>
+                                <p>All refunds are subject to verification and the applicable refund conditions.</p>
+                            </div>
+
+                            <div>
+                                <h4 class="font-bold text-slate-900 mb-1">Room Rate Tickets</h4>
+                                <p>For tickets purchased under a room rate, partial refunds are not available. If you need to request a refund, all tickets issued for the same room must be surrendered before the refund can be processed.</p>
+                            </div>
+
+                            <div>
+                                <h4 class="font-bold text-slate-900 mb-1">Ticket Revalidation</h4>
+                                <p class="mb-1">If your ticket is unused and has not been scanned, you may request to revalidate your ticket as long as it is still within its validity period.</p>
+                                <p class="mb-1">Revalidation allows you to update the date and time of travel only.</p>
+                                <p class="mb-1">Revalidation can only be processed at Amiga Gracia Travel Services website or Amiga Gracia app.</p>
+                                <p class="mb-1">Please send your:</p>
+                                <ul class="list-disc pl-5 space-y-1">
+                                    <li>eTicket Itinerary Receipt</li>
+                                    <li>Valid government-issued ID</li>
+                                </ul>
+                            </div>
+
+                            <div>
+                                <h4 class="font-bold text-slate-900 mb-1">Revalidation Fee</h4>
+                                <p class="mb-1">Revalidation before vessel departure is subject to:</p>
+                                <p class="font-semibold text-slate-900 mb-1">15% Revalidation Surcharge + &#8369;150.00 Revalidation Fee + applicable fare difference</p>
+                                <p>The final amount will depend on the applicable fare difference, if any.</p>
+                            </div>
+
+                            <div>
+                                <h4 class="font-bold text-slate-900 mb-1">When Fees May Be Waived</h4>
+                                <p class="mb-1">We understand that some travel changes are beyond your control.</p>
+                                <p class="mb-1">Refund and revalidation surcharges may be waived when a trip is affected by circumstances such as:</p>
+                                <ul class="list-disc pl-5 space-y-1">
+                                    <li>Typhoon or other force majeure events</li>
+                                    <li>Technical problems</li>
+                                    <li>Emergencies</li>
+                                    <li>Extended dry-docking</li>
+                                    <li>Preventive maintenance</li>
+                                    <li>Trip changes initiated by the carrier</li>
+                                </ul>
+                                <p class="mt-2 text-xs text-slate-500 italic">Any applicable waiver will be subject to verification and the circumstances of the affected trip.</p>
+                            </div>
+
+                            <div>
+                                <h4 class="font-bold text-slate-900 mb-1">Non-Refundable Fees</h4>
+                                <p>Please note that the Web Admin Fee and Transaction Fee are non-refundable.</p>
+                            </div>
+
+                            <div>
+                                <h4 class="font-bold text-slate-900 mb-1">Ticket Validity</h4>
+                                <p>Your ticket is valid until the date and time of departure printed on your ticket. Once the stated departure date and time have passed, the ticket is considered expired.</p>
+                            </div>
+
+                            <div>
+                                <h4 class="font-bold text-slate-900 mb-1">Customer Agreement</h4>
+                                <p>By proceeding with your booking or refund request, you confirm that you have read, understood, and agreed to the Amiga Gracia Travel Services Terms and Agreement.</p>
+                            </div>
+
+                            <p class="font-bold text-slate-900 pt-2">Thank you for choosing Amiga Gracia Travel Services.</p>
                         </div>
                         
                         <!-- Final Notice -->
