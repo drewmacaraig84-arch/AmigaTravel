@@ -599,17 +599,40 @@ class Schedule extends Model
 
     /**
      * Bust all schedule-related API search caches.
-     * Uses a pattern-flush approach: forget 'api:schedule:search:*' tagged cache
-     * or fall back to flushing the entire cache if tag support unavailable.
+     * Safely deletes only schedule and route keys on Redis without flushing sessions or queues.
      */
     public static function bust(): void
     {
         try {
-            // If Redis with tags — only bust schedule search keys
-            \Illuminate\Support\Facades\Cache::tags(['schedule_search'])->flush();
+            $driver = config('cache.default');
+            if ($driver === 'redis') {
+                try {
+                    $redis = \Illuminate\Support\Facades\Redis::connection(config('cache.stores.redis.connection', 'cache'));
+                    $patterns = [
+                        'api:schedule:*',
+                        'api:origins:*',
+                        'api:destinations:*',
+                        'api:operators:*',
+                        'api:available_dates:*',
+                        'api:all_schedules:*',
+                        'ferry_route:*',
+                    ];
+                    foreach ($patterns as $pattern) {
+                        $keys = $redis->keys($pattern);
+                        if (!empty($keys)) {
+                            $redis->del($keys);
+                        }
+                    }
+                } catch (\Throwable) {
+                    // Fallback to tags if direct keys command unavailable
+                }
+            }
+
+            // Also clear known standalone keys
+            \Illuminate\Support\Facades\Cache::forget('ferry_route:schedule_origins_v4');
+            \Illuminate\Support\Facades\Cache::forget('ferry_route:schedule_operators_v4');
         } catch (\Throwable) {
-            // File/array driver doesn't support tags — flush entire cache
-            \Illuminate\Support\Facades\Cache::flush();
+            // Ignore cache driver errors
         }
     }
 

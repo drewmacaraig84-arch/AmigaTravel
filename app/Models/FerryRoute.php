@@ -148,11 +148,11 @@ class FerryRoute extends Model
         });
 
         static::saved(function () {
-            \Illuminate\Support\Facades\Cache::flush();
+            \App\Models\Schedule::bust();
         });
 
         static::deleted(function () {
-            \Illuminate\Support\Facades\Cache::flush();
+            \App\Models\Schedule::bust();
         });
     }
 

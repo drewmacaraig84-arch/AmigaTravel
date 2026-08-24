@@ -56,7 +56,7 @@ class Operator extends Model
     public static function bust(): void
     {
         try {
-            \Illuminate\Support\Facades\Cache::flush();
+            \App\Models\Schedule::bust();
         } catch (\Throwable) {
             // Ignore cache driver errors
         }

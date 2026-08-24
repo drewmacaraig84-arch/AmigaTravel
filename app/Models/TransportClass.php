@@ -77,7 +77,7 @@ class TransportClass extends Model
             \Illuminate\Support\Facades\Cache::forget('api:services');
             \Illuminate\Support\Facades\Cache::forget('api:discounts');
             \Illuminate\Support\Facades\Cache::forget('catalog:discounts_v3');
-            \Illuminate\Support\Facades\Cache::flush();
+            \App\Models\Schedule::bust();
         } catch (\Throwable) {
             // Ignore cache driver errors
         }
