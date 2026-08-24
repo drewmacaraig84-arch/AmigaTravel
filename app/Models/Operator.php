@@ -45,4 +45,17 @@ class Operator extends Model
     {
         return $this->hasMany(FerryRoute::class, 'operator_id');
     }
+
+    protected static function booted(): void
+    {
+        $bust = function () {
+            try {
+                \Illuminate\Support\Facades\Cache::flush();
+            } catch (\Throwable) {
+                // Ignore cache driver errors
+            }
+        };
+        static::saved($bust);
+        static::deleted($bust);
+    }
 }

@@ -29,4 +29,11 @@ class ScheduleAccommodation extends Model
     {
         return $this->belongsTo(Schedule::class);
     }
+
+    protected static function booted(): void
+    {
+        $bust = fn() => Schedule::bust();
+        static::saved($bust);
+        static::deleted($bust);
+    }
 }

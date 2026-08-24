@@ -44,4 +44,28 @@ class Accommodation extends Model
     {
         return $this->belongsTo(Operator::class, 'operator_id');
     }
+
+    protected static function booted(): void
+    {
+        $bust = function () {
+            static::bust();
+        };
+
+        static::saved($bust);
+        static::deleted($bust);
+    }
+
+    public static function bust(): void
+    {
+        try {
+            \Illuminate\Support\Facades\Cache::forget('api:accommodations:all');
+            \Illuminate\Support\Facades\Cache::forget('api:accommodations_v3');
+            $destinations = static::query()->distinct()->pluck('destination')->filter();
+            foreach ($destinations as $dest) {
+                \Illuminate\Support\Facades\Cache::forget('api:accommodations:' . strtolower(trim($dest)));
+            }
+        } catch (\Throwable) {
+            // Ignore during setup/migrations/cache driver errors
+        }
+    }
 }

@@ -158,4 +158,22 @@ class AirlineBaggageRule extends Model
     {
         return $this->belongsTo(Operator::class, 'operator_id');
     }
+
+    protected static function booted(): void
+    {
+        $bust = fn() => static::bust();
+        static::saved($bust);
+        static::deleted($bust);
+    }
+
+    public static function bust(): void
+    {
+        try {
+            \Illuminate\Support\Facades\Cache::forget('baggage_rules_json_v1');
+            \Illuminate\Support\Facades\Cache::forget('baggage_rules:local');
+            \Illuminate\Support\Facades\Cache::forget('baggage_rules:international');
+        } catch (\Throwable) {
+            // Ignore cache driver errors
+        }
+    }
 }

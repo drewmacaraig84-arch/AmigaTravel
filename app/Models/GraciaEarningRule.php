@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 
 class GraciaEarningRule extends Model
 {
@@ -26,4 +27,20 @@ class GraciaEarningRule extends Model
         'spend_threshold_centavos' => 'integer',
         'points_awarded' => 'integer',
     ];
+
+    protected static function booted(): void
+    {
+        $bust = fn() => static::bust();
+        static::saved($bust);
+        static::deleted($bust);
+    }
+
+    public static function bust(): void
+    {
+        try {
+            Cache::forget('gracia:active_rule');
+        } catch (\Throwable) {
+            // Ignore cache driver errors
+        }
+    }
 }

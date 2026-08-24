@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 
@@ -45,6 +46,19 @@ class Tour extends Model
                 $tour->destinations = '';
             }
         });
+
+        static::saved(fn() => static::bust());
+        static::deleted(fn() => static::bust());
+    }
+
+    public static function bust(): void
+    {
+        try {
+            Cache::forget('api:tours');
+            Cache::forget('api:tours:all');
+        } catch (\Throwable) {
+            // Ignore cache driver errors
+        }
     }
 
     public function scopeOrdered($query)
