@@ -50,6 +50,7 @@
             font-weight: bold;
             color: #9d174d;
             text-transform: uppercase;
+            white-space: nowrap;
         }
         .tx-number {
             font-size: 14px;
@@ -163,7 +164,7 @@
             </td>
             <td class="receipt-title-box" style="width: 45%; vertical-align: middle;">
                 <span class="badge-refunded">
-                    {{ $booking->refund_status === 'completed' ? 'Refunded & Disbursed' : 'Refund In Processing' }}
+                    {{ $booking->refund_status === 'completed' ? 'Refunded & Disbursed' : 'Refund In Process' }}
                 </span>
                 <div class="tx-number">{{ $booking->transaction_number }}</div>
                 <div class="tx-date">Refund Date: {{ $booking->refund_processed_at ? $booking->refund_processed_at->format('M d, Y h:i A') : now()->format('M d, Y') }}</div>
