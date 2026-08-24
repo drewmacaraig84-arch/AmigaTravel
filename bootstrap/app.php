@@ -40,6 +40,7 @@ return Application::configure(basePath: dirname(__DIR__))
         
         $middleware->api(append: [
             \App\Http\Middleware\UpdateUserActivity::class,
+            \App\Http\Middleware\PreventApiCaching::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

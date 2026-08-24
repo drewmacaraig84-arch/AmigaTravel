@@ -43,4 +43,11 @@ class ScheduleTransportClass extends Pivot
     {
         return $this->belongsTo(TransportClass::class);
     }
+
+    protected static function booted(): void
+    {
+        $bust = fn() => Schedule::bust();
+        static::saved($bust);
+        static::deleted($bust);
+    }
 }

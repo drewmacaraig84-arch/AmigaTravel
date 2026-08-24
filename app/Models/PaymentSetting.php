@@ -120,14 +120,29 @@ class PaymentSetting extends Model
         return $instance;
     }
 
+    protected static function booted(): void
+    {
+        static::saved(function () {
+            static::bust();
+        });
+
+        static::deleted(function () {
+            static::bust();
+        });
+    }
+
     /**
      * Bust the PaymentSetting cache.
      * Call this after saving/updating the settings row.
      */
     public static function bust(): void
     {
-        Cache::forget('payment_settings:current');
-        Cache::forget('api:payment_settings');
+        try {
+            Cache::forget('payment_settings:current');
+            Cache::forget('api:payment_settings');
+        } catch (\Throwable) {
+            // Ignore cache driver errors
+        }
     }
 }
 

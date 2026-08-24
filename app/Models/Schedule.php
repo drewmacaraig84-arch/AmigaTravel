@@ -596,4 +596,27 @@ class Schedule extends Model
                 ->all(),
         ];
     }
+
+    /**
+     * Bust all schedule-related API search caches.
+     * Uses a pattern-flush approach: forget 'api:schedule:search:*' tagged cache
+     * or fall back to flushing the entire cache if tag support unavailable.
+     */
+    public static function bust(): void
+    {
+        try {
+            // If Redis with tags — only bust schedule search keys
+            \Illuminate\Support\Facades\Cache::tags(['schedule_search'])->flush();
+        } catch (\Throwable) {
+            // File/array driver doesn't support tags — flush entire cache
+            \Illuminate\Support\Facades\Cache::flush();
+        }
+    }
+
+    protected static function booted(): void
+    {
+        $bust = fn() => static::bust();
+        static::saved($bust);
+        static::deleted($bust);
+    }
 }

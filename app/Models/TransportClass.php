@@ -62,4 +62,24 @@ class TransportClass extends Model
     {
         return $this->belongsTo(Operator::class, 'operator_id');
     }
+
+    protected static function booted(): void
+    {
+        $bust = fn() => static::bust();
+        static::saved($bust);
+        static::deleted($bust);
+    }
+
+    public static function bust(): void
+    {
+        try {
+            \Illuminate\Support\Facades\Cache::forget('catalog:transport_classes_v3');
+            \Illuminate\Support\Facades\Cache::forget('api:services');
+            \Illuminate\Support\Facades\Cache::forget('api:discounts');
+            \Illuminate\Support\Facades\Cache::forget('catalog:discounts_v3');
+            \Illuminate\Support\Facades\Cache::flush();
+        } catch (\Throwable) {
+            // Ignore cache driver errors
+        }
+    }
 }

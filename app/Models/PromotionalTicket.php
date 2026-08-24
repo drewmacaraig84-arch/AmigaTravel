@@ -85,4 +85,20 @@ class PromotionalTicket extends Model
 
         return 'Active';
     }
+
+    protected static function booted(): void
+    {
+        $bust = function () {
+            try {
+                \Illuminate\Support\Facades\Cache::forget('api:promotions');
+                \Illuminate\Support\Facades\Cache::forget('website_settings:promotions');
+                \Illuminate\Support\Facades\Cache::flush();
+            } catch (\Throwable) {
+                // Ignore cache driver errors
+            }
+        };
+
+        static::saved($bust);
+        static::deleted($bust);
+    }
 }

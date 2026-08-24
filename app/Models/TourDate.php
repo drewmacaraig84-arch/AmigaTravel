@@ -21,4 +21,11 @@ class TourDate extends Model
     {
         return $this->belongsTo(Tour::class);
     }
+
+    protected static function booted(): void
+    {
+        $bust = fn() => Tour::bust();
+        static::saved($bust);
+        static::deleted($bust);
+    }
 }
