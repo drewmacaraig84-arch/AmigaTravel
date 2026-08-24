@@ -18891,6 +18891,98 @@ class _RefundScreenState extends State<RefundScreen> {
   final _accountCtrl = TextEditingController();
   final _nameCtrl = TextEditingController();
 
+  XFile? _idFile;
+  XFile? _ticketFile;
+  XFile? _authLetterFile;
+
+  Future<void> _pickRefundDoc(String type) async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+      maxWidth: 1600,
+      maxHeight: 1600,
+    );
+    if (picked != null && mounted) {
+      setState(() {
+        if (type == 'id') _idFile = picked;
+        if (type == 'ticket') _ticketFile = picked;
+        if (type == 'auth') _authLetterFile = picked;
+      });
+    }
+  }
+
+  Widget _buildDocUploadTile({
+    required String title,
+    required String subtitle,
+    required XFile? file,
+    required VoidCallback onPick,
+    required VoidCallback onRemove,
+  }) {
+    final hasFile = file != null;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: hasFile ? const Color(0xFFFDF2F8) : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: hasFile ? const Color(0xFFF472B6) : Colors.grey.shade300,
+          width: hasFile ? 1.5 : 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            hasFile ? Icons.check_circle : Icons.upload_file_outlined,
+            color: hasFile ? const Color(0xFFDB2777) : Colors.blueGrey,
+            size: 28,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: Color(0xFF1E293B))),
+                const SizedBox(height: 2),
+                Text(
+                  hasFile ? file.name : subtitle,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: hasFile ? const Color(0xFF9D174D) : Colors.grey.shade600,
+                    fontWeight: hasFile ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          if (hasFile)
+            IconButton(
+              icon: const Icon(Icons.close, size: 20, color: Colors.red),
+              onPressed: onRemove,
+              tooltip: 'Remove',
+            )
+          else
+            OutlinedButton(
+              onPressed: onPick,
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                side: const BorderSide(color: Color(0xFFDB2777)),
+                foregroundColor: const Color(0xFFDB2777),
+              ),
+              child: const Text('Upload', style: TextStyle(fontSize: 12)),
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -19006,19 +19098,31 @@ class _RefundScreenState extends State<RefundScreen> {
 
     try {
       final baseUrl = UserSession.getBaseUrl();
-      final res = await http.post(
-          Uri.parse('$baseUrl/api/bookings/${widget.booking['id']}/cancel'),
-          headers: {
-            'Accept': 'application/json'
-          },
-          body: {
-            'email': UserSession.email,
-            'action': 'confirm',
-            'refund_destination': dest,
-            'passenger_items': _selectedPassengerItems.join(','),
-          });
+      final uri = Uri.parse('$baseUrl/api/bookings/${widget.booking['id']}/cancel');
+      final request = http.MultipartRequest('POST', uri);
+      request.headers['Accept'] = 'application/json';
+      if (UserSession.token.isNotEmpty) {
+        request.headers['Authorization'] = 'Bearer ${UserSession.token}';
+      }
+      request.fields['email'] = UserSession.email;
+      request.fields['action'] = 'confirm';
+      request.fields['refund_destination'] = dest;
+      request.fields['passenger_items'] = _selectedPassengerItems.join(',');
+
+      if (_idFile != null) {
+        request.files.add(await http.MultipartFile.fromPath('refund_id_image', _idFile!.path));
+      }
+      if (_ticketFile != null) {
+        request.files.add(await http.MultipartFile.fromPath('refund_ticket_file', _ticketFile!.path));
+      }
+      if (_authLetterFile != null) {
+        request.files.add(await http.MultipartFile.fromPath('refund_auth_letter', _authLetterFile!.path));
+      }
+
+      final streamedRes = await request.send();
+      final res = await http.Response.fromStream(streamedRes);
       final data = jsonDecode(res.body);
-      if (res.statusCode == 200) {
+      if (res.statusCode == 200 && data['status'] != 'error') {
         setState(() => _success =
             'Your refund request has been submitted successfully! Please allow 24–48 hours for our finance team to review and disburse your refund to your designated account. A confirmation email has been sent.');
       } else {
@@ -19272,6 +19376,39 @@ class _RefundScreenState extends State<RefundScreen> {
                               decoration: const InputDecoration(
                                   hintText: 'Full name on the account',
                                   border: OutlineInputBorder())),
+                          const SizedBox(height: 20),
+                          const Text('Verification & Authorization Documents',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  color: Color(0xFF1E293B))),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Please upload the passenger ID, original ticket, and an authorization letter (if requesting on behalf of the passenger or for partial passenger refund).',
+                            style: TextStyle(fontSize: 12, color: Colors.blueGrey),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildDocUploadTile(
+                            title: '1. Valid ID',
+                            subtitle: 'Passenger Government ID / Photo ID',
+                            file: _idFile,
+                            onPick: () => _pickRefundDoc('id'),
+                            onRemove: () => setState(() => _idFile = null),
+                          ),
+                          _buildDocUploadTile(
+                            title: '2. Original Ticket / Receipt',
+                            subtitle: 'Original e-ticket or booking receipt',
+                            file: _ticketFile,
+                            onPick: () => _pickRefundDoc('ticket'),
+                            onRemove: () => setState(() => _ticketFile = null),
+                          ),
+                          _buildDocUploadTile(
+                            title: '3. Authorization Letter',
+                            subtitle: 'Letter permitting refund on passenger behalf',
+                            file: _authLetterFile,
+                            onPick: () => _pickRefundDoc('auth'),
+                            onRemove: () => setState(() => _authLetterFile = null),
+                          ),
                           const SizedBox(height: 24),
                           Wrap(
                             spacing: 8,

@@ -31,6 +31,7 @@ class BookingReschedule extends Component
     public string $refund_account_name = '';
     public $refund_id_image = null;
     public $refund_ticket_file = null;
+    public $refund_auth_letter = null;
 
     // Wizard State
     // Steps: departure_date, departure_schedule, departure_accommodation, return_date, return_schedule, return_accommodation, confirm
@@ -527,6 +528,7 @@ class BookingReschedule extends Component
             'refund_account_name' => 'required|string|max:100',
             'refund_id_image' => 'nullable|file|mimes:jpeg,png,jpg,webp,pdf|max:10240',
             'refund_ticket_file' => 'nullable|file|mimes:jpeg,png,jpg,webp,pdf|max:10240',
+            'refund_auth_letter' => 'nullable|file|mimes:jpeg,png,jpg,webp,pdf|max:10240',
         ];
 
         if (in_array($this->refund_method, ['Bank Account', 'Online Wallet'], true)) {
@@ -543,6 +545,11 @@ class BookingReschedule extends Component
         $ticketFilePath = null;
         if ($this->refund_ticket_file) {
             $ticketFilePath = $this->refund_ticket_file->store('refund_docs/tickets', 'public');
+        }
+
+        $authLetterPath = null;
+        if ($this->refund_auth_letter) {
+            $authLetterPath = $this->refund_auth_letter->store('refund_docs/auth_letters', 'public');
         }
 
         $destinationParts = [];
@@ -572,6 +579,7 @@ class BookingReschedule extends Component
                     'refund_destination' => $refundDestination,
                     'refund_id_image'    => $idImagePath ?: $p->refund_id_image,
                     'refund_ticket_file' => $ticketFilePath ?: $p->refund_ticket_file,
+                    'refund_auth_letter' => $authLetterPath ?: $p->refund_auth_letter,
                 ]);
             }
 
@@ -583,6 +591,7 @@ class BookingReschedule extends Component
                 'refund_destination' => $refundDestination,
                 'refund_id_image'    => $idImagePath ?: $this->booking->refund_id_image,
                 'refund_ticket_file' => $ticketFilePath ?: $this->booking->refund_ticket_file,
+                'refund_auth_letter' => $authLetterPath ?: $this->booking->refund_auth_letter,
                 'refund_amount' => $this->booking->passengers->sum('refund_amount') ?: $netRefund,
             ]);
 
@@ -592,6 +601,7 @@ class BookingReschedule extends Component
 
             $this->refund_id_image = null;
             $this->refund_ticket_file = null;
+            $this->refund_auth_letter = null;
 
             $this->loadBooking();
             $this->closeRefundForm();

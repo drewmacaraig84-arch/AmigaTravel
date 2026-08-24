@@ -176,14 +176,14 @@ class ManageRefunds extends Page implements HasTable, HasInfolists
                         default => 'warning',
                     }),
                 Tables\Columns\IconColumn::make('has_customer_docs')
-                    ->label('ID / Ticket')
+                    ->label('Customer Docs')
                     ->boolean()
-                    ->state(fn (Booking $record): bool => filled($record->refund_id_image) || filled($record->refund_ticket_file))
+                    ->state(fn (Booking $record): bool => filled($record->refund_id_image) || filled($record->refund_ticket_file) || filled($record->refund_auth_letter))
                     ->trueIcon('heroicon-o-document-check')
                     ->falseIcon('heroicon-o-minus')
                     ->trueColor('success')
                     ->falseColor('gray')
-                    ->tooltip(fn (Booking $record): string => (filled($record->refund_id_image) || filled($record->refund_ticket_file)) ? 'Customer uploaded ID or Original Ticket' : 'No customer documents uploaded'),
+                    ->tooltip(fn (Booking $record): string => (filled($record->refund_id_image) || filled($record->refund_ticket_file) || filled($record->refund_auth_letter)) ? 'Customer uploaded ID, Ticket, or Auth Letter' : 'No customer documents uploaded'),
                 Tables\Columns\TextColumn::make('refund_reference')
                     ->label('Transfer Ref No.')
                     ->searchable()

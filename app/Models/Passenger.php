@@ -68,6 +68,7 @@ class Passenger extends Model
         'refund_destination',
         'refund_id_image',
         'refund_ticket_file',
+        'refund_auth_letter',
         'refund_reference',
         'refund_proof',
         'refund_processed_at',
