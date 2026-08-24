@@ -98,7 +98,7 @@ class PromotionalTicket extends Model
         try {
             \Illuminate\Support\Facades\Cache::forget('api:promotions');
             \Illuminate\Support\Facades\Cache::forget('website_settings:promotions');
-            \Illuminate\Support\Facades\Cache::flush();
+            \App\Models\Schedule::bust();
         } catch (\Throwable) {
             // Ignore cache driver errors
         }
