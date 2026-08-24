@@ -184,4 +184,86 @@ class PromoTicketDiscountTest extends TestCase
         $this->assertEquals($discount->id, $passenger->discount_id);
         $this->assertGreaterThan(0, (float)$passenger->discount_amount);
     }
+
+    public function test_promotional_ticket_rejects_vouchers(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Vouchers cannot be used with promotional tickets.');
+
+        $schedule = $this->createAirlineSchedule();
+        $promoTicket = PromotionalTicket::create([
+            'schedule_id' => $schedule->id,
+            'promo_price' => 800.00,
+            'quantity_available' => 5,
+            'quantity_sold' => 0,
+            'starts_at' => now()->subDay(),
+            'ends_at' => now()->addDays(30),
+            'is_active' => true,
+        ]);
+
+        $data = [
+            'trip_type' => 'one_way',
+            'origin' => 'Manila',
+            'destination' => 'Cebu',
+            'departure_date' => $schedule->departure_time->format('Y-m-d'),
+            'schedule_id' => $schedule->id,
+            'promotional_ticket_id' => $promoTicket->id,
+            'voucher_code' => 'TESTVOUCHER',
+            'client_name' => 'Test User',
+            'client_email' => 'test@example.com',
+            'client_phone' => '09171234567',
+            'payment_method' => 'gcash',
+            'passengers' => [
+                [
+                    'type' => 'adult',
+                    'name' => 'Test User',
+                    'birthdate' => '1995-05-15',
+                ],
+            ],
+        ];
+
+        $action = app(CreateBookingAction::class);
+        $action->execute($data);
+    }
+
+    public function test_promotional_ticket_rejects_gracia_points(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Gracia points cannot be used with promotional tickets.');
+
+        $schedule = $this->createAirlineSchedule();
+        $promoTicket = PromotionalTicket::create([
+            'schedule_id' => $schedule->id,
+            'promo_price' => 800.00,
+            'quantity_available' => 5,
+            'quantity_sold' => 0,
+            'starts_at' => now()->subDay(),
+            'ends_at' => now()->addDays(30),
+            'is_active' => true,
+        ]);
+
+        $data = [
+            'trip_type' => 'one_way',
+            'origin' => 'Manila',
+            'destination' => 'Cebu',
+            'departure_date' => $schedule->departure_time->format('Y-m-d'),
+            'schedule_id' => $schedule->id,
+            'promotional_ticket_id' => $promoTicket->id,
+            'use_points' => true,
+            'client_name' => 'Test User',
+            'client_email' => 'test@example.com',
+            'client_phone' => '09171234567',
+            'payment_method' => 'gcash',
+            'passengers' => [
+                [
+                    'type' => 'adult',
+                    'name' => 'Test User',
+                    'birthdate' => '1995-05-15',
+                ],
+            ],
+        ];
+
+        $action = app(CreateBookingAction::class);
+        $action->execute($data);
+    }
 }

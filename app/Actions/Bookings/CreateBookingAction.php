@@ -48,15 +48,23 @@ class CreateBookingAction
             : null;
 
         // --- Promo ticket validation ---
-        $isPromoBooking = false;
+        $isPromoBooking = ! empty($data['promotional_ticket_id']);
+        if (! $isPromoBooking && ! empty($data['passengers']) && is_array($data['passengers'])) {
+            foreach ($data['passengers'] as $p) {
+                if (! empty($p['use_promo']) || ! empty($p['is_promo']) || ! empty($p['promotional_ticket_id'])) {
+                    $isPromoBooking = true;
+                    break;
+                }
+            }
+        }
         if (! empty($data['selected_transport_class_id'])) {
-            $isPromoBooking = $isPromoBooking || DB::table('schedule_transport_class')
+            $isPromoBooking = $isPromoBooking || (bool) DB::table('schedule_transport_class')
                 ->where('schedule_id', $schedule->id)
                 ->where('transport_class_id', $data['selected_transport_class_id'])
                 ->value('is_promo');
         }
         if (! empty($data['selected_return_transport_class_id']) && $returnSchedule) {
-            $isPromoBooking = $isPromoBooking || DB::table('schedule_transport_class')
+            $isPromoBooking = $isPromoBooking || (bool) DB::table('schedule_transport_class')
                 ->where('schedule_id', $returnSchedule->id)
                 ->where('transport_class_id', $data['selected_return_transport_class_id'])
                 ->value('is_promo');
