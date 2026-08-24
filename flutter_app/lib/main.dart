@@ -10079,34 +10079,6 @@ class _DiscountScreenState extends State<DiscountScreen> {
                                   ],
                                 ),
                               ),
-                            ] else if (widget.booking.usePromoTicket &&
-                                widget.booking.promotionalTicketId != null) ...[
-                              const SizedBox(height: 10),
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFFF3CD),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                      color: const Color(0xFFFFD700)),
-                                ),
-                                child: const Row(
-                                  children: [
-                                    Icon(Icons.local_activity,
-                                        color: Color(0xFFC08000), size: 18),
-                                    SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        'Promotional ticket applied — passenger discounts are not applicable.',
-                                        style: TextStyle(
-                                            fontSize: 12,
-                                            color: Color(0xFF7B5800),
-                                            fontWeight: FontWeight.w500),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
                             ] else if (_discounts.isNotEmpty) ...[
                               const SizedBox(height: 10),
                               Builder(builder: (context) {
@@ -11424,7 +11396,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                           SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              'Promotional ticket is active. Vouchers, Gracia Points, and passenger discounts cannot be combined with a promo fare.',
+                              'Promotional ticket is active. Vouchers and Gracia Points cannot be combined with a promo fare.',
                               style: TextStyle(
                                   fontSize: 12,
                                   color: Color(0xFF7B5800),
@@ -11498,8 +11470,13 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                       int payingInfants = widget.booking.mode == 'airline' ? widget.booking.infants : 0;
                       int payingPax = payingAdults + payingChildren + payingMinors + payingInfants;
 
+                      final bool isPromo = widget.booking.usePromoTicket &&
+                          widget.booking.promotionalTicketId != null;
+
                       if (widget.booking.selectedSchedule != null) {
-                        final rawAdultP = widget.booking.selectedSchedule!['adult_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0;
+                        final rawAdultP = isPromo && widget.booking.selectedSchedule!['promotional_ticket'] != null
+                            ? (widget.booking.selectedSchedule!['promotional_ticket']['promo_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0)
+                            : (widget.booking.selectedSchedule!['adult_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0);
                         final adultP = rawAdultP is num ? rawAdultP.toDouble() : (double.tryParse(rawAdultP.toString()) ?? 0.0);
                         
                         final childP = 0.5 * adultP;
@@ -11539,33 +11516,26 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                         }
                       }
 
-                      final bool isPromo = widget.booking.usePromoTicket &&
-                          widget.booking.promotionalTicketId != null;
-
                       double passengerDiscount = 0.0;
-                      if (!isPromo) {
-                        for (var p in widget.booking.passengers) {
-                          if (p['discount_id'] != null &&
-                              widget.booking.selectedSchedule != null) {
-                            final ap = widget.booking.selectedSchedule!['adult_price'] ??
-                                widget.booking.selectedSchedule!['price'] ??
+                      for (var p in widget.booking.passengers) {
+                        if (p['discount_id'] != null &&
+                            widget.booking.selectedSchedule != null) {
+                          final rawAp = isPromo && widget.booking.selectedSchedule!['promotional_ticket'] != null
+                              ? (widget.booking.selectedSchedule!['promotional_ticket']['promo_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0)
+                              : (widget.booking.selectedSchedule!['adult_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0);
+                          final ap = rawAp is num ? rawAp.toDouble() : (double.tryParse(rawAp.toString()) ?? 0.0);
+                          passengerDiscount += (ap * 0.20);
+                          if (widget.booking.tripType == 'round_trip' &&
+                              widget.booking.selectedReturnSchedule != null) {
+                            final rp = widget.booking
+                                    .selectedReturnSchedule!['adult_price'] ??
+                                widget.booking
+                                    .selectedReturnSchedule!['price'] ??
                                 0;
-                            passengerDiscount += ((ap is num
-                                    ? ap.toDouble()
-                                    : double.tryParse(ap.toString()) ?? 0) *
+                            passengerDiscount += ((rp is num
+                                    ? rp.toDouble()
+                                    : double.tryParse(rp.toString()) ?? 0) *
                                 0.20);
-                            if (widget.booking.tripType == 'round_trip' &&
-                                widget.booking.selectedReturnSchedule != null) {
-                              final rp = widget.booking
-                                      .selectedReturnSchedule!['adult_price'] ??
-                                  widget.booking
-                                      .selectedReturnSchedule!['price'] ??
-                                  0;
-                              passengerDiscount += ((rp is num
-                                      ? rp.toDouble()
-                                      : double.tryParse(rp.toString()) ?? 0) *
-                                  0.20);
-                            }
                           }
                         }
                       }

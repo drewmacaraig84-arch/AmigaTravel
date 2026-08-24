@@ -2146,9 +2146,16 @@ public function selectedSchedule(): ?array
                     }
 
                     if ($isPromo) {
-                        $grossFare = floatval($usedPromoTicket->promo_price);
-                        $grossAcc = 0.0;
+                        $grossFare = floatval($usedPromoTicket->promo_price) + $depTcPrice + ($retBasePrice + $retTcPrice) * $paxMultiplier;
+                        $grossAcc = $schedAccPrice + $retAccPrice;
                         $discAmount = 0.0;
+                        $hasDiscount = !empty($passenger['discount_id']) && !($isAirline && $pType === 'infant');
+                        if ($hasDiscount) {
+                            $disc = $discountsKeyed->get($passenger['discount_id']);
+                            if ($disc) {
+                                $discAmount = ($grossFare + $grossAcc) * ((float) $disc->percentage / 100);
+                            }
+                        }
                     } else {
                         $grossFare = ($schedBasePrice + $depTcPrice + $retBasePrice + $retTcPrice) * $paxMultiplier;
                         $grossAcc = $schedAccPrice + $retAccPrice;
@@ -2172,7 +2179,7 @@ public function selectedSchedule(): ?array
                         'type'                   => $passenger['type'],
                         'name'                   => $passenger['name'] ?: null,
                         'birthdate'              => !empty($passenger['birthdate']) ? $passenger['birthdate'] : null,
-                        'discount_id'            => ($isPromo || ($isAirline && $pType === 'infant')) ? null : ($passenger['discount_id'] ?: null),
+                        'discount_id'            => ($isAirline && $pType === 'infant') ? null : ($passenger['discount_id'] ?: null),
                         'promotional_ticket_id'  => $isPromo ? $usedPromoTicket->id : null,
                         'is_promo'               => $isPromo,
                         'promo_price'            => $isPromo ? floatval($usedPromoTicket->promo_price) : null,
@@ -2864,13 +2871,8 @@ public function selectedSchedule(): ?array
             if ($rstc && $rstc->is_promo) $hasPromoClass = true;
         }
 
-        $isFerryPromo = ($this->mode !== 'airline' && $this->use_promo_ticket);
-        $disableDiscounts = $isFerryPromo || $hasPromoClass;
-
-        // For airline bookings, fetch the active promo ticket once (if any)
-        $activePromoTicket = (strtolower($this->mode) === 'airline') ? $this->getActivePromoTicket() : null;
-
         $isFerry = (strtolower($this->mode ?? '') !== 'airline');
+        $activePromoTicket = (strtolower($this->mode) === 'airline') ? $this->getActivePromoTicket() : null;
 
         $transportTotal = collect($this->passengers)->sum(function (array $passenger) use (
             $baseSchedulePrice,
@@ -2881,17 +2883,9 @@ public function selectedSchedule(): ?array
             $returnTransportClassTotal,
             $discountsById,
             $activePromoTicket,
-            $disableDiscounts,
             $isFerry
         ) {
             $scheduleAccommodationPrice_ = $scheduleAccommodationPrice;
-
-            // Airline per-passenger promo: departure leg uses promo_price, no discount applied
-            if ($activePromoTicket && ! empty($passenger['use_promo'])) {
-                $departureFare = floatval($activePromoTicket->promo_price) + $scheduleAccommodationPrice_ + $departureTransportClassTotal;
-                $returnFare = $returnSchedulePrice + $returnScheduleAccommodationPrice + $returnTransportClassTotal;
-                return $departureFare + $returnFare;
-            }
 
             if ($passenger['type'] === 'driver') {
                 return 0; // Driver ticket is free
@@ -2910,15 +2904,21 @@ public function selectedSchedule(): ?array
                 }
             }
 
-            $depBaseAndClass = ($baseSchedulePrice + $departureTransportClassTotal) * $paxMultiplier;
-            $retBaseAndClass = ($returnSchedulePrice + $returnTransportClassTotal) * $paxMultiplier;
+            // Airline per-passenger promo: departure leg uses promo_price
+            if ($activePromoTicket && ! empty($passenger['use_promo'])) {
+                $depBaseAndClass = floatval($activePromoTicket->promo_price) + $departureTransportClassTotal;
+                $retBaseAndClass = ($returnSchedulePrice + $returnTransportClassTotal) * $paxMultiplier;
+            } else {
+                $depBaseAndClass = ($baseSchedulePrice + $departureTransportClassTotal) * $paxMultiplier;
+                $retBaseAndClass = ($returnSchedulePrice + $returnTransportClassTotal) * $paxMultiplier;
+            }
 
             $depFare = $depBaseAndClass + $scheduleAccommodationPrice_;
             $retFare = $retBaseAndClass + $returnScheduleAccommodationPrice;
 
             $fare = $depFare + $retFare;
 
-            $hasDiscount = ! empty($passenger['discount_id']) && !$disableDiscounts && !(!$isFerry && $type === 'infant');
+            $hasDiscount = ! empty($passenger['discount_id']) && !(!$isFerry && $type === 'infant');
 
             if ($hasDiscount) {
                 $discount = $discountsById->get($passenger['discount_id']);
@@ -2997,11 +2997,9 @@ public function selectedSchedule(): ?array
             if ($rstc && $rstc->is_promo) $hasPromoClass = true;
         }
 
-        $isFerryPromo = ($this->mode !== 'airline' && $this->use_promo_ticket);
-        $disableDiscounts = $isFerryPromo || $hasPromoClass;
-
         // Calculate totals considering discounts
         $discountsById = $this->discounts->keyBy('id');
+        $activePromoTicket = (strtolower($this->mode) === 'airline') ? $this->getActivePromoTicket() : null;
         
         $totalDepartureTicket = 0;
         $totalReturnTicket = 0;
@@ -3027,11 +3025,16 @@ public function selectedSchedule(): ?array
                 }
             }
 
-            $depTicket = ($departureTicketPrice + $departureTransportClassTotal) * $paxMultiplier;
-            $retTicket = ($returnTicketPrice + $returnTransportClassTotal) * $paxMultiplier;
+            $isAirlinePromoPassenger = (strtolower($this->mode) === 'airline' && !empty($passenger['use_promo']) && $activePromoTicket);
+            if ($isAirlinePromoPassenger) {
+                $depTicket = floatval($activePromoTicket->promo_price) + $departureTransportClassTotal;
+                $retTicket = ($returnTicketPrice + $returnTransportClassTotal) * $paxMultiplier;
+            } else {
+                $depTicket = ($departureTicketPrice + $departureTransportClassTotal) * $paxMultiplier;
+                $retTicket = ($returnTicketPrice + $returnTransportClassTotal) * $paxMultiplier;
+            }
             
-            $isAirlinePromoPassenger = (strtolower($this->mode) === 'airline' && !empty($passenger['use_promo']));
-            $hasDiscount = !empty($passenger['discount_id']) && !$disableDiscounts && !$isAirlinePromoPassenger && !(!$isFerry && $type === 'infant');
+            $hasDiscount = !empty($passenger['discount_id']) && !(!$isFerry && $type === 'infant');
 
             if ($hasDiscount) {
                 $discount = $discountsById->get($passenger['discount_id']);

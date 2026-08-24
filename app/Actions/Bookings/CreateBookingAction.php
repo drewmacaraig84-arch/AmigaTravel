@@ -69,13 +69,6 @@ class CreateBookingAction
             if (! empty($data['use_points'])) {
                 throw new \InvalidArgumentException('Gracia points cannot be used with promotional tickets.');
             }
-            if (isset($data['passengers']) && is_array($data['passengers'])) {
-                foreach ($data['passengers'] as $passenger) {
-                    if (! empty($passenger['discount_id'])) {
-                        throw new \InvalidArgumentException('Passenger discounts cannot be used with promotional tickets.');
-                    }
-                }
-            }
         }
 
         // --- Max passengers validation ---
