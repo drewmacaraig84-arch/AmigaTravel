@@ -499,7 +499,7 @@
         {{-- Remittance Summary Block --}}
         <div style="border: 1px solid #bdc3c7; background: #fafafa; padding: 8px 12px; border-radius: 4px; margin-bottom: 15px;">
             <div style="font-size: 10px; font-weight: bold; color: #2c3e50; border-bottom: 1.5px solid #2c3e50; padding-bottom: 3px; margin-bottom: 6px;">
-                Remitance Summary
+                Remittance Summary
             </div>
             <table style="width: 100%; border: none; margin: 0; font-size: 8px;">
                 <tr>
