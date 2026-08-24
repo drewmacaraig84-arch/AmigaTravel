@@ -2131,15 +2131,30 @@ public function selectedSchedule(): ?array
                     $isPromo = strtolower($this->mode) === 'airline' && ! empty($passenger['use_promo']) && $usedPromoTicket;
                     $itemNum = $idx + 1;
 
+                    $pType = strtolower($passenger['type'] ?? 'adult');
+                    $isAirline = strtolower($this->mode) === 'airline';
+                    $paxMultiplier = 1.0;
+                    if ($isAirline) {
+                        if (in_array($pType, ['minor', 'child', 'infant'], true)) {
+                            $paxMultiplier = 0.5;
+                        }
+                    } else {
+                        // Ferry
+                        if (in_array($pType, ['child', 'minor'], true)) {
+                            $paxMultiplier = 0.5;
+                        }
+                    }
+
                     if ($isPromo) {
                         $grossFare = floatval($usedPromoTicket->promo_price);
                         $grossAcc = 0.0;
                         $discAmount = 0.0;
                     } else {
-                        $grossFare = $schedBasePrice + $depTcPrice + $retBasePrice + $retTcPrice;
+                        $grossFare = ($schedBasePrice + $depTcPrice + $retBasePrice + $retTcPrice) * $paxMultiplier;
                         $grossAcc = $schedAccPrice + $retAccPrice;
                         $discAmount = 0.0;
-                        if (!empty($passenger['discount_id'])) {
+                        $hasDiscount = !empty($passenger['discount_id']) && !($isAirline && $pType === 'infant');
+                        if ($hasDiscount) {
                             $disc = $discountsKeyed->get($passenger['discount_id']);
                             if ($disc) {
                                 $discAmount = ($grossFare + $grossAcc) * ((float) $disc->percentage / 100);
@@ -2157,7 +2172,7 @@ public function selectedSchedule(): ?array
                         'type'                   => $passenger['type'],
                         'name'                   => $passenger['name'] ?: null,
                         'birthdate'              => !empty($passenger['birthdate']) ? $passenger['birthdate'] : null,
-                        'discount_id'            => $isPromo ? null : ($passenger['discount_id'] ?: null),
+                        'discount_id'            => ($isPromo || ($isAirline && $pType === 'infant')) ? null : ($passenger['discount_id'] ?: null),
                         'promotional_ticket_id'  => $isPromo ? $usedPromoTicket->id : null,
                         'is_promo'               => $isPromo,
                         'promo_price'            => $isPromo ? floatval($usedPromoTicket->promo_price) : null,
@@ -2882,12 +2897,30 @@ public function selectedSchedule(): ?array
                 return 0; // Driver ticket is free
             }
 
-            $depFare = ($baseSchedulePrice + $departureTransportClassTotal) + $scheduleAccommodationPrice_;
-            $retFare = ($returnSchedulePrice + $returnTransportClassTotal) + $returnScheduleAccommodationPrice;
+            $type = strtolower($passenger['type'] ?? 'adult');
+            $paxMultiplier = 1.0;
+            if ($isFerry) {
+                if (in_array($type, ['child', 'minor'], true)) {
+                    $paxMultiplier = 0.5;
+                }
+            } else {
+                // Airline
+                if (in_array($type, ['minor', 'child', 'infant'], true)) {
+                    $paxMultiplier = 0.5;
+                }
+            }
+
+            $depBaseAndClass = ($baseSchedulePrice + $departureTransportClassTotal) * $paxMultiplier;
+            $retBaseAndClass = ($returnSchedulePrice + $returnTransportClassTotal) * $paxMultiplier;
+
+            $depFare = $depBaseAndClass + $scheduleAccommodationPrice_;
+            $retFare = $retBaseAndClass + $returnScheduleAccommodationPrice;
 
             $fare = $depFare + $retFare;
 
-            if (! empty($passenger['discount_id']) && !$disableDiscounts) {
+            $hasDiscount = ! empty($passenger['discount_id']) && !$disableDiscounts && !(!$isFerry && $type === 'infant');
+
+            if ($hasDiscount) {
                 $discount = $discountsById->get($passenger['discount_id']);
 
                 if ($discount) {
@@ -2981,12 +3014,26 @@ public function selectedSchedule(): ?array
                 continue; // Driver ticket and accommodation are free
             }
 
-            $depTicket = ($departureTicketPrice + $departureTransportClassTotal);
-            $retTicket = ($returnTicketPrice + $returnTransportClassTotal);
+            $type = strtolower($passenger['type'] ?? 'adult');
+            $paxMultiplier = 1.0;
+            if ($isFerry) {
+                if (in_array($type, ['child', 'minor'], true)) {
+                    $paxMultiplier = 0.5;
+                }
+            } else {
+                // Airline
+                if (in_array($type, ['minor', 'child', 'infant'], true)) {
+                    $paxMultiplier = 0.5;
+                }
+            }
+
+            $depTicket = ($departureTicketPrice + $departureTransportClassTotal) * $paxMultiplier;
+            $retTicket = ($returnTicketPrice + $returnTransportClassTotal) * $paxMultiplier;
             
             $isAirlinePromoPassenger = (strtolower($this->mode) === 'airline' && !empty($passenger['use_promo']));
+            $hasDiscount = !empty($passenger['discount_id']) && !$disableDiscounts && !$isAirlinePromoPassenger && !(!$isFerry && $type === 'infant');
 
-            if (!empty($passenger['discount_id']) && !$disableDiscounts && !$isAirlinePromoPassenger) {
+            if ($hasDiscount) {
                 $discount = $discountsById->get($passenger['discount_id']);
                 if ($discount) {
                     $percentage = floatval($discount->percentage) / 100;

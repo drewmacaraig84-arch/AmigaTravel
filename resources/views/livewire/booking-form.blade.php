@@ -1277,17 +1277,23 @@
                                         @endif
                                     @endif
 
-                                    {{-- Discount select &mdash; hidden when promo is active for this passenger --}}
+                                    {{-- Discount select &mdash; hidden when promo is active or for airline infant --}}
                                     @php
                                         $passengerHasPromoForDiscount = ($mode === 'airline') && ! empty($passenger['use_promo']);
                                         $isDriver = $passenger['type'] === 'driver';
+                                        $isAirlineInfant = ($mode === 'airline') && ($passenger['type'] === 'infant');
                                     @endphp
-                                    <label class="block min-w-0 {{ $passengerHasPromoForDiscount ? 'opacity-40 pointer-events-none select-none' : '' }}">
+                                    <label class="block min-w-0 {{ ($passengerHasPromoForDiscount || $isAirlineInfant) ? 'opacity-50 pointer-events-none select-none' : '' }}">
                                         <span class="text-slate-900 font-bold text-sm">Discount</span>
                                         @if($isDriver)
                                             <div class="mt-3 rounded-xl border border-[#00a859] bg-[#00a859]/10 px-4 py-3 text-sm text-[#216417] font-bold flex items-center gap-2 shadow-sm">
                                                 <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                                 Driver &mdash; Free Ticket
+                                            </div>
+                                        @elseif($isAirlineInfant)
+                                            <div class="mt-3 rounded-xl border border-slate-200 bg-slate-100/80 px-4 py-3 text-sm text-slate-500 font-medium flex items-center gap-2 shadow-sm">
+                                                <svg class="w-4 h-4 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                                <span>Infant fare (50% base fare) &mdash; No additional discounts</span>
                                             </div>
                                         @elseif($passengerHasPromoForDiscount)
                                             <p class="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-400">No discount &mdash; promo fare applied</p>

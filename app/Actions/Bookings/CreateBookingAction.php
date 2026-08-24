@@ -350,14 +350,30 @@ class CreateBookingAction
                     continue;
                 }
 
-                // Gross fare per passenger (departure + return) - standard fare for all passengers
-                $grossFare = ($schedBasePrice + $depTcPrice + $retBasePrice + $retTcPrice);
+                $pType = strtolower($passengerData['type'] ?? 'adult');
+                $paxMultiplier = 1.0;
+                if ($isAirline) {
+                    if (in_array($pType, ['minor', 'child', 'infant'], true)) {
+                        $paxMultiplier = 0.5;
+                    }
+                } else {
+                    // Ferry
+                    if (in_array($pType, ['child', 'minor'], true)) {
+                        $paxMultiplier = 0.5;
+                    }
+                }
+
+                // Airline infant cannot have additional discounts
+                $hasDiscount = ! empty($passengerData['discount_id']) && ! ($isAirline && $pType === 'infant');
+
+                // Gross fare per passenger (departure + return) - 50% on base fare + transport class for eligible types
+                $grossFare = ($schedBasePrice + $depTcPrice + $retBasePrice + $retTcPrice) * $paxMultiplier;
                 $grossAcc  = $schedAccPrice + $retAccPrice;
                 $gross     = $grossFare + $grossAcc;
 
                 // Passenger-specific discount (senior, student, PWD…)
                 $discountAmount_item = 0.0;
-                if (! empty($passengerData['discount_id'])) {
+                if ($hasDiscount) {
                     $disc = $discounts->get($passengerData['discount_id']);
                     if ($disc) {
                         $discountAmount_item = $gross * ((float) $disc->percentage / 100);
@@ -392,7 +408,7 @@ class CreateBookingAction
                     'type'                   => $passengerData['type'],
                     'name'                   => $passengerData['name'],
                     'birthdate'              => !empty($passengerData['birthdate']) ? $passengerData['birthdate'] : null,
-                    'discount_id'            => $passengerData['discount_id'] ?? null,
+                    'discount_id'            => ($isAirline && $pType === 'infant') ? null : ($passengerData['discount_id'] ?? null),
                     'school_name'            => !empty($passengerData['school_name']) ? $passengerData['school_name'] : null,
                     'id_number'              => !empty($passengerData['id_number']) ? $passengerData['id_number'] : null,
                     'id_image_front'         => $frontPath,
@@ -587,12 +603,27 @@ class CreateBookingAction
                 return 0.0; // Driver travels free
             }
 
-            $ticketAndClassFare = ($schedulePrice + $departureTransportClassTotal) + ($returnSchedulePrice + $returnTransportClassTotal);
+            $type = strtolower($passenger['type'] ?? 'adult');
+            $paxMultiplier = 1.0;
+            if ($isFerry) {
+                if (in_array($type, ['child', 'minor'], true)) {
+                    $paxMultiplier = 0.5;
+                }
+            } else {
+                // Airline
+                if (in_array($type, ['minor', 'child', 'infant'], true)) {
+                    $paxMultiplier = 0.5;
+                }
+            }
+
+            $ticketAndClassFare = (($schedulePrice + $departureTransportClassTotal) + ($returnSchedulePrice + $returnTransportClassTotal)) * $paxMultiplier;
             $accommodationFare = $scheduleAccommodationPrice + $returnScheduleAccomPrice;
 
             $fare = $ticketAndClassFare + $accommodationFare;
 
-            if (! empty($passenger['discount_id'])) {
+            $hasDiscount = ! empty($passenger['discount_id']) && ! (! $isFerry && $type === 'infant');
+
+            if ($hasDiscount) {
                 $discount = $discounts->get($passenger['discount_id']);
                 if ($discount) {
                     $fare -= $fare * ((float) $discount->percentage / 100);
