@@ -22,7 +22,7 @@ class ListVouchers extends ListRecords
                 ->icon('heroicon-o-clock')
                 ->color('warning')
                 ->modalHeading('Verification SLA Guarantee Voucher Settings')
-                ->modalDescription('Configure the automatic non-expiring voucher reward given to clients when their booking is not handled/verified within the SLA window.')
+                ->modalDescription('Configure the automatic 90-day voucher reward given to clients when their booking is not handled/verified within the SLA window.')
                 ->modalSubmitActionLabel('Save Settings')
                 ->fillForm(function (): array {
                     $settings = PaymentSetting::current();
@@ -46,7 +46,7 @@ class ListVouchers extends ListRecords
                         ->required(),
                     TextInput::make('sla_voucher_amount')
                         ->label('Voucher Reward Amount (₱)')
-                        ->helperText('Flat amount for the generated non-expiring voucher.')
+                        ->helperText('Flat amount for the generated 90-day voucher.')
                         ->numeric()
                         ->prefix('₱')
                         ->minValue(0)

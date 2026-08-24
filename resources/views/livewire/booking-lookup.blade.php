@@ -297,7 +297,7 @@
                                         Our Verification Guarantee
                                     </div>
                                     <p class="text-xs sm:text-sm text-slate-700 leading-relaxed">
-                                        We are reviewing your booking. As part of our service guarantee, if your booking is not processed within <strong>{{ \App\Models\PaymentSetting::current()->getSlaVoucherHours() }} hours</strong> of payment submission, you will automatically receive a <strong>₱{{ number_format(\App\Models\PaymentSetting::current()->getSlaVoucherAmount(), 0) }} non-expiring travel voucher</strong> for your next trip.
+                                        We are reviewing your booking. As part of our service guarantee, if your booking is not processed within <strong>{{ \App\Models\PaymentSetting::current()->getSlaVoucherHours() }} hours</strong> of payment submission, you will automatically receive a <strong>₱{{ number_format(\App\Models\PaymentSetting::current()->getSlaVoucherAmount(), 0) }} travel voucher valid for 90 days</strong> towards your next trip.
                                     </p>
                                     <div class="flex items-center gap-2 pt-1 text-xs text-pink-700 font-medium">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-pink-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">

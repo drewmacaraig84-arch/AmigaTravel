@@ -29,7 +29,7 @@
                         Thank You For Your Patience
                     </h1>
                     <p style="margin: 0; font-size: 15px; color: #475569;">
-                        Dear <strong>{{ $booking->client_name }}</strong>, because your booking (Transaction <strong>{{ $booking->transaction_number }}</strong>) took longer than our standard verification window, we are pleased to award you a special non-expiring travel discount voucher.
+                        Dear <strong>{{ $booking->client_name }}</strong>, because your booking (Transaction <strong>{{ $booking->transaction_number }}</strong>) took longer than our standard verification window, we are pleased to award you a special travel discount voucher valid for 90 days.
                     </p>
                 </td>
             </tr>
@@ -48,7 +48,7 @@
                             ₱{{ number_format($voucher->discount_value, 2) }} OFF
                         </div>
                         <div style="font-size: 12px; color: #64748b; margin-top: 4px;">
-                            No expiration date &bull; Valid on all ferry and flight bookings
+                            Valid for 90 days &bull; Valid on all ferry and flight bookings
                         </div>
                     </div>
                 </td>

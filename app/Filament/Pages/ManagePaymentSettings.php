@@ -177,7 +177,7 @@ class ManagePaymentSettings extends Page implements HasForms
                     ->schema([
                         \Filament\Forms\Components\Toggle::make('sla_voucher_enabled')
                             ->label('Enable Verification SLA Guarantee Reward')
-                            ->helperText('When enabled, unverified bookings past the handling window receive an automatic non-expiring voucher.')
+                            ->helperText('When enabled, unverified bookings past the handling window receive an automatic voucher valid for 90 days.')
                             ->default(true),
                         TextInput::make('sla_voucher_hours')
                             ->label('Handling Window (Hours)')
@@ -188,7 +188,7 @@ class ManagePaymentSettings extends Page implements HasForms
                             ->required(),
                         TextInput::make('sla_voucher_amount')
                             ->label('Voucher Reward Amount (₱)')
-                            ->helperText('Flat amount of the non-expiring voucher issued to the client. Default: ₱500.00.')
+                            ->helperText('Flat amount of the 90-day voucher issued to the client. Default: ₱500.00.')
                             ->numeric()
                             ->prefix('₱')
                             ->minValue(0)

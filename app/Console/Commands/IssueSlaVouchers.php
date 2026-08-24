@@ -70,17 +70,17 @@ class IssueSlaVouchers extends Command
                     $code = 'SLA-' . strtoupper(Str::random(8));
                 } while (Voucher::where('code', $code)->exists());
 
-                // Create the non-expiring flat-amount voucher
+                // Create the 90-day flat-amount voucher
                 $voucher = Voucher::create([
                     'name'                 => "SLA Guarantee Reward - {$booking->transaction_number}",
                     'code'                 => $code,
-                    'description'          => "Automatic verification guarantee voucher for booking {$booking->transaction_number} (elapsed > {$hours}h without verification)",
+                    'description'          => "Automatic verification guarantee voucher (valid for 90 days) for booking {$booking->transaction_number} (elapsed > {$hours}h without verification)",
                     'discount_type'        => 'fixed',
                     'discount_value'       => $amount,
                     'max_discount'         => $amount,
                     'min_booking_amount'   => 0,
                     'start_at'             => Carbon::now(),
-                    'end_at'               => null, // Non-expiring
+                    'end_at'               => Carbon::now()->addDays(90), // Valid for 90 days (3 months)
                     'is_active'            => true,
                     'total_usage_limit'    => 1,
                     'one_use_per_customer' => true,
