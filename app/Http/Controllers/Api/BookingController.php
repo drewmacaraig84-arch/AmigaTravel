@@ -291,13 +291,18 @@ class BookingController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Booking not found.'], 404);
         }
 
-        // If email was provided, verify ownership
-        if (!empty($email)) {
-            $matchesEmail = strtolower($booking->client_email) === strtolower($email);
-            $matchesUser = $userId && $booking->user_id === $userId;
-            if (!$matchesEmail && !$matchesUser) {
-                return response()->json(['status' => 'error', 'message' => 'Unauthorized to view this booking.'], 403);
-            }
+        if (!$isAuthenticated && empty($email)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Authentication, email, or a valid lookup token is required to view booking details.',
+            ], 401);
+        }
+
+        // Verify booking ownership
+        $matchesEmail = !empty($email) && strtolower($booking->client_email) === strtolower($email);
+        $matchesUser = $userId && $booking->user_id === $userId;
+        if (!$matchesEmail && !$matchesUser) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized to view this booking.'], 403);
         }
 
         // Apply same formatting as index
@@ -789,13 +794,6 @@ class BookingController extends Controller
             $filename = 'rebook_proof_' . $booking->transaction_number . '_' . $safeReference . '.' . $extension;
             $proofPath = $request->file('proof')->storeAs('rebooking_proofs', $filename, 'public');
         }
-        $rebookingFee = $request->input('total_paid');
-        $transaction->update([
-            'rebooking_fee' => $rebookingFee,
-            'rebooking_proof_of_payment' => $proofPath,
-            'payment_status' => 'pending',
-            'proof_submitted_at' => now(),
-        ]);
         $passengerItems = $request->input('passenger_items');
         if (is_string($passengerItems)) {
             $passengerItems = array_filter(array_map('intval', explode(',', $passengerItems)));
@@ -803,6 +801,23 @@ class BookingController extends Controller
         $selectedItems = (is_array($passengerItems) && !empty($passengerItems))
             ? $passengerItems
             : $booking->passengers->pluck('item_number')->toArray();
+
+        // Server-side compute rebooking fee to prevent fee manipulation
+        $serverCalc = $booking->getPartialRebookingCalculation(
+            $selectedItems,
+            $request->input('dep_schedule_id'),
+            $request->input('dep_accommodation_id'),
+            $request->input('ret_schedule_id'),
+            $request->input('ret_accommodation_id')
+        );
+        $rebookingFee = (float) ($serverCalc['total_rebooking_fee'] ?? $request->input('total_paid'));
+
+        $transaction->update([
+            'rebooking_fee' => $rebookingFee,
+            'rebooking_proof_of_payment' => $proofPath,
+            'payment_status' => 'pending',
+            'proof_submitted_at' => now(),
+        ]);
 
         $selectedCount = count($selectedItems);
         $totalPaxCount = $booking->passengers()->count();

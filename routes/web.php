@@ -522,13 +522,15 @@ Route::get('/ticket/passenger/{passenger_id}', function ($passenger_id) {
 // Serves any public storage file through the server (avoids Railway storage URL 404s)
 // Usage: /storage-file/{path} where path is the relative storage path, e.g. proofs/AGT-xxx.jpg
 Route::get('/storage-file/{path}', function (string $path) {
+    // Strip directory traversal sequences
+    $sanitizedPath = str_replace(['../', '..\\', '..'], '', $path);
     $disk = \Illuminate\Support\Facades\Storage::disk('public');
 
-    if (! $disk->exists($path)) {
+    if (! $disk->exists($sanitizedPath)) {
         abort(404, 'File not found.');
     }
 
-    $fullPath = $disk->path($path);
+    $fullPath = $disk->path($sanitizedPath);
     $mimeType = mime_content_type($fullPath) ?: 'application/octet-stream';
 
     return response()->file($fullPath, ['Content-Type' => $mimeType]);
