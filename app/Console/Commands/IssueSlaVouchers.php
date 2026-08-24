@@ -17,7 +17,7 @@ use Illuminate\Support\Str;
 class IssueSlaVouchers extends Command
 {
     protected $signature = 'bookings:issue-sla-vouchers';
-    protected $description = 'Automatically issue non-expiring compensation vouchers for bookings not verified within the SLA window.';
+    protected $description = 'Automatically issue 3-month compensation vouchers for bookings not verified within the SLA window.';
 
     public function handle(): int
     {
@@ -70,17 +70,17 @@ class IssueSlaVouchers extends Command
                     $code = 'SLA-' . strtoupper(Str::random(8));
                 } while (Voucher::where('code', $code)->exists());
 
-                // Create the 90-day flat-amount voucher
+                // Create the 3-month flat-amount voucher (valid for 3 months starting from the moment code is issued)
                 $voucher = Voucher::create([
                     'name'                 => "SLA Guarantee Reward - {$booking->transaction_number}",
                     'code'                 => $code,
-                    'description'          => "Automatic verification guarantee voucher (valid for 90 days) for booking {$booking->transaction_number} (elapsed > {$hours}h without verification)",
+                    'description'          => "Automatic verification guarantee voucher (valid for 3 months from issuance) for booking {$booking->transaction_number} (elapsed > {$hours}h without verification)",
                     'discount_type'        => 'fixed',
                     'discount_value'       => $amount,
                     'max_discount'         => $amount,
                     'min_booking_amount'   => 0,
                     'start_at'             => Carbon::now(),
-                    'end_at'               => Carbon::now()->addDays(90), // Valid for 90 days (3 months)
+                    'end_at'               => Carbon::now()->addMonths(3), // Valid for 3 months starting when code is sent to user
                     'is_active'            => true,
                     'total_usage_limit'    => 1,
                     'one_use_per_customer' => true,

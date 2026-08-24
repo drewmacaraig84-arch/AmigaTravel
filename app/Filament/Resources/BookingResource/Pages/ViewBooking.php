@@ -525,22 +525,23 @@ class ViewBooking extends ViewRecord
                             })
                             ->columnSpanFull(),
                         Placeholder::make('customer_refund_docs')
-                            ->label('Customer Submitted Documents (Valid ID & Original Ticket)')
+                            ->label('Customer Submitted Documents (Valid ID, Original Ticket & Auth Letter)')
                             ->content(function () {
                                 $idUrl = $this->record->refund_id_image ? storage_asset_path($this->record->refund_id_image) : null;
                                 $ticketUrl = $this->record->refund_ticket_file ? storage_asset_path($this->record->refund_ticket_file) : null;
+                                $authLetterUrl = $this->record->refund_auth_letter ? storage_asset_path($this->record->refund_auth_letter) : null;
 
-                                if (! $idUrl && ! $ticketUrl) {
-                                    return new HtmlString('<p class="text-xs text-gray-400 italic">No customer ID or ticket was uploaded with this request.</p>');
+                                if (! $idUrl && ! $ticketUrl && ! $authLetterUrl) {
+                                    return new HtmlString('<p class="text-xs text-gray-400 italic">No customer ID, ticket, or authorization letter was uploaded with this request.</p>');
                                 }
 
-                                $html = '<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3.5 bg-gray-50 dark:bg-gray-800/80 rounded-xl border border-gray-200 dark:border-gray-700 text-xs">';
+                                $html = '<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 p-3.5 bg-gray-50 dark:bg-gray-800/80 rounded-xl border border-gray-200 dark:border-gray-700 text-xs">';
                                 
                                 if ($idUrl) {
                                     $isPdf = str_ends_with(strtolower($this->record->refund_id_image), '.pdf');
-                                    $html .= '<div><span class="text-gray-600 dark:text-gray-300 block font-bold mb-1.5 uppercase text-[11px] tracking-wider">Customer Valid ID:</span>';
+                                    $html .= '<div><span class="text-gray-600 dark:text-gray-300 block font-bold mb-1.5 uppercase text-[11px] tracking-wider">1. Valid ID:</span>';
                                     if (! $isPdf) {
-                                        $html .= '<a href="' . e($idUrl) . '" target="_blank" class="inline-block border border-gray-200 dark:border-gray-600 rounded-lg p-1.5 bg-white dark:bg-gray-900 shadow-sm hover:border-primary-500 transition"><img src="' . e($idUrl) . '" class="max-h-28 max-w-[200px] object-contain rounded"/><span class="text-[11px] text-primary-600 font-bold block text-center mt-1">Open Full Size ID &rarr;</span></a>';
+                                        $html .= '<a href="' . e($idUrl) . '" target="_blank" class="inline-block border border-gray-200 dark:border-gray-600 rounded-lg p-1.5 bg-white dark:bg-gray-900 shadow-sm hover:border-primary-500 transition"><img src="' . e($idUrl) . '" class="max-h-28 max-w-[180px] object-contain rounded"/><span class="text-[11px] text-primary-600 font-bold block text-center mt-1">Open Full Size ID &rarr;</span></a>';
                                     } else {
                                         $html .= '<a href="' . e($idUrl) . '" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-50 text-red-700 border border-red-200 font-semibold text-xs hover:bg-red-100 transition"><svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>View Valid ID (PDF)</a>';
                                     }
@@ -549,11 +550,22 @@ class ViewBooking extends ViewRecord
 
                                 if ($ticketUrl) {
                                     $isTicketPdf = str_ends_with(strtolower($this->record->refund_ticket_file), '.pdf');
-                                    $html .= '<div><span class="text-gray-600 dark:text-gray-300 block font-bold mb-1.5 uppercase text-[11px] tracking-wider">Customer Original Ticket:</span>';
+                                    $html .= '<div><span class="text-gray-600 dark:text-gray-300 block font-bold mb-1.5 uppercase text-[11px] tracking-wider">2. Original Ticket:</span>';
                                     if (! $isTicketPdf) {
-                                        $html .= '<a href="' . e($ticketUrl) . '" target="_blank" class="inline-block border border-gray-200 dark:border-gray-600 rounded-lg p-1.5 bg-white dark:bg-gray-900 shadow-sm hover:border-primary-500 transition"><img src="' . e($ticketUrl) . '" class="max-h-28 max-w-[200px] object-contain rounded"/><span class="text-[11px] text-primary-600 font-bold block text-center mt-1">Open Original Ticket &rarr;</span></a>';
+                                        $html .= '<a href="' . e($ticketUrl) . '" target="_blank" class="inline-block border border-gray-200 dark:border-gray-600 rounded-lg p-1.5 bg-white dark:bg-gray-900 shadow-sm hover:border-primary-500 transition"><img src="' . e($ticketUrl) . '" class="max-h-28 max-w-[180px] object-contain rounded"/><span class="text-[11px] text-primary-600 font-bold block text-center mt-1">Open Original Ticket &rarr;</span></a>';
                                     } else {
                                         $html .= '<a href="' . e($ticketUrl) . '" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 font-semibold text-xs hover:bg-blue-100 transition"><svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>View Original Ticket (PDF)</a>';
+                                    }
+                                    $html .= '</div>';
+                                }
+
+                                if ($authLetterUrl) {
+                                    $isAuthPdf = str_ends_with(strtolower($this->record->refund_auth_letter), '.pdf');
+                                    $html .= '<div><span class="text-gray-600 dark:text-gray-300 block font-bold mb-1.5 uppercase text-[11px] tracking-wider">3. Auth Letter:</span>';
+                                    if (! $isAuthPdf) {
+                                        $html .= '<a href="' . e($authLetterUrl) . '" target="_blank" class="inline-block border border-gray-200 dark:border-gray-600 rounded-lg p-1.5 bg-white dark:bg-gray-900 shadow-sm hover:border-primary-500 transition"><img src="' . e($authLetterUrl) . '" class="max-h-28 max-w-[180px] object-contain rounded"/><span class="text-[11px] text-primary-600 font-bold block text-center mt-1">Open Auth Letter &rarr;</span></a>';
+                                    } else {
+                                        $html .= '<a href="' . e($authLetterUrl) . '" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 font-semibold text-xs hover:bg-amber-100 transition"><svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>View Auth Letter (PDF)</a>';
                                     }
                                     $html .= '</div>';
                                 }

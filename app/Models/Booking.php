@@ -67,6 +67,7 @@ class Booking extends Model
         'refund_destination',
         'refund_id_image',
         'refund_ticket_file',
+        'refund_auth_letter',
         'cancellation_window_expires_at',
         'is_rebooked',
         'rebooking_status',
@@ -340,10 +341,10 @@ class Booking extends Model
         $amount = number_format($settings->getSlaVoucherAmount(), 0);
 
         if ($forApp) {
-            return "Our Verification Guarantee: If your booking is not processed within {$hours} hours of payment submission, you will automatically receive a ₱{$amount} travel voucher valid for 90 days in your account for your next booking.";
+            return "Our Verification Guarantee: If your booking is not processed within {$hours} hours of payment submission, you will automatically receive a ₱{$amount} travel voucher valid for 3 months in your account for your next booking.";
         }
 
-        return "Our Verification Guarantee: If your booking is not processed within {$hours} hours of payment submission, you will automatically receive a ₱{$amount} travel voucher valid for 90 days towards your next trip. Download the Amiga Gracia app to easily claim and manage your reward vouchers!";
+        return "Our Verification Guarantee: If your booking is not processed within {$hours} hours of payment submission, you will automatically receive a ₱{$amount} travel voucher valid for 3 months towards your next trip. Download the Amiga Gracia app to easily claim and manage your reward vouchers!";
     }
 
     public function serviceCancellation(): BelongsTo

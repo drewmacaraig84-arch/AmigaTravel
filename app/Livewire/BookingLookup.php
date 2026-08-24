@@ -33,6 +33,7 @@ class BookingLookup extends Component
     public string $refund_account_name = '';
     public $refund_id_image = null;
     public $refund_ticket_file = null;
+    public $refund_auth_letter = null;
     public bool $rebookingRequested = false;
     public bool $rebookingPaid = false;
     public bool $rebooking_is_round_trip = false;
@@ -356,6 +357,7 @@ class BookingLookup extends Component
         $this->validate([
             'refund_id_image' => 'nullable|file|mimes:jpeg,png,jpg,webp,pdf|max:10240',
             'refund_ticket_file' => 'nullable|file|mimes:jpeg,png,jpg,webp,pdf|max:10240',
+            'refund_auth_letter' => 'nullable|file|mimes:jpeg,png,jpg,webp,pdf|max:10240',
         ]);
 
         if (blank($this->refund_account_number) && blank($this->refund_account_name) && filled($this->refund_destination)) {
@@ -433,6 +435,11 @@ class BookingLookup extends Component
             $ticketFilePath = $this->refund_ticket_file->store('refund_docs/tickets', 'public');
         }
 
+        $authLetterPath = null;
+        if ($this->refund_auth_letter) {
+            $authLetterPath = $this->refund_auth_letter->store('refund_docs/auth_letters', 'public');
+        }
+
         $rawSelected = ! empty($this->selectedPassengerItems)
             ? $this->selectedPassengerItems
             : $eligiblePassengers->pluck('item_number')->toArray();
@@ -470,6 +477,7 @@ class BookingLookup extends Component
                     'refund_destination' => $this->refund_destination,
                     'refund_id_image'    => $idImagePath ?: $p->refund_id_image,
                     'refund_ticket_file' => $ticketFilePath ?: $p->refund_ticket_file,
+                    'refund_auth_letter' => $authLetterPath ?: $p->refund_auth_letter,
                     'refund_status'      => 'pending',
                 ]);
             }
@@ -487,6 +495,7 @@ class BookingLookup extends Component
                 'refund_destination' => $this->refund_destination,
                 'refund_id_image'    => $idImagePath ?: $this->booking->refund_id_image,
                 'refund_ticket_file' => $ticketFilePath ?: $this->booking->refund_ticket_file,
+                'refund_auth_letter' => $authLetterPath ?: $this->booking->refund_auth_letter,
                 'refund_status'      => 'pending',
             ]);
             $this->booking->transaction?->update(['payment_status' => 'cancelled']);
@@ -497,12 +506,14 @@ class BookingLookup extends Component
                 'refund_destination' => $this->refund_destination,
                 'refund_id_image'    => $idImagePath ?: $this->booking->refund_id_image,
                 'refund_ticket_file' => $ticketFilePath ?: $this->booking->refund_ticket_file,
+                'refund_auth_letter' => $authLetterPath ?: $this->booking->refund_auth_letter,
                 'refund_status'      => 'pending',
             ]);
         }
 
         $this->refund_id_image = null;
         $this->refund_ticket_file = null;
+        $this->refund_auth_letter = null;
         $this->booking = $this->booking->fresh(['passengers.discount', 'accommodations', 'transaction']);
 
         try {

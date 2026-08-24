@@ -175,6 +175,133 @@
                         </div>
                     </div>
 
+                    {{-- Verification & Authorization Documents Upload --}}
+                    <div class="mt-6 border-t border-slate-100 pt-6">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
+                            Verification &amp; Authorization Documents
+                        </label>
+                        <p class="text-xs text-slate-500 mb-4">Please upload your valid ID, original ticket, and an Authorization Letter (if requesting on behalf of the passenger or for partial passenger refund).</p>
+
+                        <div class="grid gap-4 sm:grid-cols-3">
+                            {{-- Valid ID Upload --}}
+                            <div class="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 shadow-sm hover:border-rose-300 transition">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">1. Valid ID</span>
+                                    @if($refund_id_image)
+                                        <button type="button" wire:click="$set('refund_id_image', null)" class="text-xs font-semibold text-rose-600 hover:underline">Remove</button>
+                                    @endif
+                                </div>
+
+                                @if($refund_id_image)
+                                    @php
+                                        $isIdPdf = in_array(strtolower(pathinfo($refund_id_image->getClientOriginalName(), PATHINFO_EXTENSION)), ['pdf']);
+                                    @endphp
+                                    <div class="relative overflow-hidden rounded-xl border border-slate-200 bg-white p-2 text-center">
+                                        @if(!$isIdPdf && method_exists($refund_id_image, 'temporaryUrl'))
+                                            <img src="{{ $refund_id_image->temporaryUrl() }}" class="mx-auto max-h-24 rounded-lg object-contain shadow-sm" alt="Valid ID Preview" />
+                                        @else
+                                            <div class="py-2 flex flex-col items-center justify-center text-slate-600">
+                                                <svg class="w-8 h-8 text-rose-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                                                <span class="text-[11px] font-semibold truncate max-w-full px-1">{{ $refund_id_image->getClientOriginalName() }}</span>
+                                            </div>
+                                        @endif
+                                        <p class="mt-1 text-[11px] text-emerald-600 font-medium flex items-center justify-center gap-1">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                            Attached
+                                        </p>
+                                    </div>
+                                @else
+                                    <label class="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-white p-3 text-center cursor-pointer hover:bg-rose-50/30 hover:border-rose-300 transition">
+                                        <svg class="w-7 h-7 text-slate-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                        <span class="text-xs font-semibold text-slate-600">Upload Valid ID</span>
+                                        <span class="text-[10px] text-slate-400 mt-0.5">JPG, PNG, PDF (Max 10MB)</span>
+                                        <input type="file" wire:model="refund_id_image" accept="image/*,application/pdf" class="hidden" />
+                                    </label>
+                                @endif
+                                <div wire:loading wire:target="refund_id_image" class="text-xs text-rose-600 mt-1 font-medium">Uploading ID...</div>
+                                @error('refund_id_image') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                            </div>
+
+                            {{-- Original Ticket Upload --}}
+                            <div class="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 shadow-sm hover:border-rose-300 transition">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">2. Original Ticket</span>
+                                    @if($refund_ticket_file)
+                                        <button type="button" wire:click="$set('refund_ticket_file', null)" class="text-xs font-semibold text-rose-600 hover:underline">Remove</button>
+                                    @endif
+                                </div>
+
+                                @if($refund_ticket_file)
+                                    @php
+                                        $isTicketPdf = in_array(strtolower(pathinfo($refund_ticket_file->getClientOriginalName(), PATHINFO_EXTENSION)), ['pdf']);
+                                    @endphp
+                                    <div class="relative overflow-hidden rounded-xl border border-slate-200 bg-white p-2 text-center">
+                                        @if(!$isTicketPdf && method_exists($refund_ticket_file, 'temporaryUrl'))
+                                            <img src="{{ $refund_ticket_file->temporaryUrl() }}" class="mx-auto max-h-24 rounded-lg object-contain shadow-sm" alt="Original Ticket Preview" />
+                                        @else
+                                            <div class="py-2 flex flex-col items-center justify-center text-slate-600">
+                                                <svg class="w-8 h-8 text-rose-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"></path></svg>
+                                                <span class="text-[11px] font-semibold truncate max-w-full px-1">{{ $refund_ticket_file->getClientOriginalName() }}</span>
+                                            </div>
+                                        @endif
+                                        <p class="mt-1 text-[11px] text-emerald-600 font-medium flex items-center justify-center gap-1">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                            Attached
+                                        </p>
+                                    </div>
+                                @else
+                                    <label class="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-white p-3 text-center cursor-pointer hover:bg-rose-50/30 hover:border-rose-300 transition">
+                                        <svg class="w-7 h-7 text-slate-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"></path></svg>
+                                        <span class="text-xs font-semibold text-slate-600">Upload Ticket</span>
+                                        <span class="text-[10px] text-slate-400 mt-0.5">PDF or Image (Max 10MB)</span>
+                                        <input type="file" wire:model="refund_ticket_file" accept="image/*,application/pdf" class="hidden" />
+                                    </label>
+                                @endif
+                                <div wire:loading wire:target="refund_ticket_file" class="text-xs text-rose-600 mt-1 font-medium">Uploading ticket...</div>
+                                @error('refund_ticket_file') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                            </div>
+
+                            {{-- Authorization Letter Upload --}}
+                            <div class="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 shadow-sm hover:border-rose-300 transition">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">3. Auth Letter</span>
+                                    @if($refund_auth_letter)
+                                        <button type="button" wire:click="$set('refund_auth_letter', null)" class="text-xs font-semibold text-rose-600 hover:underline">Remove</button>
+                                    @endif
+                                </div>
+
+                                @if($refund_auth_letter)
+                                    @php
+                                        $isAuthPdf = in_array(strtolower(pathinfo($refund_auth_letter->getClientOriginalName(), PATHINFO_EXTENSION)), ['pdf']);
+                                    @endphp
+                                    <div class="relative overflow-hidden rounded-xl border border-slate-200 bg-white p-2 text-center">
+                                        @if(!$isAuthPdf && method_exists($refund_auth_letter, 'temporaryUrl'))
+                                            <img src="{{ $refund_auth_letter->temporaryUrl() }}" class="mx-auto max-h-24 rounded-lg object-contain shadow-sm" alt="Authorization Letter Preview" />
+                                        @else
+                                            <div class="py-2 flex flex-col items-center justify-center text-slate-600">
+                                                <svg class="w-8 h-8 text-rose-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                                <span class="text-[11px] font-semibold truncate max-w-full px-1">{{ $refund_auth_letter->getClientOriginalName() }}</span>
+                                            </div>
+                                        @endif
+                                        <p class="mt-1 text-[11px] text-emerald-600 font-medium flex items-center justify-center gap-1">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                            Attached
+                                        </p>
+                                    </div>
+                                @else
+                                    <label class="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-white p-3 text-center cursor-pointer hover:bg-rose-50/30 hover:border-rose-300 transition">
+                                        <svg class="w-7 h-7 text-slate-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                        <span class="text-xs font-semibold text-slate-600">Upload Auth Letter</span>
+                                        <span class="text-[10px] text-slate-400 mt-0.5">Representative permission</span>
+                                        <input type="file" wire:model="refund_auth_letter" accept="image/*,application/pdf" class="hidden" />
+                                    </label>
+                                @endif
+                                <div wire:loading wire:target="refund_auth_letter" class="text-xs text-rose-600 mt-1 font-medium">Uploading auth letter...</div>
+                                @error('refund_auth_letter') <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span> @enderror
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="mt-8 flex justify-end gap-3 border-t border-slate-100 pt-6">
                         <button wire:click="closeRefundForm" type="button" class="rounded-xl border border-slate-300 bg-white px-6 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50">Cancel</button>
                         <button wire:click="submitCancelAndRefund" type="button" class="rounded-xl bg-rose-600 px-8 py-3 text-sm font-bold text-white hover:bg-rose-700 shadow-sm transition">Submit Refund Request</button>
