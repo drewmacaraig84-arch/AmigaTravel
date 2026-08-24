@@ -1187,6 +1187,62 @@ class Booking extends Model
         return $this->getRefundBreakdown($isWithinGracePeriod)['refundable_amount'];
     }
 
+    public function getProcessedRefundBreakdown(): array
+    {
+        $allPassengers = $this->passengers->sortBy('item_number')->values();
+        $refundedPax = $allPassengers->filter(fn ($p) => (float) $p->refund_amount > 0 || in_array($p->status, [Passenger::STATUS_REFUND_PENDING, Passenger::STATUS_REFUNDED, Passenger::STATUS_CANCELLED, Passenger::STATUS_OPERATOR_CANCELLED], true));
+
+        $paxToUse = $refundedPax->isNotEmpty() ? $refundedPax : $allPassengers;
+        $paxCount = max(1, $paxToUse->count());
+
+        $originalAmount = $refundedPax->isNotEmpty() && $refundedPax->count() < $allPassengers->count()
+            ? (float) $paxToUse->sum(fn ($p) => $p->getEffectiveItemTotal())
+            : (float) $this->total_price;
+
+        $refundAmount = (float) ($this->refund_amount > 0 ? $this->refund_amount : $paxToUse->sum('refund_amount'));
+        $totalDeductions = max(0, round($originalAmount - $refundAmount, 2));
+
+        $webAdminFee = (float) $paxToUse->sum(fn ($p) => $p->getEffectiveWebAdminFee());
+        if ($webAdminFee <= 0) {
+            $settings = PaymentSetting::current();
+            $webAdminFee = (float) $settings->getWebAdminFee($this->isShortHaul()) * $paxCount;
+        }
+
+        $txFee = (float) $paxToUse->sum(fn ($p) => $p->getEffectiveTransactionFee());
+        if ($txFee <= 0) {
+            $settings = PaymentSetting::current();
+            $txFee = (float) $settings->getTransactionFee($this->isShortHaul()) * $paxCount;
+        }
+
+        // If service cancellation (100% disruption refund)
+        if (filled($this->service_cancellation_id)) {
+            $surcharge = 0.0;
+            $webAdminFee = 0.0;
+            $txFee = 0.0;
+            $totalDeductions = 0.0;
+        } else {
+            // Surcharge is the remaining deduction after web admin and transaction fees
+            $surcharge = max(0, round($totalDeductions - $webAdminFee - $txFee, 2));
+            if ($surcharge <= 0 && (float) $this->cancellation_fee > 0) {
+                $surcharge = (float) $this->cancellation_fee;
+            }
+        }
+
+        $surchargePct = $this->getRefundSurchargePercentage();
+
+        return [
+            'original_amount'       => $originalAmount,
+            'web_admin_fee'         => $webAdminFee,
+            'transaction_fee'       => $txFee,
+            'surcharge_amount'      => $surcharge,
+            'surcharge_pct'         => $surchargePct,
+            'total_deductions'      => $totalDeductions,
+            'net_refund_amount'     => $refundAmount > 0 ? $refundAmount : max(0, $originalAmount - $totalDeductions),
+            'pax_count'             => $paxCount,
+            'is_service_disruption' => filled($this->service_cancellation_id),
+        ];
+    }
+
     /**
      * Total amount deducted (surcharge + non-refundable fees).
      */

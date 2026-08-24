@@ -216,21 +216,48 @@
         </table>
     </div>
 
+    @php
+        $breakdown = $booking->getProcessedRefundBreakdown();
+    @endphp
+
     <div class="section-header">Refund Breakdown & Totals</div>
     <table class="totals-table">
         <tr>
             <td class="label">Original Total Booking Amount:</td>
-            <td class="amount">₱{{ number_format((float) $booking->total_price, 2) }}</td>
+            <td class="amount">₱{{ number_format($breakdown['original_amount'], 2) }}</td>
         </tr>
-        @if((float) $booking->cancellation_fee > 0)
+        @if($breakdown['web_admin_fee'] > 0)
             <tr>
-                <td class="label" style="color: #e11d48;">Less Cancellation / Service Deductions:</td>
-                <td class="amount" style="color: #e11d48;">-₱{{ number_format((float) $booking->cancellation_fee, 2) }}</td>
+                <td class="label" style="color: #64748b; font-size: 9.5px; padding-left: 15px;">Less: Non-Refundable Web Admin Fee ({{ $breakdown['pax_count'] }} pax):</td>
+                <td class="amount" style="color: #64748b; font-size: 9.5px;">-₱{{ number_format($breakdown['web_admin_fee'], 2) }}</td>
+            </tr>
+        @endif
+        @if($breakdown['transaction_fee'] > 0)
+            <tr>
+                <td class="label" style="color: #64748b; font-size: 9.5px; padding-left: 15px;">Less: Non-Refundable Transaction Fee ({{ $breakdown['pax_count'] }} pax):</td>
+                <td class="amount" style="color: #64748b; font-size: 9.5px;">-₱{{ number_format($breakdown['transaction_fee'], 2) }}</td>
+            </tr>
+        @endif
+        @if($breakdown['surcharge_amount'] > 0)
+            <tr>
+                <td class="label" style="color: #e11d48; font-size: 9.5px; padding-left: 15px;">Less: {{ number_format($breakdown['surcharge_pct'], 0) }}% Refund Surcharge / Cancellation Fee:</td>
+                <td class="amount" style="color: #e11d48; font-size: 9.5px;">-₱{{ number_format($breakdown['surcharge_amount'], 2) }}</td>
+            </tr>
+        @elseif($breakdown['total_deductions'] > 0 && $breakdown['web_admin_fee'] == 0 && $breakdown['transaction_fee'] == 0)
+            <tr>
+                <td class="label" style="color: #e11d48; font-size: 9.5px; padding-left: 15px;">Less: Cancellation & Processing Deductions:</td>
+                <td class="amount" style="color: #e11d48; font-size: 9.5px;">-₱{{ number_format($breakdown['total_deductions'], 2) }}</td>
+            </tr>
+        @endif
+        @if($breakdown['is_service_disruption'])
+            <tr>
+                <td class="label" style="color: #047857; font-size: 9.5px; padding-left: 15px;">Service Disruption Waiver:</td>
+                <td class="amount" style="color: #047857; font-size: 9.5px;">100% Full Refund (Fees Waived)</td>
             </tr>
         @endif
         <tr class="grand-total">
             <td class="label" style="color: #9d174d; font-size: 11px;">NET REFUND AMOUNT DISBURSED:</td>
-            <td class="amount" style="color: #9d174d; font-size: 13px;">₱{{ number_format((float) $booking->refund_amount, 2) }}</td>
+            <td class="amount" style="color: #9d174d; font-size: 13px;">₱{{ number_format($breakdown['net_refund_amount'], 2) }}</td>
         </tr>
     </table>
 
