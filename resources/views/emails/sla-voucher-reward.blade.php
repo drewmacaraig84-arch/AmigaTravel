@@ -58,7 +58,7 @@
             <tr>
                 <td style="padding: 12px 32px 28px 32px; font-size: 13px; color: #475569; text-align: center;">
                     <p style="margin: 0;">
-                        Apply this voucher code during checkout on your next trip via our website or the <strong>Amiga Gracia Mobile App</strong>.
+                        Apply this voucher code during checkout on your next trip on the <strong>Amiga Gracia Mobile App</strong>.
                     </p>
                 </td>
             </tr>
