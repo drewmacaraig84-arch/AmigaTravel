@@ -48,14 +48,17 @@ class Operator extends Model
 
     protected static function booted(): void
     {
-        $bust = function () {
-            try {
-                \Illuminate\Support\Facades\Cache::flush();
-            } catch (\Throwable) {
-                // Ignore cache driver errors
-            }
-        };
+        $bust = fn() => static::bust();
         static::saved($bust);
         static::deleted($bust);
+    }
+
+    public static function bust(): void
+    {
+        try {
+            \Illuminate\Support\Facades\Cache::flush();
+        } catch (\Throwable) {
+            // Ignore cache driver errors
+        }
     }
 }

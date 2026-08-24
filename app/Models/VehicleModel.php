@@ -28,16 +28,21 @@ class VehicleModel extends Model
     protected static function booted(): void
     {
         $bust = function ($model) {
-            if ($model->vehicle_brand_id) {
-                try {
-                    \Illuminate\Support\Facades\Cache::forget('catalog:vehicle_models_v3:' . (int) $model->vehicle_brand_id);
-                } catch (\Throwable) {
-                    // Ignore cache driver errors
-                }
-            }
+            static::bust($model->vehicle_brand_id);
         };
 
         static::saved($bust);
         static::deleted($bust);
+    }
+
+    public static function bust(?int $brandId = null): void
+    {
+        try {
+            if ($brandId) {
+                \Illuminate\Support\Facades\Cache::forget('catalog:vehicle_models_v3:' . (int) $brandId);
+            }
+        } catch (\Throwable) {
+            // Ignore cache driver errors
+        }
     }
 }
