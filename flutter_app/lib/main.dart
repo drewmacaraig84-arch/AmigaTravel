@@ -9934,69 +9934,129 @@ class _DiscountScreenState extends State<DiscountScreen> {
                                   : null,
                             ),
                             const SizedBox(height: 10),
-                            TextFormField(
-                              controller: _birthdateControllers[i],
-                              readOnly: true,
-                              validator: (v) => (v == null || v.trim().isEmpty)
-                                  ? 'Birthdate is required'
-                                  : null,
-                              onTap: type == 'driver'
-                                  ? null
-                                  : () async {
-                                      final d = await showDatePicker(
-                                        context: context,
-                                        initialDate: DateTime.now().subtract(
-                                            const Duration(days: 365 * 10)),
-                                        firstDate: DateTime(1900),
-                                        lastDate: DateTime.now(),
-                                      );
-                                      if (d != null) {
-                                        final selectedDate =
-                                            "${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}";
-                                        setState(() => _birthdateControllers[i]
-                                            .text = selectedDate);
+                            Builder(builder: (context) {
+                              // Age range boundaries per passenger type
+                              final now = DateTime.now();
+                              DateTime firstDate;
+                              DateTime lastDate;
+                              String ageHint;
+                              final isAirline = widget.booking.mode == 'airline';
 
-                                        // Infant check
-                                        final age = DateTime.now()
-                                                .difference(d)
-                                                .inDays /
-                                            365.25;
-                                        if (age < 2 && type == 'child') {
-                                          if (mounted) {
-                                            showDialog(
-                                              context: context,
-                                              builder: (c) => AlertDialog(
-                                                title: const Text(
-                                                    'Minor / Infant Notice'),
-                                                content: const Text(
-                                                    'Please note: If the passenger is an infant (under 2 years old), additional requirements and fees may apply depending on the operator.'),
-                                                actions: [
-                                                  TextButton(
-                                                    onPressed: () =>
-                                                        Navigator.pop(c),
-                                                    child: const Text(
-                                                        'Acknowledge'),
-                                                  ),
-                                                ],
-                                              ),
-                                            );
-                                          }
+                              switch (type) {
+                                case 'adult':
+                                  firstDate = DateTime(now.year - 120, now.month, now.day);
+                                  lastDate  = DateTime(now.year - 11, now.month, now.day);
+                                  ageHint   = 'Age 11 and above';
+                                  break;
+                                case 'minor':
+                                  firstDate = DateTime(now.year - 11, now.month, now.day).subtract(const Duration(days: 364));
+                                  lastDate  = DateTime(now.year - 7, now.month, now.day);
+                                  ageHint   = 'Age 7 to 11';
+                                  break;
+                                case 'child':
+                                  if (isAirline) {
+                                    firstDate = DateTime(now.year - 6, now.month, now.day).subtract(const Duration(days: 364));
+                                    lastDate  = DateTime(now.year - 2, now.month, now.day);
+                                    ageHint   = 'Age 2 to 6';
+                                  } else {
+                                    firstDate = DateTime(now.year - 11, now.month, now.day).subtract(const Duration(days: 364));
+                                    lastDate  = DateTime(now.year - 2, now.month, now.day);
+                                    ageHint   = 'Age 2 to 11';
+                                  }
+                                  break;
+                                case 'infant':
+                                  firstDate = now.subtract(const Duration(days: 30 * 24)); // ~24 months
+                                  lastDate  = now;
+                                  ageHint   = 'Age 0 to 23 months';
+                                  break;
+                                default:
+                                  firstDate = DateTime(1900);
+                                  lastDate  = now;
+                                  ageHint   = '';
+                              }
+
+                              // Clamp initialDate to valid range
+                              DateTime initialDate = now.subtract(const Duration(days: 365 * 10));
+                              if (initialDate.isBefore(firstDate)) initialDate = firstDate;
+                              if (initialDate.isAfter(lastDate))  initialDate = lastDate;
+
+                              return TextFormField(
+                                controller: _birthdateControllers[i],
+                                readOnly: true,
+                                validator: (v) {
+                                  if (v == null || v.trim().isEmpty) return 'Birthdate is required';
+                                  try {
+                                    final dob = DateTime.parse(v.trim());
+                                    final ageMonths = now.difference(dob).inDays ~/ 30;
+                                    final ageYears  = now.difference(dob).inDays ~/ 365;
+                                    switch (type) {
+                                      case 'adult':
+                                        if (ageYears < 11) return 'Adult must be 11 years old or above.';
+                                        break;
+                                      case 'minor':
+                                        if (ageYears < 7 || ageYears > 11) return 'Minor must be 7 to 11 years old.';
+                                        break;
+                                      case 'child':
+                                        if (isAirline && (ageYears < 2 || ageYears > 6)) return 'Child (airline) must be 2 to 6 years old.';
+                                        if (!isAirline && (ageYears < 2 || ageYears > 11)) return 'Child (ferry) must be 2 to 11 years old.';
+                                        break;
+                                      case 'infant':
+                                        if (ageMonths > 23) return 'Infant must be 0 to 23 months old.';
+                                        break;
+                                    }
+                                  } catch (_) {
+                                    return 'Invalid date format.';
+                                  }
+                                  return null;
+                                },
+                                onTap: type == 'driver'
+                                    ? null
+                                    : () async {
+                                        final d = await showDatePicker(
+                                          context: context,
+                                          initialDate: initialDate,
+                                          firstDate: firstDate,
+                                          lastDate: lastDate,
+                                          helpText: ageHint.isNotEmpty ? ageHint.toUpperCase() : 'SELECT DATE OF BIRTH',
+                                        );
+                                        if (d != null) {
+                                          final selectedDate =
+                                              "${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}";
+                                          setState(() {
+                                            _birthdateControllers[i].text = selectedDate;
+                                            // Auto-clear Senior discount if passenger is now under 60
+                                            final ageYrs = now.difference(d).inDays ~/ 365;
+                                            final discId = pax[i]['discount_id'];
+                                            if (discId != null) {
+                                              final disc = _discounts.firstWhere(
+                                                (dd) => dd['id'] == discId,
+                                                orElse: () => {},
+                                              );
+                                              final dName = (disc['name'] ?? '').toString().toLowerCase();
+                                              if (dName.contains('senior') && ageYrs < 60) {
+                                                pax[i]['discount_id'] = null;
+                                              }
+                                            }
+                                          });
                                         }
-                                      }
-                                    },
-                              decoration: InputDecoration(
-                                labelText: 'Birthdate *',
-                                hintText: 'YYYY-MM-DD',
-                                filled: type == 'driver',
-                                fillColor: type == 'driver'
-                                    ? Colors.grey.shade100
-                                    : null,
-                                suffixIcon:
-                                    const Icon(Icons.calendar_today, size: 20),
-                                border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10)),
-                              ),
-                            ),
+                                      },
+                                decoration: InputDecoration(
+                                  labelText: 'Birthdate *',
+                                  hintText: 'YYYY-MM-DD',
+                                  helperText: type != 'driver' && ageHint.isNotEmpty ? ageHint : null,
+                                  helperStyle: const TextStyle(fontSize: 11, color: Colors.grey),
+                                  filled: type == 'driver',
+                                  fillColor: type == 'driver'
+                                      ? Colors.grey.shade100
+                                      : null,
+                                  suffixIcon:
+                                      const Icon(Icons.calendar_today, size: 20),
+                                  border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10)),
+                                ),
+                              );
+                            }),
+
                             if (widget.booking.mode == 'airline' && type == 'infant') ...[
                               const SizedBox(height: 10),
                               Container(
@@ -10049,50 +10109,108 @@ class _DiscountScreenState extends State<DiscountScreen> {
                               ),
                             ] else if (_discounts.isNotEmpty) ...[
                               const SizedBox(height: 10),
-                              DropdownButtonFormField<int?>(
-                                value: pax[i]['discount_id'],
-                                hint: const Text('No Discount'),
-                                items: [
-                                  const DropdownMenuItem<int?>(
-                                      value: null, child: Text('No Discount')),
-                                  ..._discounts
-                                      .where((d) =>
-                                          d['name'].toString().toLowerCase() !=
-                                          'infant')
-                                      .map((d) => DropdownMenuItem<int?>(
-                                            value: d['id'] as int,
-                                            child: Text('${d['name']}'),
-                                          )),
-                                ],
-                                onChanged: (v) {
-                                  setState(() {
-                                    pax[i]['discount_id'] = v;
-                                  });
-                                  if (v != null) {
-                                    showDialog(
-                                      context: context,
-                                      builder: (c) => AlertDialog(
-                                        title: const Text('Discount Applied'),
-                                        content: const Text(
-                                            'Your discount has been applied.\n\nKindly present a valid ID upon boarding to verify and enjoy your discount'),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () => Navigator.pop(c),
-                                            child: const Text('Okay'),
-                                          ),
-                                        ],
-                                      ),
-                                    );
+                              Builder(builder: (context) {
+                                // Compute passenger age from the birthdate controller
+                                final now = DateTime.now();
+                                int? paxAgeYears;
+                                final bdText = _birthdateControllers[i].text.trim();
+                                if (bdText.isNotEmpty) {
+                                  try {
+                                    final dob = DateTime.parse(bdText);
+                                    paxAgeYears = now.difference(dob).inDays ~/ 365;
+                                  } catch (_) {}
+                                }
+                                final seniorEligible = paxAgeYears != null && paxAgeYears >= 60;
+
+                                // Build discount list, excluding 'infant' named discounts
+                                // and excluding Senior if passenger is under 60
+                                final eligibleDiscounts = _discounts.where((d) {
+                                  final dName = d['name'].toString().toLowerCase();
+                                  if (dName == 'infant') return false;
+                                  if (dName.contains('senior') && paxAgeYears != null && !seniorEligible) return false;
+                                  return true;
+                                }).toList();
+
+                                // If current selection is Senior and now ineligible, auto-clear
+                                final currentDiscId = pax[i]['discount_id'];
+                                if (currentDiscId != null) {
+                                  final currentDisc = _discounts.firstWhere(
+                                    (d) => d['id'] == currentDiscId,
+                                    orElse: () => {},
+                                  );
+                                  final cName = (currentDisc['name'] ?? '').toString().toLowerCase();
+                                  if (cName.contains('senior') && paxAgeYears != null && !seniorEligible) {
+                                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                                      if (mounted) setState(() => pax[i]['discount_id'] = null);
+                                    });
                                   }
-                                },
-                                decoration: InputDecoration(
-                                  labelText: 'Discount',
-                                  prefixIcon: const Icon(Icons.local_offer,
-                                      color: kGreen, size: 18),
-                                  border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10)),
-                                ),
-                              ),
+                                }
+
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    DropdownButtonFormField<int?>(
+                                      value: eligibleDiscounts.any((d) => d['id'] == pax[i]['discount_id'])
+                                          ? pax[i]['discount_id']
+                                          : null,
+                                      hint: const Text('No Discount'),
+                                      items: [
+                                        const DropdownMenuItem<int?>(
+                                            value: null, child: Text('No Discount')),
+                                        ...eligibleDiscounts.map((d) => DropdownMenuItem<int?>(
+                                              value: d['id'] as int,
+                                              child: Text('${d['name']}'),
+                                            )),
+                                      ],
+                                      onChanged: (v) {
+                                        setState(() {
+                                          pax[i]['discount_id'] = v;
+                                        });
+                                        if (v != null) {
+                                          showDialog(
+                                            context: context,
+                                            builder: (c) => AlertDialog(
+                                              title: const Text('Discount Applied'),
+                                              content: const Text(
+                                                  'Your discount has been applied.\n\nKindly present a valid ID upon boarding to verify and enjoy your discount'),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () => Navigator.pop(c),
+                                                  child: const Text('Okay'),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        }
+                                      },
+                                      decoration: InputDecoration(
+                                        labelText: 'Discount',
+                                        prefixIcon: const Icon(Icons.local_offer,
+                                            color: kGreen, size: 18),
+                                        border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(10)),
+                                      ),
+                                    ),
+                                    if (paxAgeYears != null && !seniorEligible)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 6),
+                                        child: Row(
+                                          children: [
+                                            const Icon(Icons.info_outline, size: 14, color: Colors.orange),
+                                            const SizedBox(width: 4),
+                                            Expanded(
+                                              child: Text(
+                                                'Senior Citizen discount requires the passenger to be at least 60 years old.',
+                                                style: TextStyle(fontSize: 11, color: Colors.orange.shade800),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                  ],
+                                );
+                              }),
+
                               Builder(
                                 builder: (context) {
                                   final discId = pax[i]['discount_id'];

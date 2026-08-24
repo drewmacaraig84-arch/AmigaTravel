@@ -3268,7 +3268,38 @@ public function selectedSchedule(): ?array
         ]);
 
         $validator->after(function ($validator) {
+            $isAirline = strtolower($this->mode ?? '') === 'airline';
+
             foreach ($this->passengers as $index => $passenger) {
+                $type      = strtolower($passenger['type'] ?? 'adult');
+                $birthdate = $passenger['birthdate'] ?? null;
+
+                // --- Age-range check per passenger type ---
+                if ($birthdate && strtotime($birthdate)) {
+                    $dob     = \Carbon\Carbon::parse($birthdate);
+                    $ageYrs  = $dob->diffInYears(now());
+                    $ageMths = $dob->diffInMonths(now());
+
+                    $ageError = match (true) {
+                        $type === 'adult' && $ageYrs < 11
+                            => 'Adult passenger must be 11 years old or above.',
+                        $type === 'minor' && ($ageYrs < 7 || $ageYrs > 11)
+                            => 'Minor passenger must be 7 to 11 years old.',
+                        $type === 'child' && $isAirline && ($ageYrs < 2 || $ageYrs > 6)
+                            => 'Child passenger (airline) must be 2 to 6 years old.',
+                        $type === 'child' && !$isAirline && ($ageYrs < 2 || $ageYrs > 11)
+                            => 'Child passenger (ferry) must be 2 to 11 years old.',
+                        $type === 'infant' && $ageMths > 23
+                            => 'Infant passenger must be 0 to 23 months old.',
+                        default => null,
+                    };
+
+                    if ($ageError) {
+                        $validator->errors()->add("passengers.{$index}.birthdate", $ageError);
+                    }
+                }
+
+                // --- Discount eligibility ---
                 $discount = $this->discounts->firstWhere('id', $passenger['discount_id']);
 
                 if (! $discount) {
@@ -3295,6 +3326,16 @@ public function selectedSchedule(): ?array
                     if (blank($passenger['senior_osca_number'] ?? null)) {
                         $validator->errors()->add("passengers.{$index}.senior_osca_number", 'OSCA number is required when Senior Citizen discount is selected.');
                     }
+                    // Age check: Senior must be 60 years old or older
+                    if ($birthdate && strtotime($birthdate)) {
+                        $age = \Carbon\Carbon::parse($birthdate)->diffInYears(now());
+                        if ($age < 60) {
+                            $validator->errors()->add(
+                                "passengers.{$index}.discount_id",
+                                'Senior Citizen discount requires the passenger to be at least 60 years old.'
+                            );
+                        }
+                    }
                 }
 
                 if (str_contains($discountKey, 'pwd')) {
@@ -3307,6 +3348,7 @@ public function selectedSchedule(): ?array
 
         $validator->validate();
     }
+
 
     public function togglePassengerInfoModal(): void
     {

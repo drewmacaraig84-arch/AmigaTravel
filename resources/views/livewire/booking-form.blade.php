@@ -1230,10 +1230,54 @@
                                     </label>
 
                                     <label class="block min-w-0">
-                                        <span class="text-slate-900 font-bold text-sm">Date of birth</span>
-                                        <input type="date" wire:model.blur="passengers.{{ $index }}.birthdate" {{ $passenger['type'] === 'driver' ? 'readonly' : '' }} class="{{ $passenger['type'] === 'driver' ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : '' }} mt-3 block w-full rounded-xl border border-slate-300 px-4 py-3 shadow-sm focus:border-[#db2777] focus:outline-none focus:ring-2 focus:ring-[#db2777]/20 transition-all" />
+                                        @php
+                                            $today = now();
+                                            // Age range definitions (matching passenger type labels from UI)
+                                            // Ferry: adult 11+, child 2-11
+                                            // Airline: adult 11+, minor 7-11, child 2-6, infant 0-23m
+                                            $dobMin = match($passenger['type']) {
+                                                'adult'  => $today->copy()->subYears(120)->format('Y-m-d'),
+                                                'minor'  => $today->copy()->subYears(11)->subDays(364)->format('Y-m-d'), // 7–11
+                                                'child'  => $mode === 'airline'
+                                                    ? $today->copy()->subYears(6)->subDays(364)->format('Y-m-d')          // 2–6
+                                                    : $today->copy()->subYears(11)->subDays(364)->format('Y-m-d'),        // 2–11
+                                                'infant' => $today->copy()->subMonths(23)->subDays(30)->format('Y-m-d'),  // 0–23m
+                                                'driver' => $today->copy()->subYears(120)->format('Y-m-d'),
+                                                default  => $today->copy()->subYears(120)->format('Y-m-d'),
+                                            };
+                                            $dobMax = match($passenger['type']) {
+                                                'adult'  => $today->copy()->subYears(11)->format('Y-m-d'),
+                                                'minor'  => $today->copy()->subYears(7)->format('Y-m-d'),                 // up to 11
+                                                'child'  => $mode === 'airline'
+                                                    ? $today->copy()->subYears(2)->format('Y-m-d')                        // up to 6
+                                                    : $today->copy()->subYears(2)->format('Y-m-d'),                       // up to 11
+                                                'infant' => $today->copy()->format('Y-m-d'),                              // 0–23m
+                                                'driver' => $today->copy()->subYears(18)->format('Y-m-d'),
+                                                default  => $today->copy()->format('Y-m-d'),
+                                            };
+                                            $dobHint = match($passenger['type']) {
+                                                'adult'  => 'Age 11 and above',
+                                                'minor'  => 'Age 7 to 11',
+                                                'child'  => $mode === 'airline' ? 'Age 2 to 6' : 'Age 2 to 11',
+                                                'infant' => 'Age 0 to 23 months',
+                                                'driver' => 'Driver\'s date of birth',
+                                                default  => '',
+                                            };
+                                        @endphp
+                                        <span class="text-slate-900 font-bold text-sm">Date of birth
+                                            @if($dobHint && $passenger['type'] !== 'driver')
+                                                <span class="ml-1 text-xs font-normal text-slate-400">({{ $dobHint }})</span>
+                                            @endif
+                                        </span>
+                                        <input type="date"
+                                            wire:model.blur="passengers.{{ $index }}.birthdate"
+                                            {{ $passenger['type'] === 'driver' ? 'readonly' : '' }}
+                                            min="{{ $dobMin }}"
+                                            max="{{ $dobMax }}"
+                                            class="{{ $passenger['type'] === 'driver' ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : '' }} mt-3 block w-full rounded-xl border border-slate-300 px-4 py-3 shadow-sm focus:border-[#db2777] focus:outline-none focus:ring-2 focus:ring-[#db2777]/20 transition-all" />
                                         @error('passengers.' . $index . '.birthdate')<p class="mt-2 text-sm text-rose-600">{{ $message }}</p>@enderror
                                     </label>
+
 
                                     {{-- Airline per-passenger promo toggle --}}
                                     @if($mode === 'airline')
@@ -1298,15 +1342,37 @@
                                         @elseif($passengerHasPromoForDiscount)
                                             <p class="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-400">No discount &mdash; promo fare applied</p>
                                         @else
+                                            @php
+                                                // Compute passenger age in years from birthdate for discount eligibility
+                                                $paxBirthdate = $passenger['birthdate'] ?? null;
+                                                $paxAgeYrs    = null;
+                                                if ($paxBirthdate && strtotime($paxBirthdate)) {
+                                                    $paxAgeYrs = \Carbon\Carbon::parse($paxBirthdate)->diffInYears(now());
+                                                }
+                                                $seniorEligible = $paxAgeYrs !== null && $paxAgeYrs >= 60;
+                                            @endphp
                                             <select wire:model.number="passengers.{{ $index }}.discount_id" wire:change="$refresh" class="mt-3 block w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 shadow-sm focus:border-[#db2777] focus:outline-none focus:ring-2 focus:ring-[#db2777]/20 transition-all">
                                                 <option value="">No discount</option>
                                                 @foreach($availableDiscounts as $discount)
-                                                    <option value="{{ $discount->id }}">{{ $discount->name }}</option>
+                                                    @php
+                                                        $dName    = strtolower($discount->name);
+                                                        $isSenior = str_contains($dName, 'senior');
+                                                        $disabled = $isSenior && $paxAgeYrs !== null && !$seniorEligible;
+                                                        $hint     = $disabled ? ' (must be 60+)' : '';
+                                                    @endphp
+                                                    <option value="{{ $discount->id }}" {{ $disabled ? 'disabled' : '' }}>{{ $discount->name }}{{ $hint }}</option>
                                                 @endforeach
                                             </select>
+                                            @if($paxAgeYrs !== null && !$seniorEligible)
+                                                <p class="mt-1.5 text-xs text-amber-600 flex items-center gap-1">
+                                                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                                    Senior Citizen discount requires the passenger to be at least 60 years old.
+                                                </p>
+                                            @endif
                                             @error('passengers.' . $index . '.discount_id')<p class="mt-2 text-sm text-rose-600">{{ $message }}</p>@enderror
                                         @endif
                                     </label>
+
 
                                     @php
                                         $selectedDiscount = $discounts->firstWhere('id', $passenger['discount_id']);
