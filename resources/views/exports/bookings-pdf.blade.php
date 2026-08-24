@@ -114,19 +114,6 @@
 
     @php
         $sections = [];
-        foreach ($groupedBookings as $title => $items) {
-            $sections[] = ['title' => $title, 'items' => $items];
-        }
-
-        // Aggregate overall totals for Remittance & Volume summary
-        $allUniqueBookings = collect();
-        foreach ($groupedBookings as $title => $items) {
-            foreach ($items as $b) {
-                $allUniqueBookings->push($b);
-            }
-        }
-        $allUniqueBookings = $allUniqueBookings->unique('id');
-
         $overallSales = 0.0;
         $overallRebookingFee = 0.0;
         $overallRefundRetained = 0.0;
@@ -136,84 +123,22 @@
         $volRevalidation = 0;
         $volCancelled = 0;
 
-        foreach ($allUniqueBookings as $b) {
-            $passengers = $b->passengers;
-            $paxCount = max(1, $passengers->count());
+        $settings = \App\Models\PaymentSetting::current();
+        $calcHotelFeePerAcc = (float) ($settings->fee_per_accommodation ?? 0);
 
-            $isRefunded = in_array($b->status, ['cancelled', 'operator_cancelled']) && (float) $b->refund_amount > 0;
-            $isCancelled100 = in_array($b->status, ['cancelled', 'operator_cancelled']) && (float) $b->refund_amount <= 0;
-
-            if ($isCancelled100) {
-                // 100% cancellation (₱0 retained, omitted from monetary remittance)
-                $volCancelled += $paxCount;
-                continue;
-            }
-
-            $isPaid = false;
-            if ($b->transaction && in_array($b->transaction->payment_status, ['paid', 'refunded'])) {
-                $isPaid = true;
-            } elseif (in_array($b->status, ['confirmed', 'rebooked'])) {
-                $isPaid = true;
-            } elseif ($isRefunded) {
-                $isPaid = true;
-            }
-
-            if (! $isPaid) {
-                continue;
-            }
-
-            $refundedPaxCount = $passengers->filter(fn($p) => (float)$p->refund_amount > 0 || in_array($p->status, ['cancelled', 'refunded', 'operator_cancelled']))->count();
-            $rebookedPaxCount = $passengers->filter(fn($p) => in_array($p->status, ['rebooked', 'rescheduled']))->count();
-            $activePaxCount   = max(0, $paxCount - $refundedPaxCount - $rebookedPaxCount);
-
-            if ($isRefunded || $refundedPaxCount > 0) {
-                $refAmount = (float) ($b->refund_amount > 0 ? $b->refund_amount : $passengers->sum('refund_amount'));
-                $retained = max(0, (float) $b->total_price - $refAmount);
-                $overallRefundRetained += $retained;
-                $volRefund += ($refundedPaxCount > 0 ? $refundedPaxCount : 1);
-                $volSales  += $activePaxCount;
-            } else {
-                $overallSales += (float) $b->total_price;
-                $volSales += ($activePaxCount > 0 ? $activePaxCount : $paxCount);
-            }
-
-            $rFee = 0;
-            if ($b->transaction && (float) $b->transaction->rebooking_fee > 0) {
-                $notes = $b->disruption_notes ? json_decode($b->disruption_notes, true) : [];
-                $surcharge = (float) ($notes['surcharge'] ?? 0);
-                $reval = (float) ($notes['revalidation_fee'] ?? 0);
-                $rateDiff = (float) ($notes['rate_diff'] ?? 0);
-                if ($surcharge > 0 || $reval > 0 || $rateDiff > 0) {
-                    $rFee = $surcharge + $reval + $rateDiff;
-                } else {
-                    $rFee = (float) $b->transaction->rebooking_fee;
-                }
-            }
-            if ($rFee > 0 || $rebookedPaxCount > 0) {
-                $overallRebookingFee += $rFee;
-                $volRevalidation += ($rebookedPaxCount > 0 ? $rebookedPaxCount : 1);
-            }
-        }
-
-        $toBeRemittedAmount = $overallSales + $overallRebookingFee + $overallRefundRetained;
-        $netSalesVolume = $volSales + $volRevalidation + $volRefund;
-    @endphp
-
-    @foreach($sections as $section)
-        @php
-            $sectionTitle = $section['title'];
+        foreach ($groupedBookings as $title => $items) {
             $validSectionRows = collect();
 
-            foreach ($section['items'] as $booking) {
+            foreach ($items as $booking) {
                 $rawPassengers = $booking->passengers->sortBy('item_number');
 
                 if ($rawPassengers->isEmpty()) {
                     $matches = false;
-                    if ($sectionTitle === 'Verified Bookings' && $booking->status === 'confirmed' && ! $booking->is_rebooked) $matches = true;
-                    elseif ($sectionTitle === 'Refunded Bookings' && in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount > 0) $matches = true;
-                    elseif ($sectionTitle === 'Rebooked Bookings' && ($booking->is_rebooked || filled($booking->rebooking_status) || in_array($booking->status, ['rebooked', 'operator_rebooking']))) $matches = true;
-                    elseif ($sectionTitle === 'Pending Bookings' && $booking->status === 'pending') $matches = true;
-                    elseif ($sectionTitle === 'Cancelled Bookings' && in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount <= 0) $matches = true;
+                    if ($title === 'Verified Bookings' && $booking->status === 'confirmed' && ! $booking->is_rebooked) $matches = true;
+                    elseif ($title === 'Refunded Bookings' && in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount > 0) $matches = true;
+                    elseif ($title === 'Rebooked Bookings' && ($booking->is_rebooked || filled($booking->rebooking_status) || in_array($booking->status, ['rebooked', 'operator_rebooking']))) $matches = true;
+                    elseif ($title === 'Pending Bookings' && $booking->status === 'pending') $matches = true;
+                    elseif ($title === 'Cancelled Bookings' && in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount <= 0) $matches = true;
 
                     if ($matches) {
                         $validSectionRows->push((object)[
@@ -225,15 +150,15 @@
                 } else {
                     foreach ($rawPassengers as $pIndex => $p) {
                         $matches = false;
-                        if ($sectionTitle === 'Verified Bookings') {
+                        if ($title === 'Verified Bookings') {
                             $matches = $p->isActiveBookingItem() && ! $p->isRebookingHistoryItem() && in_array($p->status, ['confirmed']);
-                        } elseif ($sectionTitle === 'Refunded Bookings') {
+                        } elseif ($title === 'Refunded Bookings') {
                             $matches = $p->isRefundItem();
-                        } elseif ($sectionTitle === 'Rebooked Bookings') {
+                        } elseif ($title === 'Rebooked Bookings') {
                             $matches = $p->isRebookingHistoryItem();
-                        } elseif ($sectionTitle === 'Pending Bookings') {
+                        } elseif ($title === 'Pending Bookings') {
                             $matches = $p->status === 'pending' && ! $p->isRebookingHistoryItem() && ! $p->isRefundItem();
-                        } elseif ($sectionTitle === 'Cancelled Bookings') {
+                        } elseif ($title === 'Cancelled Bookings') {
                             $matches = $p->isCancelled() && (float) $p->refund_amount <= 0;
                         }
 
@@ -247,6 +172,96 @@
                     }
                 }
             }
+
+            $sections[] = [
+                'title' => $title,
+                'items' => $items,
+                'validRows' => $validSectionRows,
+            ];
+
+            // Calculate Remittance & Volume based on verified categories
+            if ($title === 'Verified Bookings') {
+                foreach ($validSectionRows as $row) {
+                    $b = $row->booking;
+                    $p = $row->passenger;
+                    $pIndex = $row->pIndex;
+                    if (! $p) {
+                        $bTotal = (float) ($b->transaction?->amount_paid ?: $b->total_price);
+                        $overallSales += $bTotal;
+                    } else {
+                        $pVehFee = ($pIndex === 0 && $b->has_vehicle ? (float) $b->vehicle_price : 0.0);
+                        $pHotelFee = ($pIndex === 0 && $b->accommodations->count() > 0 ? $calcHotelFeePerAcc : 0.0);
+                        $pItemTotal = $p->getEffectiveItemTotal() + $pVehFee + $pHotelFee;
+                        $overallSales += $pItemTotal;
+                    }
+                    $volSales++;
+                }
+            } elseif ($title === 'Rebooked Bookings') {
+                foreach ($validSectionRows as $row) {
+                    $b = $row->booking;
+                    $pIndex = $row->pIndex;
+                    if ($pIndex === 0) {
+                        $rFee = 0;
+                        if ($b->transaction && (float) $b->transaction->rebooking_fee > 0) {
+                            $notes = $b->disruption_notes ? json_decode($b->disruption_notes, true) : [];
+                            $surcharge = (float) ($notes['surcharge'] ?? 0);
+                            $reval = (float) ($notes['revalidation_fee'] ?? 0);
+                            $rateDiff = (float) ($notes['rate_diff'] ?? 0);
+                            if ($surcharge > 0 || $reval > 0 || $rateDiff > 0) {
+                                $rFee = $surcharge + $reval + $rateDiff;
+                            } else {
+                                $rFee = (float) $b->transaction->rebooking_fee;
+                            }
+                        }
+                        $overallRebookingFee += $rFee;
+                    }
+                    $volRevalidation++;
+                }
+            } elseif ($title === 'Refunded Bookings') {
+                foreach ($validSectionRows as $row) {
+                    $b = $row->booking;
+                    $p = $row->passenger;
+                    $pIndex = $row->pIndex;
+                    if (! $p) {
+                        $bTotal = (float) ($b->transaction?->amount_paid ?: $b->total_price);
+                        $refAmount = (float) $b->refund_amount;
+                        $retained = max(0.0, $bTotal - $refAmount);
+                        if ($retained > 0) {
+                            $overallRefundRetained += $retained;
+                            $volRefund++;
+                        } else {
+                            $volCancelled++;
+                        }
+                    } else {
+                        $pVehFee = ($pIndex === 0 && $b->has_vehicle ? (float) $b->vehicle_price : 0.0);
+                        $pHotelFee = ($pIndex === 0 && $b->accommodations->count() > 0 ? $calcHotelFeePerAcc : 0.0);
+                        $pItemTotal = $p->getEffectiveItemTotal() + $pVehFee + $pHotelFee;
+                        $refAmount = (float) $p->refund_amount;
+                        if ($refAmount <= 0 && in_array($b->status, ['cancelled', 'operator_cancelled']) && (float) $b->refund_amount > 0) {
+                            $refAmount = (float) ($b->refund_amount / max(1, $b->passengers->count()));
+                        }
+                        $retained = max(0.0, $pItemTotal - $refAmount);
+                        if ($retained > 0) {
+                            $overallRefundRetained += $retained;
+                            $volRefund++;
+                        } else {
+                            $volCancelled++;
+                        }
+                    }
+                }
+            } elseif ($title === 'Cancelled Bookings') {
+                $volCancelled += $validSectionRows->count();
+            }
+        }
+
+        $toBeRemittedAmount = $overallSales + $overallRebookingFee + $overallRefundRetained;
+        $netSalesVolume = $volSales + $volRevalidation + $volRefund;
+    @endphp
+
+    @foreach($sections as $section)
+        @php
+            $sectionTitle = $section['title'];
+            $validSectionRows = $section['validRows'];
         @endphp
         <h2 class="{{ !$loop->first ? 'page-break' : '' }}">{{ $section['title'] }} ({{ $validSectionRows->count() }} items)</h2>
 
@@ -327,9 +342,21 @@
 
                                 $statusStr = ucfirst(str_replace('_', ' ', $booking->status));
                                 if (in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount > 0) {
-                                    $statusStr = 'Refunded';
+                                $bTcPrice = (float) ($booking->transportClasses ? $booking->transportClasses->sum(fn($tc) => (float)($tc->pivot->price ?? 0)) : 0);
+                                $bSchedAcc = (float) ($booking->schedule_accommodation_price ?? 0) + (float) ($booking->return_schedule_accommodation_price ?? 0);
+                                $bAccFee = $bTcPrice + $bSchedAcc;
+                                $bBaseFare = max(0.0, (float)($booking->schedule_price ?? 0) + (float)($booking->return_schedule_price ?? 0));
+                                if ($bBaseFare <= 0 && $bTotal > 0 && $bAccFee <= 0) {
+                                    $bBaseFare = max(0.0, $bTotal - (float)($booking->vehicle_price ?? 0));
                                 }
 
+                                $secBaseFare += $bBaseFare;
+                                $secAccFee += $bAccFee;
+                                $secVehicleFee += (float) ($booking->vehicle_price ?? 0);
+                                $secRebookingFee += ($sectionTitle === 'Rebooked Bookings' ? $rebookingFee : 0);
+                                $secCancellationFee += (float) $booking->cancellation_fee;
+                                $secVoucherTotal += (float) $booking->voucher_discount_amount;
+                                $secPointsTotal += (float) $booking->points_discount;
                                 $secTotal += $bTotal;
                             @endphp
                             <tr>
@@ -349,14 +376,14 @@
                                     </span>
                                 </td>
                                 <td>{{ $booking->transaction?->payment_reference ?? '-' }}</td>
-                                <td>0.00</td>
-                                <td>0.00</td>
+                                <td>{{ number_format($bBaseFare, 2) }}</td>
+                                <td>{{ number_format($bAccFee, 2) }}</td>
                                 <td>{{ number_format($booking->vehicle_price ?? 0, 2) }}</td>
                                 <td>0.00</td>
                                 <td>0.00</td>
                                 <td>0.00</td>
                                 <td>0.00</td>
-                                <td>{{ number_format($rebookingFee, 2) }}</td>
+                                <td>{{ number_format($sectionTitle === 'Rebooked Bookings' ? $rebookingFee : 0, 2) }}</td>
                                 <td>{{ number_format((float) $booking->cancellation_fee, 2) }}</td>
                                 <td>-</td>
                                 <td>0.00</td>
@@ -375,7 +402,7 @@
                                 $pAdminFee = $p->getEffectiveWebAdminFee();
                                 $pTxnFee = $p->getEffectiveTransactionFee();
                                 $pHotelFee = ($pIndex === 0 ? $calcHotelFee : 0.0);
-                                $pRebookFee = ($pIndex === 0 ? $rebookingFee : 0.0);
+                                $pRebookFee = ($sectionTitle === 'Rebooked Bookings' && $pIndex === 0 ? (float) $rebookingFee : 0.0);
                                 $pCancelFee = ((float) $p->cancellation_fee > 0 ? (float) $p->cancellation_fee : ($pIndex === 0 ? (float) $booking->cancellation_fee : 0.0));
                                 $pPaxDisc = (float) $p->discount_amount;
                                 $pVoucherDisc = (float) $p->voucher_discount_share;

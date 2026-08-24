@@ -69,10 +69,18 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
                 if (in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount > 0) {
                     $bTotal = (float) $booking->refund_amount;
                 }
+                $bTcPrice = (float) ($booking->transportClasses ? $booking->transportClasses->sum(fn($tc) => (float)($tc->pivot->price ?? 0)) : 0);
+                $bSchedAcc = (float) ($booking->schedule_accommodation_price ?? 0) + (float) ($booking->return_schedule_accommodation_price ?? 0);
+                $bAccFee = $bTcPrice + $bSchedAcc;
+                $bBaseFare = max(0.0, (float)($booking->schedule_price ?? 0) + (float)($booking->return_schedule_price ?? 0));
+                if ($bBaseFare <= 0 && $bTotal > 0 && $bAccFee <= 0) {
+                    $bBaseFare = max(0.0, $bTotal - (float)($booking->vehicle_price ?? 0));
+                }
+
                 $fin = [
-                    'baseFare' => 0.0, 'accFee' => 0.0, 'vehicleFee' => (float) ($booking->vehicle_price ?? 0),
+                    'baseFare' => $bBaseFare, 'accFee' => $bAccFee, 'vehicleFee' => (float) ($booking->vehicle_price ?? 0),
                     'baggageFee' => 0.0, 'adminFee' => 0.0, 'transactionFee' => 0.0, 'hotelFee' => 0.0,
-                    'rebookingFee' => (float) $rebookingFee, 'cancellationFee' => (float) $booking->cancellation_fee,
+                    'rebookingFee' => (float) ($this->title === 'Rebooked Bookings' ? $rebookingFee : 0), 'cancellationFee' => (float) $booking->cancellation_fee,
                     'passengerDiscount' => 0.0, 'voucherDiscount' => (float) $booking->voucher_discount_amount,
                     'pointsDiscount' => (float) $booking->points_discount, 'totalAmount' => (float) $bTotal,
                 ];
@@ -118,7 +126,7 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
                     $pAdminFee = $p->getEffectiveWebAdminFee();
                     $pTxnFee = $p->getEffectiveTransactionFee();
                     $pHotelFee = ($pIndex === 0 ? $calcHotelFee : 0.0);
-                    $pRebookFee = ($pIndex === 0 ? (float) $rebookingFee : 0.0);
+                    $pRebookFee = ($this->title === 'Rebooked Bookings' && $pIndex === 0 ? (float) $rebookingFee : 0.0);
                     $pCancelFee = ((float) $p->cancellation_fee > 0 ? (float) $p->cancellation_fee : ($pIndex === 0 ? (float) $booking->cancellation_fee : 0.0));
                     $pPaxDisc = (float) $p->discount_amount;
                     $pVoucherDisc = (float) $p->voucher_discount_share;

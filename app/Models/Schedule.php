@@ -202,6 +202,11 @@ class Schedule extends Model
         return $this->duration_minutes < 300;
     }
 
+    public function getIsShortHaulAttribute(): bool
+    {
+        return $this->isShortHaul();
+    }
+
     public function getDurationLabelAttribute(): string
     {
         $totalMinutes = $this->duration_minutes;

@@ -287,50 +287,65 @@ class Passenger extends Model
     // ─── Financial Helpers ────────────────────────────────────────────────────
 
     /**
-     * Get effective gross fare amount with dynamic fallback for older records.
+     * Get effective gross base fare amount (excluding accommodation/transport class fees).
      */
     public function getEffectiveFareAmount(): float
     {
-        if ((float) ($this->attributes['fare_amount'] ?? 0) > 0) {
-            return (float) $this->attributes['fare_amount'];
+        $booking = $this->getBookingModel();
+        $isDriver = ($this->type === 'driver') && $booking?->has_vehicle;
+        if ($isDriver) {
+            return 0.0;
         }
 
-        $booking = $this->getBookingModel();
+        $tcPrice = 0.0;
+        $schedAcc = 0.0;
         if ($booking) {
-            $isDriver = ($this->type === 'driver') && $booking->has_vehicle;
-            if ($isDriver) {
-                return 0.0;
+            $allTcs  = $booking->transportClasses ?? collect();
+            $tcPrice = (float) $allTcs->sum(fn ($tc) => (float) ($tc->pivot->price ?? 0));
+            $schedAcc = (float) ($booking->schedule_accommodation_price ?? 0) + (float) ($booking->return_schedule_accommodation_price ?? 0);
+        }
+
+        $accPortion = ((float) ($this->attributes['accommodation_amount'] ?? 0) > 0)
+            ? (float) $this->attributes['accommodation_amount']
+            : ($tcPrice + $schedAcc);
+
+        if ((float) ($this->attributes['fare_amount'] ?? 0) > 0) {
+            $rawFare = (float) $this->attributes['fare_amount'];
+            if ($accPortion > 0 && $rawFare > $accPortion) {
+                return max(0.0, round($rawFare - $accPortion, 2));
             }
+            return $rawFare;
+        }
+
+        if ($booking) {
             $schedPrice = (float) ($booking->schedule_price ?? 0);
             $retPrice   = (float) ($booking->return_schedule_price ?? 0);
-            
-            $allTcs  = $booking->transportClasses ?? collect();
-            $tcPrice = $allTcs->sum(fn ($tc) => (float) ($tc->pivot->price ?? 0));
-
-            return $schedPrice + $retPrice + $tcPrice;
+            return $schedPrice + $retPrice;
         }
 
         return 0.0;
     }
 
     /**
-     * Get effective accommodation amount with dynamic fallback.
+     * Get effective accommodation / transport class amount.
      */
     public function getEffectiveAccommodationAmount(): float
     {
+        $booking = $this->getBookingModel();
+        $isDriver = ($this->type === 'driver') && $booking?->has_vehicle;
+        if ($isDriver) {
+            return 0.0;
+        }
+
         if ((float) ($this->attributes['accommodation_amount'] ?? 0) > 0) {
             return (float) $this->attributes['accommodation_amount'];
         }
 
-        $booking = $this->getBookingModel();
         if ($booking) {
-            $isDriver = ($this->type === 'driver') && $booking->has_vehicle;
-            if ($isDriver) {
-                return 0.0;
-            }
-            $schedAcc = (float) ($booking->schedule_accommodation_price ?? 0);
-            $retAcc   = (float) ($booking->return_schedule_accommodation_price ?? 0);
-            return $schedAcc + $retAcc;
+            $allTcs  = $booking->transportClasses ?? collect();
+            $tcPrice = (float) $allTcs->sum(fn ($tc) => (float) ($tc->pivot->price ?? 0));
+            $schedAcc = (float) ($booking->schedule_accommodation_price ?? 0) + (float) ($booking->return_schedule_accommodation_price ?? 0);
+            return $tcPrice + $schedAcc;
         }
 
         return 0.0;

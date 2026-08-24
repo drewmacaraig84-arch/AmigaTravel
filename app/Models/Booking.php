@@ -1463,9 +1463,8 @@ class Booking extends Model
         }
         $surcharge = round($originalFareBase * ($surchargePct / 100), 2);
 
-        // 3. Revalidation fee
-        $multiplier = $selectedCount + ($isFerry ? $selectedCount : 0);
-        $revalidationFee = $isWithin5Mins ? 0.0 : round(floatval($settings->revalidation_fee ?? 0) * $multiplier, 2);
+        // 3. Revalidation fee (charged per passenger)
+        $revalidationFee = $isWithin5Mins ? 0.0 : round(floatval($settings->revalidation_fee ?? 0) * $selectedCount, 2);
 
         // 4. Rate Difference calculation if replacement schedules provided
         $newFare = 0.0;
@@ -1518,9 +1517,7 @@ class Booking extends Model
 
         $settings = \App\Models\PaymentSetting::current();
         $passengerCount = max(1, $this->passengers()->count());
-        $isFerry        = $this->getMode() === 'ferry';
-        $multiplier     = $passengerCount + ($isFerry ? $passengerCount : 0);
-        $revalidationFee = floatval($settings->revalidation_fee ?? 0) * $multiplier;
+        $revalidationFee = floatval($settings->revalidation_fee ?? 0) * $passengerCount;
         
         $originalFare = $this->getTicketBase();
         $surchargePct = 0;
