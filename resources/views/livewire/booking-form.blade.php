@@ -1323,18 +1323,9 @@
 
                                     {{-- Discount select --}}
                                     @php
-                                        $isDriver = $passenger['type'] === 'driver';
-                                        $isAirlineInfant = ($mode === 'airline') && ($passenger['type'] === 'infant');
-
-                                        $selectedClass = $selectedSchedule && $selected_transport_class_id 
-                                            ? collect($selectedSchedule['transport_classes'] ?? [])->firstWhere(fn($c) => (int)($c['pivot_id'] ?? $c['id']) === (int)$selected_transport_class_id) 
-                                            : null;
-                                        $selectedReturnClass = $selectedReturnSchedule && $selected_return_transport_class_id 
-                                            ? collect($selectedReturnSchedule['transport_classes'] ?? [])->firstWhere(fn($c) => (int)($c['pivot_id'] ?? $c['id']) === (int)$selected_return_transport_class_id) 
-                                            : null;
-                                        $isSuperPromo = ($selectedClass && ($selectedClass['rate_type'] ?? '') === 'super_promotional')
-                                            || ($selectedReturnClass && ($selectedReturnClass['rate_type'] ?? '') === 'super_promotional')
-                                            || (($passenger['rate_type'] ?? '') === 'super_promotional');
+                                        $isDriver = ($passenger['type'] ?? '') === 'driver';
+                                        $isAirlineInfant = ($mode === 'airline') && (($passenger['type'] ?? '') === 'infant');
+                                        $isSuperPromo = $this->isSuperPromo || (($passenger['rate_type'] ?? '') === 'super_promotional');
                                     @endphp
                                     <label class="block min-w-0 {{ ($isDriver || $isAirlineInfant || $isSuperPromo) ? 'opacity-50 pointer-events-none select-none' : '' }}">
                                         <span class="text-slate-900 font-bold text-sm">Discount</span>
