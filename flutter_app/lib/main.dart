@@ -4895,7 +4895,9 @@ void showTermsModal(BuildContext context) {
                   ),
                   SizedBox(height: 4),
                   Text(
-                    '• Senior Citizens: Applicable to passengers aged 60 or above with valid OSCA or government-issued ID. A 20% discount applies to the base rate.\n'
+                    '• Senior Citizens: Applicable to passengers aged 60 or above with a valid OSCA or Philippine government-issued ID. A 20% discount applies to the base rate for Filipino nationals.\n'
+                    '  - Companion: Senior citizens are encouraged to travel with a legal-aged companion.\n'
+                    '  - Medical Certificate: Recommended to bring a medical certificate confirming fitness to travel (subject to assessment by vessel medical staff on departure date).\n'
                     '• Infants: Infants below 2 years old and below 1 meter in height may be allowed to board. A fixed rate of ₱500.00 applies per infant regardless of destination or accommodation.',
                     style:
                         TextStyle(fontSize: 13, color: kSlate600, height: 1.4),
@@ -9796,6 +9798,27 @@ class _DiscountScreenState extends State<DiscountScreen> {
         final idNumber = _idControllers[i].text.trim();
         widget.booking.passengers[i]['id_number'] = idNumber;
 
+        if (discName.contains('senior')) {
+          final bdText = _birthdateControllers[i].text.trim();
+          if (bdText.isNotEmpty) {
+            try {
+              final dob = DateTime.parse(bdText);
+              final ageYrs = DateTime.now().difference(dob).inDays ~/ 365;
+              if (ageYrs < 60) {
+                showTopSnack(
+                  context,
+                  SnackBar(
+                    content: Text(
+                        'Passenger #${i + 1}: Senior Citizen discount requires the passenger to be at least 60 years old.'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+            } catch (_) {}
+          }
+        }
+
         if (discName == 'student') {
           if (_idFrontBase64[i] == null || _idBackBase64[i] == null) {
             showTopSnack(
@@ -10185,6 +10208,18 @@ class _DiscountScreenState extends State<DiscountScreen> {
 
                               Builder(
                                 builder: (context) {
+                                  // Compute passenger age from the birthdate controller
+                                  final now = DateTime.now();
+                                  int? paxAgeYears;
+                                  final bdText = _birthdateControllers[i].text.trim();
+                                  if (bdText.isNotEmpty) {
+                                    try {
+                                      final dob = DateTime.parse(bdText);
+                                      paxAgeYears = now.difference(dob).inDays ~/ 365;
+                                    } catch (_) {}
+                                  }
+                                  final isSeniorAge = paxAgeYears != null && paxAgeYears >= 60;
+
                                   final discId = pax[i]['discount_id'];
                                   final disc = _discounts.firstWhere(
                                       (d) => d['id'] == discId,
@@ -10192,44 +10227,99 @@ class _DiscountScreenState extends State<DiscountScreen> {
                                   final discName =
                                       disc['name']?.toString().toLowerCase() ??
                                           '';
+                                  final isSeniorDiscount = discName.contains('senior');
 
-                                  if (discId != null && discName != 'infant') {
-                                    String idLabel = 'ID Number *';
-                                    if (discName == 'student') {
-                                      idLabel = 'Student ID Number *';
-                                    } else if (discName == 'senior citizen')
-                                      idLabel = 'Senior Citizen ID Number *';
-                                    else if (discName == 'pwd')
-                                      idLabel = 'PWD ID Number *';
+                                  return Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      if (discId != null && discName != 'infant') ...[
+                                        Builder(
+                                          builder: (context) {
+                                            String idLabel = 'ID Number *';
+                                            String? idHint;
+                                            if (discName.contains('student')) {
+                                              idLabel = 'Student ID Number *';
+                                            } else if (isSeniorDiscount) {
+                                              idLabel = 'Senior Citizen (OSCA) ID Number *';
+                                              idHint = 'Enter OSCA ID number';
+                                            } else if (discName.contains('pwd')) {
+                                              idLabel = 'PWD ID Number *';
+                                            }
 
-                                    return Column(
-                                      children: [
-                                        const SizedBox(height: 10),
-                                        TextFormField(
-                                          controller: _idControllers[i],
-                                          decoration: InputDecoration(
-                                            labelText: idLabel,
-                                            border: OutlineInputBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(10)),
-                                          ),
-                                          validator: (v) =>
-                                              (v == null || v.trim().isEmpty)
-                                                  ? 'ID number is required'
-                                                  : null,
+                                            return Column(
+                                              children: [
+                                                const SizedBox(height: 10),
+                                                TextFormField(
+                                                  controller: _idControllers[i],
+                                                  decoration: InputDecoration(
+                                                    labelText: idLabel,
+                                                    hintText: idHint,
+                                                    border: OutlineInputBorder(
+                                                        borderRadius:
+                                                            BorderRadius.circular(10)),
+                                                  ),
+                                                  validator: (v) =>
+                                                      (v == null || v.trim().isEmpty)
+                                                          ? 'ID number is required'
+                                                          : null,
+                                                ),
+                                                if (discName == 'student') ...[
+                                                  const SizedBox(height: 12),
+                                                  _buildIdImagePicker(
+                                                      i, 'ID Image (Front) *', true),
+                                                  const SizedBox(height: 10),
+                                                  _buildIdImagePicker(
+                                                      i, 'ID Image (Back) *', false),
+                                                ],
+                                              ],
+                                            );
+                                          },
                                         ),
-                                        if (discName == 'student') ...[
-                                          const SizedBox(height: 12),
-                                          _buildIdImagePicker(
-                                              i, 'ID Image (Front) *', true),
-                                          const SizedBox(height: 10),
-                                          _buildIdImagePicker(
-                                              i, 'ID Image (Back) *', false),
-                                        ],
                                       ],
-                                    );
-                                  }
-                                  return const SizedBox.shrink();
+                                      if (isSeniorAge || isSeniorDiscount) ...[
+                                        const SizedBox(height: 10),
+                                        Container(
+                                          padding: const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFF0FDF4),
+                                            borderRadius: BorderRadius.circular(10),
+                                            border: Border.all(color: const Color(0xFF86EFAC)),
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  const Icon(Icons.info_outline, color: kGreen, size: 18),
+                                                  const SizedBox(width: 6),
+                                                  Text(
+                                                    'Senior Citizen (Age 60+) Guidelines',
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: Colors.green.shade900,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 6),
+                                              Text(
+                                                '• 20% discount applies to the base rate for Filipino senior citizens with valid OSCA ID.\n'
+                                                '• Senior citizens are encouraged to travel with a legal-aged companion.\n'
+                                                '• Recommended to bring a medical certificate confirming fitness to travel (subject to vessel medical staff assessment).\n'
+                                                '• Valid OSCA or government-issued ID showing date of birth must be presented during check-in/boarding.',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: Colors.green.shade800,
+                                                  height: 1.35,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  );
                                 },
                               ),
                               if (widget.booking.isInternational) ...[
