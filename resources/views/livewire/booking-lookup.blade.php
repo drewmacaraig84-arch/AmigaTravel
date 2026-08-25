@@ -840,7 +840,8 @@
                                                 @error('refund_account_name')<p class="mt-1 text-sm text-rose-600">{{ $message }}</p>@enderror
                                             </div>
 
-                                            {{-- Verification Documents Upload --}}
+                                            {{-- Verification Documents Upload (Only for Refund requests) --}}
+                                            @if($cancellationExpired)
                                             <div class="col-span-full border-t border-slate-200/80 pt-4 mt-2">
                                                 <p class="text-sm font-bold text-slate-800 flex items-center gap-1.5 mb-1">
                                                     <svg class="w-4 h-4 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
@@ -973,6 +974,7 @@
                                                     </div>
                                                 </div>
                                             </div>
+                                            @endif
                                         </div>
 
                                         <div class="mt-4 flex flex-wrap gap-3" x-data="{ showRefundModal: false }">
