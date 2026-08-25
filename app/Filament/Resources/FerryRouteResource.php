@@ -401,20 +401,35 @@ class FerryRouteResource extends Resource
                         ->default(50)
                         ->required(),
 
+                    \Filament\Forms\Components\Select::make('rate_type')
+                        ->label('Rate Tier & Fare Policy')
+                        ->options([
+                            'regular'           => '🔵 Regular Fare (Standard - 100% Rate)',
+                            'promotional'       => '🟠 Promotional Fare (Promo - Non-refundable)',
+                            'super_promotional' => '🟣 Super Promotional (Super Promo - No Discounts/Vouchers/Points)',
+                        ])
+                        ->default('regular')
+                        ->required()
+                        ->live()
+                        ->afterStateUpdated(function ($state, callable $set) {
+                            $set('is_promo', in_array($state, ['promotional', 'super_promotional']));
+                        }),
+
                     Toggle::make('is_promo')
                         ->label('Promotional Ticket (Non-refundable)')
-                        ->helperText('Tickets in this class will not be eligible for refunds.')
-                        ->live(),
+                        ->helperText('Tickets in this class will not be eligible for standard refunds.')
+                        ->live()
+                        ->hidden(),
 
                     \Filament\Forms\Components\DateTimePicker::make('promo_duration_start')
                         ->label('Promo Start Date & Time')
-                        ->visible(fn (callable $get) => $get('is_promo') === true)
-                        ->required(fn (callable $get) => $get('is_promo') === true),
+                        ->visible(fn (callable $get) => in_array($get('rate_type'), ['promotional', 'super_promotional']) || $get('is_promo') === true)
+                        ->required(fn (callable $get) => in_array($get('rate_type'), ['promotional', 'super_promotional'])),
 
                     \Filament\Forms\Components\DateTimePicker::make('promo_duration_end')
                         ->label('Promo End Date & Time')
-                        ->visible(fn (callable $get) => $get('is_promo') === true)
-                        ->required(fn (callable $get) => $get('is_promo') === true)
+                        ->visible(fn (callable $get) => in_array($get('rate_type'), ['promotional', 'super_promotional']) || $get('is_promo') === true)
+                        ->required(fn (callable $get) => in_array($get('rate_type'), ['promotional', 'super_promotional']))
                         ->after('promo_duration_start'),
 
                     Toggle::make('has_bed')

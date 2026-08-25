@@ -48,9 +48,10 @@ class Passenger extends Model
         'return_seat_number',
         'return_seat_row',
         'return_seat_section',
-        // Promo
+        // Promo & Rate Tier
         'promotional_ticket_id',
         'is_promo',
+        'rate_type',
         'promo_price',
         // Individual financials
         'fare_amount',
@@ -92,6 +93,7 @@ class Passenger extends Model
 
     protected $casts = [
         'is_promo'                  => 'boolean',
+        'rate_type'                 => 'string',
         'is_rebooked'               => 'boolean',
         'promo_price'               => 'decimal:2',
         'extra_baggage_price'       => 'decimal:2',
@@ -405,12 +407,14 @@ class Passenger extends Model
         }
 
         $gross   = $this->getEffectiveFareAndClass();
-        $disc    = (float) ($this->discount_amount ?? 0);
-        if ($disc <= 0 && $this->discount) {
+        $isSuperPromo = ($this->rate_type ?? 'regular') === 'super_promotional';
+
+        $disc    = $isSuperPromo ? 0.0 : (float) ($this->discount_amount ?? 0);
+        if (!$isSuperPromo && $disc <= 0 && $this->discount) {
             $disc = $gross * ((float) $this->discount->percentage / 100);
         }
-        $voucher = (float) ($this->voucher_discount_share ?? 0);
-        $points  = (float) ($this->points_discount_share ?? 0);
+        $voucher = $isSuperPromo ? 0.0 : (float) ($this->voucher_discount_share ?? 0);
+        $points  = $isSuperPromo ? 0.0 : (float) ($this->points_discount_share ?? 0);
         $webFee  = $this->getEffectiveWebAdminFee();
         $txFee   = $this->getEffectiveTransactionFee();
         $baggage = (float) ($this->extra_baggage_price ?? 0);

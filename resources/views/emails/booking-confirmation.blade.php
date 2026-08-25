@@ -91,7 +91,7 @@
                 <td style="padding: 0 32px 20px 32px; text-align: center;">
                     <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 20px;">
                         <p style="margin: 0 0 12px 0; font-weight: 700; color: #166534; font-size: 14px;">
-                            Your Official E-Ticket / Confirmation Link:
+                            Your Confirmed Booking / Travel Itinerary:
                         </p>
                         <a href="{{ $ticketUrl }}" style="display: inline-block; padding: 14px 32px; background-color: #047857; color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 15px; box-shadow: 0 2px 4px rgba(4, 120, 87, 0.2);">
                             View / Download Your Ticket
@@ -108,7 +108,7 @@
                         <div style="font-weight: 700; margin-bottom: 4px;">📎 Attached Documents:</div>
                         <div>&bull; <strong>Payment_Acknowledgement.pdf</strong> (Proof of payment & booking summary)</div>
                         @if(! empty($hasTicketAttachment))
-                        <div>&bull; <strong>Ticket_Confirmation.pdf</strong> (Official E-Ticket / Travel Itinerary)</div>
+                        <div>&bull; <strong>Ticket_Confirmation.pdf</strong> (Confirmed Booking / Travel Itinerary)</div>
                         @endif
                     </div>
                 </td>

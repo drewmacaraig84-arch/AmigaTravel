@@ -222,7 +222,7 @@
             <td>
                 <div class="brand-logo-wrap">
                     <img src="data:image/png;base64,{{ base64_encode(file_get_contents(public_path('images/amiga-logo-transparent.png'))) }}" alt="Amiga Gracia" class="brand-logo" />
-                    <div class="brand-sub brand-sub--ack">{{ ($isTicket ?? false) ? 'OFFICIAL E-TICKET & ITINERARY' : 'E-ACKNOWLEDGEMENT' }}</div>
+                    <div class="brand-sub brand-sub--ack">{{ ($isTicket ?? false) ? 'CONFIRMED BOOKING & ITINERARY' : 'E-ACKNOWLEDGEMENT' }}</div>
                 </div>
             </td>
             <td class="receipt-title-box">
@@ -453,9 +453,9 @@
     <div class="notice-box">
         <div class="notice-title">IMPORTANT TRAVEL INSTRUCTIONS & REMINDERS</div>
         <ol style="margin: 4px 0 0 16px; padding: 0;">
-            <li>Please present a printed copy or digital screenshot of this Acknowledgement at the terminal/check-in counter.</li>
+            <li>Please print the official ticket sent by the admin (not this E-Acknowledgement) and present it at check-in.</li>
             <li>All passengers must present a valid government-issued ID (or Student/Senior ID for discounted tickets).</li>
-            <li>Please arrive at the terminal at least <strong>1.5 hours</strong> before scheduled departure for check-in and security screening.</li>
+            <li>Please arrive at the port or airport at least <strong>3 hours</strong> before scheduled departure for check-in and security screening.</li>
             <li>Tickets are non-transferable. Unused or expired tickets are subject to carrier revalidation and refund policies.</li>
         </ol>
     </div>

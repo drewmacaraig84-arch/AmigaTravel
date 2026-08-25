@@ -1346,7 +1346,8 @@
                                                 if ($paxBirthdate && strtotime($paxBirthdate)) {
                                                     $paxAgeYrs = \Carbon\Carbon::parse($paxBirthdate)->diffInYears(now());
                                                 }
-                                                $seniorEligible = $paxAgeYrs !== null && $paxAgeYrs >= 60;
+                                                $isAdultPax     = ($passenger['type'] === 'adult');
+                                                $seniorEligible = $isAdultPax && $paxAgeYrs !== null && $paxAgeYrs >= 60;
                                             @endphp
                                             <select wire:model.number="passengers.{{ $index }}.discount_id" wire:change="$refresh" class="mt-3 block w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 shadow-sm focus:border-[#db2777] focus:outline-none focus:ring-2 focus:ring-[#db2777]/20 transition-all">
                                                 <option value="">No discount</option>
@@ -1354,16 +1355,24 @@
                                                     @php
                                                         $dName    = strtolower($discount->name);
                                                         $isSenior = str_contains($dName, 'senior');
+                                                        if ($isSenior && ! $isAdultPax) {
+                                                            continue; // Non-adults (minor, child, infant) can never pick senior discount
+                                                        }
                                                         $disabled = $isSenior && $paxAgeYrs !== null && !$seniorEligible;
                                                         $hint     = $disabled ? ' (must be 60+)' : '';
                                                     @endphp
                                                     <option value="{{ $discount->id }}" {{ $disabled ? 'disabled' : '' }}>{{ $discount->name }}{{ $hint }}</option>
                                                 @endforeach
                                             </select>
-                                            @if($paxAgeYrs !== null && !$seniorEligible)
+                                            @if($seniorEligible)
+                                                <div class="mt-2 rounded-xl bg-emerald-50 border border-emerald-200 p-2.5 text-xs text-emerald-800 flex items-center gap-2">
+                                                    <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                    <span><strong>Eligible for Senior Citizen Discount (20% Off):</strong> Passenger is 60+ years old. Please select Senior Citizen and provide OSCA / Senior ID.</span>
+                                                </div>
+                                            @elseif($paxAgeYrs !== null && $isAdultPax && !$seniorEligible)
                                                 <p class="mt-1.5 text-xs text-amber-600 flex items-center gap-1">
                                                     <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                                    Senior Citizen discount requires the passenger to be at least 60 years old.
+                                                    Senior Citizen discount requires the adult passenger to be at least 60 years old.
                                                 </p>
                                             @endif
                                             @error('passengers.' . $index . '.discount_id')<p class="mt-2 text-sm text-rose-600">{{ $message }}</p>@enderror

@@ -521,30 +521,39 @@
                         @endif
 
                         <div class="rounded-2xl border border-emerald-100 bg-emerald-50 p-6">
-                            <h4 class="text-sm font-bold uppercase tracking-wider text-emerald-800 mb-4">Rebooking Fee Computation</h4>
+                            <h4 class="text-sm font-bold uppercase tracking-wider text-emerald-800 mb-4">Rebooking Breakdown</h4>
                             <div class="space-y-3 text-sm text-emerald-900">
                                 <div class="flex justify-between">
-                                    <span>Original Booking Total</span>
+                                    <span>Original Price</span>
                                     <span>₱{{ number_format($originalFare, 2) }}</span>
                                 </div>
-                                <div class="flex justify-between">
-                                    <span>New Booking Total</span>
+                                <div class="flex justify-between font-semibold">
+                                    <span>New Ticket Price</span>
                                     <span>₱{{ number_format($newFare, 2) }}</span>
                                 </div>
-                                <div class="flex justify-between pt-2 border-t border-emerald-200 mt-2">
-                                    <span>Rate Difference</span>
-                                    <span>₱{{ number_format($rebookRateDiff, 2) }}</span>
+                                <div class="pt-3 border-t border-emerald-200 mt-2">
+                                    <div class="text-xs font-bold uppercase tracking-wider text-emerald-700 mb-2">Revalidation Breakdown</div>
+                                    <div class="space-y-2 pl-2 border-l-2 border-emerald-300">
+                                        <div class="flex justify-between text-xs">
+                                            <span>Revalidation Fee:</span>
+                                            <span class="font-medium">₱{{ number_format($rebookRevalidationFee, 2) }}</span>
+                                        </div>
+                                        @if($rebookSurcharge > 0)
+                                            <div class="flex justify-between text-xs">
+                                                <span>Revalidation Surcharge:</span>
+                                                <span class="font-medium">₱{{ number_format($rebookSurcharge, 2) }}</span>
+                                            </div>
+                                        @endif
+                                        @if($rebookRateDiff > 0)
+                                            <div class="flex justify-between text-xs">
+                                                <span>Rate Diff (if applicable):</span>
+                                                <span class="font-medium">₱{{ number_format($rebookRateDiff, 2) }}</span>
+                                            </div>
+                                        @endif
+                                    </div>
                                 </div>
-                                <div class="flex justify-between">
-                                    <span>Refund Surcharge</span>
-                                    <span>₱{{ number_format($rebookSurcharge, 2) }}</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span>Revalidation Fee</span>
-                                    <span>₱{{ number_format($rebookRevalidationFee, 2) }}</span>
-                                </div>
-                                <div class="flex justify-between pt-2 border-t border-emerald-200 font-bold text-base">
-                                    <span>Total Rebooking Fee</span>
+                                <div class="flex justify-between pt-2 border-t border-emerald-200 font-bold text-base text-emerald-950">
+                                    <span>Total Revalidation Fees:</span>
                                     <span>₱{{ number_format($totalRebookFee, 2) }}</span>
                                 </div>
                             </div>

@@ -47,35 +47,48 @@ class CreateBookingAction
             ? ScheduleAccommodation::find($data['selected_return_schedule_accommodation_id'])
             : null;
 
-        // --- Promo ticket validation ---
-        $isPromoBooking = ! empty($data['promotional_ticket_id']);
+        // --- Rate tier validation ---
+        $depStc = ! empty($data['selected_transport_class_id'])
+            ? DB::table('schedule_transport_class')
+                ->where('schedule_id', $schedule->id)
+                ->where('transport_class_id', $data['selected_transport_class_id'])
+                ->first()
+            : null;
+
+        $retStc = (! empty($data['selected_return_transport_class_id']) && $returnSchedule)
+            ? DB::table('schedule_transport_class')
+                ->where('schedule_id', $returnSchedule->id)
+                ->where('transport_class_id', $data['selected_return_transport_class_id'])
+                ->first()
+            : null;
+
+        $isSuperPromoBooking = ($depStc && $depStc->rate_type === 'super_promotional')
+            || ($retStc && $retStc->rate_type === 'super_promotional');
+
+        $isPromoBooking = ! empty($data['promotional_ticket_id'])
+            || ($depStc && ($depStc->rate_type === 'promotional' || $depStc->is_promo))
+            || ($retStc && ($retStc->rate_type === 'promotional' || $retStc->is_promo));
+
         if (! $isPromoBooking && ! empty($data['passengers']) && is_array($data['passengers'])) {
             foreach ($data['passengers'] as $p) {
-                if (! empty($p['use_promo']) || ! empty($p['is_promo']) || ! empty($p['promotional_ticket_id'])) {
+                if (($p['rate_type'] ?? '') === 'super_promotional') {
+                    $isSuperPromoBooking = true;
                     $isPromoBooking = true;
                     break;
                 }
+                if (! empty($p['use_promo']) || ! empty($p['is_promo']) || ! empty($p['promotional_ticket_id']) || ($p['rate_type'] ?? '') === 'promotional') {
+                    $isPromoBooking = true;
+                }
             }
-        }
-        if (! empty($data['selected_transport_class_id'])) {
-            $isPromoBooking = $isPromoBooking || (bool) DB::table('schedule_transport_class')
-                ->where('schedule_id', $schedule->id)
-                ->where('transport_class_id', $data['selected_transport_class_id'])
-                ->value('is_promo');
-        }
-        if (! empty($data['selected_return_transport_class_id']) && $returnSchedule) {
-            $isPromoBooking = $isPromoBooking || (bool) DB::table('schedule_transport_class')
-                ->where('schedule_id', $returnSchedule->id)
-                ->where('transport_class_id', $data['selected_return_transport_class_id'])
-                ->value('is_promo');
         }
 
-        if ($isPromoBooking) {
+        // Super Promo strictly blocks vouchers and points
+        if ($isSuperPromoBooking) {
             if (! empty($data['voucher_code'])) {
-                throw new \InvalidArgumentException('Vouchers cannot be used with promotional tickets.');
+                throw new \InvalidArgumentException('Vouchers cannot be used with Super Promotional tickets.');
             }
             if (! empty($data['use_points'])) {
-                throw new \InvalidArgumentException('Gracia points cannot be used with promotional tickets.');
+                throw new \InvalidArgumentException('Gracia points cannot be used with Super Promotional tickets.');
             }
         }
 
@@ -245,8 +258,9 @@ class CreateBookingAction
                 'client_email'                       => $data['client_email'],
                 'total_price'                        => max(0, $totalPrice),
                 'status'                             => 'pending',
-                'has_extra_baggage'                  => collect($data['passengers'])->some(fn($p) => floatval($p['extra_baggage_price'] ?? 0) > 0),
-                'extra_baggage_price'                => collect($data['passengers'])->sum(fn($p) => floatval($p['extra_baggage_price'] ?? 0)),
+                'has_extra_baggage'                  => collect($data['passengers'])->some(fn($p) => floatval($p['extra_baggage_price'] ?? 0) > 0) || !empty($data['has_extra_baggage']),
+                'extra_baggage_weight'               => collect($data['passengers'])->filter(fn($p) => !empty($p['extra_baggage_weight']))->pluck('extra_baggage_weight')->implode(', ') ?: ($data['extra_baggage_weight'] ?? null),
+                'extra_baggage_price'                => collect($data['passengers'])->sum(fn($p) => floatval($p['extra_baggage_price'] ?? 0)) ?: floatval($data['extra_baggage_price'] ?? 0),
                 'has_vehicle'                        => $data['has_vehicle'] ?? false,
                 'vehicle_type'                       => $data['vehicle_type'] ?? null,
                 'vehicle_plate_number'               => $data['vehicle_plate_number'] ?? null,
@@ -364,8 +378,11 @@ class CreateBookingAction
                     }
                 }
 
-                // Airline infant cannot have additional discounts
-                $hasDiscount = ! empty($passengerData['discount_id']) && ! ($isAirline && $pType === 'infant');
+                $paxRateType = $passengerData['rate_type'] ?? ($isSuperPromoBooking ? 'super_promotional' : ($isPromoBooking ? 'promotional' : 'regular'));
+                $isSuperPromoPax = $paxRateType === 'super_promotional';
+
+                // Airline infant and Super Promo tickets cannot have additional discounts
+                $hasDiscount = ! empty($passengerData['discount_id']) && ! ($isAirline && $pType === 'infant') && ! $isSuperPromoPax;
 
                 // Gross fare per passenger (departure + return) - 50% on base fare + transport class for eligible types
                 $grossFare = ($schedBasePrice + $depTcPrice + $retBasePrice + $retTcPrice) * $paxMultiplier;
@@ -383,16 +400,16 @@ class CreateBookingAction
 
                 $netFare = $gross - $discountAmount_item;
 
-                // Allocate voucher to this passenger (greedy: fill Item 1 first)
+                // Allocate voucher to this passenger (greedy: fill Item 1 first - not allowed on Super Promo)
                 $voucherShare = 0.0;
-                if ($voucherBudget > 0) {
+                if ($voucherBudget > 0 && ! $isSuperPromoPax) {
                     $voucherShare  = min($voucherBudget, $netFare);
                     $voucherBudget -= $voucherShare;
                 }
 
-                // Allocate points to this passenger (greedy)
+                // Allocate points to this passenger (greedy - not allowed on Super Promo)
                 $pointsShare = 0.0;
-                if ($pointsBudget > 0) {
+                if ($pointsBudget > 0 && ! $isSuperPromoPax) {
                     $remAfterVoucher = $netFare - $voucherShare;
                     $pointsShare     = min($pointsBudget, $remAfterVoucher);
                     $pointsBudget   -= $pointsShare;
@@ -409,7 +426,7 @@ class CreateBookingAction
                     'type'                   => $passengerData['type'],
                     'name'                   => $passengerData['name'],
                     'birthdate'              => !empty($passengerData['birthdate']) ? $passengerData['birthdate'] : null,
-                    'discount_id'            => ($isAirline && $pType === 'infant') ? null : ($passengerData['discount_id'] ?? null),
+                    'discount_id'            => ($isAirline && $pType === 'infant') || $isSuperPromoPax ? null : ($passengerData['discount_id'] ?? null),
                     'school_name'            => !empty($passengerData['school_name']) ? $passengerData['school_name'] : null,
                     'id_number'              => !empty($passengerData['id_number']) ? $passengerData['id_number'] : null,
                     'id_image_front'         => $frontPath,
@@ -420,6 +437,8 @@ class CreateBookingAction
                     'passport_expiry_date'   => !empty($passengerData['passport_expiry_date']) ? $passengerData['passport_expiry_date'] : null,
                     'extra_baggage_weight'   => !empty($passengerData['extra_baggage_weight']) ? $passengerData['extra_baggage_weight'] : null,
                     'extra_baggage_price'    => $extraBaggagePricePax,
+                    'is_promo'               => $paxRateType !== 'regular',
+                    'rate_type'              => $paxRateType,
                     'fare_amount'            => $grossFare,
                     'accommodation_amount'   => $grossAcc,
                     'discount_amount'        => $discountAmount_item,
@@ -435,14 +454,14 @@ class CreateBookingAction
             if (! empty($data['selected_transport_class_id'])) {
                 $transportClass = TransportClass::find($data['selected_transport_class_id']);
                 if ($transportClass) {
-                    $overridePrice = \Illuminate\Support\Facades\DB::table('schedule_transport_class')
-                        ->where('schedule_id', $schedule->id)
-                        ->where('transport_class_id', $transportClass->id)
-                        ->value('additional_price');
+                    $overridePrice = $depStc?->additional_price;
                     $price = $overridePrice !== null ? (float) $overridePrice : $transportClass->effective_price;
                     
                     $booking->transportClasses()->attach($transportClass->id, [
-                        'price' => $price,
+                        'price'     => $price,
+                        'is_promo'  => (bool) ($depStc?->is_promo || ($depStc?->rate_type && $depStc->rate_type !== 'regular')),
+                        'rate_type' => $depStc?->rate_type ?? 'regular',
+                        'rate_code' => $depStc?->rate_code,
                         'is_return' => false,
                     ]);
                 }
@@ -450,14 +469,14 @@ class CreateBookingAction
             if (! empty($data['selected_return_transport_class_id']) && $returnSchedule) {
                 $returnTransportClass = TransportClass::find($data['selected_return_transport_class_id']);
                 if ($returnTransportClass) {
-                    $overridePrice = \Illuminate\Support\Facades\DB::table('schedule_transport_class')
-                        ->where('schedule_id', $returnSchedule->id)
-                        ->where('transport_class_id', $returnTransportClass->id)
-                        ->value('additional_price');
+                    $overridePrice = $retStc?->additional_price;
                     $price = $overridePrice !== null ? (float) $overridePrice : $returnTransportClass->effective_price;
 
                     $booking->transportClasses()->attach($returnTransportClass->id, [
                         'price'     => $price,
+                        'is_promo'  => (bool) ($retStc?->is_promo || ($retStc?->rate_type && $retStc->rate_type !== 'regular')),
+                        'rate_type' => $retStc?->rate_type ?? 'regular',
+                        'rate_code' => $retStc?->rate_code,
                         'is_return' => true,
                     ]);
                 }

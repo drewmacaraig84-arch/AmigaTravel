@@ -193,7 +193,7 @@
                     @else
                         <h2 style="margin: 0; color: #216417; font-size: 18px; font-weight: 900;">AMIGA TRAVEL</h2>
                     @endif
-                    <div class="brand-sub">Official E-Ticket &bull; Item {{ $itemNum }}</div>
+                    <div class="brand-sub">Confirmed Booking &bull; Item {{ $itemNum }}</div>
                 </div>
             </td>
             <td class="receipt-title-box" style="vertical-align: middle;">
@@ -336,10 +336,10 @@
     {{-- BOARDING INSTRUCTIONS --}}
     <div class="notice-box">
         <strong>Important Boarding &amp; Travel Guidelines:</strong><br>
-        &bull; Please present this E-Ticket along with a valid government or school-issued ID matching the passenger name at terminal check-in.<br>
+        &bull; Please print the Itinerary voucher / Tickets along with a valid government or school-issued ID matching the passenger name at terminal check-in.<br>
         &bull; For Ferry voyages, check-in commences 2 hours prior to scheduled departure. Boarding gates close 30 minutes prior to departure.<br>
         &bull; For Flights, check-in counters open 3 hours prior for domestic flights and close strictly 45 minutes before departure.<br>
-        &bull; Terminal and port fees may be collected separately by port authorities where applicable.
+        &bull; Terminal and port fees, where applicable, may be collected separately by the respective port authorities.
     </div>
 
     <div class="footer">

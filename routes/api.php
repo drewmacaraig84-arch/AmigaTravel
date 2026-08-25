@@ -107,7 +107,7 @@ Route::middleware(['throttle:20,1', 'sensitive.actions'])->group(function () {
 // ─────────────────────────────────────────────────────────────────────────────
 // Authenticated-only routes (requires valid API token)
 // ─────────────────────────────────────────────────────────────────────────────
-Route::middleware(['auth:api', 'throttle:60,1'])->group(function () {
+Route::middleware(['auth:sanctum,api', 'throttle:60,1'])->group(function () {
     Route::post('/profile/update', [AuthController::class, 'updateProfile']);
     Route::get('/gracia-points', [\App\Http\Controllers\Api\GraciaPointsController::class, 'index']);
     Route::post('/vouchers/claim', [\App\Http\Controllers\Api\VoucherController::class, 'claim']);

@@ -2206,7 +2206,8 @@ public function selectedSchedule(): ?array
                         $price = $scheduleTransportClass->additional_price ?? $scheduleTransportClass->transportClass->price;
                         $booking->transportClasses()->attach($scheduleTransportClass->transport_class_id, [
                             'price' => $price,
-                            'is_promo' => $scheduleTransportClass->is_promo,
+                            'is_promo' => $scheduleTransportClass->is_promo || $scheduleTransportClass->rate_type !== 'regular',
+                            'rate_type' => $scheduleTransportClass->rate_type ?? 'regular',
                             'rate_code' => $scheduleTransportClass->rate_code,
                             'is_return' => false,
                         ]);
@@ -2219,7 +2220,8 @@ public function selectedSchedule(): ?array
                         $price = $returnScheduleTransportClass->additional_price ?? $returnScheduleTransportClass->transportClass->price;
                         $booking->transportClasses()->attach($returnScheduleTransportClass->transport_class_id, [
                             'price' => $price,
-                            'is_promo' => $returnScheduleTransportClass->is_promo,
+                            'is_promo' => $returnScheduleTransportClass->is_promo || $returnScheduleTransportClass->rate_type !== 'regular',
+                            'rate_type' => $returnScheduleTransportClass->rate_type ?? 'regular',
                             'rate_code' => $returnScheduleTransportClass->rate_code,
                             'is_return' => true,
                         ]);

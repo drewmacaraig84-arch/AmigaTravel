@@ -96,7 +96,7 @@
                         <div style="font-weight: 700; margin-bottom: 4px;">📎 Attached Documents:</div>
                         <div>&bull; <strong>Payment_Acknowledgement.pdf</strong> (Proof of payment & updated booking summary)</div>
                         @if(! empty($hasTicketAttachment))
-                        <div>&bull; <strong>Ticket_Confirmation.pdf</strong> (Official E-Ticket / Travel Itinerary)</div>
+                        <div>&bull; <strong>Ticket_Confirmation.pdf</strong> (Confirmed Booking / Travel Itinerary)</div>
                         @endif
                     </div>
                 </td>

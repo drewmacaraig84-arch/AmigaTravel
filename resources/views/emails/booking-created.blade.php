@@ -29,7 +29,7 @@
                         Complete Your Travel Booking
                     </h1>
                     <p style="margin: 0; font-size: 15px; color: #475569;">
-                        Hi <strong>{{ $booking->client_name }}</strong>, your reservation is received. Please submit your payment proof to secure your seats.
+                        Hi <strong>{{ $booking->client_name }}</strong>, your reservation is received. Please submit your proof of payment to secure your seats.
                     </p>
                 </td>
             </tr>
@@ -91,7 +91,7 @@
             <tr>
                 <td style="padding: 0 32px 20px 32px;">
                     <div style="background-color: #fff1f2; border: 1px solid #fecdd3; border-radius: 10px; padding: 14px 18px; font-size: 13px; color: #9f1239;">
-                        <strong>⏱ Important Notice:</strong> Unpaid reservations are held temporarily and will automatically expire if payment proof is not submitted within the allotted window.
+                        <strong>⏱ Important Notice:</strong> Unpaid reservations are held temporarily and will automatically expire if proof of payment is not submitted within the allotted window.
                     </div>
                 </td>
             </tr>

@@ -191,45 +191,53 @@
                             $classPrice = $class['price'] ?? 0;
                             $totalPrice = $schedulePrice + $classPrice;
                             $uniqueId = $class['pivot_id'] ?? $class['id'];
+                            $rateType = $class['rate_type'] ?? (!empty($class['is_promo']) ? 'promotional' : 'regular');
+                            $isSuperPromo = $rateType === 'super_promotional';
+                            $isPromo = $rateType === 'promotional' || (!empty($class['is_promo']) && !$isSuperPromo);
                         @endphp
                         <button type="button" 
-                            @if(!empty($class['is_promo'])) 
+                            @if($isSuperPromo || $isPromo) 
                                 x-data=""
-                                x-on:click.prevent="$dispatch('open-promo-modal', { method: '{{ $selectClassMethod }}', id: {{ $uniqueId }} })"
+                                x-on:click.prevent="$dispatch('open-promo-modal', { method: '{{ $selectClassMethod }}', id: {{ $uniqueId }}, type: '{{ $rateType }}' })"
                             @else
                                 wire:click.prevent="{{ $selectClassMethod }}({{ $uniqueId }})" 
                             @endif
-                            class="relative rounded-xl border-2 p-3 sm:p-4 text-left transition duration-200 overflow-hidden {{ (int)$selectedClassId === (int)$uniqueId ? (!empty($class['is_promo']) ? 'border-amber-400 bg-amber-50 shadow-sm' : 'border-[#db2777] bg-[#db2777]/5 shadow-sm') : (!empty($class['is_promo']) ? 'border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 hover:border-amber-400 hover:shadow-sm' : 'border-slate-200 bg-white hover:border-[#db2777]/50 hover:shadow-sm') }}">
+                            class="relative rounded-xl border-2 p-3 sm:p-4 text-left transition duration-200 overflow-hidden {{ (int)$selectedClassId === (int)$uniqueId ? ($isSuperPromo ? 'border-purple-500 bg-purple-50 shadow-sm' : ($isPromo ? 'border-amber-400 bg-amber-50 shadow-sm' : 'border-[#db2777] bg-[#db2777]/5 shadow-sm')) : ($isSuperPromo ? 'border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 hover:border-purple-400 hover:shadow-sm' : ($isPromo ? 'border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 hover:border-amber-400 hover:shadow-sm' : 'border-slate-200 bg-white hover:border-[#db2777]/50 hover:shadow-sm')) }}">
                             
-                            @if(!empty($class['is_promo']))
-                                <div class="absolute top-0 right-0 bg-amber-400 text-white text-[9px] font-extrabold px-2 py-0.5 rounded-bl-lg uppercase tracking-wider shadow-sm">
-                                    PROMO
+                            @if($isSuperPromo)
+                                <div class="absolute top-0 right-0 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-[9px] font-black px-2.5 py-0.5 rounded-bl-lg uppercase tracking-wider shadow-sm">
+                                    ⚡ SUPER PROMO
+                                </div>
+                            @elseif($isPromo)
+                                <div class="absolute top-0 right-0 bg-amber-500 text-white text-[9px] font-extrabold px-2 py-0.5 rounded-bl-lg uppercase tracking-wider shadow-sm">
+                                    🔥 PROMO
                                 </div>
                             @endif
 
                             <div class="flex flex-wrap items-center justify-between gap-2">
-                                <h4 class="font-bold {{ !empty($class['is_promo']) ? 'text-amber-900' : 'text-slate-900' }} text-xs sm:text-sm pr-10">
+                                <h4 class="font-bold {{ $isSuperPromo ? 'text-purple-950' : ($isPromo ? 'text-amber-900' : 'text-slate-900') }} text-xs sm:text-sm pr-12">
                                     {{ $class['name'] }}
                                     @if(!empty($class['rate_code']))
-                                        <span class="text-xs font-semibold {{ !empty($class['is_promo']) ? 'text-amber-700' : 'text-slate-500' }} ml-1">({{ $class['rate_code'] }})</span>
+                                        <span class="text-xs font-semibold {{ $isSuperPromo ? 'text-purple-700' : ($isPromo ? 'text-amber-700' : 'text-slate-500') }} ml-1">({{ $class['rate_code'] }})</span>
                                     @endif
                                 </h4>
                                 <div class="flex items-center gap-1.5 flex-wrap justify-start w-full mt-1">
-
-                                    @if(!empty($class['is_promo']))
+                                    @if($isSuperPromo)
+                                        <span class="text-[9px] font-bold uppercase tracking-wider bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full border border-purple-200">Non-refundable & Non-rebookable</span>
+                                    @elseif($isPromo)
                                         <span class="text-[9px] font-bold uppercase tracking-wider bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full border border-rose-200">Non-refundable</span>
                                     @endif
                                 </div>
                             </div>
                             
-                            @if(!empty($class['is_promo']) && !empty($class['promo_duration_start']) && !empty($class['promo_duration_end']))
-                                <p class="mt-1.5 text-[10px] text-amber-800 font-semibold flex items-center gap-1">
+                            @if(($isSuperPromo || $isPromo) && !empty($class['promo_duration_start']) && !empty($class['promo_duration_end']))
+                                <p class="mt-1.5 text-[10px] {{ $isSuperPromo ? 'text-purple-800' : 'text-amber-800' }} font-semibold flex items-center gap-1">
                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                     Until {{ \Carbon\Carbon::parse($class['promo_duration_end'])->format('M d, Y h:i A') }}
                                 </p>
                             @endif
                             
-                            <p class="mt-2 text-lg font-extrabold {{ !empty($class['is_promo']) ? 'text-amber-600' : 'text-[#db2777]' }}">&#8369;{{ number_format($totalPrice, 2) }}</p>
+                            <p class="mt-2 text-lg font-extrabold {{ $isSuperPromo ? 'text-purple-700' : ($isPromo ? 'text-amber-600' : 'text-[#db2777]') }}">&#8369;{{ number_format($totalPrice, 2) }}</p>
                         </button>
                     @endforeach
                 </div>
@@ -238,8 +246,8 @@
     @endif
     <!-- Promotional Ticket Modal -->
     <div 
-        x-data="{ show: false, method: '', id: null }"
-        @open-promo-modal.window="show = true; method = $event.detail.method; id = $event.detail.id"
+        x-data="{ show: false, method: '', id: null, type: 'promotional' }"
+        @open-promo-modal.window="show = true; method = $event.detail.method; id = $event.detail.id; type = $event.detail.type || 'promotional'"
         x-show="show"
         style="display: none;"
         class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden bg-slate-900/60 backdrop-blur-sm"
@@ -255,19 +263,22 @@
             x-transition:leave-end="opacity-0 scale-95 translate-y-4"
             class="relative w-full max-w-sm p-6 bg-white shadow-2xl rounded-2xl mx-4 border border-slate-100"
         >
-            <div class="flex items-center justify-center w-14 h-14 mx-auto mb-4 bg-amber-100 rounded-full">
-                <svg class="w-7 h-7 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            <div class="flex items-center justify-center w-14 h-14 mx-auto mb-4 rounded-full" :class="type === 'super_promotional' ? 'bg-purple-100' : 'bg-amber-100'">
+                <svg class="w-7 h-7" :class="type === 'super_promotional' ? 'text-purple-600' : 'text-amber-600'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
             </div>
             
-            <h3 class="text-xl font-bold text-center text-slate-900 mb-2">Promotional Ticket</h3>
+            <h3 class="text-xl font-bold text-center text-slate-900 mb-2" x-text="type === 'super_promotional' ? 'Super Promotional Ticket' : 'Promotional Ticket'"></h3>
             
-            <p class="text-sm text-center text-slate-600 mb-6">
-                This is a promotional ticket and is <strong class="text-slate-800">STRICTLY non-refundable</strong>. It cannot be cancelled or rebooked. Do you wish to proceed?
+            <p class="text-sm text-center text-slate-600 mb-6" x-show="type === 'super_promotional'">
+                This is a <strong class="text-purple-700">Super Promo</strong> ticket. It is <strong class="text-slate-800">STRICTLY non-refundable and non-rebookable</strong>. Mandated discounts, vouchers, and points are not applicable to this fare. Do you wish to proceed?
+            </p>
+            <p class="text-sm text-center text-slate-600 mb-6" x-show="type !== 'super_promotional'">
+                This is a <strong class="text-amber-700">Promotional</strong> ticket and is <strong class="text-slate-800">STRICTLY non-refundable</strong>. Do you wish to proceed?
             </p>
 
             <div class="flex gap-3 justify-center w-full">
                 <button type="button" @click="show = false" class="flex-1 px-5 py-2.5 text-sm font-semibold text-slate-700 bg-slate-100 rounded-xl hover:bg-slate-200 transition">Cancel</button>
-                <button type="button" @click="$wire.call(method, id); show = false" class="flex-1 px-5 py-2.5 text-sm font-semibold text-white bg-amber-500 rounded-xl hover:bg-amber-600 shadow-sm transition">Proceed</button>
+                <button type="button" @click="$wire.call(method, id); show = false" class="flex-1 px-5 py-2.5 text-sm font-semibold text-white rounded-xl shadow-sm transition" :class="type === 'super_promotional' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-amber-500 hover:bg-amber-600'">Proceed</button>
             </div>
         </div>
     </div>

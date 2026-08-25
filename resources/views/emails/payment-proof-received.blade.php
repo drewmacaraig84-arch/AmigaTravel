@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Payment Proof Received - Amiga Travel</title>
+        <title>Proof of Payment Received - Amiga Travel</title>
     </head>
     <body style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #1e293b; margin: 0; padding: 24px; background-color: #f8fafc;">
         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 650px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
@@ -12,7 +12,7 @@
                 <td style="padding: 28px 32px 20px 32px; background: linear-gradient(135deg, #064e3b 0%, #047857 100%); text-align: center;">
                     <img src="{{ isset($message) && file_exists(public_path('images/amiga_logo_white_outline.png')) ? $message->embed(public_path('images/amiga_logo_white_outline.png')) : (file_exists(public_path('images/amiga-logo-transparent.png')) && isset($message) ? $message->embed(public_path('images/amiga-logo-transparent.png')) : 'https://www.amigagracia.com/images/amiga-logo-transparent.png') }}" alt="Amiga Gracia Travel Services" style="max-width: 200px; height: auto; margin-bottom: 12px;" />
                     <div style="font-size: 14px; font-weight: 700; letter-spacing: 1.5px; color: #a7f3d0; text-transform: uppercase;">
-                        Payment Proof Acknowledgment
+                        Proof of Payment Acknowledgment
                     </div>
                 </td>
             </tr>
@@ -26,10 +26,10 @@
                         </span>
                     </div>
                     <h1 style="margin: 0 0 10px 0; font-size: 24px; font-weight: 800; color: #0f172a;">
-                        We've Received Your Payment Proof!
+                        We've Received Your Proof of Payment!
                     </h1>
                     <p style="margin: 0; font-size: 15px; color: #475569;">
-                        Hi <strong>{{ $transaction->booking->client_name }}</strong>, thank you for submitting your payment proof. Our reservations team is currently verifying your payment details.
+                        Hi <strong>{{ $transaction->booking->client_name }}</strong>, Thank you for submitting your proof of payment. Our reservations team is currently reviewing and verifying your payment details. We'll notify you once the verification is complete.
                     </p>
                 </td>
             </tr>
@@ -109,7 +109,7 @@
                         <tr>
                             <td width="28" valign="top" style="padding-bottom: 10px; font-weight: bold; color: #047857;">2.</td>
                             <td style="padding-bottom: 10px;">
-                                <strong>Official E-Ticket Issuance:</strong> Once verified, we will email you your official E-Ticket and travel itinerary.
+                                <strong>Booking Confirmation & Ticket Issuance:</strong> Once verified, we will email you your confirmed booking and travel itinerary.
                             </td>
                         </tr>
                         <tr>

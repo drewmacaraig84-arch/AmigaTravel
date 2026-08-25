@@ -137,7 +137,7 @@
                                             <span class="text-base leading-none">⏳</span>
                                             <div>
                                                 <strong class="font-semibold text-blue-950">Refund & Rebooking Cutoff:</strong>
-                                                <p class="mt-0.5 text-blue-800">Refund and rebooking requests are strictly accepted up to <strong>24 hours before departure</strong>.</p>
+                                                <p class="mt-0.5 text-blue-800">Refund and rebooking requests received within 24 hours of departure may no longer be accommodated.</p>
                                             </div>
                                         </div>
 
@@ -707,7 +707,7 @@
                                                 <button type="button" disabled class="inline-flex items-center justify-center rounded-3xl border border-slate-200 bg-slate-100 px-6 py-3 text-sm font-semibold text-slate-500 shadow-sm">
                                                     Actions Unavailable
                                                 </button>
-                                                <p class="text-xs text-slate-500">You cannot cancel or rebook this booking as the departure date has passed.</p>
+                                                <p class="text-xs text-amber-800 font-medium bg-amber-50 border border-amber-200 p-2.5 rounded-xl">Refund and rebooking requests received within 24 hours of departure may no longer be accommodated.</p>
                                             </div>
                                         @endif
                                     @endif
@@ -1301,34 +1301,43 @@
 
                                                 <div class="rounded-2xl border border-blue-300 bg-white p-6 shadow-sm">
                                                     <div class="flex items-center justify-between mb-4">
-                                                        <h4 class="text-xs font-bold uppercase tracking-wider text-blue-800">Rebooking Fee Computation</h4>
+                                                        <h4 class="text-xs font-bold uppercase tracking-wider text-blue-800">Rebooking Breakdown</h4>
                                                         <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
                                                             {{ $this->selectedItemsLabel }}
                                                         </span>
                                                     </div>
                                                     <div class="space-y-3 text-sm">
                                                         <div class="flex justify-between text-slate-600">
-                                                            <span>Original Base Fare (Selected Items)</span>
+                                                            <span>Original Price</span>
                                                             <span class="font-medium">₱{{ number_format(max(0, $rebooking_new_total - $rebooking_rate_diff), 2) }}</span>
                                                         </div>
                                                         <div class="flex justify-between text-slate-900 font-semibold">
-                                                            <span>New Schedule Total</span>
+                                                            <span>New Ticket Price</span>
                                                             <span>₱{{ number_format($rebooking_new_total, 2) }}</span>
                                                         </div>
-                                                        <div class="flex justify-between pt-2 mt-2 border-t border-slate-100 text-slate-600">
-                                                            <span>Rate Difference</span>
-                                                            <span class="font-medium">₱{{ number_format($rebooking_rate_diff, 2) }}</span>
-                                                        </div>
-                                                        <div class="flex justify-between text-slate-600">
-                                                            <span>Rebooking Surcharge</span>
-                                                            <span class="font-medium">₱{{ number_format($rebooking_surcharge, 2) }}</span>
-                                                        </div>
-                                                        <div class="flex justify-between text-slate-600">
-                                                            <span>Revalidation Fee</span>
-                                                            <span class="font-medium">₱{{ number_format($rebooking_revalidation_fee, 2) }}</span>
+                                                        <div class="pt-3 border-t border-slate-100 mt-2">
+                                                            <div class="text-xs font-bold uppercase tracking-wider text-blue-700 mb-2">Revalidation Breakdown</div>
+                                                            <div class="space-y-2 pl-2 border-l-2 border-blue-200">
+                                                                <div class="flex justify-between text-xs text-slate-600">
+                                                                    <span>Revalidation Fee:</span>
+                                                                    <span class="font-medium">₱{{ number_format($rebooking_revalidation_fee, 2) }}</span>
+                                                                </div>
+                                                                @if($rebooking_surcharge > 0)
+                                                                    <div class="flex justify-between text-xs text-slate-600">
+                                                                        <span>Revalidation Surcharge:</span>
+                                                                        <span class="font-medium">₱{{ number_format($rebooking_surcharge, 2) }}</span>
+                                                                    </div>
+                                                                @endif
+                                                                @if($rebooking_rate_diff > 0)
+                                                                    <div class="flex justify-between text-xs text-slate-600">
+                                                                        <span>Rate Diff (if applicable):</span>
+                                                                        <span class="font-medium">₱{{ number_format($rebooking_rate_diff, 2) }}</span>
+                                                                    </div>
+                                                                @endif
+                                                            </div>
                                                         </div>
                                                         <div class="border-t border-slate-200 pt-3 flex justify-between text-base font-bold text-blue-900">
-                                                            <span>Total Rebooking Fee</span>
+                                                            <span>Total Revalidation Fees:</span>
                                                             <span>₱{{ number_format($rebooking_total_to_pay, 2) }}</span>
                                                         </div>
                                                     </div>

@@ -100,7 +100,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.125+136';
+  static const String appVersion = '1.0.131+142';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -439,9 +439,14 @@ class BookingData {
   int? selectedFerryAccommodationId;
   String? selectedFerryAccommodationName;
   double? selectedFerryAccommodationPrice;
+  String selectedRateType = 'regular'; // regular | promotional | super_promotional
+  String? selectedRateCode;
+
   int? selectedReturnFerryAccommodationId;
   String? selectedReturnFerryAccommodationName;
   double? selectedReturnFerryAccommodationPrice;
+  String selectedReturnRateType = 'regular';
+  String? selectedReturnRateCode;
 
   int? selectedAirlineClassId;
   String? selectedAirlineClassName;
@@ -449,6 +454,9 @@ class BookingData {
   int? selectedReturnAirlineClassId;
   String? selectedReturnAirlineClassName;
   double? selectedReturnAirlineClassPrice;
+
+  bool get isSuperPromo => selectedRateType == 'super_promotional' || selectedReturnRateType == 'super_promotional';
+  bool get isPromo => isSuperPromo || selectedRateType == 'promotional' || selectedReturnRateType == 'promotional';
 
   // Vehicle (Ferry only)
   bool hasVehicle = false;
@@ -6676,7 +6684,11 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
 
   Widget _priceBreakdownCard() {
     final breakdown = _booking['price_breakdown'];
-    final total = _parseDouble(_booking['total_price']);
+    final baseTotal = _parseDouble(_booking['total_price']);
+    final rebookFee = _parseDouble(_booking['transaction']?['rebooking_fee'] ?? _booking['rebooking_fee']);
+    final total = (_booking['status'] == 'pending_rebooking' || _booking['is_rebooked'] == true)
+        ? (baseTotal + rebookFee)
+        : baseTotal;
 
     if (breakdown == null || (breakdown as List).isEmpty) {
       return _SummarySection(
@@ -7251,26 +7263,65 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             !_cancellationStarted &&
             _booking['status'] != 'pending_rebooking' &&
             _booking['rebooking_status'] != 'pending') ...[
-          // Show rebook only if paid, not already rebooked, and rebooking is permitted
-          if (_paymentStatus == 'paid' &&
-              _booking['can_rebook'] == true &&
-              _booking['is_rebooked'] != true &&
+          if (_booking['is_rebooked'] != true &&
               _booking['rebooking_status'] != 'verified')
             OutlinedButton.icon(
-                onPressed: _busy
-                    ? null
-                    : () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => RebookScreen(booking: _booking),
+              onPressed: _busy
+                  ? null
+                  : () {
+                      if (_booking['can_rebook'] != true) {
+                        showDialog(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16)),
+                            icon: const Icon(Icons.info_outline,
+                                color: Color(0xFFF59E0B), size: 40),
+                            title: const Text('Rebooking Notice',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18)),
+                            content: const Text(
+                              'Refund and rebooking requests received within 24 hours of departure may no longer be accommodated.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 14),
+                            ),
+                            actionsAlignment: MainAxisAlignment.center,
+                            actions: [
+                              ElevatedButton(
+                                onPressed: () => Navigator.pop(ctx),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF2563EB),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8)),
+                                ),
+                                child: const Text('OK',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold)),
+                              ),
+                            ],
                           ),
-                        ).then((res) {
-                          if (res == true) _refreshBooking();
-                        });
-                      },
-                icon: const Icon(Icons.calendar_month),
-                label: const Text('Request rebooking')),
+                        );
+                        return;
+                      }
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => RebookScreen(booking: _booking),
+                        ),
+                      ).then((res) {
+                        if (res == true) _refreshBooking();
+                      });
+                    },
+              icon: const Icon(Icons.calendar_month),
+              label: const Text('Request rebooking'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: _booking['can_rebook'] == true
+                    ? const Color(0xFF2563EB)
+                    : Colors.grey.shade700,
+              ),
+            ),
           if (_booking['can_cancel'] == true ||
               ['unpaid', 'pending', 'paid'].contains(_paymentStatus))
             OutlinedButton.icon(
@@ -7295,6 +7346,31 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               style: OutlinedButton.styleFrom(
                   foregroundColor: isWithin5Mins ? Colors.red : Colors.orange),
             ),
+          Container(
+            margin: const EdgeInsets.only(top: 6, bottom: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFFBEB),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFFDE68A)),
+            ),
+            child: const Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.info_outline, color: Color(0xFFB45309), size: 16),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Refund and rebooking requests received within 24 hours of departure may no longer be accommodated.',
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF92400E),
+                        fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
         if (_cancellationStarted) ...[
           Card(
@@ -8132,6 +8208,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
   List<dynamic> _schedules = [];
   List<dynamic> _returnSchedules = [];
   Map<String, dynamic> _baggageRules = {};
+  bool _showBaggageRulesDrawer = false;
   bool _isLoading = true;
   String? _error;
 
@@ -8614,26 +8691,42 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
               final c = classes[index];
               final isSelected = c['id'] == val;
 
-              final isPromo = c['is_promo'] == true || c['is_promo'] == 1;
+              final rateType = c['rate_type']?.toString() ??
+                  ((c['is_promo'] == true || c['is_promo'] == 1)
+                      ? 'promotional'
+                      : 'regular');
+              final isSuperPromo = rateType == 'super_promotional';
+              final isPromo = rateType == 'promotional' ||
+                  (!isSuperPromo &&
+                      (c['is_promo'] == true || c['is_promo'] == 1));
 
               return GestureDetector(
                 onTap: () async {
-                  if (isPromo) {
+                  if (isSuperPromo || isPromo) {
                     final bool? proceed = await showDialog<bool>(
                       context: context,
                       builder: (ctx) => AlertDialog(
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        icon: const Icon(Icons.info_outline,
-                            color: Color(0xFFF59E0B), size: 48),
-                        title: const Text('Promotional Ticket',
-                            style: TextStyle(
+                        icon: Icon(
+                            isSuperPromo ? Icons.bolt : Icons.info_outline,
+                            color: isSuperPromo
+                                ? const Color(0xFF9333EA)
+                                : const Color(0xFFF59E0B),
+                            size: 48),
+                        title: Text(
+                            isSuperPromo
+                                ? 'Super Promotional Ticket'
+                                : 'Promotional Ticket',
+                            style: const TextStyle(
                                 fontWeight: FontWeight.bold, fontSize: 18)),
-                        content: const Text(
-                          'This is a promotional ticket and is STRICTLY non-refundable. It cannot be cancelled or rebooked.\n\nDo you wish to proceed?',
+                        content: Text(
+                          isSuperPromo
+                              ? 'This is a Super Promo ticket. It is STRICTLY non-refundable and non-rebookable. Mandated discounts (Senior/PWD/Student), vouchers, and Gracia Points are NOT applicable to this fare.\n\nDo you wish to proceed?'
+                              : 'This is a promotional ticket and is STRICTLY non-refundable.\n\nDo you wish to proceed?',
                           textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 14),
+                          style: const TextStyle(fontSize: 14),
                         ),
                         actionsAlignment: MainAxisAlignment.center,
                         actions: [
@@ -8651,7 +8744,9 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                           ElevatedButton(
                             onPressed: () => Navigator.pop(ctx, true),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFF59E0B),
+                              backgroundColor: isSuperPromo
+                                  ? const Color(0xFF9333EA)
+                                  : const Color(0xFFF59E0B),
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 24, vertical: 12),
@@ -8669,7 +8764,6 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
 
                   setState(() {
                     if (widget.booking.mode == 'ferry') {
-                      // Ferry uses transport_classes but must store in ferry fields
                       if (isReturn) {
                         widget.booking.selectedReturnFerryAccommodationId =
                             c['id'];
@@ -8677,26 +8771,37 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                             c['name'];
                         widget.booking.selectedReturnFerryAccommodationPrice =
                             _parseDouble(c['price']);
+                        widget.booking.selectedReturnRateType = rateType;
+                        widget.booking.selectedReturnRateCode =
+                            c['rate_code']?.toString();
                       } else {
                         widget.booking.selectedFerryAccommodationId = c['id'];
                         widget.booking.selectedFerryAccommodationName =
                             c['name'];
                         widget.booking.selectedFerryAccommodationPrice =
                             _parseDouble(c['price']);
+                        widget.booking.selectedRateType = rateType;
+                        widget.booking.selectedRateCode =
+                            c['rate_code']?.toString();
                       }
                     } else {
-                      // Airline
                       if (isReturn) {
                         widget.booking.selectedReturnAirlineClassId = c['id'];
                         widget.booking.selectedReturnAirlineClassName =
                             c['name'];
                         widget.booking.selectedReturnAirlineClassPrice =
                             _parseDouble(c['price']);
+                        widget.booking.selectedReturnRateType = rateType;
+                        widget.booking.selectedReturnRateCode =
+                            c['rate_code']?.toString();
                       } else {
                         widget.booking.selectedAirlineClassId = c['id'];
                         widget.booking.selectedAirlineClassName = c['name'];
                         widget.booking.selectedAirlineClassPrice =
                             _parseDouble(c['price']);
+                        widget.booking.selectedRateType = rateType;
+                        widget.booking.selectedRateCode =
+                            c['rate_code']?.toString();
                       }
                     }
                   });
@@ -8704,21 +8809,27 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: isPromo
-                        ? const Color(0xFFFFF7E6)
-                        : (isSelected
-                            ? kPink.withOpacity(0.05)
-                            : Colors.white),
+                    color: isSuperPromo
+                        ? const Color(0xFFFAF5FF)
+                        : (isPromo
+                            ? const Color(0xFFFFF7E6)
+                            : (isSelected
+                                ? kPink.withOpacity(0.05)
+                                : Colors.white)),
                     border: Border.all(
-                        color: isPromo
-                            ? const Color(0xFFF59E0B)
-                            : (isSelected ? kPink : Colors.grey.shade300),
-                        width: isPromo || isSelected ? 2 : 1),
+                        color: isSuperPromo
+                            ? const Color(0xFF9333EA)
+                            : (isPromo
+                                ? const Color(0xFFF59E0B)
+                                : (isSelected ? kPink : Colors.grey.shade300)),
+                        width: (isSuperPromo || isPromo || isSelected) ? 2 : 1),
                     borderRadius: BorderRadius.circular(8),
-                    boxShadow: isPromo && !isSelected
+                    boxShadow: (isSuperPromo || isPromo) && !isSelected
                         ? [
                             BoxShadow(
-                                color: const Color(0xFFF59E0B)
+                                color: (isSuperPromo
+                                        ? const Color(0xFF9333EA)
+                                        : const Color(0xFFF59E0B))
                                     .withOpacity(0.1),
                                 blurRadius: 4,
                                 spreadRadius: 1)
@@ -8964,161 +9075,82 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
     }
 
     final options = operatorRules['options'] as List;
-    final operatorName = operatorRules['name']?.toString() ??
-        (matchedOperator == 'pal'
-            ? 'Philippine Airlines'
-            : matchedOperator == 'airasia'
-                ? 'AirAsia'
-                : 'Cebu Pacific');
     final totalBaggage = widget.booking.totalExtraBaggagePrice;
     final paxWithBaggage = widget.booking.passengersWithBaggageCount;
+    final passengersCount = widget.booking.passengers.length;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.grey.shade300),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.03),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              )
-            ]),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            )
+          ],
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            // Header with Green Icon, Title, and Scope Badge
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.business_center, color: kGreen, size: 20),
-                SizedBox(width: 8),
+                Container(
+                  height: 42,
+                  width: 42,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFECFDF5),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.inventory_2_outlined, color: Color(0xFF047857), size: 22),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
-                  child: Text('Prepaid Extra Baggage',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                          color: kSlate800)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Wrap(
-              spacing: 6,
-              runSpacing: 4,
-              children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF3E8FF),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFD8B4FE)),
-                  ),
-                  child: Text(
-                    '✈️ $operatorName',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF7E22CE),
-                    ),
-                  ),
-                ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: widget.booking.isInternational
-                        ? Colors.blue.withOpacity(0.12)
-                        : kGreen.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    widget.booking.isInternational
-                        ? '🌐 International Rates'
-                        : '🇵🇭 Domestic Rates',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: widget.booking.isInternational
-                          ? const Color(0xFF0284C7)
-                          : kGreen,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Select check-in baggage allowance for each passenger on your $operatorName flight.',
-              style: const TextStyle(fontSize: 12, color: kSlate500),
-            ),
-            const SizedBox(height: 12),
-
-            // Quick apply toolbar
-            if (options.isNotEmpty && widget.booking.passengers.length > 1) ...[
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.grey.shade200),
-                ),
-                child: Row(
-                  children: [
-                    const Text('⚡ Quick apply:',
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: kSlate700)),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: [
-                            ...options.take(4).map((opt) {
-                              final price = double.tryParse(
-                                      opt['price'].toString()) ??
-                                  0.0;
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 6),
-                                child: InkWell(
-                                  onTap: () {
-                                    setState(() {
-                                      for (var p
-                                          in widget.booking.passengers) {
-                                        p['extra_baggage_weight'] =
-                                            opt['weight'];
-                                        p['extra_baggage_price'] = price;
-                                      }
-                                      widget.booking.hasExtraBaggage = true;
-                                    });
-                                  },
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      border: Border.all(
-                                          color: Colors.grey.shade300),
-                                      borderRadius:
-                                          BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      '${opt['weight']}',
-                                      style: const TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Text(
+                            'Prepaid Extra Baggage',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                              color: Color(0xFF0F172A),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                            decoration: BoxDecoration(
+                              color: widget.booking.isInternational
+                                  ? const Color(0xFFE0F2FE)
+                                  : const Color(0xFFDCFCE7),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              widget.booking.isInternational
+                                  ? 'INTL RATES'
+                                  : 'PH DOMESTIC RATES',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.3,
+                                color: widget.booking.isInternational
+                                    ? const Color(0xFF0369A1)
+                                    : const Color(0xFF15803D),
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+                          if (paxWithBaggage > 0)
                             InkWell(
                               onTap: () {
                                 setState(() {
@@ -9131,80 +9163,157 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                               },
                               borderRadius: BorderRadius.circular(8),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  border:
-                                      Border.all(color: Colors.grey.shade300),
+                                  color: Colors.red.shade50,
                                   borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.red.shade200),
                                 ),
-                                child: const Text(
-                                  'Clear all',
-                                  style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.red,
-                                      fontWeight: FontWeight.bold),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.close, size: 12, color: Colors.red.shade700),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      'Clear All',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.red.shade700,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
-                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Select check-in baggage allowance for each passenger individually',
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+
+            // Quick Apply Toolbar
+            if (options.isNotEmpty && passengersCount > 1) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Row(
+                  children: [
+                    const Text('🔥', style: TextStyle(fontSize: 13)),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Quick apply to all $passengersCount travelers:',
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF334155),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: options.map((opt) {
+                            final price = double.tryParse(opt['price'].toString()) ?? 0.0;
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 6),
+                              child: InkWell(
+                                onTap: () {
+                                  setState(() {
+                                    for (var p in widget.booking.passengers) {
+                                      p['extra_baggage_weight'] = opt['weight'];
+                                      p['extra_baggage_price'] = price;
+                                    }
+                                    widget.booking.hasExtraBaggage = true;
+                                  });
+                                },
+                                borderRadius: BorderRadius.circular(16),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Text(
+                                    '${opt['weight']} (₱${price.toStringAsFixed(0)})',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF475569),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
             ],
 
-            // Per passenger selector rows
+            // Per-Passenger Selector Cards
             ...List.generate(widget.booking.passengers.length, (i) {
               final p = widget.booking.passengers[i];
               final pWeight = p['extra_baggage_weight'];
               final pPrice = (p['extra_baggage_price'] != null)
                   ? (double.tryParse(p['extra_baggage_price'].toString()) ?? 0.0)
                   : 0.0;
+              final hasBaggage = pWeight != null && pWeight.toString().isNotEmpty && pPrice > 0;
               final pType = p['type']?.toString().toUpperCase() ?? 'ADULT';
               final pName = (p['name'] ?? '').toString().isNotEmpty
                   ? p['name']
-                  : 'Traveler #${i + 1} ($pType)';
+                  : 'Traveler #${i + 1} (${pType[0]}${pType.substring(1).toLowerCase()})';
 
               return Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.all(10),
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 decoration: BoxDecoration(
-                  color: (pWeight != null && pWeight.toString().isNotEmpty)
-                      ? kGreen.withOpacity(0.04)
-                      : Colors.white,
-                  borderRadius: BorderRadius.circular(10),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: (pWeight != null && pWeight.toString().isNotEmpty)
-                        ? kGreen.withOpacity(0.5)
-                        : Colors.grey.shade200,
+                    color: hasBaggage ? const Color(0xFF86EFAC) : const Color(0xFFE2E8F0),
+                    width: hasBaggage ? 1.5 : 1,
                   ),
                 ),
                 child: Row(
                   children: [
-                    CircleAvatar(
-                      radius: 12,
-                      backgroundColor:
-                          (pWeight != null && pWeight.toString().isNotEmpty)
-                              ? kGreen
-                              : Colors.grey.shade300,
-                      child: Text(
-                        '${i + 1}',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: (pWeight != null &&
-                                  pWeight.toString().isNotEmpty)
-                              ? Colors.white
-                              : Colors.black87,
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${i + 1}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF334155),
+                          ),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 12),
                     Expanded(
                       flex: 4,
                       child: Column(
@@ -9213,48 +9322,63 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                           Text(
                             pName,
                             style: const TextStyle(
-                                fontSize: 12, fontWeight: FontWeight.bold),
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0F172A),
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          if (pWeight != null && pWeight.toString().isNotEmpty)
-                            Text(
-                              '🧳 $pWeight (+₱${pPrice.toStringAsFixed(2)})',
-                              style: const TextStyle(
-                                  fontSize: 11,
-                                  color: kGreen,
-                                  fontWeight: FontWeight.bold),
+                          const SizedBox(height: 2),
+                          Text(
+                            pType,
+                            style: const TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF94A3B8),
+                              letterSpacing: 0.5,
                             ),
+                          ),
                         ],
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      flex: 6,
+                      flex: 5,
                       child: DropdownButtonFormField<String?>(
                         value: pWeight,
                         isExpanded: true,
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          contentPadding:
-                              EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          filled: true,
+                          fillColor: Colors.white,
                           isDense: true,
                         ),
-                        hint: const Text('0 kg (₱0)',
-                            style: TextStyle(fontSize: 11)),
+                        hint: const Text('No Extra Baggage (0 kg) — ₱0', style: TextStyle(fontSize: 11)),
                         items: [
                           const DropdownMenuItem<String?>(
                             value: null,
-                            child: Text('0 kg (₱0.00)',
-                                style: TextStyle(fontSize: 11)),
+                            child: Text(
+                              'No Extra Baggage (0 kg) — ₱0',
+                              style: TextStyle(fontSize: 11, color: Colors.black87),
+                            ),
                           ),
                           ...options.map((opt) {
                             final pr = double.tryParse(opt['price'].toString()) ?? 0.0;
                             return DropdownMenuItem<String?>(
                               value: opt['weight'].toString(),
                               child: Text(
-                                  '${opt['weight']} (+₱${pr.toStringAsFixed(0)})',
-                                  style: const TextStyle(fontSize: 11)),
+                                '${opt['weight']} — ₱${pr.toStringAsFixed(0)}',
+                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                              ),
                             );
                           }),
                         ],
@@ -9265,17 +9389,27 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                               p['extra_baggage_price'] = 0.0;
                             } else {
                               final sel = options.firstWhere(
-                                  (o) => o['weight'].toString() == val,
-                                  orElse: () => {});
+                                (o) => o['weight'].toString() == val,
+                                orElse: () => {},
+                              );
                               p['extra_baggage_weight'] = val;
-                              p['extra_baggage_price'] = double.tryParse(
-                                      sel['price']?.toString() ?? '0') ??
-                                  0.0;
+                              p['extra_baggage_price'] = double.tryParse(sel['price']?.toString() ?? '0') ?? 0.0;
                             }
-                            widget.booking.hasExtraBaggage =
-                                widget.booking.totalExtraBaggagePrice > 0;
+                            widget.booking.hasExtraBaggage = widget.booking.totalExtraBaggagePrice > 0;
                           });
                         },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      child: Text(
+                        hasBaggage ? '$pWeight added' : '0 kg added',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: hasBaggage ? FontWeight.bold : FontWeight.w500,
+                          color: hasBaggage ? const Color(0xFF047857) : const Color(0xFF94A3B8),
+                        ),
                       ),
                     ),
                   ],
@@ -9283,32 +9417,71 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
               );
             }),
 
-            const SizedBox(height: 6),
-            // Summary footer
+            const SizedBox(height: 8),
+            // Bottom Summary Footer (Matching Screenshot 1)
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
-                color: kGreen.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(10),
+                color: const Color(0xFFF0FDF4),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFBBF7D0)),
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    paxWithBaggage > 0
-                        ? 'Added for $paxWithBaggage traveler${paxWithBaggage > 1 ? 's' : ''}'
-                        : 'No extra baggage added',
-                    style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: kSlate700),
+                  const Icon(
+                    Icons.check_circle,
+                    color: Color(0xFF059669),
+                    size: 26,
                   ),
-                  Text(
-                    '+₱${totalBaggage.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: kGreen),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          paxWithBaggage > 0
+                              ? 'Extra baggage added for $paxWithBaggage traveler${paxWithBaggage > 1 ? 's' : ''}'
+                              : 'No extra baggage selected',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF064E3B),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        const Text(
+                          'Check-in baggage allowance will be confirmed and printed on the boarding vouchers.',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF047857),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      const Text(
+                        'TOTAL BAGGAGE FEE',
+                        style: TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.5,
+                          color: Color(0xFF047857),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '+₱${totalBaggage.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF047857),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -9321,33 +9494,117 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
 
   Widget _buildBaggageReminder() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
       child: Container(
-        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-            color: const Color(0xFFFFF7ED),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFFED7AA))),
-        child: const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            )
+          ],
+        ),
+        child: Column(
           children: [
-            Row(
-              children: [
-                Icon(Icons.luggage, color: Color(0xFFEA580C), size: 18),
-                SizedBox(width: 8),
-                Text('Baggage Rules & Reminders',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: Color(0xFF9A3412))),
-              ],
+            InkWell(
+              onTap: () {
+                setState(() {
+                  _showBaggageRulesDrawer = !_showBaggageRulesDrawer;
+                });
+              },
+              borderRadius: BorderRadius.circular(16),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: [
+                    Container(
+                      height: 36,
+                      width: 36,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF3C7),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.luggage, color: Color(0xFFD97706), size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Baggage Rules & Allowances',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: Color(0xFF0F172A),
+                            ),
+                          ),
+                          Text(
+                            'View cabin hand carry & checked baggage guidelines',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      _showBaggageRulesDrawer
+                          ? Icons.keyboard_arrow_up
+                          : Icons.keyboard_arrow_down,
+                      color: Colors.grey.shade500,
+                    ),
+                  ],
+                ),
+              ),
             ),
-            SizedBox(height: 8),
-            Text('• Standard ticket includes 1 hand carry bag (up to 7kg).',
-                style: TextStyle(fontSize: 12, color: Color(0xFF9A3412))),
-            SizedBox(height: 4),
-            Text('• Ensure valuables are kept with you at all times.',
-                style: TextStyle(fontSize: 12, color: Color(0xFF9A3412))),
+            if (_showBaggageRulesDrawer) ...[
+              const Divider(height: 1, color: Color(0xFFE2E8F0)),
+              Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Carry-on Baggage (Included):',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '• 1 hand carry bag up to 7 kg (max 56 x 36 x 23 cm).\n'
+                      '• 1 small personal item (handbag, laptop bag, max 35 x 20 x 20 cm).\n'
+                      '• Keep all cash, jewelry, medications, and valuable electronics in your cabin bag.',
+                      style: TextStyle(fontSize: 11.5, color: Colors.grey.shade700, height: 1.4),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Checked Baggage Policy:',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '• Prepaid extra baggage is significantly discounted compared to airport counter excess rates.\n'
+                      '• Maximum weight for a single checked piece is 32 kg for health and safety regulations.\n'
+                      '• Ensure all luggage is properly tagged with passenger contact details.',
+                      style: TextStyle(fontSize: 11.5, color: Colors.grey.shade700, height: 1.4),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -9937,6 +10194,34 @@ class _DiscountScreenState extends State<DiscountScreen> {
                                         fontWeight: FontWeight.bold),
                                   ),
                                 ),
+                                if (pax[i]['extra_baggage_weight'] != null &&
+                                    pax[i]['extra_baggage_weight'].toString().isNotEmpty &&
+                                    (double.tryParse(pax[i]['extra_baggage_price']?.toString() ?? '0') ?? 0) > 0) ...[
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFECFDF5),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(color: const Color(0xFFA7F3D0)),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Text('🧳 ', style: TextStyle(fontSize: 11)),
+                                        Text(
+                                          '${pax[i]['extra_baggage_weight']} (+₱${(double.tryParse(pax[i]['extra_baggage_price']?.toString() ?? '0') ?? 0).toStringAsFixed(0)})',
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF047857),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                             const SizedBox(height: 12),
@@ -10080,7 +10365,32 @@ class _DiscountScreenState extends State<DiscountScreen> {
                               );
                             }),
 
-                            if (widget.booking.mode == 'airline' && type == 'infant') ...[
+                            if (widget.booking.isSuperPromo) ...[
+                              const SizedBox(height: 10),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFAF5FF),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: const Color(0xFFE9D5FF)),
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Icon(Icons.bolt, color: Color(0xFF9333EA), size: 18),
+                                    SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        '⚡ Super Promo fare — Mandated discounts (Senior/PWD/Student) are not applicable to this rate tier.',
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            color: Color(0xFF6B21A8),
+                                            fontWeight: FontWeight.w600),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ] else if (widget.booking.mode == 'airline' && type == 'infant') ...[
                               const SizedBox(height: 10),
                               Container(
                                 padding: const EdgeInsets.all(12),
@@ -10115,14 +10425,15 @@ class _DiscountScreenState extends State<DiscountScreen> {
                                     paxAgeYears = now.difference(dob).inDays ~/ 365;
                                   } catch (_) {}
                                 }
-                                final seniorEligible = paxAgeYears != null && paxAgeYears >= 60;
+                                final isAdultPax = (type == 'adult');
+                                final seniorEligible = isAdultPax && paxAgeYears != null && paxAgeYears >= 60;
 
                                 // Build discount list, excluding 'infant' named discounts
-                                // and excluding Senior if passenger is under 60
+                                // and excluding Senior for non-adults (minor, child, infant) or adults under 60
                                 final eligibleDiscounts = _discounts.where((d) {
                                   final dName = d['name'].toString().toLowerCase();
                                   if (dName == 'infant') return false;
-                                  if (dName.contains('senior') && paxAgeYears != null && !seniorEligible) return false;
+                                  if (dName.contains('senior') && (!isAdultPax || paxAgeYears == null || !seniorEligible)) return false;
                                   return true;
                                 }).toList();
 
@@ -10134,7 +10445,7 @@ class _DiscountScreenState extends State<DiscountScreen> {
                                     orElse: () => {},
                                   );
                                   final cName = (currentDisc['name'] ?? '').toString().toLowerCase();
-                                  if (cName.contains('senior') && paxAgeYears != null && !seniorEligible) {
+                                  if (cName.contains('senior') && (!isAdultPax || paxAgeYears == null || !seniorEligible)) {
                                     WidgetsBinding.instance.addPostFrameCallback((_) {
                                       if (mounted) setState(() => pax[i]['discount_id'] = null);
                                     });
@@ -10179,24 +10490,60 @@ class _DiscountScreenState extends State<DiscountScreen> {
                                         }
                                       },
                                       decoration: InputDecoration(
-                                        labelText: 'Discount',
-                                        prefixIcon: const Icon(Icons.local_offer,
-                                            color: kGreen, size: 18),
+                                        labelText: 'Discount (Optional)',
                                         border: OutlineInputBorder(
                                             borderRadius: BorderRadius.circular(10)),
                                       ),
                                     ),
-                                    if (paxAgeYears != null && !seniorEligible)
+                                    if (seniorEligible)
+                                      Container(
+                                        margin: const EdgeInsets.only(top: 8),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 8),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFF0FDF4),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          border: Border.all(
+                                              color: const Color(0xFFBBF7D0)),
+                                        ),
+                                        child: const Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Icon(Icons.verified,
+                                                color: Color(0xFF16A34A),
+                                                size: 16),
+                                            SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                'Passenger is 60+ years old and eligible for Senior Citizen Discount (20% Off). Please select Senior Citizen and provide OSCA / Senior ID.',
+                                                style: TextStyle(
+                                                    fontSize: 11,
+                                                    color: Color(0xFF15803D),
+                                                    fontWeight: FontWeight.w600),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      )
+                                    else if (isAdultPax &&
+                                        paxAgeYears != null &&
+                                        !seniorEligible)
                                       Padding(
                                         padding: const EdgeInsets.only(top: 6),
                                         child: Row(
                                           children: [
-                                            const Icon(Icons.info_outline, size: 14, color: Colors.orange),
+                                            const Icon(Icons.info_outline,
+                                                size: 14,
+                                                color: Colors.orange),
                                             const SizedBox(width: 4),
                                             Expanded(
                                               child: Text(
-                                                'Senior Citizen discount requires the passenger to be at least 60 years old.',
-                                                style: TextStyle(fontSize: 11, color: Colors.orange.shade800),
+                                                'Senior Citizen discount requires the adult passenger to be at least 60 years old.',
+                                                style: TextStyle(
+                                                    fontSize: 11,
+                                                    color: Colors.orange.shade800),
                                               ),
                                             ),
                                           ],
@@ -11092,9 +11439,12 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
           'return_date': widget.booking.returnDate,
           'client_name': _clientNameCtrl.text.trim(),
           'client_email': _clientEmailCtrl.text.trim(),
-          'client_phone': _clientPhoneCtrl.text.trim(),
-          'passengers': widget.booking.passengers,
-          'accommodation_ids': widget.booking.selectedAccommodationIds,
+          'passengers': widget.booking.passengers.map((p) => {
+                ...p,
+                'rate_type': widget.booking.selectedRateType,
+                'is_promo': widget.booking.selectedRateType != 'regular',
+                if (widget.booking.isSuperPromo) 'discount_id': null,
+              }).toList(),
           // Vehicle
           'has_vehicle': widget.booking.hasVehicle,
           if (widget.booking.hasVehicle) ...{
@@ -11470,7 +11820,33 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  if (widget.booking.usePromoTicket &&
+                  if (widget.booking.isSuperPromo) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFAF5FF),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFE9D5FF)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.bolt,
+                              color: Color(0xFF9333EA), size: 20),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              '⚡ Super Promo fare is active. Vouchers and Gracia Points are strictly not applicable to Super Promo tickets.',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF6B21A8),
+                                  fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ] else if (widget.booking.usePromoTicket &&
                       widget.booking.promotionalTicketId != null) ...[
                     Container(
                       padding: const EdgeInsets.all(12),
@@ -11800,10 +12176,44 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                             if (accommodationCost > 0)
                               _SummaryRow('Stay',
                                   '₱${accommodationCost.toStringAsFixed(2)}'),
-                            if (extraBaggageCost > 0)
+                            if (extraBaggageCost > 0) ...[
                               _SummaryRow(
                                   'Prepaid Extra Baggage (${widget.booking.passengersWithBaggageCount} traveler${widget.booking.passengersWithBaggageCount > 1 ? 's' : ''})',
                                   '₱${extraBaggageCost.toStringAsFixed(2)}'),
+                              ...widget.booking.passengers.asMap().entries.where((e) {
+                                final p = e.value;
+                                return p['extra_baggage_weight'] != null &&
+                                    p['extra_baggage_weight'].toString().isNotEmpty &&
+                                    (double.tryParse(p['extra_baggage_price']?.toString() ?? '0') ?? 0) > 0;
+                              }).map((e) {
+                                final idx = e.key;
+                                final p = e.value;
+                                final pName = (p['name'] ?? '').toString().isNotEmpty
+                                    ? p['name']
+                                    : 'Traveler #${idx + 1}';
+                                final pPrice = double.tryParse(p['extra_baggage_price']?.toString() ?? '0') ?? 0.0;
+                                return Padding(
+                                  padding: const EdgeInsets.only(left: 12, bottom: 4),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        '· $pName: ${p['extra_baggage_weight']}',
+                                        style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                                      ),
+                                      Text(
+                                        '+₱${pPrice.toStringAsFixed(2)}',
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF047857),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }),
+                            ],
                             if (widget.booking.hasExtraBaggage &&
                                 widget.booking.mode == 'ferry')
                               _SummaryRow(
@@ -15593,7 +16003,7 @@ class _GraciaPointsScreenState extends State<GraciaPointsScreen> {
         });
       } else {
         setState(() {
-          _error = 'Failed to load points data.';
+          _error = data['message']?.toString() ?? 'Failed to load points data.';
           _isLoading = false;
         });
       }
@@ -20168,13 +20578,13 @@ class _RebookScreenState extends State<RebookScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Summary of Fees',
+                const Text('Rebooking Breakdown',
                     style:
                         TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 const SizedBox(height: 16),
                 if (_breakdown!['original_ticket_price'] != null) ...[
                   _buildBreakdownRow(
-                      'Original Ticket Price',
+                      'Original Price',
                       _breakdown!['original_ticket_price']?.toString() ??
                           '0.00'),
                   const SizedBox(height: 8),
@@ -20182,30 +20592,37 @@ class _RebookScreenState extends State<RebookScreen> {
                 if (_breakdown!['new_ticket_price'] != null) ...[
                   _buildBreakdownRow('New Ticket Price',
                       _breakdown!['new_ticket_price']?.toString() ?? '0.00'),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                 ],
-                if (_breakdown!['rate_diff'] != null) ...[
-                  _buildBreakdownRow('Fare Difference',
-                      _breakdown!['rate_diff']?.toString() ?? '0.00'),
-                  const SizedBox(height: 8),
-                ],
-                if (_breakdown!['surcharge'] != null) ...[
-                  _buildBreakdownRow('Rebooking Surcharge',
-                      _breakdown!['surcharge']?.toString() ?? '0.00'),
-                  const SizedBox(height: 8),
-                ],
-                _buildBreakdownRow('Revalidation Fee',
-                    _breakdown!['revalidation_fee']?.toString() ?? '0.00'),
-                if (_breakdown!['transaction_fee'] != null) ...[
-                  const SizedBox(height: 8),
-                  _buildBreakdownRow('Transaction Fee',
-                      _breakdown!['transaction_fee']?.toString() ?? '0.00'),
-                ],
-                if (_breakdown!['web_admin_fee'] != null) ...[
-                  const SizedBox(height: 8),
-                  _buildBreakdownRow('Web Admin Fee',
-                      _breakdown!['web_admin_fee']?.toString() ?? '0.00'),
-                ],
+                const Divider(),
+                const SizedBox(height: 6),
+                const Text('Revalidation Breakdown',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: Color(0xFF1E293B))),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: Column(
+                    children: [
+                      _buildBreakdownRow('Revalidation Fee:',
+                          _breakdown!['revalidation_fee']?.toString() ?? '0.00'),
+                      if (_breakdown!['surcharge'] != null &&
+                          _parseDouble(_breakdown!['surcharge']) > 0) ...[
+                        const SizedBox(height: 6),
+                        _buildBreakdownRow('Revalidation Surcharge:',
+                            _breakdown!['surcharge']?.toString() ?? '0.00'),
+                      ],
+                      if (_breakdown!['rate_diff'] != null &&
+                          _parseDouble(_breakdown!['rate_diff']) > 0) ...[
+                        const SizedBox(height: 6),
+                        _buildBreakdownRow('Rate Diff (if applicable):',
+                            _breakdown!['rate_diff']?.toString() ?? '0.00'),
+                      ],
+                    ],
+                  ),
+                ),
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 12),
                   child: Divider(),
@@ -20213,9 +20630,9 @@ class _RebookScreenState extends State<RebookScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Total to Pay',
+                    const Text('Total Revalidation Fees:',
                         style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 16)),
+                            fontWeight: FontWeight.bold, fontSize: 15)),
                     Text('₱${_breakdown!['total_to_pay']}',
                         style: const TextStyle(
                             fontWeight: FontWeight.bold,

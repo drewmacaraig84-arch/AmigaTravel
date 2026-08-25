@@ -55,7 +55,7 @@ class Schedule extends Model
     {
         return $this->belongsToMany(TransportClass::class, 'schedule_transport_class')
             ->using(ScheduleTransportClass::class)
-            ->withPivot('id', 'additional_price', 'tickets_available', 'description', 'has_bed', 'is_active', 'is_promo', 'rate_code', 'promo_duration_start', 'promo_duration_end')
+            ->withPivot('id', 'additional_price', 'tickets_available', 'description', 'has_bed', 'is_active', 'is_promo', 'rate_type', 'rate_code', 'promo_duration_start', 'promo_duration_end')
             ->withTimestamps();
     }
 
@@ -577,7 +577,8 @@ class Schedule extends Model
                     return [
                         'id' => $class->id,
                         'pivot_id' => $class->pivot?->id,
-                        'is_promo' => (bool) ($class->pivot?->is_promo ?? false),
+                        'is_promo' => (bool) ($class->pivot?->is_promo ?? false || ($class->pivot?->rate_type ?? 'regular') !== 'regular'),
+                        'rate_type' => $class->pivot?->rate_type ?? ($class->pivot?->is_promo ? 'promotional' : 'regular'),
                         'rate_code' => $class->pivot?->rate_code,
                         'promo_duration_start' => $class->pivot?->promo_duration_start?->toISOString(),
                         'promo_duration_end' => $class->pivot?->promo_duration_end?->toISOString(),

@@ -372,14 +372,14 @@ class Booking extends Model
     public function transportClasses(): BelongsToMany
     {
         return $this->belongsToMany(TransportClass::class, 'booking_transport_class')
-            ->withPivot('price', 'is_promo', 'rate_code', 'is_return')
+            ->withPivot('price', 'is_promo', 'rate_type', 'rate_code', 'is_return')
             ->withTimestamps();
     }
 
     public function departureTransportClasses(): BelongsToMany
     {
         return $this->belongsToMany(TransportClass::class, 'booking_transport_class')
-            ->withPivot('price', 'is_promo', 'rate_code', 'is_return')
+            ->withPivot('price', 'is_promo', 'rate_type', 'rate_code', 'is_return')
             ->wherePivot('is_return', false)
             ->withTimestamps();
     }
@@ -387,7 +387,7 @@ class Booking extends Model
     public function returnTransportClasses(): BelongsToMany
     {
         return $this->belongsToMany(TransportClass::class, 'booking_transport_class')
-            ->withPivot('price', 'is_promo', 'rate_code', 'is_return')
+            ->withPivot('price', 'is_promo', 'rate_type', 'rate_code', 'is_return')
             ->wherePivot('is_return', true)
             ->withTimestamps();
     }
@@ -510,7 +510,18 @@ class Booking extends Model
      */
     public function hasPromoTicket(): bool
     {
-        return $this->transportClasses()->wherePivot('is_promo', true)->exists();
+        return $this->transportClasses()
+            ->where(function ($q) {
+                $q->wherePivot('is_promo', true)
+                  ->orWherePivot('rate_type', 'promotional')
+                  ->orWherePivot('rate_type', 'super_promotional');
+            })->exists();
+    }
+
+    public function hasSuperPromoTicket(): bool
+    {
+        return $this->transportClasses()->wherePivot('rate_type', 'super_promotional')->exists()
+            || $this->passengers()->where('rate_type', 'super_promotional')->exists();
     }
 
     public function canCancel(): bool
@@ -1738,8 +1749,13 @@ class Booking extends Model
         }
         
         if ($this->has_extra_baggage && $this->extra_baggage_price > 0) {
+            $w = trim((string) $this->extra_baggage_weight);
+            $label = 'Extra Baggage';
+            if ($w !== '') {
+                $label .= ' (' . (str_ends_with(strtolower($w), 'kg') ? $w : $w . ' kg') . ')';
+            }
             $breakdown[] = [
-                'label' => 'Extra Baggage (' . $this->extra_baggage_weight . 'kg)',
+                'label' => $label,
                 'amount' => (float) $this->extra_baggage_price,
                 'class' => ''
             ];
@@ -1824,18 +1840,47 @@ class Booking extends Model
             $surcharge = (float) ($notes['surcharge'] ?? 0);
             $reval = (float) ($notes['revalidation_fee'] ?? 0);
             $rateDiff = (float) ($notes['rate_diff'] ?? 0);
+            $totalRebookFee = (float) $this->transaction->rebooking_fee;
 
-            if ($surcharge > 0 || $reval > 0 || $rateDiff > 0) {
+            if ($rateDiff > 0) {
                 $breakdown[] = [
-                    'label' => 'Revalidation Fee',
-                    'amount' => $surcharge + $reval + $rateDiff,
-                    'class' => 'text-amber-600'
+                    'label' => 'Original Price',
+                    'amount' => (float) $this->total_price,
+                    'class' => 'text-slate-600',
                 ];
-            } else {
+                $breakdown[] = [
+                    'label' => 'New Ticket Price',
+                    'amount' => (float) $this->total_price + $rateDiff,
+                    'class' => 'text-slate-900 font-semibold',
+                ];
+            }
+
+            if ($reval > 0) {
                 $breakdown[] = [
                     'label' => 'Revalidation Fee',
-                    'amount' => (float) $this->transaction->rebooking_fee,
-                    'class' => 'text-amber-600'
+                    'amount' => $reval,
+                    'class' => 'text-amber-700',
+                ];
+            }
+            if ($surcharge > 0) {
+                $breakdown[] = [
+                    'label' => 'Revalidation Surcharge',
+                    'amount' => $surcharge,
+                    'class' => 'text-amber-700',
+                ];
+            }
+            if ($rateDiff > 0) {
+                $breakdown[] = [
+                    'label' => 'Rate Diff (if applicable)',
+                    'amount' => $rateDiff,
+                    'class' => 'text-amber-700',
+                ];
+            }
+            if ($totalRebookFee > 0) {
+                $breakdown[] = [
+                    'label' => 'Total Revalidation Fees',
+                    'amount' => $totalRebookFee,
+                    'class' => 'text-amber-800 font-bold',
                 ];
             }
         }

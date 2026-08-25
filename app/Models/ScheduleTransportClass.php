@@ -20,6 +20,7 @@ class ScheduleTransportClass extends Pivot
         'has_bed',
         'is_active',
         'is_promo',
+        'rate_type',
         'rate_code',
         'promo_duration_start',
         'promo_duration_end',
@@ -30,9 +31,25 @@ class ScheduleTransportClass extends Pivot
         'has_bed' => 'boolean',
         'is_active' => 'boolean',
         'is_promo' => 'boolean',
+        'rate_type' => 'string',
         'promo_duration_start' => 'datetime',
         'promo_duration_end' => 'datetime',
     ];
+
+    public function isRegular(): bool
+    {
+        return ($this->rate_type ?? 'regular') === 'regular';
+    }
+
+    public function isPromo(): bool
+    {
+        return ($this->rate_type ?? 'regular') === 'promotional' || (bool) $this->is_promo;
+    }
+
+    public function isSuperPromo(): bool
+    {
+        return ($this->rate_type ?? 'regular') === 'super_promotional';
+    }
 
     public function schedule(): BelongsTo
     {
