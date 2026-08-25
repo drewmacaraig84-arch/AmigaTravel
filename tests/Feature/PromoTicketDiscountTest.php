@@ -92,6 +92,7 @@ class PromoTicketDiscountTest extends TestCase
         $test = Livewire::test(BookingForm::class)
             ->set('step', 5)
             ->set('mode', 'airline')
+            ->set('operator', 'Philippine Airlines')
             ->set('origin', 'Manila')
             ->set('destination', 'Cebu')
             ->set('departure_date', $depDate)
@@ -185,21 +186,20 @@ class PromoTicketDiscountTest extends TestCase
         $this->assertGreaterThan(0, (float)$passenger->discount_amount);
     }
 
-    public function test_promotional_ticket_rejects_vouchers(): void
+    public function test_super_promotional_ticket_rejects_vouchers(): void
     {
         $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Vouchers cannot be used with promotional tickets.');
+        $this->expectExceptionMessage('Vouchers cannot be used with Super Promotional tickets.');
 
         $schedule = $this->createAirlineSchedule();
-        $promoTicket = PromotionalTicket::create([
-            'schedule_id' => $schedule->id,
-            'promo_price' => 800.00,
-            'quantity_available' => 5,
-            'quantity_sold' => 0,
-            'starts_at' => now()->subDay(),
-            'ends_at' => now()->addDays(30),
-            'is_active' => true,
-        ]);
+        $stc = \Illuminate\Support\Facades\DB::table('schedule_transport_class')
+            ->where('schedule_id', $schedule->id)
+            ->first();
+        if ($stc) {
+            \Illuminate\Support\Facades\DB::table('schedule_transport_class')
+                ->where('id', $stc->id)
+                ->update(['rate_type' => 'super_promotional']);
+        }
 
         $data = [
             'trip_type' => 'one_way',
@@ -207,7 +207,7 @@ class PromoTicketDiscountTest extends TestCase
             'destination' => 'Cebu',
             'departure_date' => $schedule->departure_time->format('Y-m-d'),
             'schedule_id' => $schedule->id,
-            'promotional_ticket_id' => $promoTicket->id,
+            'selected_transport_class_id' => $stc ? $stc->transport_class_id : null,
             'voucher_code' => 'TESTVOUCHER',
             'client_name' => 'Test User',
             'client_email' => 'test@example.com',
@@ -218,6 +218,7 @@ class PromoTicketDiscountTest extends TestCase
                     'type' => 'adult',
                     'name' => 'Test User',
                     'birthdate' => '1995-05-15',
+                    'rate_type' => 'super_promotional',
                 ],
             ],
         ];
@@ -226,21 +227,20 @@ class PromoTicketDiscountTest extends TestCase
         $action->execute($data);
     }
 
-    public function test_promotional_ticket_rejects_gracia_points(): void
+    public function test_super_promotional_ticket_rejects_gracia_points(): void
     {
         $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Gracia points cannot be used with promotional tickets.');
+        $this->expectExceptionMessage('Gracia points cannot be used with Super Promotional tickets.');
 
         $schedule = $this->createAirlineSchedule();
-        $promoTicket = PromotionalTicket::create([
-            'schedule_id' => $schedule->id,
-            'promo_price' => 800.00,
-            'quantity_available' => 5,
-            'quantity_sold' => 0,
-            'starts_at' => now()->subDay(),
-            'ends_at' => now()->addDays(30),
-            'is_active' => true,
-        ]);
+        $stc = \Illuminate\Support\Facades\DB::table('schedule_transport_class')
+            ->where('schedule_id', $schedule->id)
+            ->first();
+        if ($stc) {
+            \Illuminate\Support\Facades\DB::table('schedule_transport_class')
+                ->where('id', $stc->id)
+                ->update(['rate_type' => 'super_promotional']);
+        }
 
         $data = [
             'trip_type' => 'one_way',
@@ -248,7 +248,7 @@ class PromoTicketDiscountTest extends TestCase
             'destination' => 'Cebu',
             'departure_date' => $schedule->departure_time->format('Y-m-d'),
             'schedule_id' => $schedule->id,
-            'promotional_ticket_id' => $promoTicket->id,
+            'selected_transport_class_id' => $stc ? $stc->transport_class_id : null,
             'use_points' => true,
             'client_name' => 'Test User',
             'client_email' => 'test@example.com',
@@ -259,6 +259,7 @@ class PromoTicketDiscountTest extends TestCase
                     'type' => 'adult',
                     'name' => 'Test User',
                     'birthdate' => '1995-05-15',
+                    'rate_type' => 'super_promotional',
                 ],
             ],
         ];
