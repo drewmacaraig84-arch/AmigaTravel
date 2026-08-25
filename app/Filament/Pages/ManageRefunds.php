@@ -434,7 +434,7 @@ class ManageRefunds extends Page implements HasTable, HasInfolists
 
                             Notification::make()
                                 ->title('Refund Disbursed Successfully')
-                                ->body("Booking #{$record->transaction_number} has been marked as disbursed. Refund Acknowledgement and proof sent to {$record->client_email}.")
+                                ->body("Booking #{$record->transaction_number} has been marked as disbursed. Refund Acknowledgement Receipt and proof sent to {$record->client_email}.")
                                 ->success()
                                 ->send();
                         } catch (Throwable $e) {

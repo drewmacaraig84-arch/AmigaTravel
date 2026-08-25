@@ -213,7 +213,7 @@ class Booking extends Model
 
         if ($this->isRefundCompleted()) {
             $refText = filled($this->refund_reference) ? " (Reference: {$this->refund_reference})" : '';
-            return "Your refund of {$amountFormatted} has been successfully processed and disbursed to your designated account{$refText}. You may download your official Refund Acknowledgement and proof of disbursement below.";
+            return "Your refund of {$amountFormatted} has been successfully processed and disbursed to your designated account{$refText}. You may download your Refund Acknowledgement Receipt and proof of disbursement below.";
         }
 
         $destText = filled($this->refund_destination) ? " to {$this->refund_destination}" : '';
@@ -1212,30 +1212,32 @@ class Booking extends Model
         $refundAmount = (float) ($this->refund_amount > 0 ? $this->refund_amount : $paxToUse->sum('refund_amount'));
         $totalDeductions = max(0, round($originalAmount - $refundAmount, 2));
 
-        $webAdminFee = (float) $paxToUse->sum(fn ($p) => $p->getEffectiveWebAdminFee());
-        if ($webAdminFee <= 0) {
-            $settings = PaymentSetting::current();
-            $webAdminFee = (float) $settings->getWebAdminFee($this->isShortHaul()) * $paxCount;
-        }
+        $isFullRefund = ($totalDeductions <= 0) || filled($this->service_cancellation_id);
 
-        $txFee = (float) $paxToUse->sum(fn ($p) => $p->getEffectiveTransactionFee());
-        if ($txFee <= 0) {
-            $settings = PaymentSetting::current();
-            $txFee = (float) $settings->getTransactionFee($this->isShortHaul()) * $paxCount;
-        }
-
-        // If service cancellation (100% disruption refund)
-        if (filled($this->service_cancellation_id)) {
-            $surcharge = 0.0;
+        if ($isFullRefund) {
             $webAdminFee = 0.0;
             $txFee = 0.0;
+            $surcharge = 0.0;
             $totalDeductions = 0.0;
+            $netRefundAmount = $originalAmount;
         } else {
-            // Surcharge is the remaining deduction after web admin and transaction fees
-            $surcharge = max(0, round($totalDeductions - $webAdminFee - $txFee, 2));
-            if ($surcharge <= 0 && (float) $this->cancellation_fee > 0) {
-                $surcharge = (float) $this->cancellation_fee;
+            $webAdminFee = (float) $paxToUse->sum(fn ($p) => $p->getEffectiveWebAdminFee());
+            if ($webAdminFee <= 0) {
+                $settings = PaymentSetting::current();
+                $webAdminFee = (float) $settings->getWebAdminFee($this->isShortHaul()) * $paxCount;
             }
+
+            $txFee = (float) $paxToUse->sum(fn ($p) => $p->getEffectiveTransactionFee());
+            if ($txFee <= 0) {
+                $settings = PaymentSetting::current();
+                $txFee = (float) $settings->getTransactionFee($this->isShortHaul()) * $paxCount;
+            }
+
+            // Surcharge and fees capped to total deductions
+            $webAdminFee = min($webAdminFee, $totalDeductions);
+            $txFee = min($txFee, max(0, round($totalDeductions - $webAdminFee, 2)));
+            $surcharge = max(0, round($totalDeductions - $webAdminFee - $txFee, 2));
+            $netRefundAmount = $refundAmount > 0 ? $refundAmount : max(0, round($originalAmount - $totalDeductions, 2));
         }
 
         $surchargePct = $this->getRefundSurchargePercentage();
@@ -1247,9 +1249,10 @@ class Booking extends Model
             'surcharge_amount'      => $surcharge,
             'surcharge_pct'         => $surchargePct,
             'total_deductions'      => $totalDeductions,
-            'net_refund_amount'     => $refundAmount > 0 ? $refundAmount : max(0, $originalAmount - $totalDeductions),
+            'net_refund_amount'     => $netRefundAmount,
             'pax_count'             => $paxCount,
             'is_service_disruption' => filled($this->service_cancellation_id),
+            'is_full_refund'        => $isFullRefund,
         ];
     }
 

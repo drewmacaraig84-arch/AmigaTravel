@@ -65,7 +65,7 @@
 
                             <div class="flex flex-wrap gap-3">
                                 @if (in_array($booking->status, ['cancelled', 'operator_cancelled']) && (float) $booking->refund_amount > 0)
-                                    <a href="{{ route('ticket.refund-acknowledgement', ['transaction_number' => $booking->transaction_number]) }}" target="_blank" class="inline-flex items-center justify-center rounded-3xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800">Refund Acknowledgement</a>
+                                    <a href="{{ route('ticket.refund-acknowledgement', ['transaction_number' => $booking->transaction_number]) }}" target="_blank" class="inline-flex items-center justify-center rounded-3xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800">Refund Acknowledgement Receipt</a>
                                     @if(filled($booking->refund_proof))
                                         <a href="{{ storage_asset_path($booking->refund_proof) }}" target="_blank" class="inline-flex items-center justify-center rounded-3xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100">View Proof of Refund</a>
                                     @endif

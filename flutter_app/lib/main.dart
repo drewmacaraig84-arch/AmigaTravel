@@ -7217,7 +7217,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 launchUrl(fullUrl, mode: LaunchMode.externalApplication);
               },
               icon: const Icon(Icons.receipt_long),
-              label: const Text('Refund Acknowledgement'),
+              label: const Text('Refund Acknowledgement Receipt'),
               style: FilledButton.styleFrom(
                 backgroundColor: kSlate800,
                 foregroundColor: Colors.white,

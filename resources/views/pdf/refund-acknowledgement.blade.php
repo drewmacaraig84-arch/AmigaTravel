@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Refund Acknowledgement - {{ $booking->transaction_number }}</title>
+    <title>Refund Acknowledgement Receipt - {{ $booking->transaction_number }}</title>
     <style>
         @page {
             margin: 12mm 15mm;
@@ -160,7 +160,7 @@
                 @else
                     <div style="font-size: 18px; font-weight: bold; color: #ee018d;">AMIGA GRACIA TRAVEL SERVICES</div>
                 @endif
-                <div class="brand-sub">Official Refund Acknowledgement</div>
+                <div class="brand-sub">Refund Acknowledgement Receipt</div>
             </td>
             <td class="receipt-title-box" style="width: 45%; vertical-align: middle;">
                 <span class="badge-refunded">
@@ -254,6 +254,11 @@
                 <td class="label" style="color: #047857; font-size: 9.5px; padding-left: 15px;">Service Disruption Waiver:</td>
                 <td class="amount" style="color: #047857; font-size: 9.5px;">100% Full Refund (Fees Waived)</td>
             </tr>
+        @elseif(!empty($breakdown['is_full_refund']))
+            <tr>
+                <td class="label" style="color: #047857; font-size: 9.5px; padding-left: 15px;">Full Refund Waiver / Grace Period:</td>
+                <td class="amount" style="color: #047857; font-size: 9.5px;">100% Full Refund (₱0 Deductions)</td>
+            </tr>
         @endif
         <tr class="grand-total">
             <td class="label" style="color: #9d174d; font-size: 11px;">NET REFUND AMOUNT DISBURSED:</td>
@@ -262,7 +267,7 @@
     </table>
 
     <div class="notice-box">
-        <strong>Customer Notice:</strong> This document serves as official acknowledgement from Amiga Gracia Travel Services that the refund for Transaction <strong>{{ $booking->transaction_number }}</strong> has been verified and processed. Please keep this document and the attached transaction proof for your financial records. If you have any inquiries, contact support at <strong>support@amigatravel.com</strong>.
+        <strong>Customer Notice:</strong> This document serves as a Refund Acknowledgement Receipt from Amiga Gracia Travel Services that the refund for Transaction <strong>{{ $booking->transaction_number }}</strong> has been verified and processed. Please keep this document and the attached transaction proof for your financial records. If you have any inquiries, contact support at <strong>support@amigatravel.com</strong>.
     </div>
 
     <div style="margin-top: 24px; text-align: center; font-size: 9px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 8px;">

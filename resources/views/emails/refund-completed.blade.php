@@ -123,6 +123,13 @@
                                         100% Full Refund (Fees Waived)
                                     </td>
                                 </tr>
+                                @elseif(!empty($breakdown['is_full_refund']))
+                                <tr>
+                                    <td style="padding: 4px 0; color: #047857; font-size: 12.5px;">Full Refund Waiver / Grace Period:</td>
+                                    <td style="padding: 4px 0; text-align: right; color: #047857; font-size: 12.5px; font-weight: 600;">
+                                        100% Full Refund (₱0 Deductions)
+                                    </td>
+                                </tr>
                                 @endif
                                 <tr style="border-top: 1.5px solid #047857;">
                                     <td style="padding: 10px 0 2px 0; color: #0f172a; font-weight: 700; font-size: 14px;">Total Refund Disbursed:</td>
@@ -140,7 +147,7 @@
             <tr>
                 <td style="padding: 0 32px 24px 32px;">
                     <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 14px 18px; font-size: 13px; color: #166534;">
-                        📎 <strong>Attached:</strong> Your official <strong>Refund Acknowledgement PDF</strong> and proof of transfer receipt are attached to this email.
+                        📎 <strong>Attached:</strong> Your <strong>Refund Acknowledgement Receipt PDF</strong> and proof of transfer receipt are attached to this email.
                     </div>
                 </td>
             </tr>

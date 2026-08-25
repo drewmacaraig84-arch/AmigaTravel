@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Verification Guarantee Voucher - Amiga Travel</title>
+        <title>Verification Guarantee Voucher - Amiga Gracia</title>
     </head>
     <body style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #1e293b; margin: 0; padding: 24px; background-color: #f8fafc;">
         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 650px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
@@ -29,7 +29,8 @@
                         Thank You For Your Patience
                     </h1>
                     <p style="margin: 0; font-size: 15px; color: #475569;">
-                        Dear <strong>{{ $booking->client_name }}</strong>, because your booking (Transaction <strong>{{ $booking->transaction_number }}</strong>) took longer than our standard verification window, we are pleased to award you a special travel discount voucher valid for 3 months (starting from when code is sent to you).
+                        Dear <strong>{{ $booking->client_name }}</strong>,<br />
+                        As your booking (Transaction No. <strong>{{ $booking->transaction_number }}</strong>) took longer than our standard verification period, we are pleased to offer you a special travel discount voucher, valid for three (3) months upon receipt of the code.
                     </p>
                 </td>
             </tr>

@@ -279,7 +279,7 @@
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                                             </svg>
-                                            Download Refund Acknowledgement
+                                            Download Refund Acknowledgement Receipt
                                         </a>
                                         @if(filled($booking->refund_proof))
                                             <a href="{{ storage_asset_path($booking->refund_proof) }}" target="_blank" class="inline-flex items-center gap-1.5 rounded-2xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition">

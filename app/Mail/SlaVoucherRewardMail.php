@@ -23,7 +23,7 @@ class SlaVoucherRewardMail extends Mailable
 
     public function build()
     {
-        return $this->subject('Gift from Amiga Travel: Your Verification Guarantee Voucher (' . $this->voucher->code . ')')
+        return $this->subject('Gift from Amiga Gracia: Your Verification Guarantee Voucher (' . $this->voucher->code . ')')
             ->view('emails.sla-voucher-reward');
     }
 }
