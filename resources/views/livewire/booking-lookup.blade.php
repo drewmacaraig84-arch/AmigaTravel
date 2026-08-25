@@ -271,9 +271,39 @@
                                             Refund Request In Progress (24–48 Hours)
                                         @endif
                                     </div>
-                                    <p class="text-xs sm:text-sm text-slate-700 leading-relaxed">
-                                        {{ $booking->getRefundMessage() }}
-                                    </p>
+                                    @if($booking->isRefundCompleted())
+                                        <p class="text-xs sm:text-sm text-slate-700 leading-relaxed">
+                                            {{ $booking->getRefundMessage() }}
+                                        </p>
+                                    @else
+                                        @php $dest = $booking->getParsedRefundDestination(); @endphp
+                                        <div class="space-y-2.5">
+                                            <p class="text-xs sm:text-sm text-slate-700 leading-relaxed">
+                                                Your refund request of <strong class="text-slate-900">{{ '₱' . number_format((float) $booking->refund_amount, 2) }}</strong> is currently being processed by our finance team. Please allow 24–48 hours for review and disbursement to your selected payment method.
+                                            </p>
+
+                                            @if($dest['method'] || $dest['account_number'] || $dest['account_name'])
+                                                <div class="rounded-xl bg-white/90 border border-amber-200/80 p-3.5 text-xs sm:text-sm text-slate-800 space-y-1 shadow-sm">
+                                                    @if($dest['method'])
+                                                        <div><span class="font-bold text-slate-600">Refund Method:</span> <span class="font-semibold text-slate-900">{{ $dest['method'] }}{{ $dest['institution'] ? ' (' . $dest['institution'] . ')' : '' }}</span></div>
+                                                    @endif
+                                                    @if($dest['account_number'])
+                                                        <div><span class="font-bold text-slate-600">Account No.:</span> <span class="font-mono font-semibold text-slate-900">{{ $dest['account_number'] }}</span></div>
+                                                    @endif
+                                                    @if($dest['account_name'])
+                                                        <div><span class="font-bold text-slate-600">Account Name:</span> <span class="font-semibold text-slate-900">{{ ucwords(strtolower($dest['account_name'])) }}</span></div>
+                                                    @endif
+                                                </div>
+                                            @endif
+
+                                            <p class="text-xs sm:text-sm text-slate-700 leading-relaxed">
+                                                Once your refund has been completed, you will receive an email confirmation and notification with the refund details.
+                                            </p>
+                                            <p class="text-xs sm:text-sm text-slate-600 font-medium italic">
+                                                Thank you for your patience and understanding.
+                                            </p>
+                                        </div>
+                                    @endif
                                     <div class="flex flex-wrap gap-2.5 pt-1">
                                         <a href="{{ route('ticket.refund-acknowledgement', $booking->transaction_number) }}" target="_blank" class="inline-flex items-center gap-1.5 rounded-2xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 transition">
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">

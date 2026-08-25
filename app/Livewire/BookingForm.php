@@ -522,14 +522,40 @@ class BookingForm extends Component
     public int $maxStep = 5;
 
     #[Computed]
-public function selectedSchedule(): ?array
-{
-    if (! $this->selected_schedule_id) {
-        return null;
+    public function selectedSchedule(): ?array
+    {
+        if (! $this->selected_schedule_id) {
+            return null;
+        }
+
+        return collect($this->availableSchedules)->firstWhere('id', $this->selected_schedule_id);
     }
 
-    return collect($this->availableSchedules)->firstWhere('id', $this->selected_schedule_id);
-}
+    #[Computed]
+    public function isSuperPromo(): bool
+    {
+        if ($this->selected_schedule_id && $this->selected_transport_class_id) {
+            $sched = $this->selectedSchedule();
+            if ($sched) {
+                $tc = collect($sched['transport_classes'] ?? [])->firstWhere(fn ($c) => (int)($c['pivot_id'] ?? $c['id']) === (int)$this->selected_transport_class_id);
+                if ($tc && ($tc['rate_type'] ?? '') === 'super_promotional') {
+                    return true;
+                }
+            }
+        }
+
+        if ($this->selected_return_schedule_id && $this->selected_return_transport_class_id) {
+            $retSched = collect($this->availableReturnSchedules)->firstWhere('id', $this->selected_return_schedule_id);
+            if ($retSched) {
+                $retTc = collect($retSched['transport_classes'] ?? [])->firstWhere(fn ($c) => (int)($c['pivot_id'] ?? $c['id']) === (int)$this->selected_return_transport_class_id);
+                if ($retTc && ($retTc['rate_type'] ?? '') === 'super_promotional') {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
 
     public function updatedTripType(string $value): void
     {
@@ -2145,11 +2171,12 @@ public function selectedSchedule(): ?array
                         }
                     }
 
+                    $isMinorPax = in_array($pType, ['minor', 'child'], true) || ($isAirline && $pType === 'infant');
                     if ($isPromo) {
                         $grossFare = floatval($usedPromoTicket->promo_price) + $depTcPrice + ($retBasePrice + $retTcPrice) * $paxMultiplier;
                         $grossAcc = $schedAccPrice + $retAccPrice;
                         $discAmount = 0.0;
-                        $hasDiscount = !empty($passenger['discount_id']) && !($isAirline && $pType === 'infant');
+                        $hasDiscount = ! empty($passenger['discount_id']) && ! $this->isSuperPromo;
                         if ($hasDiscount) {
                             $disc = $discountsKeyed->get($passenger['discount_id']);
                             if ($disc) {
@@ -2160,7 +2187,7 @@ public function selectedSchedule(): ?array
                         $grossFare = ($schedBasePrice + $depTcPrice + $retBasePrice + $retTcPrice) * $paxMultiplier;
                         $grossAcc = $schedAccPrice + $retAccPrice;
                         $discAmount = 0.0;
-                        $hasDiscount = !empty($passenger['discount_id']) && !($isAirline && $pType === 'infant');
+                        $hasDiscount = ! empty($passenger['discount_id']) && ! $this->isSuperPromo && ! $isMinorPax;
                         if ($hasDiscount) {
                             $disc = $discountsKeyed->get($passenger['discount_id']);
                             if ($disc) {
@@ -2920,7 +2947,11 @@ public function selectedSchedule(): ?array
 
             $fare = $depFare + $retFare;
 
-            $hasDiscount = ! empty($passenger['discount_id']) && !(!$isFerry && $type === 'infant');
+            $isMinorPax = in_array($type, ['child', 'minor'], true) || (! $isFerry && $type === 'infant');
+            $isPromoPax = $activePromoTicket && ! empty($passenger['use_promo']);
+            $hasDiscount = ! empty($passenger['discount_id'])
+                && ! $this->isSuperPromo
+                && ! (! $isPromoPax && $isMinorPax);
 
             if ($hasDiscount) {
                 $discount = $discountsById->get($passenger['discount_id']);
@@ -3036,7 +3067,10 @@ public function selectedSchedule(): ?array
                 $retTicket = ($returnTicketPrice + $returnTransportClassTotal) * $paxMultiplier;
             }
             
-            $hasDiscount = !empty($passenger['discount_id']) && !(!$isFerry && $type === 'infant');
+            $isMinorPax = in_array($type, ['child', 'minor'], true) || (! $isFerry && $type === 'infant');
+            $hasDiscount = ! empty($passenger['discount_id'])
+                && ! $this->isSuperPromo
+                && ! (! $isAirlinePromoPassenger && $isMinorPax);
 
             if ($hasDiscount) {
                 $discount = $discountsById->get($passenger['discount_id']);

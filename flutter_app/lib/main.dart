@@ -7195,18 +7195,6 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                         height: 1.4,
                       ),
                     ),
-                    if (_booking['refund_destination'] != null &&
-                        _booking['refund_destination'].toString().isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        'Destination: ${_booking['refund_destination']}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: kSlate800,
-                        ),
-                      ),
-                    ],
                     if (_booking['refund_reference'] != null &&
                         _booking['refund_reference'].toString().isNotEmpty) ...[
                       const SizedBox(height: 4),
@@ -10390,23 +10378,28 @@ class _DiscountScreenState extends State<DiscountScreen> {
                                   ],
                                 ),
                               ),
-                            ] else if (widget.booking.mode == 'airline' && type == 'infant') ...[
+                            ] else if ((widget.booking.mode == 'airline' && type == 'infant') ||
+                                       ((type == 'minor' || type == 'child') &&
+                                        !(widget.booking.mode == 'airline' &&
+                                          (pax[i]['use_promo'] == true ||
+                                           widget.booking.promotionalTicketId != null)))) ...[
                               const SizedBox(height: 10),
                               Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: Colors.grey.shade100,
+                                  color: const Color(0xFFF0F9FF),
                                   borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: Colors.grey.shade300),
+                                  border: Border.all(color: const Color(0xFFBAE6FD)),
                                 ),
                                 child: const Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Icon(Icons.info_outline, color: Colors.grey, size: 18),
+                                    Icon(Icons.info_outline, color: Color(0xFF0284C7), size: 18),
                                     SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
-                                        'Infant fare (50% base fare) — No additional discounts',
-                                        style: TextStyle(fontSize: 12, color: Colors.black54, fontWeight: FontWeight.w500),
+                                        'Minors traveling on regular fares are automatically entitled to a 50% ticket discount and are not eligible for additional mandated discounts.',
+                                        style: TextStyle(fontSize: 12, color: Color(0xFF0369A1), fontWeight: FontWeight.w500),
                                       ),
                                     ),
                                   ],
@@ -12289,6 +12282,47 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                             }
                             return const SizedBox();
                           }),
+                          if (widget.booking.passengers.any((p) => p['discount_id'] != null)) ...[
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 16),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.amber.shade50,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: Colors.amber.shade300),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(Icons.info_outline, color: Colors.amber.shade800, size: 20),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Important Reminder',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                            color: Colors.amber.shade900,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'You have booked discounted tickets. To ensure a smooth boarding experience, please remember to bring your valid ID(s) and present them at the port during boarding for verification.',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.amber.shade800,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ],
                       );
                     } catch (e) {

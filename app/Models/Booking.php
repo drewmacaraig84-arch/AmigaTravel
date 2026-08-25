@@ -216,8 +216,23 @@ class Booking extends Model
             return "Your refund of {$amountFormatted} has been successfully processed and disbursed to your designated account{$refText}. You may download your Refund Acknowledgement Receipt and proof of disbursement below.";
         }
 
-        $destText = filled($this->refund_destination) ? " to {$this->refund_destination}" : '';
-        return "Your refund request of {$amountFormatted} is currently being processed by our finance team. Please allow 24–48 hours for review and disbursement{$destText}. You will receive an email confirmation and notification once completed.";
+        $dest = $this->getParsedRefundDestination();
+        $destLines = [];
+        if ($dest['method']) {
+            $destLines[] = "Refund Method: " . $dest['method'] . ($dest['institution'] ? " ({$dest['institution']})" : "");
+        }
+        if ($dest['account_number']) {
+            $destLines[] = "Account No.: " . $dest['account_number'];
+        }
+        if ($dest['account_name']) {
+            $destLines[] = "Account Name: " . ucwords(strtolower($dest['account_name']));
+        }
+
+        $destBlock = ! empty($destLines) 
+            ? " to your selected payment method:\n\n" . implode("\n", $destLines) . "\n\n"
+            : (filled($this->refund_destination) ? " to {$this->refund_destination}.\n\n" : ".\n\n");
+
+        return "Your refund request of {$amountFormatted} is currently being processed by our finance team. Please allow 24–48 hours for review and disbursement{$destBlock}Once your refund has been completed, you will receive an email confirmation and notification with the refund details.\n\nThank you for your patience and understanding.";
     }
 
     /**

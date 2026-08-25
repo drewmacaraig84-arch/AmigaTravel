@@ -384,9 +384,13 @@ class CreateBookingAction
 
                 $paxRateType = $passengerData['rate_type'] ?? ($isSuperPromoBooking ? 'super_promotional' : ($isPromoBooking ? 'promotional' : 'regular'));
                 $isSuperPromoPax = $paxRateType === 'super_promotional';
+                $isMinorPax = in_array($pType, ['minor', 'child'], true) || ($isAirline && $pType === 'infant');
 
-                // Airline infant and Super Promo tickets cannot have additional discounts
-                $hasDiscount = ! empty($passengerData['discount_id']) && ! ($isAirline && $pType === 'infant') && ! $isSuperPromoPax;
+                // Minors traveling on regular fares get 50% auto discount and cannot stack mandated discounts.
+                // Super Promo tickets also block all additional discounts.
+                $hasDiscount = ! empty($passengerData['discount_id'])
+                    && ! $isSuperPromoPax
+                    && ! ($paxRateType === 'regular' && $isMinorPax);
 
                 // Gross fare per passenger (departure + return) - 50% on base fare + transport class for eligible types
                 $grossFare = ($schedBasePrice + $depTcPrice + $retBasePrice + $retTcPrice) * $paxMultiplier;
@@ -430,7 +434,7 @@ class CreateBookingAction
                     'type'                   => $passengerData['type'],
                     'name'                   => $passengerData['name'],
                     'birthdate'              => !empty($passengerData['birthdate']) ? $passengerData['birthdate'] : null,
-                    'discount_id'            => ($isAirline && $pType === 'infant') || $isSuperPromoPax ? null : ($passengerData['discount_id'] ?? null),
+                    'discount_id'            => $hasDiscount ? ($passengerData['discount_id'] ?? null) : null,
                     'school_name'            => !empty($passengerData['school_name']) ? $passengerData['school_name'] : null,
                     'id_number'              => !empty($passengerData['id_number']) ? $passengerData['id_number'] : null,
                     'id_image_front'         => $frontPath,
@@ -640,12 +644,18 @@ class CreateBookingAction
                 }
             }
 
+            $isMinorPax = in_array($type, ['child', 'minor'], true) || (! $isFerry && $type === 'infant');
+            $paxRateType = $passenger['rate_type'] ?? 'regular';
+            $isSuperPromoPax = $paxRateType === 'super_promotional';
+
             $ticketAndClassFare = (($schedulePrice + $departureTransportClassTotal) + ($returnSchedulePrice + $returnTransportClassTotal)) * $paxMultiplier;
             $accommodationFare = $scheduleAccommodationPrice + $returnScheduleAccomPrice;
 
             $fare = $ticketAndClassFare + $accommodationFare;
 
-            $hasDiscount = ! empty($passenger['discount_id']) && ! (! $isFerry && $type === 'infant');
+            $hasDiscount = ! empty($passenger['discount_id'])
+                && ! $isSuperPromoPax
+                && ! ($paxRateType === 'regular' && $isMinorPax);
 
             if ($hasDiscount) {
                 $discount = $discounts->get($passenger['discount_id']);

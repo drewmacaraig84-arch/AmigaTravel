@@ -17,52 +17,52 @@
             </div>
             
 
-            <div class="px-3 sm:px-6 lg:px-10 py-5 sm:py-10">
+            <div class="px-3 sm:px-6 lg:px-10 py-6 sm:py-8">
                 <div class="max-w-6xl mx-auto">
-                <div class="mb-8">
-                    @php
-                        $isTourPackage = $tour_id || $prefilled_from_package;
-                        $steps = $isTourPackage ? ['Route','Details','Stay','Submit'] : ['Route','Schedule','Details','Stay','Submit'];
+                    <div class="mb-8 rounded-2xl bg-white border border-slate-200/80 p-4 sm:p-6 shadow-sm">
+                        @php
+                            $isTourPackage = $tour_id || $prefilled_from_package;
+                            $steps = $isTourPackage ? ['Route','Details','Stay','Submit'] : ['Route','Schedule','Details','Stay','Submit'];
 
-                        $getIcon = function($label) {
-                            return match($label) {
-                                'Route' => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 sm:w-6 sm:h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" /></svg>',
-                                'Schedule' => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 sm:w-6 sm:h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>',
-                                'Details' => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 sm:w-6 sm:h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>',
-                                'Stay' => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 sm:w-6 sm:h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" /></svg>',
-                                'Submit' => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 sm:w-6 sm:h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>',
-                                default => ''
+                            $getIcon = function($label) {
+                                return match($label) {
+                                    'Route' => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 sm:w-6 sm:h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" /></svg>',
+                                    'Schedule' => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 sm:w-6 sm:h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>',
+                                    'Details' => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 sm:w-6 sm:h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>',
+                                    'Stay' => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 sm:w-6 sm:h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" /></svg>',
+                                    'Submit' => '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 sm:w-6 sm:h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>',
+                                    default => ''
+                                };
                             };
-                        };
-                    @endphp
-                    <div class="relative pt-4 pb-6">
-                        <div class="relative z-10 flex w-full items-start justify-between">
-                            @foreach($steps as $index => $label)
-                                @php $isLast = $index === count($steps) - 1; @endphp
-                                <div class="relative flex flex-col items-center justify-center text-center" style="min-width:0;flex:1">
-                                    {{-- Connector line to next step -- renders behind circle via z-0 --}}
-                                    @if(!$isLast)
-                                        <div class="absolute left-1/2 top-[1.125rem] sm:top-[1.5rem] w-full h-[3px] sm:h-[4px] -translate-y-1/2 z-0">
-                                            <div class="h-full w-full bg-slate-200"></div>
-                                            {{-- Green fill: active when the NEXT step is reached or passed --}}
-                                            <div class="absolute inset-y-0 left-0 h-full bg-[#216417] transition-all duration-500 {{ $step >= $index + 2 ? 'w-full' : 'w-0' }}"></div>
-                                        </div>
-                                    @endif
-
-                                    {{-- Circle with icon or check --}}
-                                    <div class="relative z-10 flex h-9 w-9 sm:h-12 sm:w-12 items-center justify-center rounded-full border-2 transition-colors duration-500 {{ $step === $index + 1 ? 'border-[#216417] bg-[#216417] text-white shadow-lg shadow-black/10' : ($step > $index + 1 ? 'border-[#216417] bg-white text-[#216417]' : 'border-slate-600 bg-white text-black') }}">
-                                        @if($step > $index + 1)
-                                            <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                                        @else
-                                            {!! $getIcon($label) !!}
+                        @endphp
+                        <div class="relative py-2">
+                            <div class="relative z-10 flex w-full items-start justify-between">
+                                @foreach($steps as $index => $label)
+                                    @php $isLast = $index === count($steps) - 1; @endphp
+                                    <div class="relative flex flex-col items-center justify-center text-center" style="min-width:0;flex:1">
+                                        {{-- Connector line to next step -- renders behind circle via z-0 --}}
+                                        @if(!$isLast)
+                                            <div class="absolute left-1/2 top-[1.125rem] sm:top-[1.5rem] w-full h-[3px] sm:h-[4px] -translate-y-1/2 z-0">
+                                                <div class="h-full w-full bg-slate-200"></div>
+                                                {{-- Green fill: active when the NEXT step is reached or passed --}}
+                                                <div class="absolute inset-y-0 left-0 h-full bg-[#216417] transition-all duration-500 {{ $step >= $index + 2 ? 'w-full' : 'w-0' }}"></div>
+                                            </div>
                                         @endif
+
+                                        {{-- Circle with icon or check --}}
+                                        <div class="relative z-10 flex h-9 w-9 sm:h-12 sm:w-12 items-center justify-center rounded-full border-2 transition-colors duration-500 {{ $step === $index + 1 ? 'border-[#216417] bg-[#216417] text-white shadow-lg shadow-black/10' : ($step > $index + 1 ? 'border-[#216417] bg-white text-[#216417]' : 'border-slate-600 bg-white text-black') }}">
+                                            @if($step > $index + 1)
+                                                <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                            @else
+                                                {!! $getIcon($label) !!}
+                                            @endif
+                                        </div>
+                                        <div class="mt-1.5 sm:mt-3 text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider leading-tight {{ $step === $index + 1 ? 'text-black' : ($step > $index + 1 ? 'text-[#216417]' : 'text-slate-400 sm:text-black') }} {{ $step === $index + 1 ? '' : 'hidden sm:block' }}">{{ $label }}</div>
                                     </div>
-                                    <div class="mt-1.5 sm:mt-3 text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider leading-tight {{ $step === $index + 1 ? 'text-black' : ($step > $index + 1 ? 'text-[#216417]' : 'text-slate-400 sm:text-black') }} {{ $step === $index + 1 ? '' : 'hidden sm:block' }}">{{ $label }}</div>
-                                </div>
-                            @endforeach
+                                @endforeach
+                            </div>
                         </div>
                     </div>
-                </div>
                 @if(!empty($package_name) || !empty($package_price))
                     <div class="mt-4 mb-8 rounded-2xl border border-slate-200 bg-white p-5 max-w-3xl mx-6 sm:mx-10 shadow-sm">
                         <div class="flex items-center justify-between">
@@ -1325,18 +1325,38 @@
                                     @php
                                         $isDriver = $passenger['type'] === 'driver';
                                         $isAirlineInfant = ($mode === 'airline') && ($passenger['type'] === 'infant');
+
+                                        $selectedClass = $selectedSchedule && $selected_transport_class_id 
+                                            ? collect($selectedSchedule['transport_classes'] ?? [])->firstWhere(fn($c) => (int)($c['pivot_id'] ?? $c['id']) === (int)$selected_transport_class_id) 
+                                            : null;
+                                        $selectedReturnClass = $selectedReturnSchedule && $selected_return_transport_class_id 
+                                            ? collect($selectedReturnSchedule['transport_classes'] ?? [])->firstWhere(fn($c) => (int)($c['pivot_id'] ?? $c['id']) === (int)$selected_return_transport_class_id) 
+                                            : null;
+                                        $isSuperPromo = ($selectedClass && ($selectedClass['rate_type'] ?? '') === 'super_promotional')
+                                            || ($selectedReturnClass && ($selectedReturnClass['rate_type'] ?? '') === 'super_promotional')
+                                            || (($passenger['rate_type'] ?? '') === 'super_promotional');
                                     @endphp
-                                    <label class="block min-w-0 {{ ($isDriver || $isAirlineInfant) ? 'opacity-50 pointer-events-none select-none' : '' }}">
+                                    <label class="block min-w-0 {{ ($isDriver || $isAirlineInfant || $isSuperPromo) ? 'opacity-50 pointer-events-none select-none' : '' }}">
                                         <span class="text-slate-900 font-bold text-sm">Discount</span>
                                         @if($isDriver)
                                             <div class="mt-3 rounded-xl border border-[#00a859] bg-[#00a859]/10 px-4 py-3 text-sm text-[#216417] font-bold flex items-center gap-2 shadow-sm">
                                                 <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                                 Driver &mdash; Free Ticket
                                             </div>
+                                        @elseif($isSuperPromo)
+                                            <div class="mt-3 rounded-xl border border-purple-200 bg-purple-50 px-4 py-3 text-xs text-purple-900 font-semibold flex items-start gap-2 shadow-sm">
+                                                <svg class="w-4 h-4 text-purple-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                                <span>⚡ Super Promo fare &mdash; Mandated discounts (Senior/PWD/Student) are not applicable to this rate tier.</span>
+                                            </div>
                                         @elseif($isAirlineInfant)
                                             <div class="mt-3 rounded-xl border border-slate-200 bg-slate-100/80 px-4 py-3 text-sm text-slate-500 font-medium flex items-center gap-2 shadow-sm">
                                                 <svg class="w-4 h-4 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                                <span>Infant fare (50% base fare) &mdash; No additional discounts</span>
+                                                <span>Minors traveling on regular fares are automatically entitled to a 50% ticket discount and are not eligible for additional mandated discounts.</span>
+                                            </div>
+                                        @elseif(in_array(strtolower($passenger['type'] ?? ''), ['minor', 'child'], true) && ! ($mode === 'airline' && ! empty($passenger['use_promo'])))
+                                            <div class="mt-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-xs text-sky-800 font-medium flex items-start gap-2 shadow-sm">
+                                                <svg class="w-4 h-4 text-sky-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                                <span>Minors traveling on regular fares are automatically entitled to a 50% ticket discount and are not eligible for additional mandated discounts.</span>
                                             </div>
                                         @else
                                             @php
@@ -1665,7 +1685,7 @@
                                             </svg>
                                             <div>
                                                 <h3 class="text-sm font-bold text-amber-900">Important Reminder</h3>
-                                                <p class="mt-1 text-sm text-amber-700">You have booked discounted tickets. Please make sure to bring the valid IDs (School ID, OSCA ID, or PWD ID) and present them at the port during boarding.</p>
+                                                <p class="mt-1 text-sm text-amber-700">You have booked discounted tickets. To ensure a smooth boarding experience, please remember to bring your valid ID(s) and present them at the port during boarding for verification.</p>
                                             </div>
                                         </div>
                                     </div>
@@ -2514,7 +2534,7 @@
                 <div class="flex items-start justify-between gap-4">
                     <div>
                         <h2 class="text-xl font-semibold text-slate-900">Prepare valid ID for boarding</h2>
-                        <p class="mt-3 text-sm leading-6 text-slate-600">Discounted passengers must present a valid ID during boarding. Please have your school ID, OSCA ID, or PWD ID ready.</p>
+                        <p class="mt-3 text-sm leading-6 text-slate-600">You have booked discounted tickets. To ensure a smooth boarding experience, please remember to bring your valid ID(s) and present them at the port during boarding for verification.</p>
                     </div>
                     <button type="button" wire:click.prevent="closePresentIdWarning" class="rounded-full bg-slate-100 p-2 text-slate-600 hover:bg-slate-200">
                         <span class="sr-only">Close</span>
