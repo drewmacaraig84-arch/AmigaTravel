@@ -4,7 +4,7 @@ set -e
 # Set defaults for Railway deployment
 # These should be set in Railway Variables, but provide sensible defaults
 export APP_ENV="${APP_ENV:-production}"
-export APP_DEBUG="true"
+export APP_DEBUG="${APP_DEBUG:-false}"
 export APP_URL="${APP_URL:-https://amiga-travel-production.up.railway.app}"
 export APP_NAME="${APP_NAME:-Amiga Gracia}"
 export SESSION_DRIVER="${SESSION_DRIVER:-database}"
