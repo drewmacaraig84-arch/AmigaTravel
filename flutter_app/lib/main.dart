@@ -6573,7 +6573,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             _feeRow('Estimated Refund', displayRefund,
                 color: Colors.green.shade700, bold: true),
             const SizedBox(height: 12),
-            const Text('Refund will be processed in 3–5 business days.',
+            const Text('Refund will be processed in 24–48 hours.',
                 style: TextStyle(fontSize: 12, color: Colors.grey)),
           ],
         ),
@@ -19346,39 +19346,54 @@ class _RefundScreenState extends State<RefundScreen> {
                               decoration: const InputDecoration(
                                   hintText: 'Full name on the account',
                                   border: OutlineInputBorder())),
-                          const SizedBox(height: 20),
-                          const Text('Verification & Authorization Documents',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                  color: Color(0xFF1E293B))),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'Please upload the passenger ID, original ticket, and an authorization letter (if requesting on behalf of the passenger or for partial passenger refund).',
-                            style: TextStyle(fontSize: 12, color: Colors.blueGrey),
-                          ),
-                          const SizedBox(height: 12),
-                          _buildDocUploadTile(
-                            title: '1. Valid ID',
-                            subtitle: 'Passenger Government ID / Photo ID',
-                            file: _idFile,
-                            onPick: () => _pickRefundDoc('id'),
-                            onRemove: () => setState(() => _idFile = null),
-                          ),
-                          _buildDocUploadTile(
-                            title: '2. Original Ticket / Receipt',
-                            subtitle: 'Original e-ticket or booking receipt',
-                            file: _ticketFile,
-                            onPick: () => _pickRefundDoc('ticket'),
-                            onRemove: () => setState(() => _ticketFile = null),
-                          ),
-                          _buildDocUploadTile(
-                            title: '3. Authorization Letter',
-                            subtitle: 'Letter permitting refund on passenger behalf',
-                            file: _authLetterFile,
-                            onPick: () => _pickRefundDoc('auth'),
-                            onRemove: () => setState(() => _authLetterFile = null),
-                          ),
+                          Builder(builder: (_) {
+                            final createdAtStr = widget.booking['created_at']?.toString();
+                            final createdAt = createdAtStr != null ? DateTime.tryParse(createdAtStr) : null;
+                            final isWithin5Mins = createdAt != null && DateTime.now().isBefore(createdAt.add(const Duration(minutes: 5)));
+
+                            if (isWithin5Mins) {
+                              return const SizedBox.shrink();
+                            }
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 20),
+                                const Text('Verification & Authorization Documents',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                        color: Color(0xFF1E293B))),
+                                const SizedBox(height: 4),
+                                const Text(
+                                  'Please upload the passenger ID, original ticket, and an authorization letter (if requesting on behalf of the passenger or for partial passenger refund).',
+                                  style: TextStyle(fontSize: 12, color: Colors.blueGrey),
+                                ),
+                                const SizedBox(height: 12),
+                                _buildDocUploadTile(
+                                  title: '1. Valid ID',
+                                  subtitle: 'Passenger Government ID / Photo ID',
+                                  file: _idFile,
+                                  onPick: () => _pickRefundDoc('id'),
+                                  onRemove: () => setState(() => _idFile = null),
+                                ),
+                                _buildDocUploadTile(
+                                  title: '2. Original Ticket / Receipt',
+                                  subtitle: 'Original e-ticket or booking receipt',
+                                  file: _ticketFile,
+                                  onPick: () => _pickRefundDoc('ticket'),
+                                  onRemove: () => setState(() => _ticketFile = null),
+                                ),
+                                _buildDocUploadTile(
+                                  title: '3. Authorization Letter',
+                                  subtitle: 'Letter permitting refund on passenger behalf',
+                                  file: _authLetterFile,
+                                  onPick: () => _pickRefundDoc('auth'),
+                                  onRemove: () => setState(() => _authLetterFile = null),
+                                ),
+                              ],
+                            );
+                          }),
                           const SizedBox(height: 24),
                           Wrap(
                             spacing: 8,
