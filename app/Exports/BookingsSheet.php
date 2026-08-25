@@ -82,10 +82,25 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
                     continue;
                 }
 
-                $bTotal = (float) ($booking->transaction?->amount_paid ?: $booking->total_price);
-                if (in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount > 0) {
+                $bRevalFee = ($this->title === 'Rebooked Bookings' ? $revalFee : 0.0);
+                $bRateDiff = ($this->title === 'Rebooked Bookings' ? $rateDiff : 0.0);
+                $bSurcharge = ($this->title === 'Rebooked Bookings' ? $surcharge : 0.0);
+
+                if ($this->title === 'Rebooked Bookings') {
+                    $bTotal = (float) ($bRevalFee + $bRateDiff + $bSurcharge);
+                } elseif ($this->title === 'Refunded Bookings') {
+                    $origTotal = (float) ($booking->transaction?->amount_paid ?: $booking->total_price);
+                    $refAmount = (float) $booking->refund_amount;
+                    $bTotal = max(0.0, (float) ($booking->cancellation_fee > 0 ? $booking->cancellation_fee : ($origTotal - $refAmount)));
+                } elseif ($this->title === 'Pending Refund Bookings') {
                     $bTotal = (float) $booking->refund_amount;
+                } else {
+                    $bTotal = (float) ($booking->transaction?->amount_paid ?: $booking->total_price);
+                    if (in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount > 0) {
+                        $bTotal = (float) $booking->refund_amount;
+                    }
                 }
+
                 $bTcPrice = (float) ($booking->transportClasses ? $booking->transportClasses->sum(fn($tc) => (float)($tc->pivot->price ?? 0)) : 0);
                 $bSchedAcc = (float) ($booking->schedule_accommodation_price ?? 0) + (float) ($booking->return_schedule_accommodation_price ?? 0);
                 $bAccFee = $bTcPrice + $bSchedAcc;
@@ -93,10 +108,6 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
                 if ($bBaseFare <= 0 && $bTotal > 0 && $bAccFee <= 0) {
                     $bBaseFare = max(0.0, $bTotal - (float)($booking->vehicle_price ?? 0));
                 }
-
-                $bRevalFee = ($this->title === 'Rebooked Bookings' ? $revalFee : 0.0);
-                $bRateDiff = ($this->title === 'Rebooked Bookings' ? $rateDiff : 0.0);
-                $bSurcharge = ($this->title === 'Rebooked Bookings' ? $surcharge : 0.0);
 
                 $fin = [
                     'baseFare' => $bBaseFare, 'accFee' => $bAccFee, 'vehicleFee' => (float) ($booking->vehicle_price ?? 0),
@@ -161,11 +172,24 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
                     $pVoucherDisc = (float) $p->voucher_discount_share;
                     $pPointsDisc = (float) $p->points_discount_share;
                     
-                    $pItemTotal = $p->getEffectiveItemTotal() + $pVehFee + $pHotelFee + $pRebookFee;
-                    if ((float) $p->refund_amount > 0) {
-                        $pItemTotal = (float) $p->refund_amount;
-                    } elseif (in_array($booking->status, ['cancelled', 'operator_cancelled']) && (float) $booking->refund_amount > 0 && (float) $p->refund_amount <= 0) {
-                        $pItemTotal = (float) ($booking->refund_amount / max(1, $passengers->count()));
+                    if ($this->title === 'Rebooked Bookings') {
+                        $pItemTotal = (float) $pRebookFee;
+                    } elseif ($this->title === 'Refunded Bookings') {
+                        $refAmount = (float) $p->refund_amount;
+                        if ($refAmount <= 0 && in_array($booking->status, ['cancelled', 'operator_cancelled']) && (float) $booking->refund_amount > 0) {
+                            $refAmount = (float) ($booking->refund_amount / max(1, $passengers->count()));
+                        }
+                        $grossTotal = $p->getEffectiveItemTotal() + $pVehFee + $pHotelFee;
+                        $pItemTotal = max(0.0, (float) ($pCancelFee > 0 ? $pCancelFee : ($grossTotal - $refAmount)));
+                    } elseif ($this->title === 'Pending Refund Bookings') {
+                        $pItemTotal = (float) $p->refund_amount > 0 ? (float) $p->refund_amount : (float) $p->getEffectiveItemTotal();
+                    } else {
+                        $pItemTotal = $p->getEffectiveItemTotal() + $pVehFee + $pHotelFee + $pRebookFee;
+                        if ((float) $p->refund_amount > 0) {
+                            $pItemTotal = (float) $p->refund_amount;
+                        } elseif (in_array($booking->status, ['cancelled', 'operator_cancelled']) && (float) $booking->refund_amount > 0 && (float) $p->refund_amount <= 0) {
+                            $pItemTotal = (float) ($booking->refund_amount / max(1, $passengers->count()));
+                        }
                     }
 
                     $fin = [

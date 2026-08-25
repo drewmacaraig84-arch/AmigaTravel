@@ -356,9 +356,23 @@
 
                         @if(! $p)
                             @php
-                                $bTotal = (float) ($booking->transaction?->amount_paid ?: $booking->total_price);
-                                if (in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount > 0) {
+                                $bRevalFee = ($sectionTitle === 'Rebooked Bookings' ? $revalFee : 0);
+                                $bRateDiff = ($sectionTitle === 'Rebooked Bookings' ? $rateDiff : 0);
+                                $bSurcharge = ($sectionTitle === 'Rebooked Bookings' ? $surcharge : 0);
+
+                                if ($sectionTitle === 'Rebooked Bookings') {
+                                    $bTotal = (float) ($bRevalFee + $bRateDiff + $bSurcharge);
+                                } elseif ($sectionTitle === 'Refunded Bookings') {
+                                    $origTotal = (float) ($booking->transaction?->amount_paid ?: $booking->total_price);
+                                    $refAmount = (float) $booking->refund_amount;
+                                    $bTotal = max(0.0, (float) ($booking->cancellation_fee > 0 ? $booking->cancellation_fee : ($origTotal - $refAmount)));
+                                } elseif ($sectionTitle === 'Pending Refund Bookings') {
                                     $bTotal = (float) $booking->refund_amount;
+                                } else {
+                                    $bTotal = (float) ($booking->transaction?->amount_paid ?: $booking->total_price);
+                                    if (in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount > 0) {
+                                        $bTotal = (float) $booking->refund_amount;
+                                    }
                                 }
 
                                 $statusStr = ucfirst(str_replace('_', ' ', $booking->status));
@@ -369,10 +383,6 @@
                                 if ($bBaseFare <= 0 && $bTotal > 0 && $bAccFee <= 0) {
                                     $bBaseFare = max(0.0, $bTotal - (float)($booking->vehicle_price ?? 0));
                                 }
-
-                                $bRevalFee = ($sectionTitle === 'Rebooked Bookings' ? $revalFee : 0);
-                                $bRateDiff = ($sectionTitle === 'Rebooked Bookings' ? $rateDiff : 0);
-                                $bSurcharge = ($sectionTitle === 'Rebooked Bookings' ? $surcharge : 0);
 
                                 $secBaseFare += $bBaseFare;
                                 $secAccFee += $bAccFee;
@@ -441,11 +451,24 @@
                                 $pVoucherDisc = (float) $p->voucher_discount_share;
                                 $pPointsDisc = (float) $p->points_discount_share;
                                 
-                                $pItemTotal = $p->getEffectiveItemTotal() + $pVehFee + $pHotelFee + $pRebookFee;
-                                if ((float) $p->refund_amount > 0) {
-                                    $pItemTotal = (float) $p->refund_amount;
-                                } elseif (in_array($booking->status, ['cancelled', 'operator_cancelled']) && (float) $booking->refund_amount > 0 && (float) $p->refund_amount <= 0) {
-                                    $pItemTotal = (float) ($booking->refund_amount / max(1, $booking->passengers->count()));
+                                if ($sectionTitle === 'Rebooked Bookings') {
+                                    $pItemTotal = (float) $pRebookFee;
+                                } elseif ($sectionTitle === 'Refunded Bookings') {
+                                    $refAmount = (float) $p->refund_amount;
+                                    if ($refAmount <= 0 && in_array($booking->status, ['cancelled', 'operator_cancelled']) && (float) $booking->refund_amount > 0) {
+                                        $refAmount = (float) ($booking->refund_amount / max(1, $booking->passengers->count()));
+                                    }
+                                    $grossTotal = $p->getEffectiveItemTotal() + $pVehFee + $pHotelFee;
+                                    $pItemTotal = max(0.0, (float) ($pCancelFee > 0 ? $pCancelFee : ($grossTotal - $refAmount)));
+                                } elseif ($sectionTitle === 'Pending Refund Bookings') {
+                                    $pItemTotal = (float) $p->refund_amount > 0 ? (float) $p->refund_amount : (float) $p->getEffectiveItemTotal();
+                                } else {
+                                    $pItemTotal = $p->getEffectiveItemTotal() + $pVehFee + $pHotelFee + $pRebookFee;
+                                    if ((float) $p->refund_amount > 0) {
+                                        $pItemTotal = (float) $p->refund_amount;
+                                    } elseif (in_array($booking->status, ['cancelled', 'operator_cancelled']) && (float) $booking->refund_amount > 0 && (float) $p->refund_amount <= 0) {
+                                        $pItemTotal = (float) ($booking->refund_amount / max(1, $booking->passengers->count()));
+                                    }
                                 }
 
                                 $statusStr = $p->getStatusLabel();
