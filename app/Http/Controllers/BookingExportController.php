@@ -58,10 +58,14 @@ class BookingExportController extends Controller
         });
 
         $rebookedBookings = $bookings->filter(function ($booking) {
+            $isPendingRebook = $booking->rebooking_status === 'pending' || $booking->status === Booking::STATUS_PENDING_REBOOKING;
+            if ($isPendingRebook) {
+                return false;
+            }
             return (bool) $booking->is_rebooked 
-                || filled($booking->rebooking_status) 
+                || in_array($booking->rebooking_status, ['verified', 'approved', 'completed'], true)
                 || in_array($booking->status, ['rebooked', 'operator_rebooking'])
-                || $booking->passengers->contains(fn ($p) => $p->isRebookingHistoryItem());
+                || $booking->passengers->contains(fn ($p) => $p->isRebooked() && ! $p->isRebookingPending());
         });
 
         $refundedBookings = $bookings->filter(function ($booking) {
@@ -70,8 +74,10 @@ class BookingExportController extends Controller
         });
 
         $pendingBookings = $bookings->filter(function ($booking) {
+            $isPendingRebook = $booking->rebooking_status === 'pending' || $booking->status === Booking::STATUS_PENDING_REBOOKING;
             return $booking->status === Booking::STATUS_PENDING 
-                || $booking->passengers->contains(fn ($p) => $p->status === 'pending');
+                || $isPendingRebook
+                || $booking->passengers->contains(fn ($p) => $p->status === 'pending' || $p->isRebookingPending());
         });
 
         $cancelledBookings = $bookings->filter(function ($booking) {

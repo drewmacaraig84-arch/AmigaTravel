@@ -12,7 +12,7 @@
             font-family: 'DejaVu Sans', Arial, sans-serif;
             margin: 0;
             color: #333;
-            font-size: 8px; /* Reduced font size to fit 27 columns */
+            font-size: 7px;
         }
         h1 {
             text-align: center;
@@ -20,11 +20,11 @@
             margin-bottom: 20px;
             border-bottom: 2px solid #3498db;
             padding-bottom: 5px;
-            font-size: 16px;
+            font-size: 15px;
         }
         h2 {
-            font-size: 12px;
-            margin-top: 20px;
+            font-size: 11px;
+            margin-top: 18px;
             color: #34495e;
         }
         table {
@@ -35,16 +35,16 @@
         th {
             background-color: #3498db;
             color: white;
-            padding: 4px 2px;
+            padding: 3px 1.5px;
             text-align: left;
             font-weight: bold;
             border: 1px solid #2980b9;
-            font-size: 7px;
+            font-size: 6.5px;
         }
         td {
-            padding: 4px 2px;
+            padding: 3px 1.5px;
             border: 1px solid #ddd;
-            font-size: 7px;
+            font-size: 6.5px;
             word-wrap: break-word;
         }
         tr:nth-child(even) {
@@ -134,11 +134,17 @@
 
                 if ($rawPassengers->isEmpty()) {
                     $matches = false;
-                    if ($title === 'Verified Bookings' && $booking->status === 'confirmed' && ! $booking->is_rebooked) $matches = true;
-                    elseif ($title === 'Refunded Bookings' && in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount > 0) $matches = true;
-                    elseif ($title === 'Rebooked Bookings' && ($booking->is_rebooked || filled($booking->rebooking_status) || in_array($booking->status, ['rebooked', 'operator_rebooking']))) $matches = true;
-                    elseif ($title === 'Pending Bookings' && $booking->status === 'pending') $matches = true;
-                    elseif ($title === 'Cancelled Bookings' && in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount <= 0) $matches = true;
+                    if ($title === 'Verified Bookings' && $booking->status === 'confirmed' && ! $booking->is_rebooked) {
+                        $matches = true;
+                    } elseif ($title === 'Refunded Bookings' && in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount > 0) {
+                        $matches = true;
+                    } elseif ($title === 'Rebooked Bookings' && (($booking->is_rebooked || in_array($booking->rebooking_status, ['verified', 'approved', 'completed'], true) || in_array($booking->status, ['rebooked', 'operator_rebooking'])) && $booking->rebooking_status !== 'pending' && $booking->status !== 'pending_rebooking')) {
+                        $matches = true;
+                    } elseif ($title === 'Pending Bookings' && ($booking->status === 'pending' || $booking->status === 'pending_rebooking' || $booking->rebooking_status === 'pending')) {
+                        $matches = true;
+                    } elseif ($title === 'Cancelled Bookings' && in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount <= 0) {
+                        $matches = true;
+                    }
 
                     if ($matches) {
                         $validSectionRows->push((object)[
@@ -155,9 +161,9 @@
                         } elseif ($title === 'Refunded Bookings') {
                             $matches = $p->isRefundItem();
                         } elseif ($title === 'Rebooked Bookings') {
-                            $matches = $p->isRebookingHistoryItem();
+                            $matches = $p->isRebooked() && ! $p->isRebookingPending();
                         } elseif ($title === 'Pending Bookings') {
-                            $matches = $p->status === 'pending' && ! $p->isRebookingHistoryItem() && ! $p->isRefundItem();
+                            $matches = ($p->status === 'pending' && ! $p->isRebooked() && ! $p->isRefundItem()) || $p->isRebookingPending();
                         } elseif ($title === 'Cancelled Bookings') {
                             $matches = $p->isCancelled() && (float) $p->refund_amount <= 0;
                         }
@@ -273,7 +279,8 @@
                 
                 $secBaseFare = 0; $secAccFee = 0; $secVehicleFee = 0; $secBaggageFee = 0;
                 $secAdminFee = 0; $secTransactionFee = 0; $secHotelFee = 0; 
-                $secRebookingFee = 0; $secCancellationFee = 0; $secPassengerDiscount = 0;
+                $secRevalFee = 0; $secRateDiff = 0; $secSurcharge = 0;
+                $secCancellationFee = 0; $secPassengerDiscount = 0;
             @endphp
             <table>
                 <thead>
@@ -297,7 +304,9 @@
                         <th>Admin Fee</th>
                         <th>Txn Fee</th>
                         <th>Hotel Fee</th>
-                        <th>Rebook Fee</th>
+                        <th>Reval Fee</th>
+                        <th>Rate Diff</th>
+                        <th>Surcharge</th>
                         <th>Cancel Fee</th>
                         <th>Disc. Type</th>
                         <th>Pax Disc.</th>
@@ -317,15 +326,20 @@
                             $ferryRoute = $booking->schedule?->ferryRoute;
 
                             $rebookingFee = 0;
+                            $revalFee = 0.0;
+                            $rateDiff = 0.0;
+                            $surcharge = 0.0;
+
                             if ($booking->transaction && (float) $booking->transaction->rebooking_fee > 0) {
                                 $notes = $booking->disruption_notes ? json_decode($booking->disruption_notes, true) : [];
                                 $surcharge = (float) ($notes['surcharge'] ?? 0);
-                                $reval = (float) ($notes['revalidation_fee'] ?? 0);
+                                $revalFee = (float) ($notes['revalidation_fee'] ?? 0);
                                 $rateDiff = (float) ($notes['rate_diff'] ?? 0);
-                                if ($surcharge > 0 || $reval > 0 || $rateDiff > 0) {
-                                    $rebookingFee = $surcharge + $reval + $rateDiff;
+                                if ($surcharge > 0 || $revalFee > 0 || $rateDiff > 0) {
+                                    $rebookingFee = $surcharge + $revalFee + $rateDiff;
                                 } else {
                                     $rebookingFee = (float) $booking->transaction->rebooking_fee;
+                                    $revalFee = $rebookingFee;
                                 }
                             }
 
@@ -349,10 +363,16 @@
                                     $bBaseFare = max(0.0, $bTotal - (float)($booking->vehicle_price ?? 0));
                                 }
 
+                                $bRevalFee = ($sectionTitle === 'Rebooked Bookings' ? $revalFee : 0);
+                                $bRateDiff = ($sectionTitle === 'Rebooked Bookings' ? $rateDiff : 0);
+                                $bSurcharge = ($sectionTitle === 'Rebooked Bookings' ? $surcharge : 0);
+
                                 $secBaseFare += $bBaseFare;
                                 $secAccFee += $bAccFee;
                                 $secVehicleFee += (float) ($booking->vehicle_price ?? 0);
-                                $secRebookingFee += ($sectionTitle === 'Rebooked Bookings' ? $rebookingFee : 0);
+                                $secRevalFee += $bRevalFee;
+                                $secRateDiff += $bRateDiff;
+                                $secSurcharge += $bSurcharge;
                                 $secCancellationFee += (float) $booking->cancellation_fee;
                                 $secVoucherTotal += (float) $booking->voucher_discount_amount;
                                 $secPointsTotal += (float) $booking->points_discount;
@@ -382,7 +402,9 @@
                                 <td>0.00</td>
                                 <td>0.00</td>
                                 <td>0.00</td>
-                                <td>{{ number_format($sectionTitle === 'Rebooked Bookings' ? $rebookingFee : 0, 2) }}</td>
+                                <td>{{ number_format($bRevalFee, 2) }}</td>
+                                <td>{{ number_format($bRateDiff, 2) }}</td>
+                                <td>{{ number_format($bSurcharge, 2) }}</td>
                                 <td>{{ number_format((float) $booking->cancellation_fee, 2) }}</td>
                                 <td>-</td>
                                 <td>0.00</td>
@@ -401,7 +423,12 @@
                                 $pAdminFee = $p->getEffectiveWebAdminFee();
                                 $pTxnFee = $p->getEffectiveTransactionFee();
                                 $pHotelFee = ($pIndex === 0 ? $calcHotelFee : 0.0);
-                                $pRebookFee = ($sectionTitle === 'Rebooked Bookings' && $pIndex === 0 ? (float) $rebookingFee : 0.0);
+                                
+                                $pRevalFee = ($sectionTitle === 'Rebooked Bookings' && $pIndex === 0 ? (float) $revalFee : 0.0);
+                                $pRateDiff = ($sectionTitle === 'Rebooked Bookings' && $pIndex === 0 ? (float) $rateDiff : 0.0);
+                                $pSurcharge = ($sectionTitle === 'Rebooked Bookings' && $pIndex === 0 ? (float) $surcharge : 0.0);
+                                $pRebookFee = $pRevalFee + $pRateDiff + $pSurcharge;
+
                                 $pCancelFee = ((float) $p->cancellation_fee > 0 ? (float) $p->cancellation_fee : ($pIndex === 0 ? (float) $booking->cancellation_fee : 0.0));
                                 $pPaxDisc = (float) $p->discount_amount;
                                 $pVoucherDisc = (float) $p->voucher_discount_share;
@@ -423,7 +450,9 @@
                                 $secAdminFee += $pAdminFee;
                                 $secTransactionFee += $pTxnFee;
                                 $secHotelFee += $pHotelFee;
-                                $secRebookingFee += $pRebookFee;
+                                $secRevalFee += $pRevalFee;
+                                $secRateDiff += $pRateDiff;
+                                $secSurcharge += $pSurcharge;
                                 $secCancellationFee += $pCancelFee;
                                 $secPassengerDiscount += $pPaxDisc;
                                 $secVoucherTotal += $pVoucherDisc;
@@ -454,7 +483,9 @@
                                 <td>{{ number_format($pAdminFee, 2) }}</td>
                                 <td>{{ number_format($pTxnFee, 2) }}</td>
                                 <td>{{ number_format($pHotelFee, 2) }}</td>
-                                <td>{{ number_format($pRebookFee, 2) }}</td>
+                                <td>{{ number_format($pRevalFee, 2) }}</td>
+                                <td>{{ number_format($pRateDiff, 2) }}</td>
+                                <td>{{ number_format($pSurcharge, 2) }}</td>
                                 <td>{{ number_format($pCancelFee, 2) }}</td>
                                 <td>{{ $p->discount?->name ?? '-' }}</td>
                                 <td>{{ number_format($pPaxDisc, 2) }}</td>
@@ -476,7 +507,9 @@
                         <td>{{ number_format($secAdminFee, 2) }}</td>
                         <td>{{ number_format($secTransactionFee, 2) }}</td>
                         <td>{{ number_format($secHotelFee, 2) }}</td>
-                        <td>{{ number_format($secRebookingFee, 2) }}</td>
+                        <td>{{ number_format($secRevalFee, 2) }}</td>
+                        <td>{{ number_format($secRateDiff, 2) }}</td>
+                        <td>{{ number_format($secSurcharge, 2) }}</td>
                         <td>{{ number_format($secCancellationFee, 2) }}</td>
                         <td>-</td>
                         <td>{{ number_format($secPassengerDiscount, 2) }}</td>

@@ -29,7 +29,8 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
         $rows = collect();
         $totals = [
             'baseFare' => 0, 'accFee' => 0, 'vehicleFee' => 0, 'baggageFee' => 0,
-            'adminFee' => 0, 'transactionFee' => 0, 'hotelFee' => 0, 'rebookingFee' => 0,
+            'adminFee' => 0, 'transactionFee' => 0, 'hotelFee' => 0,
+            'revalFee' => 0, 'rateDiff' => 0, 'surcharge' => 0,
             'cancellationFee' => 0, 'passengerDiscount' => 0, 'voucherDiscount' => 0,
             'pointsDiscount' => 0, 'totalAmount' => 0,
         ];
@@ -38,15 +39,20 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
             $passengers = $booking->passengers->sortBy('item_number');
 
             $rebookingFee = 0;
+            $revalFee = 0.0;
+            $rateDiff = 0.0;
+            $surcharge = 0.0;
+
             if ($booking->transaction && (float) $booking->transaction->rebooking_fee > 0) {
                 $notes = $booking->disruption_notes ? json_decode($booking->disruption_notes, true) : [];
                 $surcharge = (float) ($notes['surcharge'] ?? 0);
-                $reval = (float) ($notes['revalidation_fee'] ?? 0);
+                $revalFee = (float) ($notes['revalidation_fee'] ?? 0);
                 $rateDiff = (float) ($notes['rate_diff'] ?? 0);
-                if ($surcharge > 0 || $reval > 0 || $rateDiff > 0) {
-                    $rebookingFee = $surcharge + $reval + $rateDiff;
+                if ($surcharge > 0 || $revalFee > 0 || $rateDiff > 0) {
+                    $rebookingFee = $surcharge + $revalFee + $rateDiff;
                 } else {
                     $rebookingFee = (float) $booking->transaction->rebooking_fee;
+                    $revalFee = $rebookingFee;
                 }
             }
 
@@ -55,11 +61,17 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
 
             if ($passengers->isEmpty()) {
                 $matches = false;
-                if ($this->title === 'Verified Bookings' && $booking->status === 'confirmed' && ! $booking->is_rebooked) $matches = true;
-                elseif ($this->title === 'Refunded Bookings' && in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount > 0) $matches = true;
-                elseif ($this->title === 'Rebooked Bookings' && ($booking->is_rebooked || filled($booking->rebooking_status) || in_array($booking->status, ['rebooked', 'operator_rebooking']))) $matches = true;
-                elseif ($this->title === 'Pending Bookings' && $booking->status === 'pending') $matches = true;
-                elseif ($this->title === 'Cancelled Bookings' && in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount <= 0) $matches = true;
+                if ($this->title === 'Verified Bookings' && $booking->status === 'confirmed' && ! $booking->is_rebooked) {
+                    $matches = true;
+                } elseif ($this->title === 'Refunded Bookings' && in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount > 0) {
+                    $matches = true;
+                } elseif ($this->title === 'Rebooked Bookings' && (($booking->is_rebooked || in_array($booking->rebooking_status, ['verified', 'approved', 'completed'], true) || in_array($booking->status, ['rebooked', 'operator_rebooking'])) && $booking->rebooking_status !== 'pending' && $booking->status !== 'pending_rebooking')) {
+                    $matches = true;
+                } elseif ($this->title === 'Pending Bookings' && ($booking->status === 'pending' || $booking->status === 'pending_rebooking' || $booking->rebooking_status === 'pending')) {
+                    $matches = true;
+                } elseif ($this->title === 'Cancelled Bookings' && in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount <= 0) {
+                    $matches = true;
+                }
 
                 if (! $matches) {
                     continue;
@@ -77,10 +89,15 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
                     $bBaseFare = max(0.0, $bTotal - (float)($booking->vehicle_price ?? 0));
                 }
 
+                $bRevalFee = ($this->title === 'Rebooked Bookings' ? $revalFee : 0.0);
+                $bRateDiff = ($this->title === 'Rebooked Bookings' ? $rateDiff : 0.0);
+                $bSurcharge = ($this->title === 'Rebooked Bookings' ? $surcharge : 0.0);
+
                 $fin = [
                     'baseFare' => $bBaseFare, 'accFee' => $bAccFee, 'vehicleFee' => (float) ($booking->vehicle_price ?? 0),
                     'baggageFee' => 0.0, 'adminFee' => 0.0, 'transactionFee' => 0.0, 'hotelFee' => 0.0,
-                    'rebookingFee' => (float) ($this->title === 'Rebooked Bookings' ? $rebookingFee : 0), 'cancellationFee' => (float) $booking->cancellation_fee,
+                    'revalFee' => (float) $bRevalFee, 'rateDiff' => (float) $bRateDiff, 'surcharge' => (float) $bSurcharge,
+                    'cancellationFee' => (float) $booking->cancellation_fee,
                     'passengerDiscount' => 0.0, 'voucherDiscount' => (float) $booking->voucher_discount_amount,
                     'pointsDiscount' => (float) $booking->points_discount, 'totalAmount' => (float) $bTotal,
                 ];
@@ -108,9 +125,9 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
                     } elseif ($this->title === 'Refunded Bookings') {
                         $matches = $p->isRefundItem();
                     } elseif ($this->title === 'Rebooked Bookings') {
-                        $matches = $p->isRebookingHistoryItem();
+                        $matches = $p->isRebooked() && ! $p->isRebookingPending();
                     } elseif ($this->title === 'Pending Bookings') {
-                        $matches = $p->status === 'pending' && ! $p->isRebookingHistoryItem() && ! $p->isRefundItem();
+                        $matches = ($p->status === 'pending' && ! $p->isRebooked() && ! $p->isRefundItem()) || $p->isRebookingPending();
                     } elseif ($this->title === 'Cancelled Bookings') {
                         $matches = $p->isCancelled() && (float) $p->refund_amount <= 0;
                     }
@@ -126,7 +143,12 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
                     $pAdminFee = $p->getEffectiveWebAdminFee();
                     $pTxnFee = $p->getEffectiveTransactionFee();
                     $pHotelFee = ($pIndex === 0 ? $calcHotelFee : 0.0);
-                    $pRebookFee = ($this->title === 'Rebooked Bookings' && $pIndex === 0 ? (float) $rebookingFee : 0.0);
+
+                    $pRevalFee = ($this->title === 'Rebooked Bookings' && $pIndex === 0 ? (float) $revalFee : 0.0);
+                    $pRateDiff = ($this->title === 'Rebooked Bookings' && $pIndex === 0 ? (float) $rateDiff : 0.0);
+                    $pSurcharge = ($this->title === 'Rebooked Bookings' && $pIndex === 0 ? (float) $surcharge : 0.0);
+                    $pRebookFee = $pRevalFee + $pRateDiff + $pSurcharge;
+
                     $pCancelFee = ((float) $p->cancellation_fee > 0 ? (float) $p->cancellation_fee : ($pIndex === 0 ? (float) $booking->cancellation_fee : 0.0));
                     $pPaxDisc = (float) $p->discount_amount;
                     $pVoucherDisc = (float) $p->voucher_discount_share;
@@ -142,7 +164,9 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
                     $fin = [
                         'baseFare' => $pBaseFare, 'accFee' => $pAccFee, 'vehicleFee' => $pVehFee,
                         'baggageFee' => $pBagFee, 'adminFee' => $pAdminFee, 'transactionFee' => $pTxnFee,
-                        'hotelFee' => $pHotelFee, 'rebookingFee' => $pRebookFee, 'cancellationFee' => $pCancelFee,
+                        'hotelFee' => $pHotelFee,
+                        'revalFee' => $pRevalFee, 'rateDiff' => $pRateDiff, 'surcharge' => $pSurcharge,
+                        'cancellationFee' => $pCancelFee,
                         'passengerDiscount' => $pPaxDisc, 'voucherDiscount' => $pVoucherDisc,
                         'pointsDiscount' => $pPointsDisc, 'totalAmount' => $pItemTotal,
                     ];
@@ -186,7 +210,7 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
             'Transaction #', 'Item No.', 'Passenger Name', 'Contact #', 'Origin', 'Destination', 'Departure Date', 'Return Date',
             'Mode', 'Operator', 'Booking Status', 'Ref # (Payment)',
             'Base Fare (₱)', 'Accommodation / Class Fee (₱)', 'Vehicle Freight Fee (₱)', 'Extra Baggage Fee (₱)',
-            'Web Admin Fee (₱)', 'Transaction Fee (₱)', 'Hotel Service Fee (₱)', 'Rebooking Fee (₱)', 'Cancellation Deduction (₱)',
+            'Web Admin Fee (₱)', 'Transaction Fee (₱)', 'Hotel Service Fee (₱)', 'Revalidation Fee (₱)', 'Fare Difference (₱)', 'Surcharge (₱)', 'Cancellation Deduction (₱)',
             'Pass. Discount Type', 'Passenger Discount (₱)', 'Voucher Code', 'Voucher Discount (₱)',
             'Gracia Points Used', 'Points Discount (₱)', 'TOTAL AMOUNT (₱)',
         ];
@@ -204,7 +228,9 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
                 number_format($row->adminFee, 2),
                 number_format($row->transactionFee, 2),
                 number_format($row->hotelFee, 2),
-                number_format($row->rebookingFee, 2),
+                number_format($row->revalFee, 2),
+                number_format($row->rateDiff, 2),
+                number_format($row->surcharge, 2),
                 number_format($row->cancellationFee, 2),
                 '', // Pass discount type
                 number_format($row->passengerDiscount, 2),
@@ -240,7 +266,9 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
             number_format($row->adminFee, 2),
             number_format($row->transactionFee, 2),
             number_format($row->hotelFee, 2),
-            number_format($row->rebookingFee, 2),
+            number_format($row->revalFee, 2),
+            number_format($row->rateDiff, 2),
+            number_format($row->surcharge, 2),
             number_format($row->cancellationFee, 2),
             
             $row->discount_type,
@@ -258,7 +286,7 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
         return [
             'A' => 20, 'B' => 15, 'C' => 25, 'D' => 15, 'E' => 15, 'F' => 15, 'G' => 15, 'H' => 15, 'I' => 10, 'J' => 15, 'K' => 20, 'L' => 15,
             'M' => 15, 'N' => 15, 'O' => 15, 'P' => 15, 'Q' => 15, 'R' => 15, 'S' => 15, 'T' => 15, 'U' => 15, 'V' => 15, 'W' => 15,
-            'X' => 15, 'Y' => 15, 'Z' => 15, 'AA' => 15, 'AB' => 15,
+            'X' => 15, 'Y' => 15, 'Z' => 15, 'AA' => 15, 'AB' => 15, 'AC' => 15, 'AD' => 15,
         ];
     }
 
