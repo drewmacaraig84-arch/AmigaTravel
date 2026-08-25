@@ -99,7 +99,7 @@
                             </div>
                         @endif
 
-                        {{-- ⏱ 5-Minute Cancellation Reminder Dialog --}}
+                        {{-- ⏱ Policy Reminder Dialog (5-Min Cancel, 24h Refund & Rebook) --}}
                         @if($showCancellationReminder)
                             <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
                                 <div class="w-full max-w-md rounded-[2rem] bg-white p-7 shadow-2xl ring-1 ring-slate-200">
@@ -107,10 +107,10 @@
                                         <div class="flex items-center gap-3">
                                             <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-600" viewBox="0 0 20 20" fill="currentColor">
-                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+                                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
                                                 </svg>
                                             </div>
-                                            <p class="text-sm font-bold uppercase tracking-widest text-amber-700">Cancellation Window</p>
+                                            <p class="text-sm font-bold uppercase tracking-widest text-amber-700">Booking Policy Reminder</p>
                                         </div>
                                         <button wire:click="dismissCancellationReminder" type="button" class="rounded-full bg-slate-100 p-2 text-slate-500 transition hover:bg-slate-200">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -120,22 +120,45 @@
                                     </div>
 
                                     <h2 class="mt-4 text-xl font-bold text-slate-900">Your booking has been submitted.</h2>
-                                    <p class="mt-2 text-sm text-slate-600 leading-relaxed">
-                                        Cancellation is free within 5 minutes after providing proof of payment.
+                                    <p class="mt-1.5 text-xs text-slate-500">
+                                        Please take note of our cancellation, refund, and rebooking guidelines:
                                     </p>
 
+                                    <div class="mt-4 space-y-2.5">
+                                        <div class="flex items-start gap-3 rounded-2xl bg-amber-50/70 p-3 border border-amber-200/70 text-xs text-amber-900">
+                                            <span class="text-base leading-none">⏱</span>
+                                            <div>
+                                                <strong class="font-semibold text-amber-950">Free Cancellation (5 Minutes):</strong>
+                                                <p class="mt-0.5 text-amber-800">You are eligible for a 100% full refund if cancelled within <strong>5 minutes</strong> of booking submission.</p>
+                                            </div>
+                                        </div>
+
+                                        <div class="flex items-start gap-3 rounded-2xl bg-blue-50/70 p-3 border border-blue-200/70 text-xs text-blue-900">
+                                            <span class="text-base leading-none">⏳</span>
+                                            <div>
+                                                <strong class="font-semibold text-blue-950">Refund & Rebooking Cutoff:</strong>
+                                                <p class="mt-0.5 text-blue-800">Refund and rebooking requests are strictly accepted up to <strong>24 hours before departure</strong>.</p>
+                                            </div>
+                                        </div>
+
+                                        <div class="flex items-start gap-3 rounded-2xl bg-slate-50 p-3 border border-slate-200 text-xs text-slate-700">
+                                            <span class="text-base leading-none">💳</span>
+                                            <div>
+                                                <strong class="font-semibold text-slate-900">Disbursement Timeframe:</strong>
+                                                <p class="mt-0.5 text-slate-600">Approved refunds are processed and disbursed within <strong>24–48 hours</strong>.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     @if($booking->transaction && $booking->transaction->payment_status === 'unpaid')
-                                    <div class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-                                        Please complete payment to issue your tickets.
+                                    <div class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 font-medium">
+                                        Please complete payment to issue your official tickets.
                                     </div>
                                     @endif
 
-                                    <div class="mt-6 flex flex-wrap gap-3 justify-end">
-                                        <button wire:click="dismissCancellationReminder" type="button" class="rounded-3xl border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
-                                            Keep my booking
-                                        </button>
-                                        <button wire:click="requestCancellation" type="button" class="rounded-3xl bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700">
-                                            Cancel my booking
+                                    <div class="mt-6 flex justify-end">
+                                        <button wire:click="dismissCancellationReminder" type="button" class="w-full sm:w-auto rounded-3xl bg-slate-900 px-8 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 shadow-sm">
+                                            OK
                                         </button>
                                     </div>
                                 </div>

@@ -558,8 +558,8 @@ class Booking extends Model
             return false;
         }
 
-        // 1. Allowed for everyone if strictly before the 3-hour mark prior to departure
-        if (now()->isBefore($departureDateTime->copy()->subHours(3))) {
+        // 1. Allowed for everyone if strictly before the 24-hour mark prior to departure
+        if (now()->isBefore($departureDateTime->copy()->subHours(24))) {
             return true;
         }
 
@@ -603,8 +603,17 @@ class Booking extends Model
             return false;
         }
 
-        // Time window for refunds is identical to the cancellation window
-        return $this->canCancel();
+        if (! $this->transaction || ! in_array($this->transaction->payment_status, ['paid', 'pending', 'unpaid'])) {
+            return false;
+        }
+
+        $departureDateTime = $this->getDepartureDateTime();
+        if (! $departureDateTime) {
+            return false;
+        }
+
+        // Refund is strictly allowed at least 24 hours prior to departure
+        return now()->isBefore($departureDateTime->copy()->subHours(24));
     }
 
     public function hasBeenRebooked(): bool

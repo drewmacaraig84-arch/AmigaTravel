@@ -314,7 +314,7 @@ class BookingLookup extends Component
             $this->cancellationExpired = true;
             $this->cancelCountdown = 0;
             if (! $this->booking->isRefundEligible()) {
-                $this->feedback = 'You cannot request a refund as it is less than 3 hours before the departure time.';
+                $this->feedback = 'You cannot request a refund as it is less than 24 hours before the departure time.';
                 $this->cancellationRequested = false;
                 $this->cancellationWindowActive = false;
                 return;
@@ -412,7 +412,7 @@ class BookingLookup extends Component
         $isWithinFiveMinutes = $this->booking->created_at->addMinutes(5)->isFuture();
 
         if (! $isWithinFiveMinutes && ! $this->booking->isRefundEligible()) {
-            $this->feedback = 'You cannot request a refund as it is less than 3 hours before the departure time.';
+            $this->feedback = 'You cannot request a refund as it is less than 24 hours before the departure time.';
             return;
         }
 
@@ -581,7 +581,7 @@ class BookingLookup extends Component
         }
 
         if (! $this->booking->canRebook()) {
-            $this->feedback = 'You cannot rebook this booking as the departure date has passed.';
+            $this->feedback = 'You cannot rebook this booking as it is less than 24 hours before the departure time or the departure date has passed.';
             return;
         }
 

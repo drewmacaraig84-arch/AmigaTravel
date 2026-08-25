@@ -556,7 +556,7 @@ class BookingController extends Controller
             if (! $isWithinFiveMinutes && ! $booking->isRefundEligible()) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'You cannot request a refund as it is less than 3 hours before the departure time.',
+                    'message' => 'You cannot request a refund as it is less than 24 hours before the departure time.',
                 ], 400);
             }
 
@@ -583,7 +583,7 @@ class BookingController extends Controller
         if (! $isWithinFiveMinutes && ! $booking->isRefundEligible()) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'You cannot request a refund as it is less than 3 hours before the departure time.',
+                'message' => 'You cannot request a refund as it is less than 24 hours before the departure time.',
             ], 400);
         }
 
