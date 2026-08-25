@@ -25,6 +25,10 @@ Route::get('/queue-status', function () {
     }
 });
 
+Route::withoutMiddleware([])->get('/up', function () {
+    return response('OK', 200)->header('Content-Type', 'text/plain');
+});
+
 // ─── Diagnostic Health Check (no middleware, no session) ──────────────────────
 // Remove this route once production is stable.
 Route::withoutMiddleware([])->get('/health-check', function () {
