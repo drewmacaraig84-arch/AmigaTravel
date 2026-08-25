@@ -341,7 +341,6 @@
                                 }
 
                                 $statusStr = ucfirst(str_replace('_', ' ', $booking->status));
-                                if (in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount > 0) {
                                 $bTcPrice = (float) ($booking->transportClasses ? $booking->transportClasses->sum(fn($tc) => (float)($tc->pivot->price ?? 0)) : 0);
                                 $bSchedAcc = (float) ($booking->schedule_accommodation_price ?? 0) + (float) ($booking->return_schedule_accommodation_price ?? 0);
                                 $bAccFee = $bTcPrice + $bSchedAcc;
