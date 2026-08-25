@@ -69,8 +69,15 @@ class BookingExportController extends Controller
         });
 
         $refundedBookings = $bookings->filter(function ($booking) {
-            return (in_array($booking->status, [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED]) && (float) $booking->refund_amount > 0)
-                || $booking->passengers->contains(fn ($p) => $p->isRefundItem());
+            $isPendingRefund = $booking->status === 'refund_pending' || $booking->refund_status === 'pending';
+            return (! $isPendingRefund && in_array($booking->status, [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED, 'refunded']) && (float) $booking->refund_amount > 0)
+                || $booking->passengers->contains(fn ($p) => ($p->status === 'refunded' || $p->refund_status === 'completed' || (in_array($p->status, ['cancelled', 'operator_cancelled']) && (float) $p->refund_amount > 0 && $p->refund_status !== 'pending')) && ! $p->isRefundPending());
+        });
+
+        $pendingRefundBookings = $bookings->filter(function ($booking) {
+            $isPendingRefund = $booking->status === 'refund_pending' || $booking->refund_status === 'pending';
+            return ($isPendingRefund && (float) $booking->refund_amount > 0)
+                || $booking->passengers->contains(fn ($p) => $p->status === 'refund_pending' || $p->refund_status === 'pending' || $p->isRefundPending());
         });
 
         $pendingBookings = $bookings->filter(function ($booking) {
@@ -87,11 +94,12 @@ class BookingExportController extends Controller
         });
 
         return [
-            'Verified Bookings'  => $verifiedBookings,
-            'Rebooked Bookings'  => $rebookedBookings,
-            'Refunded Bookings'  => $refundedBookings,
-            'Pending Bookings'   => $pendingBookings,
-            'Cancelled Bookings' => $cancelledBookings,
+            'Verified Bookings'       => $verifiedBookings,
+            'Rebooked Bookings'       => $rebookedBookings,
+            'Refunded Bookings'       => $refundedBookings,
+            'Pending Refund Bookings' => $pendingRefundBookings,
+            'Pending Bookings'        => $pendingBookings,
+            'Cancelled Bookings'      => $cancelledBookings,
         ];
     }
 

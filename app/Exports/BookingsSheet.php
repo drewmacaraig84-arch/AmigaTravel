@@ -61,15 +61,20 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
 
             if ($passengers->isEmpty()) {
                 $matches = false;
+                $isPendingRefund = $booking->status === 'refund_pending' || $booking->refund_status === 'pending';
+                $isPendingRebook = $booking->rebooking_status === 'pending' || $booking->status === 'pending_rebooking';
+
                 if ($this->title === 'Verified Bookings' && $booking->status === 'confirmed' && ! $booking->is_rebooked) {
                     $matches = true;
-                } elseif ($this->title === 'Refunded Bookings' && in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount > 0) {
+                } elseif ($this->title === 'Refunded Bookings' && in_array($booking->status, ['cancelled', 'operator_cancelled', 'refunded']) && $booking->refund_amount > 0 && ! $isPendingRefund) {
                     $matches = true;
-                } elseif ($this->title === 'Rebooked Bookings' && (($booking->is_rebooked || in_array($booking->rebooking_status, ['verified', 'approved', 'completed'], true) || in_array($booking->status, ['rebooked', 'operator_rebooking'])) && $booking->rebooking_status !== 'pending' && $booking->status !== 'pending_rebooking')) {
+                } elseif ($this->title === 'Pending Refund Bookings' && $isPendingRefund && $booking->refund_amount > 0) {
                     $matches = true;
-                } elseif ($this->title === 'Pending Bookings' && ($booking->status === 'pending' || $booking->status === 'pending_rebooking' || $booking->rebooking_status === 'pending')) {
+                } elseif ($this->title === 'Rebooked Bookings' && (($booking->is_rebooked || in_array($booking->rebooking_status, ['verified', 'approved', 'completed'], true) || in_array($booking->status, ['rebooked', 'operator_rebooking'])) && ! $isPendingRebook)) {
                     $matches = true;
-                } elseif ($this->title === 'Cancelled Bookings' && in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount <= 0) {
+                } elseif ($this->title === 'Pending Bookings' && ($booking->status === 'pending' || $isPendingRebook)) {
+                    $matches = true;
+                } elseif ($this->title === 'Cancelled Bookings' && in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount <= 0 && ! $isPendingRefund) {
                     $matches = true;
                 }
 
@@ -123,13 +128,15 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
                     if ($this->title === 'Verified Bookings') {
                         $matches = $p->isActiveBookingItem() && ! $p->isRebookingHistoryItem() && in_array($p->status, ['confirmed']);
                     } elseif ($this->title === 'Refunded Bookings') {
-                        $matches = $p->isRefundItem();
+                        $matches = ($p->status === 'refunded' || $p->refund_status === 'completed' || (in_array($p->status, ['cancelled', 'operator_cancelled']) && (float) $p->refund_amount > 0 && $p->refund_status !== 'pending')) && ! $p->isRefundPending();
+                    } elseif ($this->title === 'Pending Refund Bookings') {
+                        $matches = $p->status === 'refund_pending' || $p->refund_status === 'pending' || $p->isRefundPending();
                     } elseif ($this->title === 'Rebooked Bookings') {
                         $matches = $p->isRebooked() && ! $p->isRebookingPending();
                     } elseif ($this->title === 'Pending Bookings') {
                         $matches = ($p->status === 'pending' && ! $p->isRebooked() && ! $p->isRefundItem()) || $p->isRebookingPending();
                     } elseif ($this->title === 'Cancelled Bookings') {
-                        $matches = $p->isCancelled() && (float) $p->refund_amount <= 0;
+                        $matches = $p->isCancelled() && (float) $p->refund_amount <= 0 && ! $p->isRefundPending() && $p->refund_status !== 'pending';
                     }
 
                     if (! $matches) {

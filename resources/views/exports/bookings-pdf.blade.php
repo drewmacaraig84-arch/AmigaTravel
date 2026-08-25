@@ -134,15 +134,20 @@
 
                 if ($rawPassengers->isEmpty()) {
                     $matches = false;
+                    $isPendingRefund = $booking->status === 'refund_pending' || $booking->refund_status === 'pending';
+                    $isPendingRebook = $booking->rebooking_status === 'pending' || $booking->status === 'pending_rebooking';
+
                     if ($title === 'Verified Bookings' && $booking->status === 'confirmed' && ! $booking->is_rebooked) {
                         $matches = true;
-                    } elseif ($title === 'Refunded Bookings' && in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount > 0) {
+                    } elseif ($title === 'Refunded Bookings' && in_array($booking->status, ['cancelled', 'operator_cancelled', 'refunded']) && $booking->refund_amount > 0 && ! $isPendingRefund) {
                         $matches = true;
-                    } elseif ($title === 'Rebooked Bookings' && (($booking->is_rebooked || in_array($booking->rebooking_status, ['verified', 'approved', 'completed'], true) || in_array($booking->status, ['rebooked', 'operator_rebooking'])) && $booking->rebooking_status !== 'pending' && $booking->status !== 'pending_rebooking')) {
+                    } elseif ($title === 'Pending Refund Bookings' && $isPendingRefund && $booking->refund_amount > 0) {
                         $matches = true;
-                    } elseif ($title === 'Pending Bookings' && ($booking->status === 'pending' || $booking->status === 'pending_rebooking' || $booking->rebooking_status === 'pending')) {
+                    } elseif ($title === 'Rebooked Bookings' && (($booking->is_rebooked || in_array($booking->rebooking_status, ['verified', 'approved', 'completed'], true) || in_array($booking->status, ['rebooked', 'operator_rebooking'])) && ! $isPendingRebook)) {
                         $matches = true;
-                    } elseif ($title === 'Cancelled Bookings' && in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount <= 0) {
+                    } elseif ($title === 'Pending Bookings' && ($booking->status === 'pending' || $isPendingRebook)) {
+                        $matches = true;
+                    } elseif ($title === 'Cancelled Bookings' && in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount <= 0 && ! $isPendingRefund) {
                         $matches = true;
                     }
 
@@ -159,13 +164,15 @@
                         if ($title === 'Verified Bookings') {
                             $matches = $p->isActiveBookingItem() && ! $p->isRebookingHistoryItem() && in_array($p->status, ['confirmed']);
                         } elseif ($title === 'Refunded Bookings') {
-                            $matches = $p->isRefundItem();
+                            $matches = ($p->status === 'refunded' || $p->refund_status === 'completed' || (in_array($p->status, ['cancelled', 'operator_cancelled']) && (float) $p->refund_amount > 0 && $p->refund_status !== 'pending')) && ! $p->isRefundPending();
+                        } elseif ($title === 'Pending Refund Bookings') {
+                            $matches = $p->status === 'refund_pending' || $p->refund_status === 'pending' || $p->isRefundPending();
                         } elseif ($title === 'Rebooked Bookings') {
                             $matches = $p->isRebooked() && ! $p->isRebookingPending();
                         } elseif ($title === 'Pending Bookings') {
                             $matches = ($p->status === 'pending' && ! $p->isRebooked() && ! $p->isRefundItem()) || $p->isRebookingPending();
                         } elseif ($title === 'Cancelled Bookings') {
-                            $matches = $p->isCancelled() && (float) $p->refund_amount <= 0;
+                            $matches = $p->isCancelled() && (float) $p->refund_amount <= 0 && ! $p->isRefundPending() && $p->refund_status !== 'pending';
                         }
 
                         if ($matches) {
