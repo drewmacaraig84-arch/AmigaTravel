@@ -1367,7 +1367,7 @@
                                             @if($seniorEligible)
                                                 <div class="mt-2 rounded-xl bg-emerald-50 border border-emerald-200 p-2.5 text-xs text-emerald-800 flex items-center gap-2">
                                                     <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                                    <span><strong>Eligible for Senior Citizen Discount (20% Off):</strong> Passenger is 60+ years old. Please select Senior Citizen and provide OSCA / Senior ID.</span>
+                                                    <span><strong>Eligible for Senior Citizen Discount (20% Off):</strong> Passengers aged 60 years and above are entitled to a 20% Senior Citizen Discount, based on the applicable regular fare.</span>
                                                 </div>
                                             @elseif($paxAgeYrs !== null && $isAdultPax && !$seniorEligible)
                                                 <p class="mt-1.5 text-xs text-amber-600 flex items-center gap-1">

@@ -512,9 +512,12 @@ class Booking extends Model
     {
         return $this->transportClasses()
             ->where(function ($q) {
-                $q->wherePivot('is_promo', true)
-                  ->orWherePivot('rate_type', 'promotional')
-                  ->orWherePivot('rate_type', 'super_promotional');
+                $q->where('booking_transport_class.is_promo', true)
+                  ->orWhereIn('booking_transport_class.rate_type', ['promotional', 'super_promotional']);
+            })->exists()
+            || $this->passengers()->where(function ($q) {
+                $q->where('is_promo', true)
+                  ->orWhereIn('rate_type', ['promotional', 'super_promotional']);
             })->exists();
     }
 

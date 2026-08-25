@@ -10517,7 +10517,7 @@ class _DiscountScreenState extends State<DiscountScreen> {
                                             SizedBox(width: 8),
                                             Expanded(
                                               child: Text(
-                                                'Passenger is 60+ years old and eligible for Senior Citizen Discount (20% Off). Please select Senior Citizen and provide OSCA / Senior ID.',
+                                                'Passengers aged 60 years and above are entitled to a 20% Senior Citizen Discount, based on the applicable regular fare.',
                                                 style: TextStyle(
                                                     fontSize: 11,
                                                     color: Color(0xFF15803D),
@@ -14639,7 +14639,7 @@ class ServicesScreen extends StatelessWidget {
       'tag': 'Available Online',
     },
     {
-      'title': 'Starlite & Supercat',
+      'title': 'Starlite Ferries Booking',
       'desc':
           'Affordable regional transits between Batangas, Calapan, and Roxas. We manage standard ferry bookings, roll-on/roll-off (RoRo) cargo slots, and fastcraft ticketing.',
       'icon': Icons.sailing,
@@ -14647,7 +14647,7 @@ class ServicesScreen extends StatelessWidget {
       'tag': 'Available Online',
     },
     {
-      'title': '2GO Onboarding Training',
+      'title': '2GO Onboard Training',
       'desc':
           'Comprehensive onboarding and orientation programs for individuals joining 2GO operations.',
       'icon': Icons.directions_boat,
@@ -14655,7 +14655,7 @@ class ServicesScreen extends StatelessWidget {
       'tag': 'For New Hires & Trainees',
     },
     {
-      'title': 'Educ Tour',
+      'title': 'Educational Tour',
       'desc':
           'Educational tours for students and academic groups, featuring visits to travel facilities and cultural sites.',
       'icon': Icons.school,

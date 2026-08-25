@@ -79,7 +79,7 @@ class WebsiteSettingsSeeder extends Seeder
             'service_cards' => [
                 [
                     'icon' => 'M13 5l7 7-7 7M5 5l7 7-7 7',
-                    'title' => '2GO Onboarding Training',
+                    'title' => '2GO Onboard Training',
                     'description' => 'Comprehensive onboarding and orientation programs for individuals joining 2GO operations, covering safety, customer service, and onboard protocols.',
                     'note' => 'For New Hires & Trainees',
                     'link' => url('/contact-us'),
@@ -87,7 +87,7 @@ class WebsiteSettingsSeeder extends Seeder
                 ],
                 [
                     'icon' => 'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z',
-                    'title' => 'Educ Tour',
+                    'title' => 'Educational Tour',
                     'description' => 'Educational tours for students and academic groups, featuring visits to travel facilities, ports, and cultural sites for immersive learning experiences.',
                     'note' => 'For Schools & Groups',
                     'link' => url('/contact-us'),
