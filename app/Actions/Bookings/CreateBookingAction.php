@@ -122,7 +122,11 @@ class CreateBookingAction
             $returnScheduleAccommodation,
             $voucher,
             $voucherCalculation,
-            &$discountAmount
+            &$discountAmount,
+            $depStc,
+            $retStc,
+            $isSuperPromoBooking,
+            $isPromoBooking
         ) {
             // --- Pessimistic locking: prevent last-ticket race condition ---
             // Lock the accommodation or transport-class row for the duration of this
