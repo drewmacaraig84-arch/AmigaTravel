@@ -13,39 +13,38 @@ use ZipArchive;
 
 class ProofArchivalService
 {
-    /**
-     * Permanent storage directory for proof archives.
-     */
     public const ARCHIVE_DIR = 'proof_archives';
 
-    /**
-     * Create a pre-retention ZIP archive for proofs and receipts expiring soon (e.g. 1 day before retention limit).
-     */
     public function createPreRetentionArchive(?int $days = null): ?array
     {
-        $retentionDays = $days ?? PaymentSetting::current()->proof_retention_days;
+        return $this->createArchive($days);
+    }
 
-        if (! $retentionDays || $retentionDays <= 0) {
-            return null; // Retention is disabled
-        }
-
-        // Target items that are (retentionDays - 1) days old or older
-        $thresholdDate = now()->subDays(max(1, $retentionDays - 1));
-
-        $transactions = Transaction::query()
+    /**
+     * Create a ZIP archive with all payment proofs, rebooking proofs, refund proofs, and official receipts.
+     * If $days is provided, filters for items expiring at that retention threshold.
+     */
+    public function createArchive(?int $days = null): ?array
+    {
+        $transactionsQuery = Transaction::query()
             ->with(['booking.passengers', 'booking.schedule.ferryRoute'])
             ->where(function ($q) {
                 $q->whereNotNull('proof_of_payment')
                   ->orWhereNotNull('rebooking_proof_of_payment');
-            })
-            ->where('updated_at', '<=', $thresholdDate)
-            ->get();
+            });
 
-        $bookings = Booking::query()
+        $bookingsQuery = Booking::query()
             ->with(['transaction', 'passengers', 'schedule.ferryRoute'])
-            ->whereNotNull('refund_proof')
-            ->where('updated_at', '<=', $thresholdDate)
-            ->get();
+            ->whereNotNull('refund_proof');
+
+        if ($days !== null && $days > 0) {
+            $thresholdDate = now()->subDays(max(1, $days - 1));
+            $transactionsQuery->where('updated_at', '<=', $thresholdDate);
+            $bookingsQuery->where('updated_at', '<=', $thresholdDate);
+        }
+
+        $transactions = $transactionsQuery->get();
+        $bookings = $bookingsQuery->get();
 
         if ($transactions->isEmpty() && $bookings->isEmpty()) {
             return null;

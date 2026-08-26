@@ -528,24 +528,24 @@ class ManageProofs extends Page implements HasActions, HasForms
     public function createPreRetentionArchiveManual(): void
     {
         try {
-            $archive = app(\App\Services\ProofArchivalService::class)->createPreRetentionArchive();
+            $archive = app(\App\Services\ProofArchivalService::class)->createArchive();
 
             if ($archive) {
                 Notification::make()
-                    ->title('Pre-retention archive created!')
+                    ->title('Proofs & Receipts Backup Created!')
                     ->body("Archive {$archive['filename']} created with {$archive['files_count']} item(s) ({$archive['formatted_size']}).")
                     ->success()
                     ->send();
             } else {
                 Notification::make()
-                    ->title('No expiring proofs to archive')
-                    ->body('There are currently no proofs nearing retention expiration (1 day before limit).')
+                    ->title('No proofs to backup')
+                    ->body('There are currently no proofs or receipts in the system.')
                     ->info()
                     ->send();
             }
         } catch (\Throwable $e) {
             Notification::make()
-                ->title('Archive creation failed')
+                ->title('Backup creation failed')
                 ->body($e->getMessage())
                 ->danger()
                 ->send();
@@ -571,13 +571,13 @@ class ManageProofs extends Page implements HasActions, HasForms
     public function createBackupAction(): Action
     {
         return Action::make('createBackup')
-            ->label('⚡ Backup Expiring Proofs Now')
+            ->label('📦 Backup All Proofs')
             ->icon('heroicon-o-archive-box-arrow-down')
             ->color('success')
             ->requiresConfirmation()
-            ->modalHeading('Create Pre-Retention Backup')
-            ->modalDescription('Package all proofs and receipts reaching retention expiration (1 day before limit) into a backup ZIP archive?')
-            ->modalSubmitActionLabel('Create Archive')
+            ->modalHeading('Backup All Proofs & Receipts')
+            ->modalDescription('Package all payment proofs, rebooking proofs, refund proofs, and official receipts across the system into a backup ZIP archive?')
+            ->modalSubmitActionLabel('Create Backup ZIP')
             ->action(fn () => $this->createPreRetentionArchiveManual());
     }
 }
