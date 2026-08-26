@@ -84,6 +84,11 @@
                     </div>
                 </div>
 
+                <div class="mt-3 flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50/80 px-3.5 py-2.5 text-xs text-amber-900">
+                    <span>⚠️</span>
+                    <span><strong>Notice:</strong> Minors, children, and infants cannot rebook, cancel, or request a refund without an accompanying adult.</span>
+                </div>
+
                 <div class="mt-4 grid gap-3 sm:grid-cols-2">
                     @foreach($booking->passengers->sortBy('item_number') as $passenger)
                         @php

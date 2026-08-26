@@ -448,6 +448,11 @@ class BookingReschedule extends Component
                 ? $this->selectedPassengerItems
                 : $this->booking->passengers->whereNotIn('status', ['cancelled', 'operator_cancelled', 'refunded'])->pluck('item_number')->toArray();
 
+            if (! $this->booking->hasSelectedAdult($selectedItems)) {
+                $this->feedback = 'Minors, children, and infants cannot rebook without an accompanying adult.';
+                return;
+            }
+
             foreach ($this->booking->passengers as $p) {
                 if (in_array((int) $p->item_number, array_map('intval', $selectedItems), true)) {
                     $p->update([
@@ -565,6 +570,20 @@ class BookingReschedule extends Component
         $selectedItems = !empty($this->selectedPassengerItems)
             ? $this->selectedPassengerItems
             : $this->booking->passengers->whereNotIn('status', ['cancelled', 'operator_cancelled', 'refunded'])->pluck('item_number')->toArray();
+
+        $allPax = $this->booking->passengers->whereNotIn('status', ['cancelled', 'operator_cancelled', 'refunded']);
+        $isFullCancellation = count($selectedItems) >= $allPax->count();
+
+        if (! $isFullCancellation) {
+            if (! $this->booking->hasSelectedAdult($selectedItems)) {
+                $this->feedback = 'Minors, children, and infants cannot cancel or request a refund without an accompanying adult.';
+                return;
+            }
+            if (! $this->booking->remainingActivePassengersHaveAdult($selectedItems)) {
+                $this->feedback = 'Cannot cancel the adult passenger(s) because minor/child passengers cannot remain on a booking without an adult.';
+                return;
+            }
+        }
 
         $selectedPassengers = $this->booking->passengers->filter(fn ($p) => in_array((int) $p->item_number, array_map('intval', $selectedItems), true));
         $netRefund = $selectedPassengers->sum(fn ($p) => $p->getRefundableBase()) ?: ($this->booking->getTicketBase() * (count($selectedItems) / max(1, $this->booking->passengers()->count())));

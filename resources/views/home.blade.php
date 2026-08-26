@@ -730,7 +730,7 @@
                                 <div class="flex items-center justify-between py-2.5 border-b border-slate-100">
                                     <div>
                                         <p class="text-sm font-bold text-slate-900">Adults</p>
-                                        <p class="text-xs text-slate-500">Age 11 and above</p>
+                                        <p class="text-xs text-slate-500">Age 12 and above</p>
                                     </div>
                                     <div class="flex items-center gap-3">
                                         <button type="button" 
@@ -827,7 +827,7 @@
                                 <div class="flex items-center justify-between py-2.5 border-b border-slate-100">
                                     <div>
                                         <p class="text-sm font-bold text-slate-900">Adults</p>
-                                        <p class="text-xs text-slate-500">Age 11 and above</p>
+                                        <p class="text-xs text-slate-500">Age 12 and above</p>
                                     </div>
                                     <div class="flex items-center gap-3">
                                         <button type="button" 

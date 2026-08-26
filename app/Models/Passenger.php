@@ -119,6 +119,27 @@ class Passenger extends Model
 
     // ─── Accessors ────────────────────────────────────────────────────────────
 
+    public function isAdult(): bool
+    {
+        $type = strtolower($this->type ?? 'adult');
+        if ($type === 'driver') {
+            return true;
+        }
+        if ($type === 'adult') {
+            return true;
+        }
+        if ($this->birthdate) {
+            $dob = \Carbon\Carbon::parse($this->birthdate);
+            return $dob->diffInYears(now()) >= 12;
+        }
+        return false;
+    }
+
+    public function isNonAdult(): bool
+    {
+        return ! $this->isAdult();
+    }
+
     public function hasPassportInfo(): bool
     {
         return filled($this->passport_number);

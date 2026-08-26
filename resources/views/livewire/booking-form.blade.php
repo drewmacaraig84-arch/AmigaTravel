@@ -395,7 +395,7 @@
                                         <div class="flex items-center justify-between gap-4">
                                             <div>
                                                 <p class="text-slate-900 font-semibold">Adults</p>
-                                                <p class="mt-1 text-sm text-slate-500">Age 11 and above</p>
+                                                <p class="mt-1 text-sm text-slate-500">Age 12 and above</p>
                                             </div>
                                             <div class="flex items-center gap-2">
                                                 <button type="button" wire:click.prevent="decrementAdults" @if($adults <= 1) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14"/></svg></button>
@@ -457,7 +457,7 @@
                                         <div class="flex items-center justify-between gap-4">
                                             <div>
                                                 <p class="text-slate-900 font-semibold">Adults</p>
-                                                <p class="mt-1 text-sm text-slate-500">Age 11 and above</p>
+                                                <p class="mt-1 text-sm text-slate-500">Age 12 and above</p>
                                             </div>
                                             <div class="flex items-center gap-2">
                                                 <button type="button" wire:click.prevent="decrementAdults" @if($adults <= 1) disabled @endif class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-[#db2777] hover:text-[#db2777] disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14"/></svg></button>
@@ -1246,7 +1246,7 @@
                                                 default  => $today->copy()->subYears(120)->format('Y-m-d'),
                                             };
                                             $dobMax = match($passenger['type']) {
-                                                'adult'  => $today->copy()->subYears(11)->format('Y-m-d'),
+                                                'adult'  => $today->copy()->subYears(12)->format('Y-m-d'),
                                                 'minor'  => $today->copy()->subYears(7)->format('Y-m-d'),                 // up to 11
                                                 'child'  => $mode === 'airline'
                                                     ? $today->copy()->subYears(2)->format('Y-m-d')                        // up to 6
@@ -1256,7 +1256,7 @@
                                                 default  => $today->copy()->format('Y-m-d'),
                                             };
                                             $dobHint = match($passenger['type']) {
-                                                'adult'  => 'Age 11 and above',
+                                                'adult'  => 'Age 12 and above',
                                                 'minor'  => 'Age 7 to 11',
                                                 'child'  => $mode === 'airline' ? 'Age 2 to 6' : 'Age 2 to 11',
                                                 'infant' => 'Age 0 to 23 months',

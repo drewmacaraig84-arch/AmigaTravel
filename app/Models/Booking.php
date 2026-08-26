@@ -668,6 +668,39 @@ class Booking extends Model
         return now()->isBefore($departureDateTime->copy()->subHours(24));
     }
 
+    /**
+     * Check if the given passenger item numbers include at least one adult.
+     */
+    public function hasSelectedAdult(array $selectedItemNumbers = []): bool
+    {
+        $selected = array_map('intval', $selectedItemNumbers);
+        $passengers = $this->passengers;
+        if (empty($selected)) {
+            return $passengers->contains(fn ($p) => $p->isAdult());
+        }
+        return $passengers
+            ->filter(fn ($p) => in_array((int) $p->item_number, $selected, true))
+            ->contains(fn ($p) => $p->isAdult());
+    }
+
+    /**
+     * Check if remaining active passengers (after excluding the selected items) would still have at least one adult.
+     * If all passengers are selected, returns true because the whole booking is being processed.
+     */
+    public function remainingActivePassengersHaveAdult(array $selectedItemNumbers = []): bool
+    {
+        $selected = array_map('intval', $selectedItemNumbers);
+        $remaining = $this->passengers
+            ->filter(fn ($p) => ! in_array((int) $p->item_number, $selected, true))
+            ->filter(fn ($p) => ! in_array($p->status, ['cancelled', 'operator_cancelled', 'refund_pending', 'refunded'], true));
+
+        if ($remaining->isEmpty()) {
+            return true; // No passengers remaining on booking
+        }
+
+        return $remaining->contains(fn ($p) => $p->isAdult());
+    }
+
     public function hasBeenRebooked(): bool
     {
         if ($this->is_rebooked) {

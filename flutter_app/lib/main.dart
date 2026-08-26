@@ -10241,8 +10241,8 @@ class _DiscountScreenState extends State<DiscountScreen> {
                               switch (type) {
                                 case 'adult':
                                   firstDate = DateTime(now.year - 120, now.month, now.day);
-                                  lastDate  = DateTime(now.year - 11, now.month, now.day);
-                                  ageHint   = 'Age 11 and above';
+                                  lastDate  = DateTime(now.year - 12, now.month, now.day);
+                                  ageHint   = 'Age 12 and above';
                                   break;
                                 case 'minor':
                                   firstDate = DateTime(now.year - 11, now.month, now.day).subtract(const Duration(days: 364));
@@ -12810,9 +12810,33 @@ class _PassengerItemsCardState extends State<_PassengerItemsCard> {
           ],
         ),
         const SizedBox(height: 8),
-        if (widget.showSelection)
-          ...sorted.map((p) => renderItemCard(p))
-        else ...[
+        if (widget.showSelection) ...[
+          Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFFBEB),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFFDE68A)),
+            ),
+            child: const Row(
+              children: [
+                Text('⚠️', style: TextStyle(fontSize: 13)),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Notice: Minors, children, and infants cannot rebook, cancel, or request a refund without an accompanying adult.',
+                    style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF92400E)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ...sorted.map((p) => renderItemCard(p)),
+        ] else ...[
           if (activeItems.isEmpty)
             Card(
               color: Colors.grey.shade100,
@@ -17967,9 +17991,38 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
     return parts.join(' | ');
   }
 
+  bool _hasSelectedAdultInBooking(List<int> selectedItems) {
+    final pax = widget.booking['passengers'];
+    if (pax is! List || pax.isEmpty) return true;
+    for (final p in pax) {
+      if (p is Map) {
+        final itemNum = int.tryParse(p['item_number']?.toString() ?? '1') ?? 1;
+        if (selectedItems.contains(itemNum)) {
+          final type = (p['type']?.toString() ?? 'adult').toLowerCase();
+          if (type == 'adult' || type == 'driver') return true;
+          final bday = p['birthdate']?.toString();
+          if (bday != null && bday.isNotEmpty) {
+            try {
+              final dob = DateTime.parse(bday);
+              final now = DateTime.now();
+              int age = now.year - dob.year;
+              if (now.month < dob.month || (now.month == dob.month && now.day < dob.day)) age--;
+              if (age >= 12) return true;
+            } catch (_) {}
+          }
+        }
+      }
+    }
+    return false;
+  }
+
   Future<void> _submitRefund() async {
     if (_selectedPassengerItems.isEmpty) {
       setState(() => _feedback = 'Please select at least one passenger item to refund.');
+      return;
+    }
+    if (!_hasSelectedAdultInBooking(_selectedPassengerItems)) {
+      setState(() => _feedback = 'Minors, children, and infants cannot cancel or request a refund without an accompanying adult.');
       return;
     }
     if (_accountNumberCtrl.text.trim().isEmpty ||
@@ -18170,6 +18223,10 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
   Future<void> _submitReschedule() async {
     if (_selectedPassengerItems.isEmpty) {
       setState(() => _feedback = 'Please select at least one passenger item to reschedule.');
+      return;
+    }
+    if (!_hasSelectedAdultInBooking(_selectedPassengerItems)) {
+      setState(() => _feedback = 'Minors, children, and infants cannot rebook without an accompanying adult.');
       return;
     }
     if (_isResumeTba) {
@@ -19533,6 +19590,31 @@ class _RefundScreenState extends State<RefundScreen> {
     super.dispose();
   }
 
+  bool _hasSelectedAdultInBooking(List<int> selectedItems) {
+    final pax = widget.booking['passengers'];
+    if (pax is! List || pax.isEmpty) return true;
+    for (final p in pax) {
+      if (p is Map) {
+        final itemNum = int.tryParse(p['item_number']?.toString() ?? '1') ?? 1;
+        if (selectedItems.contains(itemNum)) {
+          final type = (p['type']?.toString() ?? 'adult').toLowerCase();
+          if (type == 'adult' || type == 'driver') return true;
+          final bday = p['birthdate']?.toString();
+          if (bday != null && bday.isNotEmpty) {
+            try {
+              final dob = DateTime.parse(bday);
+              final now = DateTime.now();
+              int age = now.year - dob.year;
+              if (now.month < dob.month || (now.month == dob.month && now.day < dob.day)) age--;
+              if (age >= 12) return true;
+            } catch (_) {}
+          }
+        }
+      }
+    }
+    return false;
+  }
+
   Future<void> _startCancellation() async {
     if (_selectedPassengerItems.isEmpty) {
       setState(() {
@@ -19542,6 +19624,20 @@ class _RefundScreenState extends State<RefundScreen> {
         _webAdminFee = 0;
         _surchargeAmount = 0;
         _affectedItemsLabel = 'None selected';
+        _isLoading = false;
+      });
+      return;
+    }
+    final paxList = widget.booking['passengers'] is List ? (widget.booking['passengers'] as List) : [];
+    final eligibleCount = paxList.where((p) {
+      if (p is! Map) return true;
+      final s = (p['status']?.toString() ?? '').toLowerCase();
+      return s != 'refund_pending' && s != 'refunded' && s != 'rebooking_pending' && s != 'rebooked' && s != 'cancelled' && s != 'operator_cancelled';
+    }).length;
+    final isFullCancel = _selectedPassengerItems.length >= eligibleCount;
+    if (!isFullCancel && !_hasSelectedAdultInBooking(_selectedPassengerItems)) {
+      setState(() {
+        _error = 'Minors, children, and infants cannot cancel or request a refund without an accompanying adult.';
         _isLoading = false;
       });
       return;
@@ -19594,6 +19690,17 @@ class _RefundScreenState extends State<RefundScreen> {
     if (_selectedPassengerItems.isEmpty) {
       showTopSnack(context,
           const SnackBar(content: Text('Please select at least one passenger item to refund.')));
+      return;
+    }
+    final paxList = widget.booking['passengers'] is List ? (widget.booking['passengers'] as List) : [];
+    final eligibleCount = paxList.where((p) {
+      if (p is! Map) return true;
+      final s = (p['status']?.toString() ?? '').toLowerCase();
+      return s != 'refund_pending' && s != 'refunded' && s != 'rebooking_pending' && s != 'rebooked' && s != 'cancelled' && s != 'operator_cancelled';
+    }).length;
+    final isFullCancel = _selectedPassengerItems.length >= eligibleCount;
+    if (!isFullCancel && !_hasSelectedAdultInBooking(_selectedPassengerItems)) {
+      showTopSnack(context, const SnackBar(content: Text('Minors, children, and infants cannot cancel or request a refund without an accompanying adult.')));
       return;
     }
     if (_accountCtrl.text.trim().isEmpty || _nameCtrl.text.trim().isEmpty) {
@@ -20137,9 +20244,38 @@ class _RebookScreenState extends State<RebookScreen> {
     }
   }
 
+  bool _hasSelectedAdultInBooking(List<int> selectedItems) {
+    final pax = widget.booking['passengers'];
+    if (pax is! List || pax.isEmpty) return true;
+    for (final p in pax) {
+      if (p is Map) {
+        final itemNum = int.tryParse(p['item_number']?.toString() ?? '1') ?? 1;
+        if (selectedItems.contains(itemNum)) {
+          final type = (p['type']?.toString() ?? 'adult').toLowerCase();
+          if (type == 'adult' || type == 'driver') return true;
+          final bday = p['birthdate']?.toString();
+          if (bday != null && bday.isNotEmpty) {
+            try {
+              final dob = DateTime.parse(bday);
+              final now = DateTime.now();
+              int age = now.year - dob.year;
+              if (now.month < dob.month || (now.month == dob.month && now.day < dob.day)) age--;
+              if (age >= 12) return true;
+            } catch (_) {}
+          }
+        }
+      }
+    }
+    return false;
+  }
+
   Future<void> _calcBreakdown() async {
     if (_selectedPassengerItems.isEmpty) {
       setState(() => _error = 'Please select at least one passenger to rebook.');
+      return;
+    }
+    if (!_hasSelectedAdultInBooking(_selectedPassengerItems)) {
+      setState(() => _error = 'Minors, children, and infants cannot rebook without an accompanying adult.');
       return;
     }
     setState(() {
@@ -20186,6 +20322,10 @@ class _RebookScreenState extends State<RebookScreen> {
   Future<void> _submitRebook() async {
     if (_selectedPassengerItems.isEmpty) {
       setState(() => _error = 'Please select at least one passenger item.');
+      return;
+    }
+    if (!_hasSelectedAdultInBooking(_selectedPassengerItems)) {
+      setState(() => _error = 'Minors, children, and infants cannot rebook without an accompanying adult.');
       return;
     }
     final reference = _rebookingReferenceCtrl.text.trim();

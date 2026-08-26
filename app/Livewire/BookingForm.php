@@ -3339,8 +3339,8 @@ class BookingForm extends Component
                     $ageMths = $dob->diffInMonths(now());
 
                     $ageError = match (true) {
-                        $type === 'adult' && $ageYrs < 11
-                            => 'Adult passenger must be 11 years old or above.',
+                        $type === 'adult' && $ageYrs < 12
+                            => 'Adult passenger must be 12 years old or above.',
                         $type === 'minor' && ($ageYrs < 7 || $ageYrs > 11)
                             => 'Minor passenger must be 7 to 11 years old.',
                         $type === 'child' && $isAirline && ($ageYrs < 2 || $ageYrs > 6)

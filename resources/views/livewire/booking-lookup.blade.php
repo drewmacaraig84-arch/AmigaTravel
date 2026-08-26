@@ -212,6 +212,11 @@
                                                 To proceed with rebooking, please select your preferred new travel date and submit your proof of payment for the rebooking fee.
                                             </div>
                                         @endif
+
+                                        <div class="flex items-start gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 font-medium">
+                                            <span class="text-sm">⚠️</span>
+                                            <span><strong>Notice:</strong> Minors, children, and infants cannot rebook, cancel, or request a refund without an accompanying adult.</span>
+                                        </div>
                                     </div>
 
                                     <div class="mt-6 flex flex-wrap gap-3 justify-end">
