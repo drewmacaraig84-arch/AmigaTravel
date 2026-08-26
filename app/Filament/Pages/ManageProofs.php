@@ -138,7 +138,7 @@ class ManageProofs extends Page implements HasActions, HasForms
                     'amount' => (float) ($booking?->total_price ?? 0),
                     'updated_at' => $tx->updated_at ?? $tx->created_at,
                     'receipt_download_url' => $booking ? route('admin.receipts.download', ['booking' => $booking->id, 'type' => 'confirmed']) : null,
-                    'view_url' => $this->viewTransactionUrl($tx),
+                    'view_url' => $booking ? BookingResource::getUrl('view', ['record' => $booking]) : null,
                 ]);
             }
 
@@ -167,7 +167,7 @@ class ManageProofs extends Page implements HasActions, HasForms
                     'amount' => (float) ($booking?->total_price ?? 0),
                     'updated_at' => $booking?->verified_at ?? $tx->updated_at,
                     'receipt_download_url' => $booking ? route('admin.receipts.download', ['booking' => $booking->id, 'type' => 'rebooked']) : null,
-                    'view_url' => $booking ? BookingResource::getUrl('view', ['record' => $booking]) : $this->viewTransactionUrl($tx),
+                    'view_url' => $booking ? BookingResource::getUrl('view', ['record' => $booking]) : null,
                 ]);
             }
         }
@@ -401,9 +401,9 @@ class ManageProofs extends Page implements HasActions, HasForms
         return false;
     }
 
-    public function viewTransactionUrl(Transaction $transaction): string
+    public function viewBookingUrl(?Booking $booking): ?string
     {
-        return TransactionResource::getUrl('view', ['record' => $transaction]);
+        return $booking ? BookingResource::getUrl('view', ['record' => $booking]) : null;
     }
 
     public function downloadZip(bool $onlySelected = false): ?\Symfony\Component\HttpFoundation\BinaryFileResponse
@@ -519,6 +519,39 @@ class ManageProofs extends Page implements HasActions, HasForms
             ->disabled(fn (): bool => empty($this->selectedTransactions));
     }
 
+    #[Computed]
+    public function archives(): Collection
+    {
+        return app(\App\Services\ProofArchivalService::class)->listArchives();
+    }
+
+    public function createPreRetentionArchiveManual(): void
+    {
+        try {
+            $archive = app(\App\Services\ProofArchivalService::class)->createPreRetentionArchive();
+
+            if ($archive) {
+                Notification::make()
+                    ->title('Pre-retention archive created!')
+                    ->body("Archive {$archive['filename']} created with {$archive['files_count']} item(s) ({$archive['formatted_size']}).")
+                    ->success()
+                    ->send();
+            } else {
+                Notification::make()
+                    ->title('No expiring proofs to archive')
+                    ->body('There are currently no proofs nearing retention expiration (1 day before limit).')
+                    ->info()
+                    ->send();
+            }
+        } catch (\Throwable $e) {
+            Notification::make()
+                ->title('Archive creation failed')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+        }
+    }
+
     public function deleteProofAction(): Action
     {
         return Action::make('deleteProof')
@@ -533,5 +566,18 @@ class ManageProofs extends Page implements HasActions, HasForms
                 $this->deleteProof((string) $arguments['compositeId']);
             })
             ->extraAttributes(['class' => 'flex-1']);
+    }
+
+    public function createBackupAction(): Action
+    {
+        return Action::make('createBackup')
+            ->label('⚡ Backup Expiring Proofs Now')
+            ->icon('heroicon-o-archive-box-arrow-down')
+            ->color('success')
+            ->requiresConfirmation()
+            ->modalHeading('Create Pre-Retention Backup')
+            ->modalDescription('Package all proofs and receipts reaching retention expiration (1 day before limit) into a backup ZIP archive?')
+            ->modalSubmitActionLabel('Create Archive')
+            ->action(fn () => $this->createPreRetentionArchiveManual());
     }
 }

@@ -212,4 +212,57 @@ class ProofsAndReceiptsTest extends TestCase
         $responseRefunded->assertSuccessful();
         $this->assertEquals('application/pdf', $responseRefunded->headers->get('content-type'));
     }
+
+    public function test_pre_retention_archive_service_and_download()
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'is_admin' => true,
+            'admin_permissions' => ['proofs' => true, 'bookings' => true],
+        ]);
+
+        \Illuminate\Support\Facades\Storage::fake('public');
+        \Illuminate\Support\Facades\Storage::disk('public')->put('proofs/test_expiring.jpg', 'fake image content');
+
+        $booking = Booking::create([
+            'transaction_number' => 'AGT-20260826-8888',
+            'client_name' => 'Archive Traveler',
+            'client_email' => 'arch@example.com',
+            'origin' => 'Calapan',
+            'destination' => 'Batangas',
+            'departure_date' => now()->addDays(5),
+            'status' => 'confirmed',
+            'total_price' => 550,
+        ]);
+        $booking->timestamps = false;
+        $booking->updated_at = now()->subDays(35);
+        $booking->save();
+
+        $tx = Transaction::create([
+            'booking_id' => $booking->id,
+            'payment_status' => 'paid',
+            'payment_method' => 'gcash',
+            'proof_of_payment' => 'proofs/test_expiring.jpg',
+        ]);
+        $tx->timestamps = false;
+        $tx->updated_at = now()->subDays(35);
+        $tx->save();
+
+        $service = app(\App\Services\ProofArchivalService::class);
+        $result = $service->createPreRetentionArchive(30);
+
+        $this->assertNotNull($result);
+        $this->assertFileExists($result['path']);
+        $this->assertGreaterThan(0, $result['files_count']);
+
+        // Test downloading the created archive
+        $response = $this->actingAs($admin)->get(route('admin.proofs.download-archive', ['filename' => $result['filename']]));
+        $response->assertSuccessful();
+        $this->assertEquals('application/zip', $response->headers->get('content-type'));
+
+        // Clean up test file
+        if (file_exists($result['path'])) {
+            @unlink($result['path']);
+        }
+    }
 }

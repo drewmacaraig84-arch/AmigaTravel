@@ -627,3 +627,8 @@ Route::get('/sitemap.xml', function () {
 Route::middleware(['web', 'auth'])->get('/admin/receipts/download/{booking}/{type?}', [\App\Http\Controllers\ReceiptController::class, 'download'])
     ->name('admin.receipts.download');
 
+// Pre-Retention Proof Archive Download Route
+Route::middleware(['web', 'auth'])->get('/admin/proofs/download-archive/{filename}', [\App\Http\Controllers\ProofArchiveController::class, 'download'])
+    ->name('admin.proofs.download-archive');
+
+
