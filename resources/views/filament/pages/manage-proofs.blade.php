@@ -37,15 +37,21 @@
             </div>
         </div>
 
-        <!-- Pre-Retention Backups Archive List (if any exist) -->
-        @if($this->archives->isNotEmpty())
-            <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700/80 dark:bg-gray-900">
-                <h4 class="text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-                    <svg class="w-4 h-4 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <!-- Pre-Retention Backups Archive Section -->
+        <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700/80 dark:bg-gray-900">
+            <div class="flex items-center justify-between mb-2.5">
+                <h4 class="text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider flex items-center gap-1.5">
+                    <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
                     </svg>
-                    Saved Pre-Retention ZIP Archives ({{ $this->archives->count() }})
+                    Automatic Pre-Retention ZIP Archives ({{ $this->archives->count() }})
                 </h4>
+                <span class="text-[11px] text-gray-400 dark:text-gray-500">
+                    Target folder: <code class="font-mono text-primary-600 dark:text-primary-400">storage/app/proof_archives/</code>
+                </span>
+            </div>
+
+            @if($this->archives->isNotEmpty())
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-48 overflow-y-auto">
                     @foreach($this->archives as $archive)
                         <div class="flex items-center justify-between p-2.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs">
@@ -69,8 +75,15 @@
                         </div>
                     @endforeach
                 </div>
-            </div>
-        @endif
+            @else
+                <div class="rounded-lg border border-dashed border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/40 p-4 text-center">
+                    <p class="text-xs font-semibold text-gray-600 dark:text-gray-300">No automated backup archives generated yet</p>
+                    <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">
+                        Nightly backup ZIPs will automatically appear here 1 day before proofs reach the {{ $settingsData['proof_retention_days'] ?? 30 }}-day retention limit.
+                    </p>
+                </div>
+            @endif
+        </div>
 
         <!-- Filter Tabs & Controls Card -->
         <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700/80 dark:bg-gray-900 space-y-4">
