@@ -37,7 +37,7 @@ class ManageProofs extends Page implements HasActions, HasForms
     }
 
     protected static ?string $navigationIcon = 'heroicon-o-photo';
-    protected static ?string $navigationGroup = 'Settings';
+    protected static ?string $navigationGroup = 'Reports';
     protected static ?int $navigationSort = 30;
     protected static ?string $navigationLabel = 'Proof of Payment';
     protected static ?string $title = 'Proof of Payment';

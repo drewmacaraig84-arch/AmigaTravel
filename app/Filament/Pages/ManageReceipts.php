@@ -36,8 +36,8 @@ class ManageReceipts extends Page implements HasActions, HasForms
     }
 
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
-    protected static ?string $navigationGroup = 'Settings';
-    protected static ?int $navigationSort = 31;
+    protected static ?string $navigationGroup = 'Reports';
+    protected static ?int $navigationSort = 40;
     protected static ?string $navigationLabel = 'Receipts';
     protected static ?string $title = 'Receipts & Acknowledgements';
     protected static string $view = 'filament.pages.manage-receipts';
