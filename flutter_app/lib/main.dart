@@ -17860,6 +17860,107 @@ class _DiscountCouponCard extends StatelessWidget {
 }
 
 // ==========================================
+// ACCOMPANIMENT POLICY HELPERS
+// ==========================================
+bool isPassengerAdult(Map p) {
+  final type = (p['type']?.toString() ?? 'adult').toLowerCase();
+  if (type == 'adult' || type == 'driver' || type == 'senior' || type == 'pwd') return true;
+  if (type == 'student') {
+    final bday = p['birthdate']?.toString();
+    if (bday != null && bday.isNotEmpty) {
+      try {
+        final dob = DateTime.parse(bday);
+        final now = DateTime.now();
+        int age = now.year - dob.year;
+        if (now.month < dob.month || (now.month == dob.month && now.day < dob.day)) age--;
+        return age >= 12;
+      } catch (_) {}
+    }
+    return true;
+  }
+  final bday = p['birthdate']?.toString();
+  if (bday != null && bday.isNotEmpty) {
+    try {
+      final dob = DateTime.parse(bday);
+      final now = DateTime.now();
+      int age = now.year - dob.year;
+      if (now.month < dob.month || (now.month == dob.month && now.day < dob.day)) age--;
+      return age >= 12;
+    } catch (_) {}
+  }
+  return false;
+}
+
+bool hasSingleAdultWithNonAdults(Map<String, dynamic> booking) {
+  final pax = booking['passengers'];
+  if (pax is! List || pax.isEmpty) return false;
+  final activePax = pax.where((p) {
+    if (p is! Map) return false;
+    final s = (p['status']?.toString() ?? '').toLowerCase();
+    return s != 'cancelled' && s != 'operator_cancelled' && s != 'refund_pending' && s != 'refunded' && s != 'rebooked';
+  }).toList();
+  if (activePax.isEmpty) return false;
+  final adultCount = activePax.where((p) => isPassengerAdult(p as Map)).length;
+  final nonAdultCount = activePax.where((p) => !isPassengerAdult(p as Map)).length;
+  return adultCount == 1 && nonAdultCount > 0;
+}
+
+String? validatePartyAccompaniment(Map<String, dynamic> booking, List<int> selectedItems, {String action = 'modify'}) {
+  final pax = booking['passengers'];
+  if (pax is! List || pax.isEmpty) return null;
+
+  final activePax = <Map>[];
+  for (final p in pax) {
+    if (p is Map) {
+      final s = (p['status']?.toString() ?? '').toLowerCase();
+      if (s != 'cancelled' && s != 'operator_cancelled' && s != 'refund_pending' && s != 'refunded' && s != 'rebooked') {
+        activePax.add(p);
+      }
+    }
+  }
+
+  if (activePax.isEmpty) return null;
+
+  final totalAdults = activePax.where((p) => isPassengerAdult(p)).length;
+  final totalNonAdults = activePax.where((p) => !isPassengerAdult(p)).length;
+
+  final selectedPax = activePax.where((p) {
+    final itemNum = int.tryParse(p['item_number']?.toString() ?? '1') ?? 1;
+    return selectedItems.contains(itemNum);
+  }).toList();
+
+  final remainingPax = activePax.where((p) {
+    final itemNum = int.tryParse(p['item_number']?.toString() ?? '1') ?? 1;
+    return !selectedItems.contains(itemNum);
+  }).toList();
+
+  final selectedAdults = selectedPax.where((p) => isPassengerAdult(p)).length;
+  final selectedNonAdults = selectedPax.where((p) => !isPassengerAdult(p)).length;
+
+  final remainingAdults = remainingPax.where((p) => isPassengerAdult(p)).length;
+  final remainingNonAdults = remainingPax.where((p) => !isPassengerAdult(p)).length;
+
+  // 1. Single adult with non-adults: all-or-nothing
+  if (totalAdults == 1 && totalNonAdults > 0) {
+    if (selectedPax.length < activePax.length) {
+      return 'This booking has only one adult accompanying minor/child passenger(s). To $action, all passengers must be processed together, or no action can be taken.';
+    }
+  }
+
+  // 2. Selected group: Non-adults cannot act without an adult
+  if (selectedNonAdults > 0 && selectedAdults == 0) {
+    return 'Minors, children, and infants cannot $action without an accompanying adult.';
+  }
+
+  // 3. Remaining group: Remaining non-adults cannot be left without an adult
+  if (remainingNonAdults > 0 && remainingAdults == 0) {
+    return 'Cannot $action the selected adult passenger(s) because minor/child passengers cannot remain on a booking without an adult.';
+  }
+
+  return null;
+}
+
+// ==========================================
 // SERVICE CANCELLATION SCREEN (In-app reschedule/refund)
 // ==========================================
 class ServiceCancellationScreen extends StatefulWidget {
@@ -17991,38 +18092,14 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
     return parts.join(' | ');
   }
 
-  bool _hasSelectedAdultInBooking(List<int> selectedItems) {
-    final pax = widget.booking['passengers'];
-    if (pax is! List || pax.isEmpty) return true;
-    for (final p in pax) {
-      if (p is Map) {
-        final itemNum = int.tryParse(p['item_number']?.toString() ?? '1') ?? 1;
-        if (selectedItems.contains(itemNum)) {
-          final type = (p['type']?.toString() ?? 'adult').toLowerCase();
-          if (type == 'adult' || type == 'driver') return true;
-          final bday = p['birthdate']?.toString();
-          if (bday != null && bday.isNotEmpty) {
-            try {
-              final dob = DateTime.parse(bday);
-              final now = DateTime.now();
-              int age = now.year - dob.year;
-              if (now.month < dob.month || (now.month == dob.month && now.day < dob.day)) age--;
-              if (age >= 12) return true;
-            } catch (_) {}
-          }
-        }
-      }
-    }
-    return false;
-  }
-
   Future<void> _submitRefund() async {
     if (_selectedPassengerItems.isEmpty) {
       setState(() => _feedback = 'Please select at least one passenger item to refund.');
       return;
     }
-    if (!_hasSelectedAdultInBooking(_selectedPassengerItems)) {
-      setState(() => _feedback = 'Minors, children, and infants cannot cancel or request a refund without an accompanying adult.');
+    final policyErr = validatePartyAccompaniment(widget.booking, _selectedPassengerItems, action: 'request a refund for');
+    if (policyErr != null) {
+      setState(() => _feedback = policyErr);
       return;
     }
     if (_accountNumberCtrl.text.trim().isEmpty ||
@@ -18225,8 +18302,9 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
       setState(() => _feedback = 'Please select at least one passenger item to reschedule.');
       return;
     }
-    if (!_hasSelectedAdultInBooking(_selectedPassengerItems)) {
-      setState(() => _feedback = 'Minors, children, and infants cannot rebook without an accompanying adult.');
+    final policyErr = validatePartyAccompaniment(widget.booking, _selectedPassengerItems, action: 'reschedule');
+    if (policyErr != null) {
+      setState(() => _feedback = policyErr);
       return;
     }
     if (_isResumeTba) {
@@ -19590,31 +19668,6 @@ class _RefundScreenState extends State<RefundScreen> {
     super.dispose();
   }
 
-  bool _hasSelectedAdultInBooking(List<int> selectedItems) {
-    final pax = widget.booking['passengers'];
-    if (pax is! List || pax.isEmpty) return true;
-    for (final p in pax) {
-      if (p is Map) {
-        final itemNum = int.tryParse(p['item_number']?.toString() ?? '1') ?? 1;
-        if (selectedItems.contains(itemNum)) {
-          final type = (p['type']?.toString() ?? 'adult').toLowerCase();
-          if (type == 'adult' || type == 'driver') return true;
-          final bday = p['birthdate']?.toString();
-          if (bday != null && bday.isNotEmpty) {
-            try {
-              final dob = DateTime.parse(bday);
-              final now = DateTime.now();
-              int age = now.year - dob.year;
-              if (now.month < dob.month || (now.month == dob.month && now.day < dob.day)) age--;
-              if (age >= 12) return true;
-            } catch (_) {}
-          }
-        }
-      }
-    }
-    return false;
-  }
-
   Future<void> _startCancellation() async {
     if (_selectedPassengerItems.isEmpty) {
       setState(() {
@@ -19628,16 +19681,10 @@ class _RefundScreenState extends State<RefundScreen> {
       });
       return;
     }
-    final paxList = widget.booking['passengers'] is List ? (widget.booking['passengers'] as List) : [];
-    final eligibleCount = paxList.where((p) {
-      if (p is! Map) return true;
-      final s = (p['status']?.toString() ?? '').toLowerCase();
-      return s != 'refund_pending' && s != 'refunded' && s != 'rebooking_pending' && s != 'rebooked' && s != 'cancelled' && s != 'operator_cancelled';
-    }).length;
-    final isFullCancel = _selectedPassengerItems.length >= eligibleCount;
-    if (!isFullCancel && !_hasSelectedAdultInBooking(_selectedPassengerItems)) {
+    final policyErr = validatePartyAccompaniment(widget.booking, _selectedPassengerItems, action: 'cancel');
+    if (policyErr != null) {
       setState(() {
-        _error = 'Minors, children, and infants cannot cancel or request a refund without an accompanying adult.';
+        _error = policyErr;
         _isLoading = false;
       });
       return;
@@ -19692,15 +19739,9 @@ class _RefundScreenState extends State<RefundScreen> {
           const SnackBar(content: Text('Please select at least one passenger item to refund.')));
       return;
     }
-    final paxList = widget.booking['passengers'] is List ? (widget.booking['passengers'] as List) : [];
-    final eligibleCount = paxList.where((p) {
-      if (p is! Map) return true;
-      final s = (p['status']?.toString() ?? '').toLowerCase();
-      return s != 'refund_pending' && s != 'refunded' && s != 'rebooking_pending' && s != 'rebooked' && s != 'cancelled' && s != 'operator_cancelled';
-    }).length;
-    final isFullCancel = _selectedPassengerItems.length >= eligibleCount;
-    if (!isFullCancel && !_hasSelectedAdultInBooking(_selectedPassengerItems)) {
-      showTopSnack(context, const SnackBar(content: Text('Minors, children, and infants cannot cancel or request a refund without an accompanying adult.')));
+    final policyErr = validatePartyAccompaniment(widget.booking, _selectedPassengerItems, action: 'cancel');
+    if (policyErr != null) {
+      showTopSnack(context, SnackBar(content: Text(policyErr)));
       return;
     }
     if (_accountCtrl.text.trim().isEmpty || _nameCtrl.text.trim().isEmpty) {
@@ -19842,13 +19883,41 @@ class _RefundScreenState extends State<RefundScreen> {
                         padding: const EdgeInsets.all(16),
                         children: [
                           if (paxList.isNotEmpty) ...[
+                            if (hasSingleAdultWithNonAdults(widget.booking))
+                              Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFFBEB),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: const Color(0xFFFDE68A)),
+                                ),
+                                child: const Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('⚠️ ', style: TextStyle(fontSize: 14)),
+                                    Expanded(
+                                      child: Text(
+                                        'Accompaniment Policy: This booking contains 1 adult accompanying minor/child passengers. Under travel safety regulations, non-adults cannot travel or be modified unaccompanied. All passengers must be processed together.',
+                                        style: TextStyle(fontSize: 12, color: Color(0xFF92400E), fontWeight: FontWeight.w500),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             _PassengerItemsCard(
                               passengers: paxList,
                               showSelection: true,
                               selectedItemNumbers: _selectedPassengerItems,
                               onSelectionChanged: (selectedItems) {
-                                setState(() => _selectedPassengerItems = selectedItems);
-                                _startCancellation();
+                                if (hasSingleAdultWithNonAdults(widget.booking)) {
+                                  final allItems = paxList.map<int>((p) => int.tryParse(p['item_number']?.toString() ?? '1') ?? 1).toList();
+                                  setState(() => _selectedPassengerItems = allItems);
+                                  showTopSnack(context, const SnackBar(content: Text('This booking has only 1 adult accompanying non-adults. All passengers must be cancelled together.')));
+                                } else {
+                                  setState(() => _selectedPassengerItems = selectedItems);
+                                  _startCancellation();
+                                }
                               },
                             ),
                             const SizedBox(height: 12),
@@ -20244,38 +20313,14 @@ class _RebookScreenState extends State<RebookScreen> {
     }
   }
 
-  bool _hasSelectedAdultInBooking(List<int> selectedItems) {
-    final pax = widget.booking['passengers'];
-    if (pax is! List || pax.isEmpty) return true;
-    for (final p in pax) {
-      if (p is Map) {
-        final itemNum = int.tryParse(p['item_number']?.toString() ?? '1') ?? 1;
-        if (selectedItems.contains(itemNum)) {
-          final type = (p['type']?.toString() ?? 'adult').toLowerCase();
-          if (type == 'adult' || type == 'driver') return true;
-          final bday = p['birthdate']?.toString();
-          if (bday != null && bday.isNotEmpty) {
-            try {
-              final dob = DateTime.parse(bday);
-              final now = DateTime.now();
-              int age = now.year - dob.year;
-              if (now.month < dob.month || (now.month == dob.month && now.day < dob.day)) age--;
-              if (age >= 12) return true;
-            } catch (_) {}
-          }
-        }
-      }
-    }
-    return false;
-  }
-
   Future<void> _calcBreakdown() async {
     if (_selectedPassengerItems.isEmpty) {
       setState(() => _error = 'Please select at least one passenger to rebook.');
       return;
     }
-    if (!_hasSelectedAdultInBooking(_selectedPassengerItems)) {
-      setState(() => _error = 'Minors, children, and infants cannot rebook without an accompanying adult.');
+    final policyErr = validatePartyAccompaniment(widget.booking, _selectedPassengerItems, action: 'rebook');
+    if (policyErr != null) {
+      setState(() => _error = policyErr);
       return;
     }
     setState(() {
@@ -20324,8 +20369,9 @@ class _RebookScreenState extends State<RebookScreen> {
       setState(() => _error = 'Please select at least one passenger item.');
       return;
     }
-    if (!_hasSelectedAdultInBooking(_selectedPassengerItems)) {
-      setState(() => _error = 'Minors, children, and infants cannot rebook without an accompanying adult.');
+    final policyErr = validatePartyAccompaniment(widget.booking, _selectedPassengerItems, action: 'rebook');
+    if (policyErr != null) {
+      setState(() => _error = policyErr);
       return;
     }
     final reference = _rebookingReferenceCtrl.text.trim();
@@ -20397,11 +20443,41 @@ class _RebookScreenState extends State<RebookScreen> {
       padding: const EdgeInsets.all(16),
       children: [
         if (paxList.isNotEmpty) ...[
+          if (hasSingleAdultWithNonAdults(widget.booking))
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFBEB),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFFDE68A)),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('⚠️ ', style: TextStyle(fontSize: 14)),
+                  Expanded(
+                    child: Text(
+                      'Accompaniment Policy: This booking contains 1 adult accompanying minor/child passengers. Under travel safety regulations, non-adults cannot travel or be modified unaccompanied. All passengers must be rebooked together.',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF92400E), fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           _PassengerItemsCard(
             passengers: paxList,
             showSelection: true,
             selectedItemNumbers: _selectedPassengerItems,
-            onSelectionChanged: (items) => setState(() => _selectedPassengerItems = items),
+            onSelectionChanged: (items) {
+              if (hasSingleAdultWithNonAdults(widget.booking)) {
+                final allItems = paxList.map<int>((p) => int.tryParse(p['item_number']?.toString() ?? '1') ?? 1).toList();
+                setState(() => _selectedPassengerItems = allItems);
+                showTopSnack(context, const SnackBar(content: Text('This booking has only 1 adult accompanying non-adults. All passengers must be rebooked together.')));
+              } else {
+                setState(() => _selectedPassengerItems = items);
+              }
+            },
           ),
           const SizedBox(height: 12),
         ],

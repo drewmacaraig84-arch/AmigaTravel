@@ -665,6 +665,97 @@ class Booking extends Model
     }
 
     /**
+     * Check if this booking's active passengers have exactly one adult accompanied by non-adults.
+     */
+    public function hasSingleAdultWithNonAdults(): bool
+    {
+        $activePax = $this->getActivePassengers();
+        if ($activePax->isEmpty()) {
+            $activePax = $this->passengers->filter(fn ($p) => ! in_array($p->status, ['cancelled', 'operator_cancelled', 'refunded'], true));
+        }
+
+        if ($activePax->isEmpty()) {
+            return false;
+        }
+
+        $adultCount = $activePax->filter(fn ($p) => $p->isAdult())->count();
+        $nonAdultCount = $activePax->filter(fn ($p) => $p->isNonAdult())->count();
+
+        return ($adultCount === 1 && $nonAdultCount > 0);
+    }
+
+    /**
+     * Validate party accompaniment policy for a requested passenger action (rebook, cancel, refund, reschedule).
+     *
+     * @param array $selectedItemNumbers
+     * @param string $actionType e.g. 'rebook', 'cancel', 'refund', 'reschedule'
+     * @return array ['valid' => bool, 'error' => ?string]
+     */
+    public function validatePassengerPartyPolicy(array $selectedItemNumbers = [], string $actionType = 'action'): array
+    {
+        $activePax = $this->getActivePassengers();
+        if ($activePax->isEmpty()) {
+            $activePax = $this->passengers->filter(fn ($p) => ! in_array($p->status, ['cancelled', 'operator_cancelled', 'refunded'], true));
+        }
+
+        if ($activePax->isEmpty()) {
+            return ['valid' => true, 'error' => null];
+        }
+
+        $selected = array_map('intval', $selectedItemNumbers);
+        if (empty($selected)) {
+            $selected = $activePax->pluck('item_number')->map(fn ($n) => (int) $n)->toArray();
+        }
+
+        $selectedPax = $activePax->filter(fn ($p) => in_array((int) $p->item_number, $selected, true));
+        $remainingPax = $activePax->filter(fn ($p) => ! in_array((int) $p->item_number, $selected, true));
+
+        $totalAdults = $activePax->filter(fn ($p) => $p->isAdult())->count();
+        $totalNonAdults = $activePax->filter(fn ($p) => $p->isNonAdult())->count();
+
+        $selectedAdults = $selectedPax->filter(fn ($p) => $p->isAdult())->count();
+        $selectedNonAdults = $selectedPax->filter(fn ($p) => $p->isNonAdult())->count();
+
+        $remainingAdults = $remainingPax->filter(fn ($p) => $p->isAdult())->count();
+        $remainingNonAdults = $remainingPax->filter(fn ($p) => $p->isNonAdult())->count();
+
+        $actionVerb = match ($actionType) {
+            'rebook', 'reschedule' => 'rebook',
+            'cancel'               => 'cancel',
+            'refund'               => 'request a refund for',
+            default                => 'modify',
+        };
+
+        // 1. If booking has only 1 adult and has non-adults, party must not be split
+        if ($totalAdults === 1 && $totalNonAdults > 0) {
+            if ($selectedPax->count() < $activePax->count()) {
+                return [
+                    'valid' => false,
+                    'error' => "This booking has only one adult accompanying minor/child passenger(s). Minors cannot travel or be modified unaccompanied. To {$actionVerb}, all passengers must be processed together, or no action can be taken.",
+                ];
+            }
+        }
+
+        // 2. Selected group: Non-adults cannot act without an accompanying adult in their selected group
+        if ($selectedNonAdults > 0 && $selectedAdults === 0) {
+            return [
+                'valid' => false,
+                'error' => "Minors, children, and infants cannot {$actionVerb} without an accompanying adult.",
+            ];
+        }
+
+        // 3. Remaining group: Remaining non-adults cannot be left on the booking without an accompanying adult
+        if ($remainingNonAdults > 0 && $remainingAdults === 0) {
+            return [
+                'valid' => false,
+                'error' => "Cannot {$actionVerb} the selected adult passenger(s) because minor/child passengers cannot remain on a booking without an adult.",
+            ];
+        }
+
+        return ['valid' => true, 'error' => null];
+    }
+
+    /**
      * Check if the given passenger item numbers include at least one adult.
      */
     public function hasSelectedAdult(array $selectedItemNumbers = []): bool

@@ -215,7 +215,7 @@
 
                                         <div class="flex items-start gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 font-medium">
                                             <span class="text-sm">⚠️</span>
-                                            <span><strong>Notice:</strong> Minors, children, and infants cannot rebook, cancel, or request a refund without an accompanying adult.</span>
+                                            <span><strong>Accompaniment Policy:</strong> Minors, children, and infants cannot rebook, cancel, or request a refund without an accompanying adult. If this booking has only one adult, all passengers must rebook, cancel, or refund together so minors are not left unaccompanied.</span>
                                         </div>
                                     </div>
 
@@ -450,6 +450,14 @@
                                         All passenger items on this booking have been refunded or rescheduled.
                                     </div>
                                 @else
+                                    @if($booking->hasSingleAdultWithNonAdults())
+                                        <div class="rounded-2xl border border-amber-200 bg-amber-50/90 p-3.5 text-xs text-amber-900 font-medium flex items-start gap-2.5 mb-3">
+                                            <span class="text-base">⚠️</span>
+                                            <div>
+                                                <strong class="font-bold">Accompaniment Policy:</strong> This booking contains 1 adult accompanying minor/child passenger(s). Under safety regulations, non-adults cannot travel or be modified unaccompanied. Any rebooking, cancellation, or refund must apply to all passengers together.
+                                            </div>
+                                        </div>
+                                    @endif
                                     <div class="space-y-3">
                                         @foreach($activePax->sortBy('item_number') as $passenger)
                                             @php

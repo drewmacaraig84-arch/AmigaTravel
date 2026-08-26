@@ -223,11 +223,32 @@ class BookingLookup extends Component
             return;
         }
 
+        if ($this->booking->hasSingleAdultWithNonAdults()) {
+            $this->selectAllPassengers();
+            $this->feedback = 'This booking has only one adult accompanying minor/child passengers. All passengers must be rebooked, cancelled, or refunded together.';
+            return;
+        }
+
         if (in_array($itemNumber, $this->selectedPassengerItems, true)) {
             $this->selectedPassengerItems = array_values(array_diff($this->selectedPassengerItems, [$itemNumber]));
         } else {
             $this->selectedPassengerItems[] = $itemNumber;
             sort($this->selectedPassengerItems);
+        }
+    }
+
+    public function updatedSelectedPassengerItems(): void
+    {
+        if (! $this->booking) {
+            return;
+        }
+
+        if ($this->booking->hasSingleAdultWithNonAdults()) {
+            $activeItems = $this->booking->getActivePassengers()->pluck('item_number')->map(fn ($n) => (int) $n)->toArray();
+            if (count($this->selectedPassengerItems) !== count($activeItems)) {
+                $this->selectedPassengerItems = $activeItems;
+                $this->feedback = 'This booking has only one adult accompanying minor/child passengers. All passengers must be rebooked, cancelled, or refunded together.';
+            }
         }
     }
 
@@ -293,18 +314,10 @@ class BookingLookup extends Component
         }
 
         $selectedItems = ! empty($this->selectedPassengerItems) ? $this->selectedPassengerItems : $this->booking->passengers->pluck('item_number')->toArray();
-        $allActivePax = $this->booking->getActivePassengers();
-        $isFullCancellation = count($selectedItems) >= $allActivePax->count();
-
-        if (! $isFullCancellation) {
-            if (! $this->booking->hasSelectedAdult($selectedItems)) {
-                $this->feedback = 'Minors, children, and infants cannot cancel or request a refund without an accompanying adult.';
-                return;
-            }
-            if (! $this->booking->remainingActivePassengersHaveAdult($selectedItems)) {
-                $this->feedback = 'Cannot cancel the adult passenger(s) because minor/child passengers cannot remain on a booking without an adult.';
-                return;
-            }
+        $policy = $this->booking->validatePassengerPartyPolicy($selectedItems, 'cancel');
+        if (! $policy['valid']) {
+            $this->feedback = $policy['error'];
+            return;
         }
 
         if (! in_array($this->booking->status, ['pending', 'confirmed'], true) || ! $this->booking->transaction || ! in_array($this->booking->transaction->payment_status, ['paid', 'pending', 'unpaid'])) {
@@ -470,20 +483,10 @@ class BookingLookup extends Component
             return;
         }
 
-        $allPassengers = $this->booking->passengers->sortBy('item_number')->values();
-        $selectedCount = count($selectedItems);
-        $totalPaxCount = $allPassengers->count();
-        $isFullCancellation = ($selectedCount >= $totalPaxCount);
-
-        if (! $isFullCancellation) {
-            if (! $this->booking->hasSelectedAdult($selectedItems)) {
-                $this->feedback = 'Minors, children, and infants cannot cancel or request a refund without an accompanying adult.';
-                return;
-            }
-            if (! $this->booking->remainingActivePassengersHaveAdult($selectedItems)) {
-                $this->feedback = 'Cannot cancel the adult passenger(s) because minor/child passengers cannot remain on a booking without an adult.';
-                return;
-            }
+        $policy = $this->booking->validatePassengerPartyPolicy($selectedItems, 'cancel');
+        if (! $policy['valid']) {
+            $this->feedback = $policy['error'];
+            return;
         }
 
         $partialBreakdown = $this->booking->getPartialRefundBreakdown($selectedItems, $isWithinFiveMinutes);
@@ -621,8 +624,9 @@ class BookingLookup extends Component
             ? $this->selectedPassengerItems
             : $this->booking->getActivePassengers()->pluck('item_number')->toArray();
 
-        if (! $this->booking->hasSelectedAdult($selectedItems)) {
-            $this->feedback = 'Minors, children, and infants cannot rebook without an accompanying adult.';
+        $policy = $this->booking->validatePassengerPartyPolicy($selectedItems, 'rebook');
+        if (! $policy['valid']) {
+            $this->feedback = $policy['error'];
             return;
         }
 
@@ -662,8 +666,9 @@ class BookingLookup extends Component
             ? $this->selectedPassengerItems
             : $this->booking->getActivePassengers()->pluck('item_number')->toArray();
 
-        if (! $this->booking->hasSelectedAdult($selectedItems)) {
-            $this->feedback = 'Minors, children, and infants cannot rebook without an accompanying adult.';
+        $policy = $this->booking->validatePassengerPartyPolicy($selectedItems, 'rebook');
+        if (! $policy['valid']) {
+            $this->feedback = $policy['error'];
             return;
         }
 
@@ -1039,9 +1044,10 @@ class BookingLookup extends Component
             ? $this->selectedPassengerItems
             : $this->booking->getActivePassengers()->pluck('item_number')->toArray();
 
-        if (! $this->booking->hasSelectedAdult($selectedItems)) {
+        $policy = $this->booking->validatePassengerPartyPolicy($selectedItems, 'rebook');
+        if (! $policy['valid']) {
             $this->isUploadingRebooking = false;
-            $this->feedback = 'Minors, children, and infants cannot rebook without an accompanying adult.';
+            $this->feedback = $policy['error'];
             return;
         }
 

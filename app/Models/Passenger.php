@@ -122,10 +122,13 @@ class Passenger extends Model
     public function isAdult(): bool
     {
         $type = strtolower($this->type ?? 'adult');
-        if ($type === 'driver') {
+        if (in_array($type, ['driver', 'adult', 'senior', 'pwd'], true)) {
             return true;
         }
-        if ($type === 'adult') {
+        if ($type === 'student') {
+            if ($this->birthdate) {
+                return \Carbon\Carbon::parse($this->birthdate)->diffInYears(now()) >= 12;
+            }
             return true;
         }
         if ($this->birthdate) {

@@ -552,22 +552,12 @@ class BookingController extends Controller
             ], 400);
         }
 
-        $allPax = $booking->passengers->whereNotIn('status', ['cancelled', 'operator_cancelled', 'refunded']);
-        $isFullCancellation = count($selectedItems) >= $allPax->count();
-
-        if (! $isFullCancellation) {
-            if (! $booking->hasSelectedAdult($selectedItems)) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Minors, children, and infants cannot cancel or request a refund without an accompanying adult.',
-                ], 422);
-            }
-            if (! $booking->remainingActivePassengersHaveAdult($selectedItems)) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Cannot cancel the adult passenger(s) because minor/child passengers cannot remain on a booking without an adult.',
-                ], 422);
-            }
+        $policy = $booking->validatePassengerPartyPolicy($selectedItems, 'cancel');
+        if (! $policy['valid']) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $policy['error'],
+            ], 422);
         }
 
         if ($request->input('action', 'confirm') === 'start') {
@@ -820,10 +810,11 @@ class BookingController extends Controller
             ? $passengerItems
             : $booking->passengers->pluck('item_number')->toArray();
 
-        if (! $booking->hasSelectedAdult($selectedItems)) {
+        $policy = $booking->validatePassengerPartyPolicy($selectedItems, 'rebook');
+        if (! $policy['valid']) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Minors, children, and infants cannot rebook without an accompanying adult.',
+                'message' => $policy['error'],
             ], 422);
         }
 
@@ -946,10 +937,11 @@ class BookingController extends Controller
             ? $passengerItems
             : $booking->passengers->pluck('item_number')->toArray();
 
-        if (! $booking->hasSelectedAdult($selectedItems)) {
+        $policy = $booking->validatePassengerPartyPolicy($selectedItems, 'rebook');
+        if (! $policy['valid']) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Minors, children, and infants cannot rebook without an accompanying adult.',
+                'message' => $policy['error'],
             ], 422);
         }
 
@@ -1116,6 +1108,14 @@ class BookingController extends Controller
             ? $passengerItems
             : $booking->passengers->pluck('item_number')->toArray();
 
+        $policy = $booking->validatePassengerPartyPolicy($selectedItems, 'reschedule');
+        if (! $policy['valid']) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $policy['error'],
+            ], 422);
+        }
+
         foreach ($booking->passengers as $p) {
             if (in_array((int) $p->item_number, array_map('intval', $selectedItems), true)) {
                 $p->update([
@@ -1190,6 +1190,14 @@ class BookingController extends Controller
         $selectedItems = (is_array($passengerItems) && !empty($passengerItems))
             ? $passengerItems
             : $booking->passengers->pluck('item_number')->toArray();
+
+        $policy = $booking->validatePassengerPartyPolicy($selectedItems, 'refund');
+        if (! $policy['valid']) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $policy['error'],
+            ], 422);
+        }
 
         $selectedPassengers = $booking->passengers->filter(fn ($p) => in_array((int) $p->item_number, array_map('intval', $selectedItems), true));
         $netRefund = $selectedPassengers->sum(fn ($p) => $p->getRefundableBase()) ?: ($booking->getTicketBase() * (count($selectedItems) / max(1, $booking->passengers()->count())));
