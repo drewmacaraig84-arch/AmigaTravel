@@ -1,29 +1,23 @@
 .proofs-grid {
     display: grid;
     gap: 1rem;
-    grid-template-columns: repeat(1, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-@media (min-width: 640px) {
-    .proofs-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-
-@media (min-width: 1024px) {
+@media (min-width: 768px) {
     .proofs-grid {
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 }
 
-@media (min-width: 1440px) {
+@media (min-width: 1280px) {
     .proofs-grid {
         grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 }
 
 .proofs-grid .proof-image {
-    height: 9.5rem;
+    height: 9rem;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -37,21 +31,18 @@
 }
 
 .proofs-status-paid {
-    background-color: rgb(34 197 94 / 0.15);
+    background-color: rgb(34 197 94 / 0.1);
     color: rgb(74 222 128);
-    border: 1px solid rgb(34 197 94 / 0.3);
 }
 
 .proofs-status-pending {
-    background-color: rgb(245 158 11 / 0.15);
+    background-color: rgb(245 158 11 / 0.1);
     color: rgb(251 191 36);
-    border: 1px solid rgb(245 158 11 / 0.3);
 }
 
 .proofs-status-cancelled {
-    background-color: rgb(239 68 68 / 0.15);
+    background-color: rgb(239 68 68 / 0.1);
     color: rgb(248 113 113);
-    border: 1px solid rgb(239 68 68 / 0.3);
 }
 
 .proofs-status-rebooked {
@@ -67,111 +58,7 @@
 }
 
 .proofs-status-default {
-    background-color: rgb(107 114 128 / 0.15);
+    background-color: rgb(107 114 128 / 0.1);
     color: rgb(156 163 175);
-    border: 1px solid rgb(107 114 128 / 0.3);
 }
 
-/* Category Filter Tabs Styling */
-.proofs-tabs-container {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.proof-tab {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.45rem 0.85rem;
-    border-radius: 0.5rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-    transition: all 0.15s ease-in-out;
-    cursor: pointer;
-    border: 1px solid transparent;
-}
-
-.proof-tab-all-inactive {
-    background-color: #f3f4f6;
-    color: #374151;
-    border-color: #e5e7eb;
-}
-:is(.dark .proof-tab-all-inactive) {
-    background-color: #1e293b;
-    color: #cbd5e1;
-    border-color: #334155;
-}
-.proof-tab-all-inactive:hover {
-    background-color: #e5e7eb;
-}
-:is(.dark .proof-tab-all-inactive:hover) {
-    background-color: #334155;
-}
-.proof-tab-all-active {
-    background-color: #f59e0b;
-    color: #ffffff;
-    border-color: #d97706;
-    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-}
-
-.proof-tab-confirmed-inactive {
-    background-color: rgb(16 185 129 / 0.08);
-    color: #047857;
-    border-color: rgb(16 185 129 / 0.25);
-}
-:is(.dark .proof-tab-confirmed-inactive) {
-    background-color: rgb(16 185 129 / 0.12);
-    color: #6ee7b7;
-    border-color: rgb(16 185 129 / 0.3);
-}
-.proof-tab-confirmed-inactive:hover {
-    background-color: rgb(16 185 129 / 0.18);
-}
-.proof-tab-confirmed-active {
-    background-color: #059669;
-    color: #ffffff;
-    border-color: #047857;
-    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-}
-
-.proof-tab-rebooked-inactive {
-    background-color: rgb(168 85 247 / 0.08);
-    color: #7e22ce;
-    border-color: rgb(168 85 247 / 0.25);
-}
-:is(.dark .proof-tab-rebooked-inactive) {
-    background-color: rgb(168 85 247 / 0.12);
-    color: #d8b4fe;
-    border-color: rgb(168 85 247 / 0.3);
-}
-.proof-tab-rebooked-inactive:hover {
-    background-color: rgb(168 85 247 / 0.18);
-}
-.proof-tab-rebooked-active {
-    background-color: #9333ea;
-    color: #ffffff;
-    border-color: #7e22ce;
-    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-}
-
-.proof-tab-refunded-inactive {
-    background-color: rgb(14 165 233 / 0.08);
-    color: #0369a1;
-    border-color: rgb(14 165 233 / 0.25);
-}
-:is(.dark .proof-tab-refunded-inactive) {
-    background-color: rgb(14 165 233 / 0.12);
-    color: #7dd3fc;
-    border-color: rgb(14 165 233 / 0.3);
-}
-.proof-tab-refunded-inactive:hover {
-    background-color: rgb(14 165 233 / 0.18);
-}
-.proof-tab-refunded-active {
-    background-color: #0284c7;
-    color: #ffffff;
-    border-color: #0369a1;
-    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-}

@@ -2,100 +2,32 @@
     <link rel="stylesheet" href="{{ asset('css/admin-proofs.css') }}">
 
     <div class="space-y-6">
-        <!-- Retention Settings & Safety Backup Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-stretch">
-            <!-- Left Card: Retention Settings Form (7 cols) -->
-            <div class="md:col-span-7 rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700/80 dark:bg-gray-900 flex flex-col justify-between">
-                <form wire:submit="saveSettings" class="space-y-3">
-                    {{ $this->form }}
+        <!-- Retention Settings Card -->
+        <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+            <form wire:submit="saveSettings" class="space-y-4">
+                {{ $this->form }}
 
-                    <x-filament::button type="submit" size="sm">
+                <div class="flex flex-wrap items-center gap-3">
+                    <x-filament::button type="submit">
                         Save settings
                     </x-filament::button>
-                </form>
-            </div>
 
-            <!-- Right Card: Pre-Retention Backup Action (5 cols) -->
-            <div class="md:col-span-5 rounded-xl border border-gray-200 bg-gray-50/50 p-5 shadow-sm dark:border-gray-700/80 dark:bg-gray-900/60 flex flex-col justify-between">
-                <div>
-                    <div class="flex items-center gap-2">
-                        <span class="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
-                            </svg>
-                        </span>
-                        <span class="text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-200">Pre-Retention Archive</span>
-                    </div>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-2 leading-relaxed">
-                        Automatic safety ZIP archives are generated 1 day before proofs hit the retention limit.
-                    </p>
-                </div>
-
-                <div class="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700/60 flex items-center">
                     {{ $this->createBackupAction }}
                 </div>
-            </div>
+            </form>
         </div>
 
-        <!-- Pre-Retention Backups Archive Section -->
-        <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700/80 dark:bg-gray-900">
-            <div class="flex items-center justify-between mb-2.5">
-                <h4 class="text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider flex items-center gap-1.5">
-                    <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
-                    </svg>
-                    Automatic Pre-Retention ZIP Archives ({{ $this->archives->count() }})
-                </h4>
-                <span class="text-[11px] text-gray-400 dark:text-gray-500">
-                    Target folder: <code class="font-mono text-primary-600 dark:text-primary-400">storage/app/proof_archives/</code>
-                </span>
-            </div>
-
-            @if($this->archives->isNotEmpty())
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-48 overflow-y-auto">
-                    @foreach($this->archives as $archive)
-                        <div class="flex items-center justify-between p-2.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs">
-                            <div class="truncate mr-2">
-                                <div class="font-mono font-semibold text-gray-900 dark:text-white truncate" title="{{ $archive->filename }}">
-                                    📦 {{ $archive->filename }}
-                                </div>
-                                <div class="text-[10px] text-gray-400">
-                                    {{ $archive->created_at->format('M d, Y h:i A') }} &bull; {{ $archive->formatted_size }}
-                                </div>
-                            </div>
-                            <a
-                                href="{{ $archive->download_url }}"
-                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-primary-50 text-primary-700 hover:bg-primary-100 dark:bg-primary-900/40 dark:text-primary-300 font-semibold text-[11px] shrink-0 transition"
-                            >
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-                                </svg>
-                                Download
-                            </a>
-                        </div>
-                    @endforeach
-                </div>
-            @else
-                <div class="rounded-lg border border-dashed border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/40 p-4 text-center">
-                    <p class="text-xs font-semibold text-gray-600 dark:text-gray-300">No automated backup archives generated yet</p>
-                    <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">
-                        Nightly backup ZIPs will automatically appear here 1 day before proofs reach the {{ $settingsData['proof_retention_days'] ?? 30 }}-day retention limit.
-                    </p>
-                </div>
-            @endif
-        </div>
-
-        <!-- Filter Tabs & Controls Card -->
-        <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700/80 dark:bg-gray-900 space-y-4">
-            <!-- Category Tabs (Responsive Pill Buttons) -->
-            <div class="proofs-tabs-container border-b border-gray-100 pb-4 dark:border-gray-800">
+        <!-- Filter Tabs & Controls -->
+        <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900 space-y-4">
+            <!-- Category Tabs -->
+            <div class="flex flex-wrap items-center gap-2 border-b border-gray-100 pb-4 dark:border-gray-800">
                 <button
                     type="button"
                     wire:click="setTypeFilter('all')"
-                    class="proof-tab {{ $typeFilter === 'all' ? 'proof-tab-all-active' : 'proof-tab-all-inactive' }}"
+                    class="inline-flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition {{ $typeFilter === 'all' ? 'bg-primary-600 text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700' }}"
                 >
                     <span>All Transactions</span>
-                    <span class="rounded-full px-1.5 py-0.5 text-[10px] font-bold {{ $typeFilter === 'all' ? 'bg-white/20 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300' }}">
+                    <span class="rounded-full px-1.5 py-0.5 text-[10px] {{ $typeFilter === 'all' ? 'bg-white/20 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300' }}">
                         {{ $this->counts['all'] }}
                     </span>
                 </button>
@@ -103,11 +35,11 @@
                 <button
                     type="button"
                     wire:click="setTypeFilter('confirmed')"
-                    class="proof-tab {{ $typeFilter === 'confirmed' ? 'proof-tab-confirmed-active' : 'proof-tab-confirmed-inactive' }}"
+                    class="inline-flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition {{ $typeFilter === 'confirmed' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/50' }}"
                 >
-                    <span class="inline-block w-2 h-2 rounded-full {{ $typeFilter === 'confirmed' ? 'bg-white' : 'bg-emerald-500' }}"></span>
+                    <span class="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
                     <span>Confirmed</span>
-                    <span class="rounded-full px-1.5 py-0.5 text-[10px] font-bold {{ $typeFilter === 'confirmed' ? 'bg-white/20 text-white' : 'bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200' }}">
+                    <span class="rounded-full px-1.5 py-0.5 text-[10px] {{ $typeFilter === 'confirmed' ? 'bg-white/20 text-white' : 'bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200' }}">
                         {{ $this->counts['confirmed'] }}
                     </span>
                 </button>
@@ -115,11 +47,11 @@
                 <button
                     type="button"
                     wire:click="setTypeFilter('rebooked')"
-                    class="proof-tab {{ $typeFilter === 'rebooked' ? 'proof-tab-rebooked-active' : 'proof-tab-rebooked-inactive' }}"
+                    class="inline-flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition {{ $typeFilter === 'rebooked' ? 'bg-purple-600 text-white shadow-sm' : 'bg-purple-50 text-purple-700 hover:bg-purple-100 dark:bg-purple-950/40 dark:text-purple-300 dark:hover:bg-purple-900/50' }}"
                 >
-                    <span class="inline-block w-2 h-2 rounded-full {{ $typeFilter === 'rebooked' ? 'bg-white' : 'bg-purple-500' }}"></span>
+                    <span class="inline-block w-2 h-2 rounded-full bg-purple-400"></span>
                     <span>Rebooked</span>
-                    <span class="rounded-full px-1.5 py-0.5 text-[10px] font-bold {{ $typeFilter === 'rebooked' ? 'bg-white/20 text-white' : 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200' }}">
+                    <span class="rounded-full px-1.5 py-0.5 text-[10px] {{ $typeFilter === 'rebooked' ? 'bg-white/20 text-white' : 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200' }}">
                         {{ $this->counts['rebooked'] }}
                     </span>
                 </button>
@@ -127,11 +59,11 @@
                 <button
                     type="button"
                     wire:click="setTypeFilter('refunded')"
-                    class="proof-tab {{ $typeFilter === 'refunded' ? 'proof-tab-refunded-active' : 'proof-tab-refunded-inactive' }}"
+                    class="inline-flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition {{ $typeFilter === 'refunded' ? 'bg-sky-600 text-white shadow-sm' : 'bg-sky-50 text-sky-700 hover:bg-sky-100 dark:bg-sky-950/40 dark:text-sky-300 dark:hover:bg-sky-900/50' }}"
                 >
-                    <span class="inline-block w-2 h-2 rounded-full {{ $typeFilter === 'refunded' ? 'bg-white' : 'bg-sky-500' }}"></span>
+                    <span class="inline-block w-2 h-2 rounded-full bg-sky-400"></span>
                     <span>Refunded / Cancelled</span>
-                    <span class="rounded-full px-1.5 py-0.5 text-[10px] font-bold {{ $typeFilter === 'refunded' ? 'bg-white/20 text-white' : 'bg-sky-100 dark:bg-sky-900 text-sky-800 dark:text-sky-200' }}">
+                    <span class="rounded-full px-1.5 py-0.5 text-[10px] {{ $typeFilter === 'refunded' ? 'bg-white/20 text-white' : 'bg-sky-100 dark:bg-sky-900 text-sky-800 dark:text-sky-200' }}">
                         {{ $this->counts['refunded'] }}
                     </span>
                 </button>
