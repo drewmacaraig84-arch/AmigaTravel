@@ -289,7 +289,7 @@ class Passenger extends Model
     // ─── Financial Helpers ────────────────────────────────────────────────────
 
     /**
-     * Get effective gross base fare amount (excluding accommodation/transport class fees).
+     * Get effective gross base fare amount (excluding accommodation fees).
      */
     public function getEffectiveFareAmount(): float
     {
@@ -299,37 +299,23 @@ class Passenger extends Model
             return 0.0;
         }
 
-        $tcPrice = 0.0;
-        $schedAcc = 0.0;
-        if ($booking) {
-            $allTcs  = $booking->transportClasses ?? collect();
-            $tcPrice = (float) $allTcs->sum(fn ($tc) => (float) ($tc->pivot->price ?? 0));
-            $schedAcc = (float) ($booking->schedule_accommodation_price ?? 0) + (float) ($booking->return_schedule_accommodation_price ?? 0);
-        }
-
-        $accPortion = ((float) ($this->attributes['accommodation_amount'] ?? 0) > 0)
-            ? (float) $this->attributes['accommodation_amount']
-            : ($tcPrice + $schedAcc);
-
-        if ((float) ($this->attributes['fare_amount'] ?? 0) > 0) {
-            $rawFare = (float) $this->attributes['fare_amount'];
-            if ($accPortion > 0 && $rawFare > $accPortion) {
-                return max(0.0, round($rawFare - $accPortion, 2));
-            }
-            return $rawFare;
+        // If passenger record has fare_amount explicitly set (including 0)
+        if (array_key_exists('fare_amount', $this->attributes) && $this->attributes['fare_amount'] !== null) {
+            return (float) $this->attributes['fare_amount'];
         }
 
         if ($booking) {
             $schedPrice = (float) ($booking->schedule_price ?? 0);
             $retPrice   = (float) ($booking->return_schedule_price ?? 0);
-            return $schedPrice + $retPrice;
+            $paxMultiplier = in_array(strtolower($this->type ?? 'adult'), ['child', 'minor'], true) ? 0.5 : 1.0;
+            return ($schedPrice + $retPrice) * $paxMultiplier;
         }
 
         return 0.0;
     }
 
     /**
-     * Get effective accommodation / transport class amount.
+     * Get effective accommodation amount.
      */
     public function getEffectiveAccommodationAmount(): float
     {
@@ -339,15 +325,14 @@ class Passenger extends Model
             return 0.0;
         }
 
-        if ((float) ($this->attributes['accommodation_amount'] ?? 0) > 0) {
+        // If passenger record has accommodation_amount explicitly set (including 0)
+        if (array_key_exists('accommodation_amount', $this->attributes) && $this->attributes['accommodation_amount'] !== null) {
             return (float) $this->attributes['accommodation_amount'];
         }
 
         if ($booking) {
-            $allTcs  = $booking->transportClasses ?? collect();
-            $tcPrice = (float) $allTcs->sum(fn ($tc) => (float) ($tc->pivot->price ?? 0));
             $schedAcc = (float) ($booking->schedule_accommodation_price ?? 0) + (float) ($booking->return_schedule_accommodation_price ?? 0);
-            return $tcPrice + $schedAcc;
+            return $schedAcc;
         }
 
         return 0.0;

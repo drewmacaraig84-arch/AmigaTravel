@@ -15,7 +15,7 @@ class DiscountSeeder extends Seeder
     public function run(): void
     {
         $discounts = [
-            ['name' => 'Student', 'percentage' => 10],
+            ['name' => 'Student', 'percentage' => 20],
             ['name' => 'Senior Citizen', 'percentage' => 20],
             ['name' => 'PWD', 'percentage' => 20],
             ['name' => 'Infant', 'percentage' => 100],
