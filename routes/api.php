@@ -69,7 +69,7 @@ Route::middleware('throttle:60,1')->group(function () {
                 $version = trim($matches[1]);
             }
         }
-        return response()->json(['version' => $version, 'force_update' => false]);
+        return response()->json(['version' => $version, 'force_update' => true]);
     });
 });
 

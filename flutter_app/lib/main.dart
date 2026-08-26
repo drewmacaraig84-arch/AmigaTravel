@@ -100,7 +100,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.132+143';
+  static const String appVersion = '1.0.133+144';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -3749,11 +3749,26 @@ class _TravelScreenState extends State<TravelScreen>
   }
 
   Future<void> _selectDate(BuildContext context, bool isDeparture) async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final dep = _departureDate ?? today;
+    final effectiveFirstDate = isDeparture
+        ? today
+        : (dep.isAfter(today) ? dep : today);
+    DateTime initial = isDeparture
+        ? (_departureDate ?? today)
+        : (_returnDate ?? effectiveFirstDate);
+    if (!isDeparture && initial.isBefore(effectiveFirstDate)) {
+      initial = effectiveFirstDate;
+    }
+    if (initial.isBefore(today)) {
+      initial = today;
+    }
     final picked = await showDatePicker(
       context: context,
-      initialDate: isDeparture ? _departureDate : _returnDate,
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      initialDate: initial,
+      firstDate: isDeparture ? today : effectiveFirstDate,
+      lastDate: today.add(const Duration(days: 365)),
       selectableDayPredicate: (DateTime day) {
         if (_origin == null || _destination == null) return false;
         if (isDeparture) {
@@ -3761,6 +3776,7 @@ class _TravelScreenState extends State<TravelScreen>
           return _availableDepartureDates.contains(_fmt(day));
         } else {
           if (_availableReturnDates.isEmpty) return false;
+          if (_departureDate != null && day.isBefore(_departureDate!)) return false;
           return _availableReturnDates.contains(_fmt(day));
         }
       },
@@ -3775,6 +3791,11 @@ class _TravelScreenState extends State<TravelScreen>
       setState(() {
         if (isDeparture) {
           _departureDate = picked;
+          if (_tripTabController.index == 1 &&
+              _returnDate != null &&
+              _returnDate!.isBefore(picked)) {
+            _returnDate = picked;
+          }
         } else {
           _returnDate = picked;
         }
@@ -10034,6 +10055,13 @@ class _DiscountScreenState extends State<DiscountScreen> {
       widget.booking.passengers[i]['birthdate'] =
           _birthdateControllers[i].text.trim();
 
+      final pType = (widget.booking.passengers[i]['type'] ?? '').toString().toLowerCase();
+      final isRegularMinor = !widget.booking.isPromo &&
+          (pType == 'minor' || pType == 'child' || (widget.booking.mode == 'airline' && pType == 'infant'));
+      if (widget.booking.isSuperPromo || isRegularMinor) {
+        widget.booking.passengers[i]['discount_id'] = null;
+      }
+
       final discId = widget.booking.passengers[i]['discount_id'];
       final disc =
           _discounts.firstWhere((d) => d['id'] == discId, orElse: () => {});
@@ -10287,7 +10315,7 @@ class _DiscountScreenState extends State<DiscountScreen> {
                                     final ageYears  = now.difference(dob).inDays ~/ 365;
                                     switch (type) {
                                       case 'adult':
-                                        if (ageYears < 11) return 'Adult must be 11 years old or above.';
+                                        if (ageYears < 12) return 'Adult must be 12 years old or above.';
                                         break;
                                       case 'minor':
                                         if (ageYears < 7 || ageYears > 11) return 'Minor must be 7 to 11 years old.';
@@ -10465,20 +10493,74 @@ class _DiscountScreenState extends State<DiscountScreen> {
                                         });
                                         if (v != null) {
                                           showDialog(
-                                            context: context,
-                                            builder: (c) => AlertDialog(
-                                              title: const Text('Discount Applied'),
-                                              content: const Text(
-                                                  'Your discount has been applied.\n\nKindly present a valid ID upon boarding to verify and enjoy your discount'),
-                                              actions: [
-                                                TextButton(
-                                                  onPressed: () => Navigator.pop(c),
-                                                  child: const Text('Okay'),
-                                                ),
-                                              ],
-                                            ),
-                                          );
-                                        }
+                                             context: context,
+                                             builder: (c) => AlertDialog(
+                                               shape: RoundedRectangleBorder(
+                                                   borderRadius: BorderRadius.circular(16)),
+                                               title: const Row(
+                                                 children: [
+                                                   Icon(Icons.badge_outlined, color: kPink, size: 24),
+                                                   SizedBox(width: 8),
+                                                   Expanded(
+                                                     child: Text(
+                                                       'Prepare Valid ID for Boarding',
+                                                       style: TextStyle(
+                                                           fontSize: 16, fontWeight: FontWeight.bold),
+                                                     ),
+                                                   ),
+                                                 ],
+                                               ),
+                                               content: Column(
+                                                 mainAxisSize: MainAxisSize.min,
+                                                 crossAxisAlignment: CrossAxisAlignment.start,
+                                                 children: [
+                                                   const Text(
+                                                     'You have selected a discounted fare. To ensure a smooth boarding experience, please remember to bring your valid ID(s) and present them at the port/terminal during boarding for verification.',
+                                                     style: TextStyle(
+                                                         fontSize: 13, color: kSlate700, height: 1.4),
+                                                   ),
+                                                   const SizedBox(height: 12),
+                                                   Container(
+                                                     padding: const EdgeInsets.all(12),
+                                                     decoration: BoxDecoration(
+                                                       color: Colors.grey.shade50,
+                                                       borderRadius: BorderRadius.circular(10),
+                                                       border: Border.all(color: Colors.grey.shade200),
+                                                     ),
+                                                     child: const Column(
+                                                       crossAxisAlignment: CrossAxisAlignment.start,
+                                                       children: [
+                                                         Text('What to bring:',
+                                                             style: TextStyle(
+                                                                 fontWeight: FontWeight.bold,
+                                                                 fontSize: 12,
+                                                                 color: kSlate800)),
+                                                         SizedBox(height: 6),
+                                                         Text(
+                                                             '• School ID for Student discounts\n• OSCA ID for Senior Citizen discounts\n• PWD ID for PWD discounts',
+                                                             style: TextStyle(
+                                                                 fontSize: 12,
+                                                                 color: kSlate600,
+                                                                 height: 1.4)),
+                                                       ],
+                                                     ),
+                                                   ),
+                                                 ],
+                                               ),
+                                               actions: [
+                                                 FilledButton(
+                                                   onPressed: () => Navigator.pop(c),
+                                                   style: FilledButton.styleFrom(
+                                                     backgroundColor: kPink,
+                                                     shape: RoundedRectangleBorder(
+                                                         borderRadius: BorderRadius.circular(10)),
+                                                   ),
+                                                   child: const Text('Got it, I will present my ID'),
+                                                 ),
+                                               ],
+                                             ),
+                                           );
+                                         }
                                       },
                                       decoration: InputDecoration(
                                         labelText: 'Discount (Optional)',
@@ -11430,11 +11512,16 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
           'return_date': widget.booking.returnDate,
           'client_name': _clientNameCtrl.text.trim(),
           'client_email': _clientEmailCtrl.text.trim(),
-          'passengers': widget.booking.passengers.map((p) => {
-                ...p,
-                'rate_type': widget.booking.selectedRateType,
-                'is_promo': widget.booking.selectedRateType != 'regular',
-                if (widget.booking.isSuperPromo) 'discount_id': null,
+          'passengers': widget.booking.passengers.map((p) {
+                final pType = (p['type'] ?? '').toString().toLowerCase();
+                final isRegularMinor = !widget.booking.isPromo &&
+                    (pType == 'minor' || pType == 'child' || (widget.booking.mode == 'airline' && pType == 'infant'));
+                return {
+                  ...p,
+                  'rate_type': widget.booking.selectedRateType,
+                  'is_promo': widget.booking.selectedRateType != 'regular',
+                  if (widget.booking.isSuperPromo || isRegularMinor) 'discount_id': null,
+                };
               }).toList(),
           // Vehicle
           'has_vehicle': widget.booking.hasVehicle,
@@ -11837,8 +11924,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                  ] else if (widget.booking.usePromoTicket &&
-                      widget.booking.promotionalTicketId != null) ...[
+                  ] else if (widget.booking.isPromo) ...[
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -11853,7 +11939,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                           SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              'Promotional ticket is active. Vouchers and Gracia Points cannot be combined with a promo fare.',
+                              'Promotional fare is active. Vouchers and Gracia Points cannot be combined with a promo fare.',
                               style: TextStyle(
                                   fontSize: 12,
                                   color: Color(0xFF7B5800),
@@ -11985,7 +12071,10 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                       double passengerDiscount = 0.0;
                       if (!isSuperPromo) {
                         for (var p in widget.booking.passengers) {
-                          if (p['discount_id'] != null &&
+                          final pType = (p['type'] ?? '').toString().toLowerCase();
+                          final isRegularMinor = !isPromo &&
+                              (pType == 'minor' || pType == 'child' || (widget.booking.mode == 'airline' && pType == 'infant'));
+                          if (p['discount_id'] != null && !isRegularMinor &&
                               widget.booking.selectedSchedule != null) {
                             final rawAp = isPromo && widget.booking.selectedSchedule!['promotional_ticket'] != null
                                 ? (widget.booking.selectedSchedule!['promotional_ticket']['promo_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0)
@@ -12076,8 +12165,8 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                           passengerDiscount;
                       if (subtotal < 0) subtotal = 0.0;
 
-                      // Voucher and points are blocked on Super Promo
-                      final discount = (!isSuperPromo &&
+                      // Voucher and points are blocked on Promo and Super Promo
+                      final discount = (!isPromo &&
                               widget.booking.voucherData != null)
                           ? _parseDouble(
                               widget.booking.voucherData!['discount_amount'])
@@ -12086,7 +12175,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                       if (totalBeforePoints < 0) totalBeforePoints = 0.0;
 
                       double pointsDiscount = 0.0;
-                      if (!isSuperPromo && _usePoints) {
+                      if (!isPromo && _usePoints) {
                         pointsDiscount = _availablePoints > totalBeforePoints
                             ? totalBeforePoints.ceilToDouble()
                             : _availablePoints;
@@ -20534,9 +20623,13 @@ class _RebookScreenState extends State<RebookScreen> {
                 : _retDate!.toIso8601String().split('T')[0]),
             trailing: const Icon(Icons.calendar_today),
             onTap: () async {
+              if (_depDate == null) {
+                showTopSnack(context, const SnackBar(content: Text('Please select a departure date first.')));
+                return;
+              }
               final d = await showDatePicker(
                   context: context,
-                  initialDate: _depDate!.add(const Duration(days: 1)),
+                  initialDate: _retDate != null && !_retDate!.isBefore(_depDate!) ? _retDate! : _depDate!.add(const Duration(days: 1)),
                   firstDate: _depDate!,
                   lastDate: DateTime.now().add(const Duration(days: 365)));
               if (d != null) setState(() => _retDate = d);
