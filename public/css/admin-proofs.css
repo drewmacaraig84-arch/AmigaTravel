@@ -62,3 +62,288 @@
     color: rgb(156 163 175);
 }
 
+/* Proofs Category Filter Tabs */
+.proof-filter-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.625rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.dark .proof-filter-tabs {
+    border-bottom-color: #1f2937;
+}
+
+.proof-filter-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.95rem;
+    border-radius: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.25rem;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+    outline: none;
+}
+
+.proof-filter-btn:focus-visible {
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.4);
+}
+
+.proof-filter-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.125rem 0.45rem;
+    border-radius: 9999px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 1;
+    min-width: 1.25rem;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.proof-filter-dot {
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 1. All Transactions Tab */
+.proof-filter-btn[data-filter="all"] {
+    background-color: #f3f4f6;
+    color: #374151;
+    border-color: #e5e7eb;
+}
+.proof-filter-btn[data-filter="all"]:hover {
+    background-color: #e5e7eb;
+    color: #111827;
+}
+.proof-filter-btn[data-filter="all"] .proof-filter-badge {
+    background-color: #e5e7eb;
+    color: #4b5563;
+}
+.dark .proof-filter-btn[data-filter="all"] {
+    background-color: #1e293b;
+    color: #cbd5e1;
+    border-color: #334155;
+}
+.dark .proof-filter-btn[data-filter="all"]:hover {
+    background-color: #334155;
+    color: #f8fafc;
+}
+.dark .proof-filter-btn[data-filter="all"] .proof-filter-badge {
+    background-color: #0f172a;
+    color: #94a3b8;
+}
+
+/* All Active */
+.proof-filter-btn[data-filter="all"].is-active {
+    background-color: #f59e0b;
+    color: #ffffff;
+    border-color: #d97706;
+    box-shadow: 0 1px 3px rgba(245, 158, 11, 0.3);
+}
+.proof-filter-btn[data-filter="all"].is-active .proof-filter-badge {
+    background-color: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+}
+.dark .proof-filter-btn[data-filter="all"].is-active {
+    background-color: #d97706;
+    color: #ffffff;
+    border-color: #f59e0b;
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.35);
+}
+.dark .proof-filter-btn[data-filter="all"].is-active .proof-filter-badge {
+    background-color: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+}
+
+/* 2. Confirmed Tab */
+.proof-filter-btn[data-filter="confirmed"] {
+    background-color: #ecfdf5;
+    color: #047857;
+    border-color: #a7f3d0;
+}
+.proof-filter-btn[data-filter="confirmed"]:hover {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+.proof-filter-btn[data-filter="confirmed"] .proof-filter-badge {
+    background-color: #a7f3d0;
+    color: #065f46;
+}
+.proof-filter-btn[data-filter="confirmed"] .proof-filter-dot {
+    background-color: #10b981;
+}
+.dark .proof-filter-btn[data-filter="confirmed"] {
+    background-color: rgba(6, 78, 59, 0.35);
+    color: #6ee7b7;
+    border-color: rgba(16, 185, 129, 0.3);
+}
+.dark .proof-filter-btn[data-filter="confirmed"]:hover {
+    background-color: rgba(6, 78, 59, 0.6);
+    color: #a7f3d0;
+    border-color: rgba(16, 185, 129, 0.5);
+}
+.dark .proof-filter-btn[data-filter="confirmed"] .proof-filter-badge {
+    background-color: rgba(6, 78, 59, 0.7);
+    color: #6ee7b7;
+}
+
+/* Confirmed Active */
+.proof-filter-btn[data-filter="confirmed"].is-active {
+    background-color: #059669;
+    color: #ffffff;
+    border-color: #047857;
+    box-shadow: 0 1px 3px rgba(5, 150, 105, 0.3);
+}
+.proof-filter-btn[data-filter="confirmed"].is-active .proof-filter-badge {
+    background-color: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+}
+.proof-filter-btn[data-filter="confirmed"].is-active .proof-filter-dot {
+    background-color: #ffffff;
+}
+.dark .proof-filter-btn[data-filter="confirmed"].is-active {
+    background-color: #059669;
+    color: #ffffff;
+    border-color: #34d399;
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
+}
+.dark .proof-filter-btn[data-filter="confirmed"].is-active .proof-filter-badge {
+    background-color: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+}
+.dark .proof-filter-btn[data-filter="confirmed"].is-active .proof-filter-dot {
+    background-color: #ffffff;
+}
+
+/* 3. Rebooked Tab */
+.proof-filter-btn[data-filter="rebooked"] {
+    background-color: #faf5ff;
+    color: #7e22ce;
+    border-color: #e9d5ff;
+}
+.proof-filter-btn[data-filter="rebooked"]:hover {
+    background-color: #f3e8ff;
+    color: #6b21a8;
+}
+.proof-filter-btn[data-filter="rebooked"] .proof-filter-badge {
+    background-color: #e9d5ff;
+    color: #6b21a8;
+}
+.proof-filter-btn[data-filter="rebooked"] .proof-filter-dot {
+    background-color: #a855f7;
+}
+.dark .proof-filter-btn[data-filter="rebooked"] {
+    background-color: rgba(88, 28, 135, 0.35);
+    color: #d8b4fe;
+    border-color: rgba(168, 85, 247, 0.3);
+}
+.dark .proof-filter-btn[data-filter="rebooked"]:hover {
+    background-color: rgba(88, 28, 135, 0.6);
+    color: #e9d5ff;
+    border-color: rgba(168, 85, 247, 0.5);
+}
+.dark .proof-filter-btn[data-filter="rebooked"] .proof-filter-badge {
+    background-color: rgba(88, 28, 135, 0.7);
+    color: #d8b4fe;
+}
+
+/* Rebooked Active */
+.proof-filter-btn[data-filter="rebooked"].is-active {
+    background-color: #7c3aed;
+    color: #ffffff;
+    border-color: #6d28d9;
+    box-shadow: 0 1px 3px rgba(124, 58, 237, 0.3);
+}
+.proof-filter-btn[data-filter="rebooked"].is-active .proof-filter-badge {
+    background-color: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+}
+.proof-filter-btn[data-filter="rebooked"].is-active .proof-filter-dot {
+    background-color: #ffffff;
+}
+.dark .proof-filter-btn[data-filter="rebooked"].is-active {
+    background-color: #7c3aed;
+    color: #ffffff;
+    border-color: #c084fc;
+    box-shadow: 0 0 12px rgba(168, 85, 247, 0.4);
+}
+.dark .proof-filter-btn[data-filter="rebooked"].is-active .proof-filter-badge {
+    background-color: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+}
+.dark .proof-filter-btn[data-filter="rebooked"].is-active .proof-filter-dot {
+    background-color: #ffffff;
+}
+
+/* 4. Refunded Tab */
+.proof-filter-btn[data-filter="refunded"] {
+    background-color: #f0f9ff;
+    color: #0369a1;
+    border-color: #bae6fd;
+}
+.proof-filter-btn[data-filter="refunded"]:hover {
+    background-color: #e0f2fe;
+    color: #075985;
+}
+.proof-filter-btn[data-filter="refunded"] .proof-filter-badge {
+    background-color: #bae6fd;
+    color: #075985;
+}
+.proof-filter-btn[data-filter="refunded"] .proof-filter-dot {
+    background-color: #0ea5e9;
+}
+.dark .proof-filter-btn[data-filter="refunded"] {
+    background-color: rgba(12, 74, 110, 0.35);
+    color: #7dd3fc;
+    border-color: rgba(14, 165, 233, 0.3);
+}
+.dark .proof-filter-btn[data-filter="refunded"]:hover {
+    background-color: rgba(12, 74, 110, 0.6);
+    color: #bae6fd;
+    border-color: rgba(14, 165, 233, 0.5);
+}
+.dark .proof-filter-btn[data-filter="refunded"] .proof-filter-badge {
+    background-color: rgba(12, 74, 110, 0.7);
+    color: #7dd3fc;
+}
+
+/* Refunded Active */
+.proof-filter-btn[data-filter="refunded"].is-active {
+    background-color: #0284c7;
+    color: #ffffff;
+    border-color: #0369a1;
+    box-shadow: 0 1px 3px rgba(2, 132, 199, 0.3);
+}
+.proof-filter-btn[data-filter="refunded"].is-active .proof-filter-badge {
+    background-color: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+}
+.proof-filter-btn[data-filter="refunded"].is-active .proof-filter-dot {
+    background-color: #ffffff;
+}
+.dark .proof-filter-btn[data-filter="refunded"].is-active {
+    background-color: #0284c7;
+    color: #ffffff;
+    border-color: #38bdf8;
+    box-shadow: 0 0 12px rgba(14, 165, 233, 0.4);
+}
+.dark .proof-filter-btn[data-filter="refunded"].is-active .proof-filter-badge {
+    background-color: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+}
+.dark .proof-filter-btn[data-filter="refunded"].is-active .proof-filter-dot {
+    background-color: #ffffff;
+}

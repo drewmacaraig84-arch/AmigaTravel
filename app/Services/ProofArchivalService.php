@@ -192,6 +192,21 @@ class ProofArchivalService
     }
 
     /**
+     * Safely delete a backup ZIP archive.
+     */
+    public function deleteArchive(string $filename): bool
+    {
+        $safeFilename = basename($filename);
+        $filepath = storage_path('app/' . self::ARCHIVE_DIR . '/' . $safeFilename);
+
+        if (file_exists($filepath) && is_file($filepath)) {
+            return @unlink($filepath);
+        }
+
+        return false;
+    }
+
+    /**
      * Ensure entry names inside ZIP do not collide.
      */
     private function resolveUniqueEntryName(ZipArchive $zip, string $name): string

@@ -260,9 +260,51 @@ class ProofsAndReceiptsTest extends TestCase
         $response->assertSuccessful();
         $this->assertEquals('application/zip', $response->headers->get('content-type'));
 
-        // Clean up test file
-        if (file_exists($result['path'])) {
-            @unlink($result['path']);
-        }
+        // Test deleting the archive via service
+        $deleted = $service->deleteArchive($result['filename']);
+        $this->assertTrue($deleted);
+        $this->assertFileDoesNotExist($result['path']);
+    }
+
+    public function test_proof_archive_deletion_via_filament_page_action()
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'is_admin' => true,
+            'admin_permissions' => ['proofs' => true, 'bookings' => true],
+        ]);
+
+        \Illuminate\Support\Facades\Storage::fake('public');
+        \Illuminate\Support\Facades\Storage::disk('public')->put('proofs/test_archive_del.jpg', 'image for archive');
+
+        $booking = Booking::create([
+            'transaction_number' => 'AGT-20260826-9999',
+            'client_name' => 'Delete Test User',
+            'client_email' => 'del@example.com',
+            'origin' => 'Calapan',
+            'destination' => 'Batangas',
+            'departure_date' => now()->addDays(2),
+            'status' => 'confirmed',
+            'total_price' => 550,
+        ]);
+
+        Transaction::create([
+            'booking_id' => $booking->id,
+            'payment_status' => 'paid',
+            'payment_method' => 'gcash',
+            'proof_of_payment' => 'proofs/test_archive_del.jpg',
+        ]);
+
+        $service = app(\App\Services\ProofArchivalService::class);
+        $archive = $service->createArchive();
+        $this->assertNotNull($archive);
+        $this->assertFileExists($archive['path']);
+
+        Livewire::actingAs($admin)
+            ->test(ManageProofs::class)
+            ->callAction('deleteArchive', ['filename' => $archive['filename']])
+            ->assertHasNoErrors();
+
+        $this->assertFileDoesNotExist($archive['path']);
     }
 }

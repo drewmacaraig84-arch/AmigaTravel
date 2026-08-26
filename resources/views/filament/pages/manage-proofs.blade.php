@@ -18,30 +18,47 @@
 
             <!-- Saved Backup Archives List -->
             @if($this->archives->isNotEmpty())
-                <div class="border-t border-gray-100 dark:border-gray-800 pt-4">
-                    <h4 class="text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2.5 flex items-center gap-1.5">
-                        📦 Saved Backup ZIP Archives ({{ $this->archives->count() }})
-                    </h4>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-48 overflow-y-auto">
+                <div class="border-t border-gray-200 dark:border-gray-700/80 pt-5 mt-2">
+                    <div class="flex items-center justify-between mb-3.5">
+                        <div class="flex items-center gap-2">
+                            <span class="flex h-6 w-6 items-center justify-center rounded-md bg-amber-500/10 text-amber-600 dark:bg-amber-400/15 dark:text-amber-400 text-xs">
+                                📦
+                            </span>
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-gray-900 dark:text-gray-100">
+                                Saved Backup ZIP Archives
+                            </h4>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary-100 text-primary-700 dark:bg-primary-900/50 dark:text-primary-300">
+                                {{ $this->archives->count() }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 max-h-60 overflow-y-auto pr-1">
                         @foreach($this->archives as $archive)
-                            <div class="flex items-center justify-between p-2.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs">
-                                <div class="truncate mr-2">
-                                    <div class="font-mono font-semibold text-gray-900 dark:text-white truncate" title="{{ $archive->filename }}">
+                            <div class="flex items-center justify-between gap-3 p-3 rounded-lg bg-gray-50/80 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition shadow-xs">
+                                <div class="min-w-0 flex-1 mr-1">
+                                    <div class="font-mono text-xs font-semibold text-gray-900 dark:text-white truncate" title="{{ $archive->filename }}">
                                         {{ $archive->filename }}
                                     </div>
-                                    <div class="text-[10px] text-gray-500 dark:text-gray-400">
-                                        {{ $archive->created_at->format('M d, Y h:i A') }} &bull; {{ $archive->formatted_size }}
+                                    <div class="mt-1 flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400">
+                                        <span>{{ $archive->created_at->format('M d, Y h:i A') }}</span>
+                                        <span>&bull;</span>
+                                        <span class="font-medium text-gray-700 dark:text-gray-300">{{ $archive->formatted_size }}</span>
                                     </div>
                                 </div>
-                                <a
-                                    href="{{ $archive->download_url }}"
-                                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-primary-50 text-primary-700 hover:bg-primary-100 dark:bg-primary-900/40 dark:text-primary-300 font-semibold text-[11px] shrink-0 transition"
-                                >
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-                                    </svg>
-                                    Download
-                                </a>
+                                <div class="flex items-center gap-1.5 shrink-0">
+                                    <x-filament::button
+                                        tag="a"
+                                        href="{{ $archive->download_url }}"
+                                        color="primary"
+                                        size="xs"
+                                        icon="heroicon-o-arrow-down-tray"
+                                    >
+                                        Download
+                                    </x-filament::button>
+
+                                    {{ ($this->deleteArchiveAction)(['filename' => $archive->filename]) }}
+                                </div>
                             </div>
                         @endforeach
                     </div>
@@ -52,50 +69,61 @@
         <!-- Filter Tabs & Controls -->
         <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900 space-y-4">
             <!-- Category Tabs -->
-            <div class="flex flex-wrap items-center gap-2 border-b border-gray-100 pb-4 dark:border-gray-800">
+            <div
+                x-data="{ activeFilter: @entangle('typeFilter').live }"
+                class="proof-filter-tabs"
+            >
                 <button
                     type="button"
-                    wire:click="setTypeFilter('all')"
-                    class="inline-flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition {{ $typeFilter === 'all' ? 'bg-primary-600 text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700' }}"
+                    @click="activeFilter = 'all'; $wire.setTypeFilter('all')"
+                    :class="{ 'is-active': activeFilter === 'all' }"
+                    class="proof-filter-btn {{ $typeFilter === 'all' ? 'is-active' : '' }}"
+                    data-filter="all"
                 >
                     <span>All Transactions</span>
-                    <span class="rounded-full px-1.5 py-0.5 text-[10px] {{ $typeFilter === 'all' ? 'bg-white/20 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300' }}">
+                    <span class="proof-filter-badge">
                         {{ $this->counts['all'] }}
                     </span>
                 </button>
 
                 <button
                     type="button"
-                    wire:click="setTypeFilter('confirmed')"
-                    class="inline-flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition {{ $typeFilter === 'confirmed' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/50' }}"
+                    @click="activeFilter = 'confirmed'; $wire.setTypeFilter('confirmed')"
+                    :class="{ 'is-active': activeFilter === 'confirmed' }"
+                    class="proof-filter-btn {{ $typeFilter === 'confirmed' ? 'is-active' : '' }}"
+                    data-filter="confirmed"
                 >
-                    <span class="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
+                    <span class="proof-filter-dot"></span>
                     <span>Confirmed</span>
-                    <span class="rounded-full px-1.5 py-0.5 text-[10px] {{ $typeFilter === 'confirmed' ? 'bg-white/20 text-white' : 'bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200' }}">
+                    <span class="proof-filter-badge">
                         {{ $this->counts['confirmed'] }}
                     </span>
                 </button>
 
                 <button
                     type="button"
-                    wire:click="setTypeFilter('rebooked')"
-                    class="inline-flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition {{ $typeFilter === 'rebooked' ? 'bg-purple-600 text-white shadow-sm' : 'bg-purple-50 text-purple-700 hover:bg-purple-100 dark:bg-purple-950/40 dark:text-purple-300 dark:hover:bg-purple-900/50' }}"
+                    @click="activeFilter = 'rebooked'; $wire.setTypeFilter('rebooked')"
+                    :class="{ 'is-active': activeFilter === 'rebooked' }"
+                    class="proof-filter-btn {{ $typeFilter === 'rebooked' ? 'is-active' : '' }}"
+                    data-filter="rebooked"
                 >
-                    <span class="inline-block w-2 h-2 rounded-full bg-purple-400"></span>
+                    <span class="proof-filter-dot"></span>
                     <span>Rebooked</span>
-                    <span class="rounded-full px-1.5 py-0.5 text-[10px] {{ $typeFilter === 'rebooked' ? 'bg-white/20 text-white' : 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200' }}">
+                    <span class="proof-filter-badge">
                         {{ $this->counts['rebooked'] }}
                     </span>
                 </button>
 
                 <button
                     type="button"
-                    wire:click="setTypeFilter('refunded')"
-                    class="inline-flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition {{ $typeFilter === 'refunded' ? 'bg-sky-600 text-white shadow-sm' : 'bg-sky-50 text-sky-700 hover:bg-sky-100 dark:bg-sky-950/40 dark:text-sky-300 dark:hover:bg-sky-900/50' }}"
+                    @click="activeFilter = 'refunded'; $wire.setTypeFilter('refunded')"
+                    :class="{ 'is-active': activeFilter === 'refunded' }"
+                    class="proof-filter-btn {{ $typeFilter === 'refunded' ? 'is-active' : '' }}"
+                    data-filter="refunded"
                 >
-                    <span class="inline-block w-2 h-2 rounded-full bg-sky-400"></span>
+                    <span class="proof-filter-dot"></span>
                     <span>Refunded / Cancelled</span>
-                    <span class="rounded-full px-1.5 py-0.5 text-[10px] {{ $typeFilter === 'refunded' ? 'bg-white/20 text-white' : 'bg-sky-100 dark:bg-sky-900 text-sky-800 dark:text-sky-200' }}">
+                    <span class="proof-filter-badge">
                         {{ $this->counts['refunded'] }}
                     </span>
                 </button>

@@ -582,4 +582,39 @@ class ManageProofs extends Page implements HasActions, HasForms
             ->modalSubmitActionLabel('Create Backup ZIP')
             ->action(fn () => $this->createPreRetentionArchiveManual());
     }
+
+    public function deleteArchiveAction(): Action
+    {
+        return Action::make('deleteArchive')
+            ->label('Delete')
+            ->icon('heroicon-o-trash')
+            ->color('danger')
+            ->size(ActionSize::ExtraSmall)
+            ->requiresConfirmation()
+            ->modalHeading('Delete Backup Archive')
+            ->modalDescription('Are you sure you want to permanently delete this backup ZIP archive? This cannot be undone.')
+            ->modalSubmitActionLabel('Delete')
+            ->modalIcon('heroicon-o-trash')
+            ->action(function (array $arguments): void {
+                $filename = (string) ($arguments['filename'] ?? '');
+                if ($filename) {
+                    $deleted = app(\App\Services\ProofArchivalService::class)->deleteArchive($filename);
+                    unset($this->archives);
+
+                    if ($deleted) {
+                        Notification::make()
+                            ->title('Backup archive deleted')
+                            ->body("Archive {$filename} was deleted successfully.")
+                            ->success()
+                            ->send();
+                    } else {
+                        Notification::make()
+                            ->title('Failed to delete archive')
+                            ->body("Archive {$filename} could not be found or deleted.")
+                            ->danger()
+                            ->send();
+                    }
+                }
+            });
+    }
 }
