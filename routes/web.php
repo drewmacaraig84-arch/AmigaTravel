@@ -622,3 +622,8 @@ Route::get('/sitemap.xml', function () {
 
     return response($xml, 200)->header('Content-Type', 'text/xml');
 });
+
+// Official Receipt PDF Download Route
+Route::middleware(['web', 'auth'])->get('/admin/receipts/download/{booking}/{type?}', [\App\Http\Controllers\ReceiptController::class, 'download'])
+    ->name('admin.receipts.download');
+

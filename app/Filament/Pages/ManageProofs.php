@@ -2,7 +2,9 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Resources\BookingResource;
 use App\Filament\Resources\TransactionResource;
+use App\Models\Booking;
 use App\Models\PaymentSetting;
 use App\Models\Transaction;
 use App\Models\User;
@@ -19,34 +21,34 @@ use Filament\Pages\Page;
 use Filament\Support\Enums\ActionSize;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Computed;
 
 class ManageProofs extends Page implements HasActions, HasForms
 {
+    use InteractsWithActions;
+    use InteractsWithForms;
+
     public static function canAccess(): bool
     {
         $user = Auth::user();
 
         return $user instanceof User && $user->hasAdminPermission('proofs');
     }
-    use InteractsWithActions;
-    use InteractsWithForms;
 
     protected static ?string $navigationIcon = 'heroicon-o-photo';
-
     protected static ?string $navigationGroup = 'Settings';
     protected static ?int $navigationSort = 30;
     protected static ?string $navigationLabel = 'Proofs';
-
-    protected static ?string $title = 'Payment Proofs';
-
+    protected static ?string $title = 'Payment Proofs & Receipts';
     protected static string $view = 'filament.pages.manage-proofs';
 
     public ?array $settingsData = [];
-
     public array $selectedTransactions = [];
-
     public bool $selectAll = false;
+
+    public string $typeFilter = 'all'; // 'all', 'confirmed', 'rebooked', 'refunded'
+    public string $search = '';
 
     public ?string $dateFilter = 'all';
     public ?string $customDateStart = null;
@@ -78,30 +80,195 @@ class ManageProofs extends Page implements HasActions, HasForms
             ->statePath('settingsData');
     }
 
+    public function setTypeFilter(string $filter): void
+    {
+        $this->typeFilter = $filter;
+        $this->selectedTransactions = [];
+        $this->selectAll = false;
+    }
+
+    #[Computed]
+    public function allItems(): Collection
+    {
+        // 1. Fetch transactions with bookings
+        $transactions = Transaction::query()
+            ->with(['booking.passengers', 'booking.schedule.ferryRoute'])
+            ->latest('updated_at')
+            ->get();
+
+        // 2. Fetch standalone bookings that might not have a transaction record or have refund docs
+        $bookings = Booking::query()
+            ->with(['transaction', 'passengers', 'schedule.ferryRoute'])
+            ->latest('updated_at')
+            ->get();
+
+        $items = collect();
+
+        // Map transactions -> Confirmed Proof & Rebooked Proof
+        foreach ($transactions as $tx) {
+            $booking = $tx->booking;
+            $txNumber = $booking?->transaction_number ?? ('TX-' . $tx->id);
+
+            // A. Confirmed Proof & Receipt (Original)
+            if (filled($tx->proof_of_payment) || $tx->payment_status === 'paid' || ($booking && $booking->status === 'confirmed')) {
+                $statusClass = match ($tx->payment_status) {
+                    'paid' => 'proofs-status-paid',
+                    'pending' => 'proofs-status-pending',
+                    'cancelled' => 'proofs-status-cancelled',
+                    default => 'proofs-status-default',
+                };
+
+                $items->push((object) [
+                    'id' => 'confirmed_' . $tx->id,
+                    'composite_id' => 'confirmed_' . $tx->id,
+                    'transaction_id' => $tx->id,
+                    'booking_id' => $booking?->id,
+                    'type' => 'confirmed',
+                    'type_label' => 'Confirmed',
+                    'display_name' => $txNumber,
+                    'status_badge' => $tx->payment_status === 'paid' ? 'Paid' : ucfirst($tx->payment_status ?? 'Pending'),
+                    'status_class' => $statusClass,
+                    'proof_url' => $tx->proof_url,
+                    'has_proof' => filled($tx->proof_of_payment),
+                    'proof_disk_path' => $tx->proof_of_payment,
+                    'client_name' => $booking?->client_name ?? '—',
+                    'client_email' => $booking?->client_email ?? '—',
+                    'route' => ($booking?->origin ?? '—') . ' → ' . ($booking?->destination ?? '—'),
+                    'payment_reference' => $tx->payment_reference,
+                    'amount' => (float) ($booking?->total_price ?? 0),
+                    'updated_at' => $tx->updated_at ?? $tx->created_at,
+                    'receipt_download_url' => $booking ? route('admin.receipts.download', ['booking' => $booking->id, 'type' => 'confirmed']) : null,
+                    'view_url' => $this->viewTransactionUrl($tx),
+                ]);
+            }
+
+            // B. Rebooked Proof & Receipt
+            $isRebooked = (bool) ($booking?->is_rebooked || filled($booking?->rebooking_status) || filled($tx->rebooking_proof_of_payment));
+            if ($isRebooked) {
+                $rebookProofUrl = filled($tx->rebooking_proof_of_payment) ? storage_asset_path($tx->rebooking_proof_of_payment) : null;
+
+                $items->push((object) [
+                    'id' => 'rebooked_' . $tx->id,
+                    'composite_id' => 'rebooked_' . $tx->id,
+                    'transaction_id' => $tx->id,
+                    'booking_id' => $booking?->id,
+                    'type' => 'rebooked',
+                    'type_label' => 'Rebooked',
+                    'display_name' => $txNumber . ' - Rebooked',
+                    'status_badge' => 'Rebooked',
+                    'status_class' => 'proofs-status-rebooked',
+                    'proof_url' => $rebookProofUrl ?: $tx->proof_url,
+                    'has_proof' => filled($tx->rebooking_proof_of_payment) || filled($tx->proof_of_payment),
+                    'proof_disk_path' => $tx->rebooking_proof_of_payment ?: $tx->proof_of_payment,
+                    'client_name' => $booking?->client_name ?? '—',
+                    'client_email' => $booking?->client_email ?? '—',
+                    'route' => ($booking?->origin ?? '—') . ' → ' . ($booking?->destination ?? '—'),
+                    'payment_reference' => $tx->payment_reference,
+                    'amount' => (float) ($booking?->total_price ?? 0),
+                    'updated_at' => $booking?->verified_at ?? $tx->updated_at,
+                    'receipt_download_url' => $booking ? route('admin.receipts.download', ['booking' => $booking->id, 'type' => 'rebooked']) : null,
+                    'view_url' => $booking ? BookingResource::getUrl('view', ['record' => $booking]) : $this->viewTransactionUrl($tx),
+                ]);
+            }
+        }
+
+        // C. Refunded / Cancelled Proof & Receipt
+        foreach ($bookings as $b) {
+            $isRefunded = in_array($b->status, [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED])
+                || filled($b->refund_proof)
+                || filled($b->refund_destination)
+                || $b->isRefundCompleted();
+
+            if ($isRefunded) {
+                $refundProofUrl = filled($b->refund_proof) ? storage_asset_path($b->refund_proof) : null;
+                $txNumber = $b->transaction_number ?? ('BK-' . $b->id);
+
+                $items->push((object) [
+                    'id' => 'refunded_' . $b->id,
+                    'composite_id' => 'refunded_' . $b->id,
+                    'transaction_id' => $b->transaction?->id,
+                    'booking_id' => $b->id,
+                    'type' => 'refunded',
+                    'type_label' => 'Refunded/Cancelled',
+                    'display_name' => $txNumber . ' - Refunded/Cancelled',
+                    'status_badge' => $b->isRefundCompleted() ? 'Refunded' : 'Refund Pending',
+                    'status_class' => 'proofs-status-refunded',
+                    'proof_url' => $refundProofUrl ?: ($b->transaction?->proof_url),
+                    'has_proof' => filled($b->refund_proof) || filled($b->transaction?->proof_of_payment),
+                    'proof_disk_path' => $b->refund_proof ?: $b->transaction?->proof_of_payment,
+                    'client_name' => $b->client_name ?? '—',
+                    'client_email' => $b->client_email ?? '—',
+                    'route' => ($b->origin ?? '—') . ' → ' . ($b->destination ?? '—'),
+                    'payment_reference' => $b->refund_reference ?? $b->transaction?->payment_reference,
+                    'amount' => (float) ($b->refund_amount ?? $b->total_price ?? 0),
+                    'updated_at' => $b->refund_processed_at ?? $b->updated_at,
+                    'receipt_download_url' => route('admin.receipts.download', ['booking' => $b->id, 'type' => 'refunded']),
+                    'view_url' => BookingResource::getUrl('view', ['record' => $b]),
+                ]);
+            }
+        }
+
+        // Sort latest first
+        return $items->sortByDesc(fn ($item) => $item->updated_at ? $item->updated_at->timestamp : 0)->values();
+    }
+
+    #[Computed]
+    public function counts(): array
+    {
+        $all = $this->allItems;
+
+        return [
+            'all' => $all->count(),
+            'confirmed' => $all->where('type', 'confirmed')->count(),
+            'rebooked' => $all->where('type', 'rebooked')->count(),
+            'refunded' => $all->where('type', 'refunded')->count(),
+        ];
+    }
+
     #[Computed]
     public function proofs(): Collection
     {
-        $query = Transaction::query()
-            ->with('booking')
-            ->whereNotNull('proof_of_payment')
-            ->latest('updated_at');
+        $items = $this->allItems;
 
-        if ($this->dateFilter === 'today') {
-            $query->whereDate('updated_at', today());
-        } elseif ($this->dateFilter === 'week') {
-            $query->whereBetween('updated_at', [now()->startOfWeek(), now()->endOfWeek()]);
-        } elseif ($this->dateFilter === 'month') {
-            $query->whereBetween('updated_at', [now()->startOfMonth(), now()->endOfMonth()]);
-        } elseif ($this->dateFilter === 'year') {
-            $query->whereBetween('updated_at', [now()->startOfYear(), now()->endOfYear()]);
-        } elseif ($this->dateFilter === 'custom' && $this->customDateStart && $this->customDateEnd) {
-            $query->whereBetween('updated_at', [
-                \Carbon\Carbon::parse($this->customDateStart)->startOfDay(),
-                \Carbon\Carbon::parse($this->customDateEnd)->endOfDay(),
-            ]);
+        // 1. Type filter
+        if ($this->typeFilter !== 'all') {
+            $items = $items->where('type', $this->typeFilter);
         }
 
-        return $query->get();
+        // 2. Date filter
+        if ($this->dateFilter === 'today') {
+            $items = $items->filter(fn ($i) => $i->updated_at && $i->updated_at->isToday());
+        } elseif ($this->dateFilter === 'week') {
+            $start = now()->startOfWeek();
+            $end = now()->endOfWeek();
+            $items = $items->filter(fn ($i) => $i->updated_at && $i->updated_at->between($start, $end));
+        } elseif ($this->dateFilter === 'month') {
+            $start = now()->startOfMonth();
+            $end = now()->endOfMonth();
+            $items = $items->filter(fn ($i) => $i->updated_at && $i->updated_at->between($start, $end));
+        } elseif ($this->dateFilter === 'year') {
+            $start = now()->startOfYear();
+            $end = now()->endOfYear();
+            $items = $items->filter(fn ($i) => $i->updated_at && $i->updated_at->between($start, $end));
+        } elseif ($this->dateFilter === 'custom' && $this->customDateStart && $this->customDateEnd) {
+            $start = \Carbon\Carbon::parse($this->customDateStart)->startOfDay();
+            $end = \Carbon\Carbon::parse($this->customDateEnd)->endOfDay();
+            $items = $items->filter(fn ($i) => $i->updated_at && $i->updated_at->between($start, $end));
+        }
+
+        // 3. Search query
+        if (filled($this->search)) {
+            $search = strtolower(trim($this->search));
+            $items = $items->filter(function ($i) use ($search) {
+                return str_contains(strtolower($i->display_name), $search)
+                    || str_contains(strtolower((string) $i->client_name), $search)
+                    || str_contains(strtolower((string) $i->client_email), $search)
+                    || str_contains(strtolower((string) $i->payment_reference), $search)
+                    || str_contains(strtolower((string) $i->route), $search);
+            });
+        }
+
+        return $items->values();
     }
 
     public function saveSettings(): void
@@ -123,8 +290,7 @@ class ManageProofs extends Page implements HasActions, HasForms
     {
         if ($value) {
             $this->selectedTransactions = $this->proofs
-                ->pluck('id')
-                ->map(fn (int $id): string => (string) $id)
+                ->pluck('composite_id')
                 ->all();
         } else {
             $this->selectedTransactions = [];
@@ -132,6 +298,12 @@ class ManageProofs extends Page implements HasActions, HasForms
     }
 
     public function updatedDateFilter(): void
+    {
+        $this->selectedTransactions = [];
+        $this->selectAll = false;
+    }
+
+    public function updatedSearch(): void
     {
         $this->selectedTransactions = [];
         $this->selectAll = false;
@@ -152,8 +324,7 @@ class ManageProofs extends Page implements HasActions, HasForms
     public function updatedSelectedTransactions(): void
     {
         $allIds = $this->proofs
-            ->pluck('id')
-            ->map(fn (int $id): string => (string) $id)
+            ->pluck('composite_id')
             ->all();
 
         $this->selectAll = ! empty($allIds)
@@ -166,16 +337,13 @@ class ManageProofs extends Page implements HasActions, HasForms
             return;
         }
 
-        $transactions = Transaction::query()
-            ->whereKey($this->selectedTransactions)
-            ->whereNotNull('proof_of_payment')
-            ->get();
-
-        foreach ($transactions as $transaction) {
-            $transaction->deleteProof();
+        $count = 0;
+        foreach ($this->selectedTransactions as $compositeId) {
+            if ($this->performDelete($compositeId)) {
+                $count++;
+            }
         }
 
-        $count = $transactions->count();
         $this->selectedTransactions = [];
         $this->selectAll = false;
 
@@ -185,26 +353,52 @@ class ManageProofs extends Page implements HasActions, HasForms
             ->send();
     }
 
-    public function deleteProof(int $transactionId): void
+    public function deleteProof(string $compositeId): void
     {
-        $transaction = Transaction::query()
-            ->whereKey($transactionId)
-            ->whereNotNull('proof_of_payment')
-            ->firstOrFail();
+        if ($this->performDelete($compositeId)) {
+            $this->selectedTransactions = array_values(array_filter(
+                $this->selectedTransactions,
+                fn (string $id): bool => $id !== $compositeId,
+            ));
 
-        $transaction->deleteProof();
+            $this->updatedSelectedTransactions();
 
-        $this->selectedTransactions = array_values(array_filter(
-            $this->selectedTransactions,
-            fn (string $id): bool => (int) $id !== $transactionId,
-        ));
+            Notification::make()
+                ->title('Proof deleted')
+                ->success()
+                ->send();
+        }
+    }
 
-        $this->updatedSelectedTransactions();
+    protected function performDelete(string $compositeId): bool
+    {
+        $parts = explode('_', $compositeId, 2);
+        $type = $parts[0] ?? '';
+        $id = (int) ($parts[1] ?? 0);
 
-        Notification::make()
-            ->title('Proof deleted')
-            ->success()
-            ->send();
+        if ($type === 'confirmed' && $id > 0) {
+            $tx = Transaction::find($id);
+            if ($tx) {
+                $tx->deleteProof();
+                return true;
+            }
+        } elseif ($type === 'rebooked' && $id > 0) {
+            $tx = Transaction::find($id);
+            if ($tx && $tx->rebooking_proof_of_payment) {
+                Storage::disk('public')->delete($tx->rebooking_proof_of_payment);
+                $tx->update(['rebooking_proof_of_payment' => null]);
+                return true;
+            }
+        } elseif ($type === 'refunded' && $id > 0) {
+            $b = Booking::find($id);
+            if ($b && $b->refund_proof) {
+                Storage::disk('public')->delete($b->refund_proof);
+                $b->update(['refund_proof' => null]);
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function viewTransactionUrl(Transaction $transaction): string
@@ -214,30 +408,13 @@ class ManageProofs extends Page implements HasActions, HasForms
 
     public function downloadZip(bool $onlySelected = false): ?\Symfony\Component\HttpFoundation\BinaryFileResponse
     {
-        $query = Transaction::query()->whereNotNull('proof_of_payment');
+        $items = $this->proofs;
 
         if ($onlySelected && ! empty($this->selectedTransactions)) {
-            $query->whereKey($this->selectedTransactions);
-        } else {
-            if ($this->dateFilter === 'today') {
-                $query->whereDate('updated_at', today());
-            } elseif ($this->dateFilter === 'week') {
-                $query->whereBetween('updated_at', [now()->startOfWeek(), now()->endOfWeek()]);
-            } elseif ($this->dateFilter === 'month') {
-                $query->whereBetween('updated_at', [now()->startOfMonth(), now()->endOfMonth()]);
-            } elseif ($this->dateFilter === 'year') {
-                $query->whereBetween('updated_at', [now()->startOfYear(), now()->endOfYear()]);
-            } elseif ($this->dateFilter === 'custom' && $this->customDateStart && $this->customDateEnd) {
-                $query->whereBetween('updated_at', [
-                    \Carbon\Carbon::parse($this->customDateStart)->startOfDay(),
-                    \Carbon\Carbon::parse($this->customDateEnd)->endOfDay(),
-                ]);
-            }
+            $items = $items->whereIn('composite_id', $this->selectedTransactions);
         }
 
-        $transactions = $query->get();
-
-        if ($transactions->isEmpty()) {
+        if ($items->isEmpty()) {
             Notification::make()
                 ->title('No proofs available to download')
                 ->warning()
@@ -260,10 +437,10 @@ class ManageProofs extends Page implements HasActions, HasForms
         }
 
         $filesAdded = 0;
-        $disk = \Illuminate\Support\Facades\Storage::disk('public');
-        
-        foreach ($transactions as $tx) {
-            $proofPath = $tx->proof_of_payment;
+        $disk = Storage::disk('public');
+
+        foreach ($items as $item) {
+            $proofPath = $item->proof_disk_path ?? null;
             if (! $proofPath) {
                 continue;
             }
@@ -276,14 +453,13 @@ class ManageProofs extends Page implements HasActions, HasForms
 
             if ($fileContents !== null) {
                 $extension = pathinfo($proofPath, PATHINFO_EXTENSION) ?: 'jpg';
-                $ref = $tx->booking?->transaction_number ?? ('TX-' . $tx->id);
-                $zipEntryName = "{$ref}_proof.{$extension}";
+                $cleanName = preg_replace('/[^A-Za-z0-9_-]/', '_', $item->display_name);
+                $zipEntryName = "{$cleanName}_proof.{$extension}";
 
                 // Handle duplicates inside ZIP
                 $counter = 1;
-                $originalName = $zipEntryName;
                 while ($zip->statName($zipEntryName) !== false) {
-                    $zipEntryName = "{$ref}_proof_{$counter}.{$extension}";
+                    $zipEntryName = "{$cleanName}_proof_{$counter}.{$extension}";
                     $counter++;
                 }
 
@@ -354,7 +530,7 @@ class ManageProofs extends Page implements HasActions, HasForms
             ->modalDescription('Delete this proof image? This cannot be undone.')
             ->modalSubmitActionLabel('Delete')
             ->action(function (array $arguments): void {
-                $this->deleteProof((int) $arguments['transactionId']);
+                $this->deleteProof((string) $arguments['compositeId']);
             })
             ->extraAttributes(['class' => 'flex-1']);
     }

@@ -65,6 +65,16 @@
             border-color: #86efac;
             color: #166534;
         }
+        .badge-rebooked {
+            background-color: #f3e8ff;
+            border-color: #d8b4fe;
+            color: #6b21a8;
+        }
+        .badge-refunded {
+            background-color: #e0f2fe;
+            border-color: #7dd3fc;
+            color: #0369a1;
+        }
         .tx-number {
             font-size: 14px;
             font-weight: bold;
@@ -222,18 +232,40 @@
             <td>
                 <div class="brand-logo-wrap">
                     <img src="data:image/png;base64,{{ base64_encode(file_get_contents(public_path('images/amiga-logo-transparent.png'))) }}" alt="Amiga Gracia" class="brand-logo" />
-                    <div class="brand-sub brand-sub--ack">{{ ($isTicket ?? false) ? 'CONFIRMED BOOKING & ITINERARY' : 'E-ACKNOWLEDGEMENT' }}</div>
+                    @php
+                        $rType = strtolower($receiptType ?? 'confirmed');
+                        $subTitle = match ($rType) {
+                            'rebooked' => 'E-ACKNOWLEDGEMENT (REBOOKED)',
+                            'refunded', 'cancelled' => 'REFUND CREDIT ACKNOWLEDGEMENT',
+                            default => ($isTicket ?? false) ? 'CONFIRMED BOOKING & ITINERARY' : 'E-ACKNOWLEDGEMENT',
+                        };
+                    @endphp
+                    <div class="brand-sub brand-sub--ack">{{ $subTitle }}</div>
                 </div>
             </td>
             <td class="receipt-title-box">
                 @php
                     $payStatus = strtolower($booking->transaction?->payment_status ?? $booking->status ?? 'confirmed');
                     $isPaid = in_array($payStatus, ['paid', 'confirmed', 'completed', 'approved']);
+                    
+                    if ($rType === 'rebooked') {
+                        $badgeClass = 'badge-rebooked';
+                        $badgeText = 'REBOOKED / CONFIRMED';
+                        $displayRef = $booking->transaction_number . ' - Rebooked';
+                    } elseif (in_array($rType, ['refunded', 'cancelled'])) {
+                        $badgeClass = 'badge-refunded';
+                        $badgeText = 'REFUNDED / CANCELLED';
+                        $displayRef = $booking->transaction_number . ' - Refunded/Cancelled';
+                    } else {
+                        $badgeClass = $isPaid ? 'badge-paid' : '';
+                        $badgeText = $isPaid ? 'CONFIRMED / PAID' : strtoupper($payStatus);
+                        $displayRef = $booking->transaction_number;
+                    }
                 @endphp
-                <div class="receipt-badge {{ $isPaid ? 'badge-paid' : '' }}">
-                    {{ $isPaid ? 'CONFIRMED / PAID' : strtoupper($payStatus) }}
+                <div class="receipt-badge {{ $badgeClass }}">
+                    {{ $badgeText }}
                 </div>
-                <div class="tx-number">REF: {{ $booking->transaction_number }}</div>
+                <div class="tx-number">REF: {{ $displayRef }}</div>
                 <div class="tx-date">Issued: {{ optional($booking->created_at)->format('M d, Y h:i A') ?? date('M d, Y') }}</div>
             </td>
         </tr>
