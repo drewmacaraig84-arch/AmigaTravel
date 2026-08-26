@@ -453,19 +453,27 @@ class RouteScheduleSeeder extends Seeder
                 foreach ($rData['schedules'] as $sData) {
                     $vehicleName = $sData['vehicle_name'] ?? $sData['service_name'];
 
-                    // Match vehicle for this operator
-                    $vehicle = Vehicle::query()
-                        ->where(function($q) use ($operatorId, $operatorName, $rData) {
-                            if ($operatorId) $q->where('operator_id', $operatorId);
-                            $q->orWhere('operator', $operatorName)->orWhere('operator', $rData['operator']);
-                        })
-                        ->where(function($q) use ($sData, $vehicleName) {
-                            $q->where('name', $vehicleName)
-                              ->orWhere('name', 'like', "%{$vehicleName}%")
-                              ->orWhere('vehicle_id', $sData['plate_no'] ?? '');
-                        })
-                        ->first();
+                    // Match vehicle by plate_no first (most specific), then fall back to operator+name
+                    $plateNo = $sData['plate_no'] ?? null;
+                    $vehicle = null;
 
+                    // 1. Match by exact plate number (most reliable)
+                    if ($plateNo) {
+                        $vehicle = Vehicle::where('vehicle_id', $plateNo)->first();
+                    }
+
+                    // 2. Match by operator + exact name
+                    if (! $vehicle) {
+                        $vehicle = Vehicle::query()
+                            ->where(function($q) use ($operatorId, $operatorName, $rData) {
+                                if ($operatorId) $q->where('operator_id', $operatorId);
+                                else $q->where('operator', $operatorName)->orWhere('operator', $rData['operator']);
+                            })
+                            ->where('name', $vehicleName)
+                            ->first();
+                    }
+
+                    // 3. Fuzzy fallback
                     if (! $vehicle) {
                         $vehicle = Vehicle::where('name', 'like', "%{$vehicleName}%")->first();
                     }
