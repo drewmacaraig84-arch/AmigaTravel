@@ -420,6 +420,40 @@ class Passenger extends Model
         return max(0.0, $this->getEffectiveItemTotal() - $nonRefundable);
     }
 
+    /**
+     * Get individual refund breakdown for this passenger item.
+     */
+    public function getRefundBreakdown(bool $isWithinGracePeriod = false): array
+    {
+        $itemTotal = $this->getEffectiveItemTotal();
+
+        if ($isWithinGracePeriod) {
+            return [
+                'item_total'          => $itemTotal,
+                'refundable_amount'   => $itemTotal,
+                'deduction_amount'    => 0.0,
+                'surcharge_amount'    => 0.0,
+                'non_refundable_fees' => 0.0,
+            ];
+        }
+
+        $booking = $this->getBookingModel();
+        $nonRefundableFees = $this->getEffectiveWebAdminFee() + $this->getEffectiveTransactionFee();
+        $ticketBase = max(0.0, $itemTotal - $nonRefundableFees);
+        $surchargePct = $booking ? $booking->getRefundSurchargePercentage() : 0;
+        $surcharge = round($ticketBase * ($surchargePct / 100), 2);
+        $refundable = max(0.0, round($ticketBase - $surcharge, 2));
+        $deduction = round($itemTotal - $refundable, 2);
+
+        return [
+            'item_total'          => $itemTotal,
+            'refundable_amount'   => $refundable,
+            'deduction_amount'    => $deduction,
+            'surcharge_amount'    => $surcharge,
+            'non_refundable_fees' => $nonRefundableFees,
+        ];
+    }
+
     // ─── Status Label ─────────────────────────────────────────────────────────
 
     public function getStatusLabel(): string

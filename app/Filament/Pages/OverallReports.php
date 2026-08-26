@@ -57,8 +57,8 @@ class OverallReports extends Page
 
     public function mount(): void
     {
-        $this->startDate = now()->startOfMonth()->toDateString();
-        $this->endDate = now()->endOfMonth()->toDateString();
+        $this->startDate = now()->startOfMonth()->format('Y-m-d 00:00:00');
+        $this->endDate = now()->endOfMonth()->format('Y-m-d 23:59:59');
         $this->loadStats();
     }
 

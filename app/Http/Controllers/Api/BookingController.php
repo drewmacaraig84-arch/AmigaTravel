@@ -632,9 +632,9 @@ class BookingController extends Controller
 
         foreach ($allPassengers as $p) {
             if (in_array((int) $p->item_number, array_map('intval', $selectedItems), true)) {
-                $pItemTotal = $p->getEffectiveItemTotal();
-                $pRefund = $selectedCount > 0 ? round($totalRefundAmount / $selectedCount, 2) : $pItemTotal;
-                $pFee    = $selectedCount > 0 ? round($totalCancellationFee / $selectedCount, 2) : 0;
+                $pBreakdown = $p->getRefundBreakdown($isWithinFiveMinutes);
+                $pRefund = $pBreakdown['refundable_amount'];
+                $pFee    = $pBreakdown['deduction_amount'];
 
                 $p->update([
                     'status'             => \App\Models\Passenger::STATUS_REFUND_PENDING,
