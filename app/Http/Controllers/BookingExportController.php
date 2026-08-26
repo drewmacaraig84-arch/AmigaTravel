@@ -116,13 +116,14 @@ class BookingExportController extends Controller
         $fromDate = request()->input('from_date') ?? request()->input('start') ?? request()->input('startDate') ?? request()->input('from');
         $toDate   = request()->input('to_date') ?? request()->input('end') ?? request()->input('endDate') ?? request()->input('to');
 
-        $grouped = $this->getGroupedBookings();
+        $exportedBy = auth()->user()?->name ?? auth('filament')->user()?->name ?? 'Administrator';
 
         $html = view('exports.bookings-pdf', [
             'groupedBookings' => $grouped,
             'fromDate'        => $fromDate,
             'toDate'          => $toDate,
             'generatedAt'     => now(),
+            'exportedBy'      => $exportedBy,
         ])->render();
 
         $options = new Options();

@@ -1185,8 +1185,6 @@
 
                     @if ($step === 3)
                         <div class="space-y-4">
-                            <p class="text-black font-bold">Each traveler can have their own discount, if eligible. Name is required, discount is optional.</p>
-
                             @php
                                 $typeLabels = ['adult' => 'Adult', 'child' => 'Child', 'minor' => 'Minor', 'infant' => 'Infant', 'driver' => 'Driver'];
                                 $countByType = [];

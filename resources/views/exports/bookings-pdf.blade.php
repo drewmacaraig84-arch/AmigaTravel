@@ -96,11 +96,11 @@
                     <div style="font-size: 8px; color: #475569; background: #f8fafc; border: 1px solid #cbd5e1; padding: 4px 8px; border-radius: 4px; display: inline-block;">
                         <strong>Date Range:</strong> 
                         @if(!empty($fromDate) && !empty($toDate))
-                            {{ \Carbon\Carbon::parse($fromDate)->format('M d, Y') }} — {{ \Carbon\Carbon::parse($toDate)->format('M d, Y') }}
+                            {{ str_contains($fromDate, ':') ? \Carbon\Carbon::parse($fromDate)->format('M d, Y h:i A') : \Carbon\Carbon::parse($fromDate)->startOfDay()->format('M d, Y h:i A') }} — {{ str_contains($toDate, ':') ? \Carbon\Carbon::parse($toDate)->format('M d, Y h:i A') : \Carbon\Carbon::parse($toDate)->endOfDay()->format('M d, Y h:i A') }}
                         @elseif(!empty($fromDate))
-                            From {{ \Carbon\Carbon::parse($fromDate)->format('M d, Y') }}
+                            From {{ str_contains($fromDate, ':') ? \Carbon\Carbon::parse($fromDate)->format('M d, Y h:i A') : \Carbon\Carbon::parse($fromDate)->startOfDay()->format('M d, Y h:i A') }}
                         @elseif(!empty($toDate))
-                            Up to {{ \Carbon\Carbon::parse($toDate)->format('M d, Y') }}
+                            Up to {{ str_contains($toDate, ':') ? \Carbon\Carbon::parse($toDate)->format('M d, Y h:i A') : \Carbon\Carbon::parse($toDate)->endOfDay()->format('M d, Y h:i A') }}
                         @else
                             All Recorded Dates
                         @endif
@@ -577,7 +577,7 @@
                     <td style="border: none; padding: 2px 0; text-align: right;">{{ number_format($overallRefundRetained, 2) }}</td>
                 </tr>
                 <tr style="border-top: 1.5px solid #2c3e50; font-weight: bold; font-size: 9px; background: #edf2f7;">
-                    <td style="border: none; padding: 4px 2px;">TO BE REMITTED AMOUNT</td>
+                    <td style="border: none; padding: 4px 2px;">NET SALES</td>
                     <td style="border: none; padding: 4px 2px; text-align: right; color: #1e3a8a;">&#8369;{{ number_format($toBeRemittedAmount, 2) }}</td>
                 </tr>
             </table>
@@ -614,7 +614,7 @@
     </div>
 
     <div class="footer">
-        <p>Generated on {{ ($generatedAt ?? now())->format('F d, Y \a\t h:i:s A') }} | Amiga Gracia Travel Services</p>
+        <p>Generated on {{ ($generatedAt ?? now())->format('F d, Y \a\t h:i:s A') }} | Exported by: {{ $exportedBy ?? auth()->user()?->name ?? 'Administrator' }} | Amiga Gracia Travel Services</p>
     </div>
 </body>
 </html>

@@ -378,11 +378,7 @@ class Booking extends Model
         $hours = $settings->getSlaVoucherHours();
         $amount = number_format($settings->getSlaVoucherAmount(), 0);
 
-        if ($forApp) {
-            return "Our Verification Guarantee: If your booking is not processed within {$hours} hours of payment submission, you will automatically receive a ₱{$amount} travel voucher valid for 3 months in your account for your next booking.";
-        }
-
-        return "Our Verification Guarantee: If your booking is not processed within {$hours} hours of payment submission, you will automatically receive a ₱{$amount} travel voucher valid for 3 months towards your next trip. Download the Amiga Gracia app to easily claim and manage your reward vouchers!";
+        return "We’re reviewing your booking. If it’s not processed within {$hours} hours of payment and you haven’t heard from us, you’ll automatically receive a ₱{$amount} Travel Voucher, valid for 90 days. Download the Amiga Gracia App to claim, track, and redeem your voucher. Terms and conditions apply.";
     }
 
     public function serviceCancellation(): BelongsTo

@@ -2662,7 +2662,7 @@ class _HomeScreenState extends State<HomeScreen>
                           Icon(Icons.stars_rounded,
                               color: Colors.white, size: 30),
                           SizedBox(height: 10),
-                          Text('My Points',
+                          Text('My Gracia Coins',
                               style: TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
@@ -6829,7 +6829,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                           color: Color(0xFFEE018D), size: 20),
                       SizedBox(width: 8),
                       Text(
-                        'Verification Guarantee',
+                        'Our Service Guarantee',
                         style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF9D174D),
@@ -14707,7 +14707,7 @@ class ServicesScreen extends StatelessWidget {
       'tag': 'Available Online',
     },
     {
-      'title': 'Starlite Ferries Booking',
+      'title': 'Starlite Ferries',
       'desc':
           'Affordable regional transits between Batangas, Calapan, and Roxas. We manage standard ferry bookings, roll-on/roll-off (RoRo) cargo slots, and fastcraft ticketing.',
       'icon': Icons.sailing,
@@ -14723,7 +14723,7 @@ class ServicesScreen extends StatelessWidget {
       'tag': 'For New Hires & Trainees',
     },
     {
-      'title': 'Educational Tour',
+      'title': 'Education Tour',
       'desc':
           'Educational tours for students and academic groups, featuring visits to travel facilities and cultural sites.',
       'icon': Icons.school,
@@ -19892,7 +19892,7 @@ class _RefundScreenState extends State<RefundScreen> {
                                   ),
                                   const SizedBox(height: 4),
                                   const Text(
-                                      'The 100% refund window has expired. See the breakdown of your refund below.',
+                                      'The 100% refund period has expired. Please see the refund breakdown below.',
                                       style: TextStyle(
                                           color: Color(0xFF92400E),
                                           fontSize: 12)),
