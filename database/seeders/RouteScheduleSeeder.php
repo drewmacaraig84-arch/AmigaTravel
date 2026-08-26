@@ -409,58 +409,36 @@ class RouteScheduleSeeder extends Seeder
             $allPivotRecords = [];
             $now = Carbon::now();
 
+            $operators = \App\Models\Operator::all();
+            $resolveOperator = function (?string $name) use ($operators): ?\App\Models\Operator {
+                if (empty($name)) return null;
+                $exact = $operators->firstWhere('name', $name);
+                if ($exact) return $exact;
+                $lower = strtolower(trim($name));
+                if (str_contains($lower, 'starlite')) return $operators->first(fn($o) => stripos($o->name, 'Starlite') !== false);
+                if (str_contains($lower, 'pal') || str_contains($lower, 'philippine')) return $operators->first(fn($o) => stripos($o->name, 'Philippine') !== false);
+                if (str_contains($lower, 'cebu') || str_contains($lower, 'cebpac')) return $operators->first(fn($o) => stripos($o->name, 'Cebu') !== false);
+                if (str_contains($lower, 'airasia')) return $operators->first(fn($o) => stripos($o->name, 'AirAsia') !== false);
+                if (str_contains($lower, '2go')) return $operators->first(fn($o) => stripos($o->name, '2GO') !== false);
+                return null;
+            };
+
             foreach ($routesData as $rData) {
-                // Find matching vehicle if any
-                $vehicle = Vehicle::query()
-                    ->where('name', 'like', '%' . ($rData['schedules'][0]['vehicle_name'] ?? '') . '%')
-                    ->orWhere('operator', 'like', '%' . $rData['operator'] . '%')
-                    ->first();
+                $operator = $resolveOperator($rData['operator']);
+                $operatorName = $operator ? $operator->name : $rData['operator'];
+                $operatorId = $operator?->id;
 
-                // If no vehicle found, create a basic Vehicle record from first schedule info
-                if (! $vehicle) {
-                    $firstSched = $rData['schedules'][0] ?? null;
-                    $plateNo = $firstSched['plate_no'] ?? null;
-                    $vehicleName = $firstSched['vehicle_name'] ?? ($rData['operator'] ?? '');
-
-                    $vehicle = Vehicle::firstOrCreate(
-                        ['vehicle_id' => $plateNo, 'name' => $vehicleName],
-                        [
-                            'type' => ($rData['mode'] === 'airline' ? 'airline' : 'ferry'),
-                            'operator' => $rData['operator'] ?? null,
-                            'description' => $rData['operator'] ?? null,
-                            'capacity' => null,
-                            'is_active' => true,
-                        ]
-                    );
-                }
-
-                // 1. Create or update FerryRoute
-                // Match existing routes by origin/destination/operator only so we can
-                // correct the `mode` (airline/ferry) if it differs from the seed data.
-                $route = FerryRoute::updateOrCreate(
-                    [
-                        'origin' => $rData['origin'],
-                        'destination' => $rData['destination'],
-                        'operator' => $rData['operator'],
-                    ],
-                    [
-                        'mode' => $rData['mode'],
-                        'trip_type' => $rData['trip_type'],
-                        'is_active' => true,
-                        'vehicle_id' => $vehicle?->id,
-                    ]
-                );
-
-                // 2. Prepare TransportClass records for this operator & accommodations
+                // 1. Prepare TransportClass records for this operator & accommodations
                 $transportClasses = [];
                 foreach ($rData['accommodations'] as $accData) {
                     $code = str($accData['name'])->slug()->value();
                     $tc = TransportClass::updateOrCreate(
                         [
-                            'operator' => $rData['operator'],
+                            'operator' => $operatorName,
                             'code' => $code,
                         ],
                         [
+                            'operator_id' => $operatorId,
                             'name' => $accData['name'],
                             'description' => $accData['description'] ?? null,
                             'price' => $accData['price'] ?? 0,
@@ -471,9 +449,62 @@ class RouteScheduleSeeder extends Seeder
                     $transportClasses[$accData['name']] = $tc;
                 }
 
-                // 3. Create daily schedules across the date range
-                for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
-                    foreach ($rData['schedules'] as $sData) {
+                // 2. Create distinct route for each vehicle and generate its schedules
+                foreach ($rData['schedules'] as $sData) {
+                    $vehicleName = $sData['vehicle_name'] ?? $sData['service_name'];
+
+                    // Match vehicle for this operator
+                    $vehicle = Vehicle::query()
+                        ->where(function($q) use ($operatorId, $operatorName, $rData) {
+                            if ($operatorId) $q->where('operator_id', $operatorId);
+                            $q->orWhere('operator', $operatorName)->orWhere('operator', $rData['operator']);
+                        })
+                        ->where(function($q) use ($sData, $vehicleName) {
+                            $q->where('name', $vehicleName)
+                              ->orWhere('name', 'like', "%{$vehicleName}%")
+                              ->orWhere('vehicle_id', $sData['plate_no'] ?? '');
+                        })
+                        ->first();
+
+                    if (! $vehicle) {
+                        $vehicle = Vehicle::where('name', 'like', "%{$vehicleName}%")->first();
+                    }
+
+                    if (! $vehicle) {
+                        $vehicle = Vehicle::create([
+                            'vehicle_id' => $sData['plate_no'] ?? \Illuminate\Support\Str::upper(\Illuminate\Support\Str::random(7)),
+                            'name' => $vehicleName,
+                            'type' => ($rData['mode'] === 'airline' ? 'airline' : 'ferry'),
+                            'operator' => $operatorName,
+                            'operator_id' => $operatorId,
+                            'is_active' => true,
+                        ]);
+                    } elseif ($operatorId && $vehicle->operator_id !== $operatorId) {
+                        $vehicle->update(['operator_id' => $operatorId, 'operator' => $operatorName]);
+                    }
+
+                    // Create or update FerryRoute per distinct (origin, destination, mode, vehicle)
+                    $route = FerryRoute::firstOrCreate(
+                        [
+                            'origin' => $rData['origin'],
+                            'destination' => $rData['destination'],
+                            'mode' => $rData['mode'],
+                            'vehicle_id' => $vehicle->id,
+                        ],
+                        [
+                            'operator' => $operatorName,
+                            'operator_id' => $operatorId,
+                            'trip_type' => $rData['trip_type'],
+                            'is_active' => true,
+                        ]
+                    );
+
+                    if ($route->operator_id !== $operatorId || $route->operator !== $operatorName) {
+                        $route->update(['operator_id' => $operatorId, 'operator' => $operatorName]);
+                    }
+
+                    // 3. Create daily schedules across the date range
+                    for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
                         $departureTime = Carbon::parse($date->format('Y-m-d') . ' ' . $sData['dep_time']);
                         $arrivalTime = $departureTime->copy()->addMinutes($sData['duration']);
 

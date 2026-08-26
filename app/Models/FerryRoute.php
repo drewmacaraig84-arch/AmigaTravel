@@ -131,6 +131,15 @@ class FerryRoute extends Model
             ->all();
     }
 
+    public function getOperatorDisplayNameAttribute(): string
+    {
+        return $this->operatorRecord?->name 
+            ?? $this->operator 
+            ?? $this->vehicle?->operatorRecord?->name 
+            ?? $this->vehicle?->operator 
+            ?? '—';
+    }
+
     protected static function booted(): void
     {
         static::saving(function ($route) {
@@ -141,8 +150,33 @@ class FerryRoute extends Model
                 }
             } elseif ($route->operator) {
                 $operator = \App\Models\Operator::where('name', $route->operator)->first();
+                if (! $operator) {
+                    $opName = strtolower(trim($route->operator));
+                    if (str_contains($opName, 'starlite')) {
+                        $operator = \App\Models\Operator::where('name', 'like', '%Starlite%')->first();
+                    } elseif (str_contains($opName, 'pal') || str_contains($opName, 'philippine')) {
+                        $operator = \App\Models\Operator::where('name', 'like', '%Philippine%')->first();
+                    } elseif (str_contains($opName, 'cebu') || str_contains($opName, 'cebpac')) {
+                        $operator = \App\Models\Operator::where('name', 'like', '%Cebu%')->first();
+                    } elseif (str_contains($opName, 'airasia')) {
+                        $operator = \App\Models\Operator::where('name', 'like', '%AirAsia%')->first();
+                    } elseif (str_contains($opName, '2go')) {
+                        $operator = \App\Models\Operator::where('name', 'like', '%2GO%')->first();
+                    }
+                }
                 if ($operator) {
                     $route->operator_id = $operator->id;
+                    $route->operator = $operator->name;
+                }
+            }
+
+            if (! $route->operator_id && $route->vehicle_id) {
+                $vehicle = \App\Models\Vehicle::find($route->vehicle_id);
+                if ($vehicle && $vehicle->operator_id) {
+                    $route->operator_id = $vehicle->operator_id;
+                    if (empty($route->operator)) {
+                        $route->operator = optional($vehicle->operatorRecord)->name ?? $vehicle->operator;
+                    }
                 }
             }
         });
