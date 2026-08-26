@@ -36,10 +36,10 @@ class ManageReceipts extends Page implements HasActions, HasForms
     }
 
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
-    protected static ?string $navigationGroup = 'Bookings';
-    protected static ?int $navigationSort = 25;
+    protected static ?string $navigationGroup = 'Settings';
+    protected static ?int $navigationSort = 31;
     protected static ?string $navigationLabel = 'Receipts';
-    protected static ?string $title = 'Official Receipts & Acknowledgements';
+    protected static ?string $title = 'Receipts & Acknowledgements';
     protected static string $view = 'filament.pages.manage-receipts';
 
     public array $selectedReceipts = [];
@@ -97,7 +97,7 @@ class ManageReceipts extends Page implements HasActions, HasForms
                     'booking_id'           => $booking->id,
                     'transaction_number'   => $txNumber,
                     'type'                 => 'confirmed',
-                    'type_label'           => 'Official E-Receipt',
+                    'type_label'           => 'PAYMENT ACKNOWLEDGEMENT RECEIPT',
                     'display_name'         => $txNumber,
                     'status_badge'         => $statusBadge,
                     'status_class'         => $statusClass,
@@ -127,7 +127,7 @@ class ManageReceipts extends Page implements HasActions, HasForms
                     'booking_id'           => $booking->id,
                     'transaction_number'   => $txNumber,
                     'type'                 => 'rebooked',
-                    'type_label'           => 'Rebooked E-Receipt',
+                    'type_label'           => 'PAYMENT ACKNOWLEDGEMENT RECEIPT',
                     'display_name'         => $txNumber . ' - Rebooked',
                     'status_badge'         => 'Rebooked',
                     'status_class'         => 'receipt-badge-rebooked',
@@ -161,7 +161,7 @@ class ManageReceipts extends Page implements HasActions, HasForms
                     'booking_id'           => $booking->id,
                     'transaction_number'   => $txNumber,
                     'type'                 => 'refunded',
-                    'type_label'           => 'Refund Acknowledgement',
+                    'type_label'           => 'REFUND ACKNOWLEDGEMENT RECEIPT',
                     'display_name'         => $txNumber . ' - Refund',
                     'status_badge'         => $booking->isRefundCompleted() ? 'Refunded' : 'Refund Pending',
                     'status_class'         => 'receipt-badge-refunded',
