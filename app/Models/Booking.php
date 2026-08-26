@@ -1615,7 +1615,7 @@ class Booking extends Model
         }
 
         $selectedCount = max(1, $selectedPassengers->count());
-        $isFerry = $this->getMode() === 'ferry';
+        $isAirline = $this->getMode() === 'airline';
         $settings = \App\Models\PaymentSetting::current();
 
         $created_at = $this->created_at ? \Carbon\Carbon::parse($this->created_at) : now();
@@ -1635,7 +1635,7 @@ class Booking extends Model
         // 2. Rebooking Surcharge
         $surchargePct = 0;
         if (! $isWithin5Mins) {
-            if ($this->getMode() === 'airline') {
+            if ($isAirline) {
                 $surchargePct = (float) $settings->rebook_airline_before_departure_surcharge_pct;
             } else {
                 if ($this->isAfterDeparture()) {
@@ -1650,30 +1650,99 @@ class Booking extends Model
         // 3. Revalidation fee (charged per passenger)
         $revalidationFee = $isWithin5Mins ? 0.0 : round(floatval($settings->revalidation_fee ?? 0) * $selectedCount, 2);
 
-        // 4. Rate Difference calculation if replacement schedules provided
-        $newFare = 0.0;
+        // 4. Resolve new schedule prices for departure and return
+        $depSchedPrice = 0.0;
+        $depClassOrAccPrice = 0.0;
+        $depAccPrice = 0.0; // ferry accommodation (non-multiplied)
         if ($depScheduleId) {
             $depSched = \App\Models\Schedule::find($depScheduleId);
             $depSchedPrice = (float) ($depSched?->price ?? 0);
-            $depAccPrice = 0.0;
+
             if ($depAccommodationId) {
-                $acc = \App\Models\ScheduleAccommodation::find($depAccommodationId);
-                $depAccPrice = (float) ($acc?->price ?? 0);
+                if ($isAirline) {
+                    // For airlines, dep_accommodation_id is a TransportClass ID
+                    $stc = \App\Models\ScheduleTransportClass::resolveForSchedule($depScheduleId, $depAccommodationId);
+                    $depClassOrAccPrice = $stc ? $stc->getEffectivePrice() : 0.0;
+                    // Fallback: try TransportClass directly
+                    if ($depClassOrAccPrice <= 0) {
+                        $tc = \App\Models\TransportClass::find($depAccommodationId);
+                        $depClassOrAccPrice = (float) ($tc?->effective_price ?? $tc?->price ?? 0);
+                    }
+                } else {
+                    // For ferry, dep_accommodation_id is a ScheduleAccommodation ID
+                    $acc = \App\Models\ScheduleAccommodation::find($depAccommodationId);
+                    $depAccPrice = (float) ($acc?->price ?? 0);
+                }
             }
-            $newFare += ($depSchedPrice + $depAccPrice) * $selectedCount;
         }
 
+        $retSchedPrice = 0.0;
+        $retClassOrAccPrice = 0.0;
+        $retAccPrice = 0.0;
         if ($retScheduleId) {
             $retSched = \App\Models\Schedule::find($retScheduleId);
             $retSchedPrice = (float) ($retSched?->price ?? 0);
-            $retAccPrice = 0.0;
+
             if ($retAccommodationId) {
-                $rAcc = \App\Models\ScheduleAccommodation::find($retAccommodationId);
-                $retAccPrice = (float) ($rAcc?->price ?? 0);
+                if ($isAirline) {
+                    $rStc = \App\Models\ScheduleTransportClass::resolveForSchedule($retScheduleId, $retAccommodationId);
+                    $retClassOrAccPrice = $rStc ? $rStc->getEffectivePrice() : 0.0;
+                    if ($retClassOrAccPrice <= 0) {
+                        $rTc = \App\Models\TransportClass::find($retAccommodationId);
+                        $retClassOrAccPrice = (float) ($rTc?->effective_price ?? $rTc?->price ?? 0);
+                    }
+                } else {
+                    $rAcc = \App\Models\ScheduleAccommodation::find($retAccommodationId);
+                    $retAccPrice = (float) ($rAcc?->price ?? 0);
+                }
             }
-            $newFare += ($retSchedPrice + $retAccPrice) * $selectedCount;
         }
 
+        // 5. Calculate new fare per passenger with correct multipliers
+        $newFare = 0.0;
+        $passengersBreakdown = [];
+
+        foreach ($selectedPassengers as $p) {
+            $pType = strtolower($p->type ?? 'adult');
+            $rateType = $p->rate_type ?? 'regular';
+            $isPromo = in_array($rateType, ['promotional', 'super_promotional'], true)
+                || (bool) ($p->is_promo ?? false);
+
+            // Apply 50% multiplier for minor/child/infant on regular fares
+            $paxMultiplier = 1.0;
+            if (! $isPromo) {
+                if ($isAirline) {
+                    if (in_array($pType, ['minor', 'child', 'infant'], true)) {
+                        $paxMultiplier = 0.5;
+                    }
+                } else {
+                    // Ferry — minor and child get 50%
+                    if (in_array($pType, ['child', 'minor'], true)) {
+                        $paxMultiplier = 0.5;
+                    }
+                }
+            }
+
+            // For airlines: base fare + transport class get multiplied together
+            // For ferries: base fare gets multiplied, accommodation is flat
+            $paxNewFare = (($depSchedPrice + $depClassOrAccPrice + $retSchedPrice + $retClassOrAccPrice) * $paxMultiplier)
+                + $depAccPrice + $retAccPrice;
+
+            $newFare += $paxNewFare;
+
+            $pOriginalFare = (float) $p->getEffectiveFareAndClass();
+
+            $passengersBreakdown[] = [
+                'item_number'   => (int) $p->item_number,
+                'name'          => $p->name ?? 'Passenger',
+                'type'          => strtoupper($pType),
+                'multiplier'    => $paxMultiplier,
+                'original_fare' => round($pOriginalFare, 2),
+                'new_fare'      => round($paxNewFare, 2),
+            ];
+        }
+
+        $newFare = round($newFare, 2);
         $rateDiff = max(0.0, round($newFare - $originalFareBase, 2));
         $totalToPay = round($rateDiff + $surcharge + $revalidationFee, 2);
 
@@ -1687,6 +1756,7 @@ class Booking extends Model
             'total_rebooking_fee'   => $totalToPay,
             'selected_count'        => $selectedCount,
             'affected_items'        => $this->getAffectedItemsLabel($selectedPassengers->pluck('item_number')->toArray()),
+            'passengers_breakdown'  => $passengersBreakdown,
         ];
     }
 

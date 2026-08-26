@@ -100,7 +100,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.134+145';
+  static const String appVersion = '1.0.135+146';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -20798,8 +20798,33 @@ class _RebookScreenState extends State<RebookScreen> {
 
               final ticketPrice = _parseDouble(selectedSch['price']);
               final rawClassPrice = _parseDouble(tc['price']);
-              final combinedPrice = isAirline ? ((ticketPrice + rawClassPrice) * 1.5) : (ticketPrice + rawClassPrice);
+              final perAdultGross = ticketPrice + rawClassPrice;
 
+              // Calculate total new fare across all selected passengers with multipliers
+              final selectedPax = widget.booking['passengers'] as List? ?? [];
+              final filteredPax = selectedPax.where((p) {
+                if (p is Map) {
+                  final itemNum = int.tryParse(p['item_number']?.toString() ?? '1') ?? 1;
+                  return _selectedPassengerItems.contains(itemNum);
+                }
+                return true;
+              }).toList();
+              final paxToUse = filteredPax.isNotEmpty ? filteredPax : selectedPax;
+
+              double totalNewFare = 0.0;
+              for (final p in paxToUse) {
+                final type = (p['type'] ?? 'adult').toString().toLowerCase();
+                final rateType = (p['rate_type'] ?? 'regular').toString().toLowerCase();
+                final isPromo = rateType == 'promotional' || rateType == 'super_promotional';
+                final isMinorType = isAirline
+                    ? ['minor', 'child', 'infant'].contains(type)
+                    : ['minor', 'child'].contains(type);
+                final multiplier = (!isPromo && isMinorType) ? 0.5 : 1.0;
+                totalNewFare += perAdultGross * multiplier;
+              }
+              final combinedPrice = totalNewFare;
+
+              // Calculate original total fare for comparison
               final tcs = widget.booking['transport_classes'] as List? ?? [];
               final origTcPrice = (tcs.isNotEmpty && isReturn && tcs.length > 1)
                   ? _parseDouble(tcs[1]['pivot']?['price'] ?? tcs[1]['price'])
@@ -20816,13 +20841,24 @@ class _RebookScreenState extends State<RebookScreen> {
                   : _parseDouble(
                       widget.booking['schedule_accommodation_price']);
 
-              final originalPerPax = isAirline
+              final originalPerAdult = isAirline
                   ? (originalSchPrice + origTcPrice)
                   : (originalSchPrice + origTcPrice + originalAccPrice);
 
-              final newPerPax = combinedPrice;
+              // Original total across all selected passengers
+              double originalTotal = 0.0;
+              for (final p in paxToUse) {
+                final type = (p['type'] ?? 'adult').toString().toLowerCase();
+                final rateType = (p['rate_type'] ?? 'regular').toString().toLowerCase();
+                final isPromo = rateType == 'promotional' || rateType == 'super_promotional';
+                final isMinorType = isAirline
+                    ? ['minor', 'child', 'infant'].contains(type)
+                    : ['minor', 'child'].contains(type);
+                final multiplier = (!isPromo && isMinorType) ? 0.5 : 1.0;
+                originalTotal += originalPerAdult * multiplier;
+              }
 
-              final isTooLow = newPerPax < originalPerPax;
+              final isTooLow = combinedPrice < originalTotal;
 
               return GestureDetector(
                 onTap: isTooLow
@@ -20866,9 +20902,9 @@ class _RebookScreenState extends State<RebookScreen> {
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 4),
                       Text(
-                        '₱${combinedPrice.toStringAsFixed(2)}',
+                        '₱${perAdultGross.toStringAsFixed(2)}',
                         style: TextStyle(
                             color: isTooLow
                                 ? Colors.grey
@@ -20879,6 +20915,16 @@ class _RebookScreenState extends State<RebookScreen> {
                                 isTooLow ? TextDecoration.lineThrough : null),
                         textAlign: TextAlign.center,
                       ),
+                      const SizedBox(height: 2),
+                      if (paxToUse.length > 1)
+                        Text(
+                          'Total: ₱${combinedPrice.toStringAsFixed(0)} (${paxToUse.length} pax)',
+                          style: TextStyle(
+                              fontSize: 10,
+                              color: isTooLow ? Colors.grey : const Color(0xFF64748B),
+                              fontWeight: FontWeight.w500),
+                          textAlign: TextAlign.center,
+                        ),
                       if (isTooLow)
                         const Text('Price lower than original',
                             style: TextStyle(color: Colors.red, fontSize: 10)),
@@ -20908,6 +20954,16 @@ class _RebookScreenState extends State<RebookScreen> {
   }
 
   Widget _buildBreakdownStep() {
+    final paxBreakdown = (_breakdown!['passengers_breakdown'] is List)
+        ? (_breakdown!['passengers_breakdown'] as List)
+        : [];
+    final origPrice = _parseDouble(_breakdown!['original_ticket_price']);
+    final newPrice = _parseDouble(_breakdown!['new_ticket_price']);
+    final rateDiff = _parseDouble(_breakdown!['rate_diff']);
+    final surcharge = _parseDouble(_breakdown!['surcharge']);
+    final revalFee = _parseDouble(_breakdown!['revalidation_fee']);
+    final totalToPay = _parseDouble(_breakdown!['total_to_pay']);
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -20924,56 +20980,76 @@ class _RebookScreenState extends State<RebookScreen> {
           ],
         ),
         const SizedBox(height: 16),
+
+        // 1. General Breakdown Card
         Card(
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           elevation: 2,
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Rebooking Breakdown',
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.receipt_long,
+                          color: Color(0xFF2563EB), size: 18),
+                    ),
+                    const SizedBox(width: 10),
+                    const Text('General Breakdown',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Color(0xFF0F172A))),
+                  ],
+                ),
                 const SizedBox(height: 16),
-                if (_breakdown!['original_ticket_price'] != null) ...[
-                  _buildBreakdownRow(
-                      'Original Price',
-                      _breakdown!['original_ticket_price']?.toString() ??
-                          '0.00'),
-                  const SizedBox(height: 8),
-                ],
-                if (_breakdown!['new_ticket_price'] != null) ...[
-                  _buildBreakdownRow('New Ticket Price',
-                      _breakdown!['new_ticket_price']?.toString() ?? '0.00'),
-                  const SizedBox(height: 12),
-                ],
-                const Divider(),
-                const SizedBox(height: 6),
-                const Text('Revalidation Breakdown',
+                _buildBreakdownRow('Original Ticket Price', origPrice.toStringAsFixed(2)),
+                const SizedBox(height: 8),
+                _buildBreakdownRow('New Ticket Price', newPrice.toStringAsFixed(2)),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Divider(),
+                ),
+                const Text('Fees & Fare Adjustment',
                     style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
-                        color: Color(0xFF1E293B))),
-                const SizedBox(height: 8),
+                        color: Color(0xFF334155))),
+                const SizedBox(height: 10),
                 Padding(
-                  padding: const EdgeInsets.only(left: 8),
+                  padding: const EdgeInsets.only(left: 4),
                   child: Column(
                     children: [
-                      _buildBreakdownRow('Revalidation Fee:',
-                          _breakdown!['revalidation_fee']?.toString() ?? '0.00'),
-                      if (_breakdown!['surcharge'] != null &&
-                          _parseDouble(_breakdown!['surcharge']) > 0) ...[
-                        const SizedBox(height: 6),
-                        _buildBreakdownRow('Revalidation Surcharge:',
-                            _breakdown!['surcharge']?.toString() ?? '0.00'),
+                      if (rateDiff > 0) ...[
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.trending_up, size: 16, color: Color(0xFF0284C7)),
+                                SizedBox(width: 6),
+                                Text('Rate Difference (Upgrade):',
+                                    style: TextStyle(color: Color(0xFF0369A1), fontWeight: FontWeight.w600)),
+                              ],
+                            ),
+                            Text('+₱${rateDiff.toStringAsFixed(2)}',
+                                style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0284C7))),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
                       ],
-                      if (_breakdown!['rate_diff'] != null &&
-                          _parseDouble(_breakdown!['rate_diff']) > 0) ...[
-                        const SizedBox(height: 6),
-                        _buildBreakdownRow('Rate Diff (if applicable):',
-                            _breakdown!['rate_diff']?.toString() ?? '0.00'),
+                      _buildBreakdownRow('Revalidation Fee:', revalFee.toStringAsFixed(2)),
+                      if (surcharge > 0) ...[
+                        const SizedBox(height: 8),
+                        _buildBreakdownRow('Revalidation Surcharge:', surcharge.toStringAsFixed(2)),
                       ],
                     ],
                   ),
@@ -20985,20 +21061,148 @@ class _RebookScreenState extends State<RebookScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Total Revalidation Fees:',
+                    const Text('Total Amount to Pay:',
                         style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 15)),
-                    Text('₱${_breakdown!['total_to_pay']}',
+                            fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0F172A))),
+                    Text('₱${totalToPay.toStringAsFixed(2)}',
                         style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 20,
-                            color: Color(0xFFdb2777))),
+                            color: Color(0xFFDB2777))),
                   ],
                 ),
               ],
             ),
           ),
         ),
+
+        // 2. Per-Passenger Breakdown Card (Shown only when more than 1 passenger)
+        if (paxBreakdown.length > 1) ...[
+          const SizedBox(height: 16),
+          Card(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            elevation: 2,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.people_alt_outlined,
+                            color: Color(0xFF059669), size: 18),
+                      ),
+                      const SizedBox(width: 10),
+                      const Text('Breakdown Per Passenger',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              color: Color(0xFF0F172A))),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Comparison of original vs new fare per passenger category.',
+                    style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                  ),
+                  const SizedBox(height: 14),
+                  ...paxBreakdown.asMap().entries.map((entry) {
+                    final idx = entry.key;
+                    final p = entry.value as Map<String, dynamic>;
+                    final pName = p['name']?.toString() ?? 'Traveler #${idx + 1}';
+                    final pType = p['type']?.toString().toUpperCase() ?? 'ADULT';
+                    final pOrig = _parseDouble(p['original_fare']);
+                    final pNew = _parseDouble(p['new_fare']);
+                    final pDiff = pNew - pOrig;
+                    final mult = _parseDouble(p['multiplier']);
+                    final multText = (mult < 1.0) ? ' (${(mult * 100).toInt()}%)' : '';
+                    final isChildOrMinor = ['MINOR', 'CHILD', 'INFANT'].contains(pType);
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 22,
+                                height: 22,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE2E8F0),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Center(
+                                  child: Text('${idx + 1}',
+                                      style: const TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF334155))),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(pName,
+                                    style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF1E293B)),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: isChildOrMinor ? const Color(0xFFDCFCE7) : const Color(0xFFDBEAFE),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text('$pType$multText',
+                                    style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: isChildOrMinor ? const Color(0xFF166534) : const Color(0xFF1E40AF))),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Original: ₱${pOrig.toStringAsFixed(2)}',
+                                  style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B))),
+                              Text('New: ₱${pNew.toStringAsFixed(2)}',
+                                  style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF0F172A))),
+                              if (pDiff > 0)
+                                Text('+₱${pDiff.toStringAsFixed(2)}',
+                                    style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF0284C7)))
+                              else
+                                const Text('No change',
+                                    style: TextStyle(fontSize: 11.5, color: Color(0xFF94A3B8))),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ),
+        ],
+
         const SizedBox(height: 24),
         const Text('Reference Number',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),

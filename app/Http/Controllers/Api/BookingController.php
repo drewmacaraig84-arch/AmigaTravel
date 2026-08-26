@@ -966,6 +966,7 @@ class BookingController extends Controller
                 'total_to_pay'          => (float) $calc['total_rebooking_fee'],
                 'selected_count'        => (int) $calc['selected_count'],
                 'affected_items'        => $calc['affected_items'],
+                'passengers_breakdown'  => $calc['passengers_breakdown'] ?? [],
             ],
             'qr_code_url' => $settings->qr_code_path ? asset('storage/' . $settings->qr_code_path) : null,
         ]);
