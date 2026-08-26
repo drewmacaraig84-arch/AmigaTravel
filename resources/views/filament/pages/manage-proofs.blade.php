@@ -2,8 +2,8 @@
     <link rel="stylesheet" href="{{ asset('css/admin-proofs.css') }}">
 
     <div class="space-y-6">
-        <!-- Retention Settings Card -->
-        <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+        <!-- Retention Settings & Backups Card -->
+        <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900 space-y-4">
             <form wire:submit="saveSettings" class="space-y-4">
                 {{ $this->form }}
 
@@ -15,6 +15,38 @@
                     {{ $this->createBackupAction }}
                 </div>
             </form>
+
+            <!-- Saved Backup Archives List -->
+            @if($this->archives->isNotEmpty())
+                <div class="border-t border-gray-100 dark:border-gray-800 pt-4">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2.5 flex items-center gap-1.5">
+                        📦 Saved Backup ZIP Archives ({{ $this->archives->count() }})
+                    </h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-48 overflow-y-auto">
+                        @foreach($this->archives as $archive)
+                            <div class="flex items-center justify-between p-2.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs">
+                                <div class="truncate mr-2">
+                                    <div class="font-mono font-semibold text-gray-900 dark:text-white truncate" title="{{ $archive->filename }}">
+                                        {{ $archive->filename }}
+                                    </div>
+                                    <div class="text-[10px] text-gray-500 dark:text-gray-400">
+                                        {{ $archive->created_at->format('M d, Y h:i A') }} &bull; {{ $archive->formatted_size }}
+                                    </div>
+                                </div>
+                                <a
+                                    href="{{ $archive->download_url }}"
+                                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-primary-50 text-primary-700 hover:bg-primary-100 dark:bg-primary-900/40 dark:text-primary-300 font-semibold text-[11px] shrink-0 transition"
+                                >
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                                    </svg>
+                                    Download
+                                </a>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
         </div>
 
         <!-- Filter Tabs & Controls -->

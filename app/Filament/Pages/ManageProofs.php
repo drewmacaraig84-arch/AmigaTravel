@@ -530,6 +530,8 @@ class ManageProofs extends Page implements HasActions, HasForms
         try {
             $archive = app(\App\Services\ProofArchivalService::class)->createArchive();
 
+            unset($this->archives);
+
             if ($archive) {
                 Notification::make()
                     ->title('Proofs & Receipts Backup Created!')
