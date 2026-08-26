@@ -48,18 +48,10 @@ class CreateBookingAction
             : null;
 
         // --- Rate tier validation ---
-        $depStc = ! empty($data['selected_transport_class_id'])
-            ? DB::table('schedule_transport_class')
-                ->where('schedule_id', $schedule->id)
-                ->where('transport_class_id', $data['selected_transport_class_id'])
-                ->first()
-            : null;
+        $depStc = ScheduleTransportClass::resolveForSchedule($schedule->id, $data['selected_transport_class_id'] ?? null);
 
         $retStc = (! empty($data['selected_return_transport_class_id']) && $returnSchedule)
-            ? DB::table('schedule_transport_class')
-                ->where('schedule_id', $returnSchedule->id)
-                ->where('transport_class_id', $data['selected_return_transport_class_id'])
-                ->first()
+            ? ScheduleTransportClass::resolveForSchedule($returnSchedule->id, $data['selected_return_transport_class_id'])
             : null;
 
         $isSuperPromoBooking = ($depStc && $depStc->rate_type === 'super_promotional')
@@ -161,9 +153,8 @@ class CreateBookingAction
                 $lockedReturnAccom->decrement('tickets_available');
             }
 
-            if (! empty($data['selected_transport_class_id'])) {
-                $lockedStc = ScheduleTransportClass::where('schedule_id', $schedule->id)
-                    ->where('transport_class_id', $data['selected_transport_class_id'])
+            if ($depStc) {
+                $lockedStc = ScheduleTransportClass::where('id', $depStc->id)
                     ->lockForUpdate()
                     ->first();
 
@@ -178,9 +169,8 @@ class CreateBookingAction
                 }
             }
 
-            if ($returnSchedule && ! empty($data['selected_return_transport_class_id'])) {
-                $lockedReturnStc = ScheduleTransportClass::where('schedule_id', $returnSchedule->id)
-                    ->where('transport_class_id', $data['selected_return_transport_class_id'])
+            if ($retStc) {
+                $lockedReturnStc = ScheduleTransportClass::where('id', $retStc->id)
                     ->lockForUpdate()
                     ->first();
 
@@ -297,30 +287,10 @@ class CreateBookingAction
             $txFeePerPax       = $settings->getTransactionFee($isShortHaul);
 
             // Departure TC price per pax
-            $depTcPrice = 0.0;
-            if (! empty($data['selected_transport_class_id'])) {
-                $tc = TransportClass::find($data['selected_transport_class_id']);
-                if ($tc) {
-                    $override = \Illuminate\Support\Facades\DB::table('schedule_transport_class')
-                        ->where('schedule_id', $schedule->id)
-                        ->where('transport_class_id', $tc->id)
-                        ->value('additional_price');
-                    $depTcPrice = $override !== null ? (float) $override : (float) $tc->effective_price;
-                }
-            }
+            $depTcPrice = $depStc ? $depStc->getEffectivePrice() : 0.0;
 
             // Return TC price per pax
-            $retTcPrice = 0.0;
-            if (! empty($data['selected_return_transport_class_id']) && $returnSchedule) {
-                $retTc = TransportClass::find($data['selected_return_transport_class_id']);
-                if ($retTc) {
-                    $override = \Illuminate\Support\Facades\DB::table('schedule_transport_class')
-                        ->where('schedule_id', $returnSchedule->id)
-                        ->where('transport_class_id', $retTc->id)
-                        ->value('additional_price');
-                    $retTcPrice = $override !== null ? (float) $override : (float) $retTc->effective_price;
-                }
-            }
+            $retTcPrice = $retStc ? $retStc->getEffectivePrice() : 0.0;
 
             // Schedule base prices
             $schedBasePrice  = (float) ($schedule->price ?? 0);
@@ -459,35 +429,25 @@ class CreateBookingAction
             }
 
             // --- Attach Transport Classes ---
-            if (! empty($data['selected_transport_class_id'])) {
-                $transportClass = TransportClass::find($data['selected_transport_class_id']);
-                if ($transportClass) {
-                    $overridePrice = $depStc?->additional_price;
-                    $price = $overridePrice !== null ? (float) $overridePrice : $transportClass->effective_price;
-                    
-                    $booking->transportClasses()->attach($transportClass->id, [
-                        'price'     => $price,
-                        'is_promo'  => (bool) ($depStc?->is_promo || ($depStc?->rate_type && $depStc->rate_type !== 'regular')),
-                        'rate_type' => $depStc?->rate_type ?? 'regular',
-                        'rate_code' => $depStc?->rate_code,
-                        'is_return' => false,
-                    ]);
-                }
+            if ($depStc && $depStc->transportClass) {
+                $price = $depStc->getEffectivePrice();
+                $booking->transportClasses()->attach($depStc->transport_class_id, [
+                    'price'     => $price,
+                    'is_promo'  => (bool) ($depStc->is_promo || ($depStc->rate_type && $depStc->rate_type !== 'regular')),
+                    'rate_type' => $depStc->rate_type ?? 'regular',
+                    'rate_code' => $depStc->rate_code,
+                    'is_return' => false,
+                ]);
             }
-            if (! empty($data['selected_return_transport_class_id']) && $returnSchedule) {
-                $returnTransportClass = TransportClass::find($data['selected_return_transport_class_id']);
-                if ($returnTransportClass) {
-                    $overridePrice = $retStc?->additional_price;
-                    $price = $overridePrice !== null ? (float) $overridePrice : $returnTransportClass->effective_price;
-
-                    $booking->transportClasses()->attach($returnTransportClass->id, [
-                        'price'     => $price,
-                        'is_promo'  => (bool) ($retStc?->is_promo || ($retStc?->rate_type && $retStc->rate_type !== 'regular')),
-                        'rate_type' => $retStc?->rate_type ?? 'regular',
-                        'rate_code' => $retStc?->rate_code,
-                        'is_return' => true,
-                    ]);
-                }
+            if ($retStc && $retStc->transportClass) {
+                $price = $retStc->getEffectivePrice();
+                $booking->transportClasses()->attach($retStc->transport_class_id, [
+                    'price'     => $price,
+                    'is_promo'  => (bool) ($retStc->is_promo || ($retStc->rate_type && $retStc->rate_type !== 'regular')),
+                    'rate_type' => $retStc->rate_type ?? 'regular',
+                    'rate_code' => $retStc->rate_code,
+                    'is_return' => true,
+                ]);
             }
 
             // --- Attach Accommodations ---
@@ -590,29 +550,13 @@ class CreateBookingAction
             return \App\Models\Discount::all()->keyBy('id');
         });
 
-        $departureTransportClassTotal = 0;
-        if ($selectedTransportClassId) {
-            $transportClass = TransportClass::find($selectedTransportClassId);
-            if ($transportClass) {
-                $overridePrice = \Illuminate\Support\Facades\DB::table('schedule_transport_class')
-                    ->where('schedule_id', $schedule->id)
-                    ->where('transport_class_id', $transportClass->id)
-                    ->value('additional_price');
-                $departureTransportClassTotal = $overridePrice !== null ? (float) $overridePrice : (float) $transportClass->effective_price;
-            }
-        }
+        $depStc = ScheduleTransportClass::resolveForSchedule($schedule->id, $selectedTransportClassId);
+        $departureTransportClassTotal = $depStc ? $depStc->getEffectivePrice() : 0.0;
 
-        $returnTransportClassTotal = 0;
-        if ($tripType === 'round_trip' && $returnSelectedTransportClassId && $returnSchedule) {
-            $returnTransportClass = TransportClass::find($returnSelectedTransportClassId);
-            if ($returnTransportClass) {
-                $overridePrice = \Illuminate\Support\Facades\DB::table('schedule_transport_class')
-                    ->where('schedule_id', $returnSchedule->id)
-                    ->where('transport_class_id', $returnTransportClass->id)
-                    ->value('additional_price');
-                $returnTransportClassTotal = $overridePrice !== null ? (float) $overridePrice : (float) $returnTransportClass->effective_price;
-            }
-        }
+        $retStc = ($tripType === 'round_trip' && $returnSelectedTransportClassId && $returnSchedule)
+            ? ScheduleTransportClass::resolveForSchedule($returnSchedule->id, $returnSelectedTransportClassId)
+            : null;
+        $returnTransportClassTotal = $retStc ? $retStc->getEffectivePrice() : 0.0;
 
         $isFerry = strtolower($schedule->ferryRoute?->mode ?? '') !== 'airline';
 

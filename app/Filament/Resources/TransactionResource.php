@@ -286,10 +286,12 @@ class TransactionResource extends Resource
                                 $html .= '<th class="py-2.5 px-3">Item #</th>';
                                 $html .= '<th class="py-2.5 px-3">Passenger</th>';
                                 $html .= '<th class="py-2.5 px-3">Status</th>';
-                                $html .= '<th class="py-2.5 px-3 text-right">Fare & Transport Class</th>';
-                                $html .= '<th class="py-2.5 px-3 text-right">Web Admin Fee</th>';
-                                $html .= '<th class="py-2.5 px-3 text-right">Transaction Fee</th>';
-                                $html .= '<th class="py-2.5 px-3 text-right">Item Total</th>';
+                                $html .= '<th class="py-2.5 px-3 text-right">Fare & Class</th>';
+                                $html .= '<th class="py-2.5 px-3 text-right">Discount</th>';
+                                $html .= '<th class="py-2.5 px-3 text-right">Voucher/Pts</th>';
+                                $html .= '<th class="py-2.5 px-3 text-right">Web Fee</th>';
+                                $html .= '<th class="py-2.5 px-3 text-right">Tx Fee</th>';
+                                $html .= '<th class="py-2.5 px-3 text-right">Total</th>';
                                 $html .= '</tr>';
                                 $html .= '</thead>';
                                 $html .= '<tbody class="divide-y divide-gray-100 dark:divide-gray-700/50">';
@@ -311,15 +313,27 @@ class TransactionResource extends Resource
                                     };
 
                                     $fareAndClass = $p->getEffectiveFareAndClass();
+                                    $discAmt = (float) ($p->discount_amount ?? 0);
+                                    $voucherPoints = (float) ($p->voucher_discount_share ?? 0) + (float) ($p->points_discount_share ?? 0);
                                     $webFee = $p->getEffectiveWebAdminFee();
                                     $txFee = $p->getEffectiveTransactionFee();
                                     $itemTotal = $p->getEffectiveItemTotal();
+
+                                    $discCell = $discAmt > 0
+                                        ? '<span class="text-emerald-600 dark:text-emerald-400 font-medium">-₱' . number_format($discAmt, 2) . '</span>' . ($p->discount ? ' <span class="text-[10px] bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 px-1 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">' . htmlspecialchars($p->discount->name) . '</span>' : '')
+                                        : '<span class="text-gray-400">—</span>';
+
+                                    $voucherCell = $voucherPoints > 0
+                                        ? '<span class="text-emerald-600 dark:text-emerald-400 font-medium">-₱' . number_format($voucherPoints, 2) . '</span>'
+                                        : '<span class="text-gray-400">—</span>';
 
                                     $html .= '<tr class="hover:bg-gray-50/50 dark:hover:bg-gray-700/20">';
                                     $html .= '<td class="py-2.5 px-3 font-bold text-gray-900 dark:text-white">Item ' . $itemNum . '</td>';
                                     $html .= '<td class="py-2.5 px-3"><span class="font-medium text-gray-900 dark:text-white">' . $name . '</span> <span class="text-xs text-gray-500">(' . $type . ')</span>' . $ticket . '</td>';
                                     $html .= '<td class="py-2.5 px-3"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ' . $badgeColorClass . '">' . $statusLabel . '</span></td>';
                                     $html .= '<td class="py-2.5 px-3 text-right font-medium">₱' . number_format($fareAndClass, 2) . '</td>';
+                                    $html .= '<td class="py-2.5 px-3 text-right">' . $discCell . '</td>';
+                                    $html .= '<td class="py-2.5 px-3 text-right">' . $voucherCell . '</td>';
                                     $html .= '<td class="py-2.5 px-3 text-right text-gray-500">₱' . number_format($webFee, 2) . '</td>';
                                     $html .= '<td class="py-2.5 px-3 text-right text-gray-500">₱' . number_format($txFee, 2) . '</td>';
                                     $html .= '<td class="py-2.5 px-3 text-right font-bold text-primary-600 dark:text-primary-400">₱' . number_format($itemTotal, 2) . '</td>';

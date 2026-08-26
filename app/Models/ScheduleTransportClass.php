@@ -61,6 +61,38 @@ class ScheduleTransportClass extends Pivot
         return $this->belongsTo(TransportClass::class);
     }
 
+    public function getEffectivePrice(): float
+    {
+        if ($this->additional_price !== null) {
+            return (float) $this->additional_price;
+        }
+
+        return (float) ($this->transportClass?->effective_price ?? $this->transportClass?->price ?? 0.0);
+    }
+
+    /**
+     * Resolve ScheduleTransportClass by either schedule_transport_class primary ID (pivot_id)
+     * or transport_class_id for a given schedule.
+     */
+    public static function resolveForSchedule(?int $scheduleId, ?int $classOrPivotId): ?self
+    {
+        if (! $scheduleId || ! $classOrPivotId) {
+            return null;
+        }
+
+        // Try by pivot primary key ID first
+        $stc = static::with('transportClass')->find($classOrPivotId);
+        if ($stc && (int) $stc->schedule_id === (int) $scheduleId) {
+            return $stc;
+        }
+
+        // Fallback: lookup by transport_class_id
+        return static::with('transportClass')
+            ->where('schedule_id', $scheduleId)
+            ->where('transport_class_id', $classOrPivotId)
+            ->first();
+    }
+
     protected static function booted(): void
     {
         $bust = fn() => Schedule::bust();
@@ -68,3 +100,4 @@ class ScheduleTransportClass extends Pivot
         static::deleted($bust);
     }
 }
+

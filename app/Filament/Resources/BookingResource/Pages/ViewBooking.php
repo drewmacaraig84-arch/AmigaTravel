@@ -168,17 +168,29 @@ class ViewBooking extends ViewRecord
             };
 
             $fareAndClass = $p->getEffectiveFareAndClass();
+            $discAmt = (float) ($p->discount_amount ?? 0);
+            $voucherPoints = (float) ($p->voucher_discount_share ?? 0) + (float) ($p->points_discount_share ?? 0);
             $webFee = $p->getEffectiveWebAdminFee();
             $txFee = $p->getEffectiveTransactionFee();
             $itemTotal = $p->getEffectiveItemTotal();
 
             $rowOpacity = $isArchived ? 'opacity-70 bg-gray-50/50 dark:bg-gray-800/30' : '';
 
+            $discCell = $discAmt > 0
+                ? '<span class="text-emerald-600 dark:text-emerald-400 font-medium">-₱' . number_format($discAmt, 2) . '</span>' . ($p->discount ? ' <span class="text-[10px] bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 px-1 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">' . htmlspecialchars($p->discount->name) . '</span>' : '')
+                : '<span class="text-gray-400">—</span>';
+
+            $voucherCell = $voucherPoints > 0
+                ? '<span class="text-emerald-600 dark:text-emerald-400 font-medium">-₱' . number_format($voucherPoints, 2) . '</span>'
+                : '<span class="text-gray-400">—</span>';
+
             $row  = '<tr class="hover:bg-gray-50/50 dark:hover:bg-gray-700/20 ' . $rowOpacity . '">';
             $row .= '<td class="py-2.5 px-3 font-bold text-gray-900 dark:text-white">Item ' . $itemNum . '</td>';
             $row .= '<td class="py-2.5 px-3"><span class="font-medium text-gray-900 dark:text-white">' . $name . '</span> <span class="text-xs text-gray-500">(' . $type . ')</span>' . $ticket . '</td>';
             $row .= '<td class="py-2.5 px-3"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ' . $badgeColorClass . '">' . $statusLabel . '</span></td>';
             $row .= '<td class="py-2.5 px-3 text-right font-medium">₱' . number_format($fareAndClass, 2) . '</td>';
+            $row .= '<td class="py-2.5 px-3 text-right">' . $discCell . '</td>';
+            $row .= '<td class="py-2.5 px-3 text-right">' . $voucherCell . '</td>';
             $row .= '<td class="py-2.5 px-3 text-right text-gray-500">₱' . number_format($webFee, 2) . '</td>';
             $row .= '<td class="py-2.5 px-3 text-right text-gray-500">₱' . number_format($txFee, 2) . '</td>';
             $row .= '<td class="py-2.5 px-3 text-right font-bold text-primary-600 dark:text-primary-400">₱' . number_format($itemTotal, 2) . '</td>';
@@ -195,7 +207,7 @@ class ViewBooking extends ViewRecord
             $html .= '<p class="text-xs text-gray-500 italic py-2">All original items on this booking have been refunded or rescheduled.</p>';
         } else {
             $html .= '<div class="overflow-x-auto"><table class="w-full text-sm text-left text-gray-700 dark:text-gray-200">';
-            $html .= '<thead class="text-xs uppercase bg-gray-50 dark:bg-gray-700/50 text-gray-500 border-b border-gray-200 dark:border-gray-700"><tr><th class="py-2.5 px-3">Item #</th><th class="py-2.5 px-3">Passenger</th><th class="py-2.5 px-3">Status</th><th class="py-2.5 px-3 text-right">Fare & Class</th><th class="py-2.5 px-3 text-right">Web Fee</th><th class="py-2.5 px-3 text-right">Tx Fee</th><th class="py-2.5 px-3 text-right">Total</th></tr></thead>';
+            $html .= '<thead class="text-xs uppercase bg-gray-50 dark:bg-gray-700/50 text-gray-500 border-b border-gray-200 dark:border-gray-700"><tr><th class="py-2.5 px-3">Item #</th><th class="py-2.5 px-3">Passenger</th><th class="py-2.5 px-3">Status</th><th class="py-2.5 px-3 text-right">Fare & Class</th><th class="py-2.5 px-3 text-right">Discount</th><th class="py-2.5 px-3 text-right">Voucher/Pts</th><th class="py-2.5 px-3 text-right">Web Fee</th><th class="py-2.5 px-3 text-right">Tx Fee</th><th class="py-2.5 px-3 text-right">Total</th></tr></thead>';
             $html .= '<tbody class="divide-y divide-gray-100 dark:divide-gray-700/50">';
             foreach ($activePax as $p) {
                 $html .= $renderRow($p, false);

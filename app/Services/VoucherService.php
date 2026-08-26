@@ -6,6 +6,7 @@ use App\Models\Voucher;
 use App\Models\Schedule;
 use App\Models\ScheduleAccommodation;
 use App\Models\TransportClass;
+use App\Models\ScheduleTransportClass;
 use App\Models\Accommodation;
 use App\Models\Discount;
 use Illuminate\Database\Eloquent\Builder;
@@ -208,11 +209,24 @@ class VoucherService
         });
         
         $transportClassTotal = 0;
-        if (!empty($bookingData['selected_transport_class_id'])) {
-            /** @var TransportClass|null $transportClass */
-            $transportClass = TransportClass::query()->where('id', $bookingData['selected_transport_class_id'])->first();
-            if ($transportClass) {
-                $transportClassTotal = floatval($transportClass->effective_price);
+        $scheduleId = $bookingData['schedule_id'] ?? null;
+        if (! empty($bookingData['selected_transport_class_id'])) {
+            $stc = ScheduleTransportClass::resolveForSchedule($scheduleId, $bookingData['selected_transport_class_id']);
+            if ($stc) {
+                $transportClassTotal += $stc->getEffectivePrice();
+            } else {
+                $transportClass = TransportClass::query()->where('id', $bookingData['selected_transport_class_id'])->first();
+                if ($transportClass) {
+                    $transportClassTotal += floatval($transportClass->effective_price);
+                }
+            }
+        }
+
+        $returnScheduleId = $bookingData['return_schedule_id'] ?? null;
+        if (! empty($bookingData['selected_return_transport_class_id']) && $returnScheduleId) {
+            $retStc = ScheduleTransportClass::resolveForSchedule($returnScheduleId, $bookingData['selected_return_transport_class_id']);
+            if ($retStc) {
+                $transportClassTotal += $retStc->getEffectivePrice();
             }
         }
         
