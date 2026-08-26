@@ -425,8 +425,7 @@ class ViewBooking extends ViewRecord
                                     <th class="py-2.5 px-3">Type</th>
                                     <th class="py-2.5 px-3">Birthdate</th>
                                     <th class="py-2.5 px-3">Discount</th>
-                                    <th class="py-2.5 px-3 text-right">Fare</th>
-                                    <th class="py-2.5 px-3 text-right">Acc.</th>
+                                    <th class="py-2.5 px-3 text-right">Fare & Class</th>
                                     <th class="py-2.5 px-3 text-right">Discount Amt</th>
                                     <th class="py-2.5 px-3 text-right">Voucher</th>
                                     <th class="py-2.5 px-3 text-right">Points</th>
@@ -447,8 +446,8 @@ class ViewBooking extends ViewRecord
                                     $type       = e(strtoupper($p->type ?? 'adult'));
                                     $bday       = $p->birthdate ? $p->birthdate->format('Y-m-d') : 'N/A';
                                     $discount   = e($p->discount?->name ?: 'None');
-                                    $fareAmt    = '₱' . number_format((float) $p->fare_amount, 2);
-                                    $accAmt     = '₱' . number_format((float) $p->accommodation_amount, 2);
+                                    $fareAndClass = $p->getEffectiveFareAndClass();
+                                    $fareAndClassAmt = '₱' . number_format((float) $fareAndClass, 2);
                                     $discAmt    = $p->discount_amount > 0 ? '-₱' . number_format((float) $p->discount_amount, 2) : '—';
                                     $voucherAmt = $p->voucher_discount_share > 0 ? '-₱' . number_format((float) $p->voucher_discount_share, 2) : '—';
                                     $pointsAmt  = $p->points_discount_share > 0 ? '-₱' . number_format((float) $p->points_discount_share, 2) : '—';
@@ -491,8 +490,7 @@ class ViewBooking extends ViewRecord
                                         <td class=\"py-2.5 px-3 text-xs\">{$type}</td>
                                         <td class=\"py-2.5 px-3 text-xs\">{$bday}</td>
                                         <td class=\"py-2.5 px-3 text-xs\">{$discount}</td>
-                                        <td class=\"py-2.5 px-3 text-right text-xs\">{$fareAmt}</td>
-                                        <td class=\"py-2.5 px-3 text-right text-xs\">{$accAmt}</td>
+                                        <td class=\"py-2.5 px-3 text-right text-xs font-medium\">{$fareAndClassAmt}</td>
                                         <td class=\"py-2.5 px-3 text-right text-xs text-green-600\">{$discAmt}</td>
                                         <td class=\"py-2.5 px-3 text-right text-xs text-green-600\">{$voucherAmt}</td>
                                         <td class=\"py-2.5 px-3 text-right text-xs text-green-600\">{$pointsAmt}</td>
