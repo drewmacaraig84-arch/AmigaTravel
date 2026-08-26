@@ -80,7 +80,7 @@
                     class="proof-filter-btn {{ $typeFilter === 'all' ? 'is-active' : '' }}"
                     data-filter="all"
                 >
-                    <span>All Transactions</span>
+                    <span>All Proofs</span>
                     <span class="proof-filter-badge">
                         {{ $this->counts['all'] }}
                     </span>
@@ -218,23 +218,22 @@
                             </span>
                         </div>
 
-                        <!-- Image Preview / Fallback Area -->
+                        <!-- Image Preview Area -->
                         <div class="proof-image bg-gray-100 dark:bg-gray-800 relative group">
                             @if ($item->has_proof && $item->proof_url)
-                                <img
-                                    src="{{ $item->proof_url }}"
-                                    alt="Proof for {{ $item->display_name }}"
-                                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
-                                />
-                                <div class="hidden h-36 w-full items-center justify-center bg-gray-100 dark:bg-gray-800 text-xs font-semibold text-gray-400">
-                                    Proof image unavailable
-                                </div>
+                                <a href="{{ $item->proof_url }}" target="_blank" class="block w-full h-full">
+                                    <img
+                                        src="{{ $item->proof_url }}"
+                                        alt="Proof for {{ $item->display_name }}"
+                                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                                    />
+                                    <div class="hidden h-36 w-full items-center justify-center bg-gray-100 dark:bg-gray-800 text-xs font-semibold text-gray-400">
+                                        Proof image unavailable
+                                    </div>
+                                </a>
                             @else
-                                <div class="h-36 w-full flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-800 text-center p-3">
-                                    <svg class="w-8 h-8 text-gray-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                                    </svg>
-                                    <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Official E-Receipt Available</span>
+                                <div class="h-36 w-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-xs font-semibold text-gray-400">
+                                    Proof image unavailable
                                 </div>
                             @endif
                         </div>
@@ -271,8 +270,7 @@
 
                         <!-- Action Buttons -->
                         <div class="mt-auto flex flex-col gap-1.5 border-t border-gray-200 p-2 dark:border-gray-700 bg-gray-50/30 dark:bg-gray-800/30">
-                            <!-- Top row: View Booking & Receipt PDF -->
-                            <div class="flex gap-1.5">
+                            <div class="flex items-center gap-1.5">
                                 @if($item->view_url)
                                     <x-filament::button
                                         tag="a"
@@ -281,27 +279,10 @@
                                         size="xs"
                                         class="flex-1"
                                     >
-                                        View
+                                        View Booking
                                     </x-filament::button>
                                 @endif
 
-                                @if($item->receipt_download_url)
-                                    <x-filament::button
-                                        tag="a"
-                                        href="{{ $item->receipt_download_url }}"
-                                        target="_blank"
-                                        color="success"
-                                        size="xs"
-                                        class="flex-1"
-                                        icon="heroicon-o-document-text"
-                                    >
-                                        Receipt PDF
-                                    </x-filament::button>
-                                @endif
-                            </div>
-
-                            <!-- Bottom row: Download Proof & Delete -->
-                            <div class="flex gap-1.5">
                                 @if ($item->has_proof && $item->proof_url)
                                     <x-filament::button
                                         tag="a"
@@ -311,13 +292,14 @@
                                         color="amber"
                                         size="xs"
                                         class="flex-1"
+                                        icon="heroicon-o-arrow-down-tray"
                                     >
-                                        Proof Img
+                                        Download
                                     </x-filament::button>
                                 @endif
 
                                 @if ($item->has_proof)
-                                    <div class="flex flex-1">
+                                    <div class="flex shrink-0">
                                         {{ ($this->deleteProofAction)(['compositeId' => $item->composite_id]) }}
                                     </div>
                                 @endif

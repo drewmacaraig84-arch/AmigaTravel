@@ -40,7 +40,7 @@ class ManageProofs extends Page implements HasActions, HasForms
     protected static ?string $navigationGroup = 'Settings';
     protected static ?int $navigationSort = 30;
     protected static ?string $navigationLabel = 'Proofs';
-    protected static ?string $title = 'Payment Proofs & Receipts';
+    protected static ?string $title = 'Payment Proofs';
     protected static string $view = 'filament.pages.manage-proofs';
 
     public ?array $settingsData = [];
@@ -96,9 +96,10 @@ class ManageProofs extends Page implements HasActions, HasForms
             ->latest('updated_at')
             ->get();
 
-        // 2. Fetch standalone bookings that might not have a transaction record or have refund docs
+        // 2. Fetch standalone bookings that might have refund proof images
         $bookings = Booking::query()
             ->with(['transaction', 'passengers', 'schedule.ferryRoute'])
+            ->whereNotNull('refund_proof')
             ->latest('updated_at')
             ->get();
 
@@ -109,8 +110,8 @@ class ManageProofs extends Page implements HasActions, HasForms
             $booking = $tx->booking;
             $txNumber = $booking?->transaction_number ?? ('TX-' . $tx->id);
 
-            // A. Confirmed Proof & Receipt (Original)
-            if (filled($tx->proof_of_payment) || $tx->payment_status === 'paid' || ($booking && $booking->status === 'confirmed')) {
+            // A. Confirmed Proof (Must have uploaded proof file)
+            if (filled($tx->proof_of_payment)) {
                 $statusClass = match ($tx->payment_status) {
                     'paid' => 'proofs-status-paid',
                     'pending' => 'proofs-status-pending',
@@ -129,7 +130,7 @@ class ManageProofs extends Page implements HasActions, HasForms
                     'status_badge' => $tx->payment_status === 'paid' ? 'Paid' : ucfirst($tx->payment_status ?? 'Pending'),
                     'status_class' => $statusClass,
                     'proof_url' => $tx->proof_url,
-                    'has_proof' => filled($tx->proof_of_payment),
+                    'has_proof' => true,
                     'proof_disk_path' => $tx->proof_of_payment,
                     'client_name' => $booking?->client_name ?? '—',
                     'client_email' => $booking?->client_email ?? '—',
@@ -137,15 +138,13 @@ class ManageProofs extends Page implements HasActions, HasForms
                     'payment_reference' => $tx->payment_reference,
                     'amount' => (float) ($booking?->total_price ?? 0),
                     'updated_at' => $tx->updated_at ?? $tx->created_at,
-                    'receipt_download_url' => $booking ? route('admin.receipts.download', ['booking' => $booking->id, 'type' => 'confirmed']) : null,
                     'view_url' => $booking ? BookingResource::getUrl('view', ['record' => $booking]) : null,
                 ]);
             }
 
-            // B. Rebooked Proof & Receipt
-            $isRebooked = (bool) ($booking?->is_rebooked || filled($booking?->rebooking_status) || filled($tx->rebooking_proof_of_payment));
-            if ($isRebooked) {
-                $rebookProofUrl = filled($tx->rebooking_proof_of_payment) ? storage_asset_path($tx->rebooking_proof_of_payment) : null;
+            // B. Rebooked Proof (Must have uploaded rebooking proof file)
+            if (filled($tx->rebooking_proof_of_payment)) {
+                $rebookProofUrl = storage_asset_path($tx->rebooking_proof_of_payment);
 
                 $items->push((object) [
                     'id' => 'rebooked_' . $tx->id,
@@ -157,30 +156,24 @@ class ManageProofs extends Page implements HasActions, HasForms
                     'display_name' => $txNumber . ' - Rebooked',
                     'status_badge' => 'Rebooked',
                     'status_class' => 'proofs-status-rebooked',
-                    'proof_url' => $rebookProofUrl ?: $tx->proof_url,
-                    'has_proof' => filled($tx->rebooking_proof_of_payment) || filled($tx->proof_of_payment),
-                    'proof_disk_path' => $tx->rebooking_proof_of_payment ?: $tx->proof_of_payment,
+                    'proof_url' => $rebookProofUrl,
+                    'has_proof' => true,
+                    'proof_disk_path' => $tx->rebooking_proof_of_payment,
                     'client_name' => $booking?->client_name ?? '—',
                     'client_email' => $booking?->client_email ?? '—',
                     'route' => ($booking?->origin ?? '—') . ' → ' . ($booking?->destination ?? '—'),
                     'payment_reference' => $tx->payment_reference,
                     'amount' => (float) ($booking?->total_price ?? 0),
                     'updated_at' => $booking?->verified_at ?? $tx->updated_at,
-                    'receipt_download_url' => $booking ? route('admin.receipts.download', ['booking' => $booking->id, 'type' => 'rebooked']) : null,
                     'view_url' => $booking ? BookingResource::getUrl('view', ['record' => $booking]) : null,
                 ]);
             }
         }
 
-        // C. Refunded / Cancelled Proof & Receipt
+        // C. Refunded / Cancelled Proof
         foreach ($bookings as $b) {
-            $isRefunded = in_array($b->status, [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED])
-                || filled($b->refund_proof)
-                || filled($b->refund_destination)
-                || $b->isRefundCompleted();
-
-            if ($isRefunded) {
-                $refundProofUrl = filled($b->refund_proof) ? storage_asset_path($b->refund_proof) : null;
+            if (filled($b->refund_proof)) {
+                $refundProofUrl = storage_asset_path($b->refund_proof);
                 $txNumber = $b->transaction_number ?? ('BK-' . $b->id);
 
                 $items->push((object) [
@@ -193,16 +186,15 @@ class ManageProofs extends Page implements HasActions, HasForms
                     'display_name' => $txNumber . ' - Refunded/Cancelled',
                     'status_badge' => $b->isRefundCompleted() ? 'Refunded' : 'Refund Pending',
                     'status_class' => 'proofs-status-refunded',
-                    'proof_url' => $refundProofUrl ?: ($b->transaction?->proof_url),
-                    'has_proof' => filled($b->refund_proof) || filled($b->transaction?->proof_of_payment),
-                    'proof_disk_path' => $b->refund_proof ?: $b->transaction?->proof_of_payment,
+                    'proof_url' => $refundProofUrl,
+                    'has_proof' => true,
+                    'proof_disk_path' => $b->refund_proof,
                     'client_name' => $b->client_name ?? '—',
                     'client_email' => $b->client_email ?? '—',
                     'route' => ($b->origin ?? '—') . ' → ' . ($b->destination ?? '—'),
                     'payment_reference' => $b->refund_reference ?? $b->transaction?->payment_reference,
                     'amount' => (float) ($b->refund_amount ?? $b->total_price ?? 0),
                     'updated_at' => $b->refund_processed_at ?? $b->updated_at,
-                    'receipt_download_url' => route('admin.receipts.download', ['booking' => $b->id, 'type' => 'refunded']),
                     'view_url' => BookingResource::getUrl('view', ['record' => $b]),
                 ]);
             }
@@ -564,8 +556,9 @@ class ManageProofs extends Page implements HasActions, HasForms
             ->modalHeading('Delete proof')
             ->modalDescription('Delete this proof image? This cannot be undone.')
             ->modalSubmitActionLabel('Delete')
-            ->action(function (array $arguments): void {
-                $this->deleteProof((string) $arguments['compositeId']);
+            ->action(function (array $data, array $arguments = []): void {
+                $compositeId = (string) ($arguments['compositeId'] ?? $data['compositeId'] ?? '');
+                $this->deleteProof($compositeId);
             })
             ->extraAttributes(['class' => 'flex-1']);
     }
@@ -595,8 +588,8 @@ class ManageProofs extends Page implements HasActions, HasForms
             ->modalDescription('Are you sure you want to permanently delete this backup ZIP archive? This cannot be undone.')
             ->modalSubmitActionLabel('Delete')
             ->modalIcon('heroicon-o-trash')
-            ->action(function (array $arguments): void {
-                $filename = (string) ($arguments['filename'] ?? '');
+            ->action(function (array $data, array $arguments = []): void {
+                $filename = (string) ($arguments['filename'] ?? $data['filename'] ?? '');
                 if ($filename) {
                     $deleted = app(\App\Services\ProofArchivalService::class)->deleteArchive($filename);
                     unset($this->archives);

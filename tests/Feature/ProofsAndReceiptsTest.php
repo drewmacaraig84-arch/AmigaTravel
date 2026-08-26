@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Filament\Pages\ManageProofs;
+use App\Filament\Pages\ManageReceipts;
 use App\Models\Booking;
 use App\Models\FerryRoute;
 use App\Models\Schedule;
@@ -302,9 +303,102 @@ class ProofsAndReceiptsTest extends TestCase
 
         Livewire::actingAs($admin)
             ->test(ManageProofs::class)
-            ->callAction('deleteArchive', ['filename' => $archive['filename']])
+            ->callAction('deleteArchive', arguments: ['filename' => $archive['filename']])
             ->assertHasNoErrors();
 
         $this->assertFileDoesNotExist($archive['path']);
+    }
+
+    public function test_receipts_page_renders_with_official_receipts_and_tabs()
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'is_admin' => true,
+            'admin_permissions' => ['receipts' => true, 'bookings' => true],
+        ]);
+
+        $route = FerryRoute::create([
+            'origin' => 'Calapan',
+            'destination' => 'Batangas',
+            'operator' => 'Starlite Ferries',
+            'mode' => 'ferry',
+            'is_active' => true,
+        ]);
+
+        $schedule = Schedule::create([
+            'ferry_route_id' => $route->id,
+            'service_name' => 'Starlite Eagle',
+            'departure_time' => '08:00:00',
+            'arrival_time' => '10:00:00',
+            'price' => 450,
+            'duration_minutes' => 120,
+            'is_active' => true,
+        ]);
+
+        $b1 = Booking::create([
+            'transaction_number' => 'AGT-20260826-RCP1',
+            'client_name' => 'Receipt Client 1',
+            'client_email' => 'rcp1@example.com',
+            'origin' => 'Calapan',
+            'destination' => 'Batangas',
+            'departure_date' => now()->addDays(2),
+            'schedule_id' => $schedule->id,
+            'schedule_price' => 450,
+            'status' => 'confirmed',
+            'total_price' => 550,
+        ]);
+
+        $b2 = Booking::create([
+            'transaction_number' => 'AGT-20260826-RCP2',
+            'client_name' => 'Receipt Client 2',
+            'client_email' => 'rcp2@example.com',
+            'origin' => 'Calapan',
+            'destination' => 'Batangas',
+            'departure_date' => now()->addDays(3),
+            'schedule_id' => $schedule->id,
+            'schedule_price' => 450,
+            'status' => 'confirmed',
+            'is_rebooked' => true,
+            'rebooking_status' => 'verified',
+            'total_price' => 650,
+        ]);
+
+        $b3 = Booking::create([
+            'transaction_number' => 'AGT-20260826-RCP3',
+            'client_name' => 'Receipt Client 3',
+            'client_email' => 'rcp3@example.com',
+            'origin' => 'Calapan',
+            'destination' => 'Batangas',
+            'departure_date' => now()->addDays(4),
+            'schedule_id' => $schedule->id,
+            'schedule_price' => 450,
+            'status' => 'cancelled',
+            'refund_amount' => 500,
+            'refund_status' => 'completed',
+            'total_price' => 550,
+        ]);
+
+        $component = Livewire::actingAs($admin)
+            ->test(ManageReceipts::class)
+            ->assertSuccessful()
+            ->assertSee('AGT-20260826-RCP1')
+            ->assertSee('AGT-20260826-RCP2')
+            ->assertSee('AGT-20260826-RCP3');
+
+        // Filter tabs
+        $component->call('setTypeFilter', 'confirmed')
+            ->assertSet('typeFilter', 'confirmed')
+            ->assertSee('AGT-20260826-RCP1')
+            ->assertDontSee('AGT-20260826-RCP3');
+
+        $component->call('setTypeFilter', 'rebooked')
+            ->assertSet('typeFilter', 'rebooked')
+            ->assertSee('AGT-20260826-RCP2')
+            ->assertDontSee('AGT-20260826-RCP1');
+
+        $component->call('setTypeFilter', 'refunded')
+            ->assertSet('typeFilter', 'refunded')
+            ->assertSee('AGT-20260826-RCP3')
+            ->assertDontSee('AGT-20260826-RCP1');
     }
 }

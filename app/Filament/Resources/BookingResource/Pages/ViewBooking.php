@@ -704,7 +704,7 @@ class ViewBooking extends ViewRecord
                                 }
                                 if (!empty($data['proof_path'])) {
                                     $url = storage_asset_path($data['proof_path']);
-                                    $html .= "<p><strong>Payment Proof:</strong> <a href=\"{$url}\" target=\"_blank\" class=\"text-primary-600 underline\">View Receipt</a></p>";
+                                    $html .= "<p><strong>Payment Proof:</strong> <a href=\"{$url}\" target=\"_blank\" class=\"text-primary-600 underline\">View Payment Proof</a></p>";
                                 }
                                 
                                 $html .= '</div>';

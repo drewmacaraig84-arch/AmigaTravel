@@ -55,6 +55,7 @@ class User extends Authenticatable implements FilamentUser
         'Bookings' => [
             'bookings' => 'Bookings',
             'transactions' => 'Transactions',
+            'receipts' => 'Receipts',
         ],
         'Airline' => [
             'airline_seats' => 'Airline Seats',
@@ -87,6 +88,7 @@ class User extends Authenticatable implements FilamentUser
         'service_cancellations' => 'Service Cancellations',
         'bookings' => 'Bookings',
         'transactions' => 'Transactions',
+        'receipts' => 'Receipts',
         'airline_seats' => 'Airline Seats',
         'airline_baggage' => 'Airline Baggage',
         'vehicle_rates' => 'Vehicle Rates',
