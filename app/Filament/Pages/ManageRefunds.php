@@ -95,6 +95,20 @@ class ManageRefunds extends Page implements HasTable, HasInfolists
                     ->badge()
                     ->color('warning')
                     ->placeholder('—'),
+                Tables\Columns\TextColumn::make('type')
+                    ->label('Type')
+                    ->state(function (Booking $record): string {
+                        $isFullCancellation = in_array($record->status, [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED], true)
+                            || ($record->passengers->isNotEmpty() && $record->passengers->every(fn ($p) => in_array($p->status, ['cancelled', 'refund_pending', 'refunded', 'operator_cancelled'], true)));
+
+                        return $isFullCancellation ? 'Cancel Booking' : 'Refund';
+                    })
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'Cancel Booking' => 'danger',
+                        'Refund' => 'info',
+                        default => 'gray',
+                    }),
                 Tables\Columns\TextColumn::make('client_name')
                     ->label('Client Name')
                     ->searchable()
@@ -205,6 +219,19 @@ class ManageRefunds extends Page implements HasTable, HasInfolists
                         'pending' => 'Pending Processing',
                         'completed' => 'Disbursed',
                     ]),
+                SelectFilter::make('type')
+                    ->label('Type')
+                    ->options([
+                        'cancel_booking' => 'Cancel Booking',
+                        'refund' => 'Refund',
+                    ])
+                    ->query(function (Builder $query, array $data) {
+                        if ($data['value'] === 'cancel_booking') {
+                            $query->whereIn('status', [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED]);
+                        } elseif ($data['value'] === 'refund') {
+                            $query->whereNotIn('status', [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED]);
+                        }
+                    }),
             ])
             ->actions([
                 Action::make('viewRefund')
