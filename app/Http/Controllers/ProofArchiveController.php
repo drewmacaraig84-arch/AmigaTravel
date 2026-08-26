@@ -15,7 +15,7 @@ class ProofArchiveController extends Controller
      */
     public function download(Request $request, string $filename): BinaryFileResponse
     {
-        $user = Auth::user();
+        $user = Auth::user() ?? Auth::guard('admin')->user();
 
         // Staff / Admin check
         $isStaff = $user instanceof User && ($user->hasAdminPermission('proofs') || $user->role === 'admin' || $user->is_admin);

@@ -623,12 +623,12 @@ Route::get('/sitemap.xml', function () {
     return response($xml, 200)->header('Content-Type', 'text/xml');
 });
 
-// Official Receipt PDF Download Route
-Route::middleware(['web', 'auth'])->get('/admin/receipts/download/{booking}/{type?}', [\App\Http\Controllers\ReceiptController::class, 'download'])
+// Official Receipt PDF Stream / View Route
+Route::middleware(['web'])->get('/receipts/view/{booking}/{type?}', [\App\Http\Controllers\ReceiptController::class, 'view'])
     ->name('admin.receipts.download');
 
 // Pre-Retention Proof Archive Download Route
-Route::middleware(['web', 'auth'])->get('/admin/proofs/download-archive/{filename}', [\App\Http\Controllers\ProofArchiveController::class, 'download'])
+Route::middleware(['web'])->get('/admin/proofs/download-archive/{filename}', [\App\Http\Controllers\ProofArchiveController::class, 'download'])
     ->name('admin.proofs.download-archive');
 
 

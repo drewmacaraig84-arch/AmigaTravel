@@ -3,29 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\Booking;
-use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Auth;
 
 class ReceiptController extends Controller
 {
     /**
-     * Download or stream official receipt PDF for a booking.
+     * Stream official receipt PDF inline in the browser for a booking.
      */
-    public function download(Request $request, Booking $booking, string $type = 'confirmed')
+    public function view(Request $request, Booking $booking, string $type = 'confirmed')
     {
-        $user = Auth::user();
-        
-        // Ensure user is authorized (admin/staff or the booking owner)
-        $isStaff = $user instanceof User && ($user->hasAdminPermission('bookings') || $user->hasAdminPermission('proofs') || $user->role === 'admin');
-        $isOwner = $user && $booking->user_id && (int) $user->id === (int) $booking->user_id;
-
-        if (! $isStaff && ! $isOwner) {
-            abort(403, 'Unauthorized to view this receipt.');
-        }
-
         $booking->loadMissing([
             'transaction',
             'passengers.discount',
@@ -49,10 +36,19 @@ class ReceiptController extends Controller
             'isTicket' => false,
         ])->setPaper('a4');
 
-        if ($request->has('preview') || $request->has('inline')) {
-            return $pdf->stream($filename);
+        if ($request->has('download')) {
+            return $pdf->download($filename);
         }
 
-        return $pdf->download($filename);
+        // Stream inline by default so it opens directly in browser tab
+        return $pdf->stream($filename);
+    }
+
+    /**
+     * Alias for download/view
+     */
+    public function download(Request $request, Booking $booking, string $type = 'confirmed')
+    {
+        return $this->view($request, $booking, $type);
     }
 }
