@@ -95,7 +95,7 @@ class ManageRefunds extends Page implements HasTable, HasInfolists
                     ->badge()
                     ->color('warning')
                     ->placeholder('—'),
-                Tables\Columns\TextColumn::make('type')
+                Tables\Columns\TextColumn::make('request_type')
                     ->label('Type')
                     ->state(function (Booking $record): string {
                         $isFullCancellation = in_array($record->status, [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED], true)
@@ -219,16 +219,17 @@ class ManageRefunds extends Page implements HasTable, HasInfolists
                         'pending' => 'Pending Processing',
                         'completed' => 'Disbursed',
                     ]),
-                SelectFilter::make('type')
+                SelectFilter::make('request_type')
                     ->label('Type')
                     ->options([
                         'cancel_booking' => 'Cancel Booking',
                         'refund' => 'Refund',
                     ])
                     ->query(function (Builder $query, array $data) {
-                        if ($data['value'] === 'cancel_booking') {
+                        $val = $data['value'] ?? null;
+                        if ($val === 'cancel_booking') {
                             $query->whereIn('status', [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED]);
-                        } elseif ($data['value'] === 'refund') {
+                        } elseif ($val === 'refund') {
                             $query->whereNotIn('status', [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED]);
                         }
                     }),
