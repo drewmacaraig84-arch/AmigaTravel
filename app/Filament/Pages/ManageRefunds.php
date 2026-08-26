@@ -99,7 +99,7 @@ class ManageRefunds extends Page implements HasTable, HasInfolists
                     ->label('Type')
                     ->state(fn (Booking $record): string => $record->getRefundRequestType())
                     ->badge()
-                    ->color(fn (string $state): string => match ($state) {
+                    ->color(fn (?string $state): string => match ($state) {
                         'Cancel Booking' => 'danger',
                         'Refund' => 'info',
                         default => 'gray',
