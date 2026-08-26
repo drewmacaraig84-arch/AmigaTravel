@@ -167,7 +167,12 @@ class ViewBooking extends ViewRecord
                 default   => 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
             };
 
-            $fareAndClass = $p->getEffectiveFareAndClass();
+            $fareAmt = $p->getEffectiveFareAmount();
+            $classAmt = $p->getEffectiveAccommodationAmount();
+            $fareDisplay = '₱' . number_format($fareAmt, 2);
+            if ($classAmt > 0) {
+                $fareDisplay .= '<br><span class="text-[10px] text-gray-500 font-normal">+ ₱' . number_format($classAmt, 2) . ' Class</span>';
+            }
             $discAmt = (float) ($p->discount_amount ?? 0);
             $voucherPoints = (float) ($p->voucher_discount_share ?? 0) + (float) ($p->points_discount_share ?? 0);
             $webFee = $p->getEffectiveWebAdminFee();
@@ -188,7 +193,7 @@ class ViewBooking extends ViewRecord
             $row .= '<td class="py-2.5 px-3 font-bold text-gray-900 dark:text-white">Item ' . $itemNum . '</td>';
             $row .= '<td class="py-2.5 px-3"><span class="font-medium text-gray-900 dark:text-white">' . $name . '</span> <span class="text-xs text-gray-500">(' . $type . ')</span>' . $ticket . '</td>';
             $row .= '<td class="py-2.5 px-3"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ' . $badgeColorClass . '">' . $statusLabel . '</span></td>';
-            $row .= '<td class="py-2.5 px-3 text-right font-medium">₱' . number_format($fareAndClass, 2) . '</td>';
+            $row .= '<td class="py-2.5 px-3 text-right font-medium">' . $fareDisplay . '</td>';
             $row .= '<td class="py-2.5 px-3 text-right">' . $discCell . '</td>';
             $row .= '<td class="py-2.5 px-3 text-right">' . $voucherCell . '</td>';
             $row .= '<td class="py-2.5 px-3 text-right text-gray-500">₱' . number_format($webFee, 2) . '</td>';
@@ -446,8 +451,12 @@ class ViewBooking extends ViewRecord
                                     $type       = e(strtoupper($p->type ?? 'adult'));
                                     $bday       = $p->birthdate ? $p->birthdate->format('Y-m-d') : 'N/A';
                                     $discount   = e($p->discount?->name ?: 'None');
-                                    $fareAndClass = $p->getEffectiveFareAndClass();
-                                    $fareAndClassAmt = '₱' . number_format((float) $fareAndClass, 2);
+                                    $fareAmt = $p->getEffectiveFareAmount();
+                                    $classAmt = $p->getEffectiveAccommodationAmount();
+                                    $fareAndClassAmt = '₱' . number_format($fareAmt, 2);
+                                    if ($classAmt > 0) {
+                                        $fareAndClassAmt .= '<br><span class="text-[10px] text-gray-500 font-normal">+ ₱' . number_format($classAmt, 2) . ' Class</span>';
+                                    }
                                     $discAmt    = $p->discount_amount > 0 ? '-₱' . number_format((float) $p->discount_amount, 2) : '—';
                                     $voucherAmt = $p->voucher_discount_share > 0 ? '-₱' . number_format((float) $p->voucher_discount_share, 2) : '—';
                                     $pointsAmt  = $p->points_discount_share > 0 ? '-₱' . number_format((float) $p->points_discount_share, 2) : '—';
