@@ -57,9 +57,18 @@
         color: #94a3b8; /* slate-400 */
     }
     .dark .daterangepicker select.monthselect, 
-    .dark .daterangepicker select.yearselect {
+    .dark .daterangepicker select.yearselect,
+    .dark .daterangepicker select.hourselect,
+    .dark .daterangepicker select.minuteselect,
+    .dark .daterangepicker select.secondselect,
+    .dark .daterangepicker select.ampmselect {
         background-color: #1e293b;
         border-color: #334155;
+        color: #e2e8f0;
+        border-radius: 0.375rem;
+        padding: 2px 4px;
+    }
+    .dark .daterangepicker .calendar-time {
         color: #e2e8f0;
     }
     .dark .daterangepicker:before {
@@ -81,25 +90,30 @@
                      initPicker() {
                          const el = $(this.$refs.picker);
                          el.daterangepicker({
-                             startDate: '{{ \Carbon\Carbon::parse($startDate)->format('m/d/Y') }}',
-                             endDate: '{{ \Carbon\Carbon::parse($endDate)->format('m/d/Y') }}',
+                             timePicker: true,
+                             timePicker24Hour: false,
+                             timePickerIncrement: 1,
+                             startDate: '{{ \Carbon\Carbon::parse($startDate)->format('m/d/Y h:i A') }}',
+                             endDate: '{{ \Carbon\Carbon::parse($endDate)->format('m/d/Y h:i A') }}',
                              opens: 'left',
                              autoApply: false,
                              ranges: {
-                                'Today': [moment(), moment()],
-                                'Yesterday': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
-                                'Last 7 Days': [moment().subtract(6, 'days'), moment()],
-                                'Last 15 Days': [moment().subtract(14, 'days'), moment()],
-                                'Last 30 Days': [moment().subtract(29, 'days'), moment()],
-                                'This Month': [moment().startOf('month'), moment().endOf('month')],
-                                'Last Month': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')],
-                                'Last 6 Months': [moment().subtract(6, 'month').startOf('month'), moment().endOf('month')],
-                                'This Year': [moment().startOf('year'), moment().endOf('year')]
+                                'Today': [moment().startOf('day'), moment().endOf('day')],
+                                'Yesterday': [moment().subtract(1, 'days').startOf('day'), moment().subtract(1, 'days').endOf('day')],
+                                'Last 7 Days': [moment().subtract(6, 'days').startOf('day'), moment().endOf('day')],
+                                'Last 15 Days': [moment().subtract(14, 'days').startOf('day'), moment().endOf('day')],
+                                'Last 30 Days': [moment().subtract(29, 'days').startOf('day'), moment().endOf('day')],
+                                'This Month': [moment().startOf('month').startOf('day'), moment().endOf('month').endOf('day')],
+                                'Last Month': [moment().subtract(1, 'month').startOf('month').startOf('day'), moment().subtract(1, 'month').endOf('month').endOf('day')],
+                                'Last 6 Months': [moment().subtract(6, 'month').startOf('month').startOf('day'), moment().endOf('month').endOf('day')],
+                                'This Year': [moment().startOf('year').startOf('day'), moment().endOf('year').endOf('day')]
                              },
-                             locale: { format: 'MM/DD/YYYY' }
+                             locale: { 
+                                 format: 'MM/DD/YYYY hh:mm A' 
+                             }
                          });
                          el.on('apply.daterangepicker', (ev, picker) => {
-                             @this.updateDateRange(picker.startDate.format('YYYY-MM-DD'), picker.endDate.format('YYYY-MM-DD'));
+                             @this.updateDateRange(picker.startDate.format('YYYY-MM-DD HH:mm:ss'), picker.endDate.format('YYYY-MM-DD HH:mm:ss'));
                          });
                      }
                  }"
@@ -115,12 +129,12 @@
                          }, 100);
                      }
                  ">
-                <div class="relative w-[260px]">
-                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                <div class="relative w-[340px] sm:w-[380px]">
+                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                         <x-heroicon-m-magnifying-glass class="h-4 w-4 text-slate-400" />
                     </div>
                     <input type="text" x-ref="picker" readonly
-                           class="w-full cursor-pointer rounded-lg bg-white dark:bg-white/5 py-2 pl-10 pr-4 text-sm font-medium text-slate-900 shadow-sm border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-center dark:border-slate-700 dark:text-slate-100" />
+                           class="w-full cursor-pointer rounded-lg bg-white dark:bg-white/5 py-2 pl-9 pr-3 text-xs sm:text-sm font-medium text-slate-900 shadow-sm border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-center dark:border-slate-700 dark:text-slate-100" />
                 </div>
             </div>
 

@@ -29,9 +29,15 @@ class ReportingService
         string $dateColumn = 'created_at',
     ): Builder {
         if ($startDate && $endDate) {
+            $hasStartTime = strlen($startDate) > 10;
+            $hasEndTime = strlen($endDate) > 10;
+
+            $start = $hasStartTime ? Carbon::parse($startDate) : Carbon::parse($startDate)->startOfDay();
+            $end = $hasEndTime ? Carbon::parse($endDate) : Carbon::parse($endDate)->endOfDay();
+
             return $query->whereBetween($dateColumn, [
-                Carbon::parse($startDate)->startOfDay(),
-                Carbon::parse($endDate)->endOfDay(),
+                $start,
+                $end,
             ]);
         }
 

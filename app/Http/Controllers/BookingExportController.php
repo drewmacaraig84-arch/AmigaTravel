@@ -43,11 +43,19 @@ class BookingExportController extends Controller
         $toDate   = request()->input('to_date') ?? request()->input('end') ?? request()->input('endDate') ?? request()->input('to');
 
         if ($fromDate) {
-            $query->whereDate('created_at', '>=', $fromDate);
+            if (strlen($fromDate) > 10) {
+                $query->where('created_at', '>=', \Illuminate\Support\Carbon::parse($fromDate));
+            } else {
+                $query->whereDate('created_at', '>=', $fromDate);
+            }
         }
 
         if ($toDate) {
-            $query->whereDate('created_at', '<=', $toDate);
+            if (strlen($toDate) > 10) {
+                $query->where('created_at', '<=', \Illuminate\Support\Carbon::parse($toDate));
+            } else {
+                $query->whereDate('created_at', '<=', $toDate);
+            }
         }
 
         $bookings = $query->get();
