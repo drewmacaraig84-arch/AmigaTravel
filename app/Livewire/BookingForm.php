@@ -535,22 +535,16 @@ class BookingForm extends Component
     public function isSuperPromo(): bool
     {
         if ($this->selected_schedule_id && $this->selected_transport_class_id) {
-            $sched = $this->selectedSchedule();
-            if ($sched) {
-                $tc = collect($sched['transport_classes'] ?? [])->firstWhere(fn ($c) => (int)($c['pivot_id'] ?? $c['id']) === (int)$this->selected_transport_class_id);
-                if ($tc && ($tc['rate_type'] ?? '') === 'super_promotional') {
-                    return true;
-                }
+            $stc = \App\Models\ScheduleTransportClass::resolveForSchedule($this->selected_schedule_id, $this->selected_transport_class_id);
+            if ($stc && $stc->isSuperPromo()) {
+                return true;
             }
         }
 
         if ($this->selected_return_schedule_id && $this->selected_return_transport_class_id) {
-            $retSched = collect($this->availableReturnSchedules)->firstWhere('id', $this->selected_return_schedule_id);
-            if ($retSched) {
-                $retTc = collect($retSched['transport_classes'] ?? [])->firstWhere(fn ($c) => (int)($c['pivot_id'] ?? $c['id']) === (int)$this->selected_return_transport_class_id);
-                if ($retTc && ($retTc['rate_type'] ?? '') === 'super_promotional') {
-                    return true;
-                }
+            $retStc = \App\Models\ScheduleTransportClass::resolveForSchedule($this->selected_return_schedule_id, $this->selected_return_transport_class_id);
+            if ($retStc && $retStc->isSuperPromo()) {
+                return true;
             }
         }
 
@@ -2070,6 +2064,31 @@ class BookingForm extends Component
                     $lockedReturnAccom->decrement('tickets_available');
                 }
 
+                $depStc = \App\Models\ScheduleTransportClass::resolveForSchedule($schedule?->id, $this->selected_transport_class_id);
+                $retStc = ($returnSchedule && $this->selected_return_transport_class_id)
+                    ? \App\Models\ScheduleTransportClass::resolveForSchedule($returnSchedule->id, $this->selected_return_transport_class_id)
+                    : null;
+
+                if ($depStc) {
+                    $lockedStc = \App\Models\ScheduleTransportClass::where('id', $depStc->id)->lockForUpdate()->first();
+                    if ($lockedStc && $lockedStc->tickets_available !== null && $lockedStc->tickets_available <= 0) {
+                        throw new \RuntimeException('Sorry, this class is now fully booked. Please choose another option.');
+                    }
+                    if ($lockedStc && $lockedStc->tickets_available !== null) {
+                        $lockedStc->decrement('tickets_available');
+                    }
+                }
+
+                if ($retStc) {
+                    $lockedReturnStc = \App\Models\ScheduleTransportClass::where('id', $retStc->id)->lockForUpdate()->first();
+                    if ($lockedReturnStc && $lockedReturnStc->tickets_available !== null && $lockedReturnStc->tickets_available <= 0) {
+                        throw new \RuntimeException('Sorry, the return trip class is now fully booked. Please choose another option.');
+                    }
+                    if ($lockedReturnStc && $lockedReturnStc->tickets_available !== null) {
+                        $lockedReturnStc->decrement('tickets_available');
+                    }
+                }
+
                 $termsVersion = 'amiga-terms-2026-07-24';
                 $termsAcceptedAt = now();
                 $termsAcceptedIp = request()->ip();
@@ -2130,21 +2149,8 @@ class BookingForm extends Component
                 $webAdminFeePerPax = (float) $settings->getWebAdminFee($isShortHaul);
                 $txFeePerPax = (float) $settings->getTransactionFee($isShortHaul);
 
-                $depTcPrice = 0.0;
-                if ($this->selected_transport_class_id && $schedule) {
-                    $stc = \App\Models\ScheduleTransportClass::where('schedule_id', $schedule->id)
-                        ->where('transport_class_id', $this->selected_transport_class_id)
-                        ->first();
-                    $depTcPrice = (float) ($stc?->additional_price ?? $stc?->transportClass?->price ?? 0);
-                }
-
-                $retTcPrice = 0.0;
-                if ($this->selected_return_transport_class_id && $returnSchedule) {
-                    $rstc = \App\Models\ScheduleTransportClass::where('schedule_id', $returnSchedule->id)
-                        ->where('transport_class_id', $this->selected_return_transport_class_id)
-                        ->first();
-                    $retTcPrice = (float) ($rstc?->additional_price ?? $rstc?->transportClass?->price ?? 0);
-                }
+                $depTcPrice = $depStc ? $depStc->getEffectivePrice() : 0.0;
+                $retTcPrice = $retStc ? $retStc->getEffectivePrice() : 0.0;
 
                 $schedBasePrice = (float) ($usedSchedulePrice ?? $schedule?->price ?? 0);
                 $schedAccPrice = $scheduleAccommodation ? (float) $scheduleAccommodation->price : 0.0;
@@ -2227,32 +2233,26 @@ class BookingForm extends Component
                     ]);
                 }
 
-                if ($this->selected_transport_class_id) {
-                    $scheduleTransportClass = \App\Models\ScheduleTransportClass::with('transportClass')->find($this->selected_transport_class_id);
-                    if ($scheduleTransportClass && $scheduleTransportClass->transportClass) {
-                        $price = $scheduleTransportClass->additional_price ?? $scheduleTransportClass->transportClass->price;
-                        $booking->transportClasses()->attach($scheduleTransportClass->transport_class_id, [
-                            'price' => $price,
-                            'is_promo' => $scheduleTransportClass->is_promo || $scheduleTransportClass->rate_type !== 'regular',
-                            'rate_type' => $scheduleTransportClass->rate_type ?? 'regular',
-                            'rate_code' => $scheduleTransportClass->rate_code,
-                            'is_return' => false,
-                        ]);
-                    }
+                if ($depStc && $depStc->transportClass) {
+                    $price = $depStc->getEffectivePrice();
+                    $booking->transportClasses()->attach($depStc->transport_class_id, [
+                        'price' => $price,
+                        'is_promo' => $depStc->is_promo || $depStc->rate_type !== 'regular',
+                        'rate_type' => $depStc->rate_type ?? 'regular',
+                        'rate_code' => $depStc->rate_code,
+                        'is_return' => false,
+                    ]);
                 }
 
-                if ($this->selected_return_transport_class_id) {
-                    $returnScheduleTransportClass = \App\Models\ScheduleTransportClass::with('transportClass')->find($this->selected_return_transport_class_id);
-                    if ($returnScheduleTransportClass && $returnScheduleTransportClass->transportClass) {
-                        $price = $returnScheduleTransportClass->additional_price ?? $returnScheduleTransportClass->transportClass->price;
-                        $booking->transportClasses()->attach($returnScheduleTransportClass->transport_class_id, [
-                            'price' => $price,
-                            'is_promo' => $returnScheduleTransportClass->is_promo || $returnScheduleTransportClass->rate_type !== 'regular',
-                            'rate_type' => $returnScheduleTransportClass->rate_type ?? 'regular',
-                            'rate_code' => $returnScheduleTransportClass->rate_code,
-                            'is_return' => true,
-                        ]);
-                    }
+                if ($retStc && $retStc->transportClass) {
+                    $price = $retStc->getEffectivePrice();
+                    $booking->transportClasses()->attach($retStc->transport_class_id, [
+                        'price' => $price,
+                        'is_promo' => $retStc->is_promo || $retStc->rate_type !== 'regular',
+                        'rate_type' => $retStc->rate_type ?? 'regular',
+                        'rate_code' => $retStc->rate_code,
+                        'is_return' => true,
+                    ]);
                 }
 
                 if ($this->selected_hotel_id) {
@@ -2887,16 +2887,16 @@ class BookingForm extends Component
 
         $departureTransportClassTotal = 0;
         $hasPromoClass = false;
-        if ($this->selected_transport_class_id) {
-            $stc = \App\Models\ScheduleTransportClass::with('transportClass')->find($this->selected_transport_class_id);
-            $departureTransportClassTotal = floatval($stc->additional_price ?? $stc->transportClass->price ?? 0);
+        if ($this->selected_transport_class_id && $this->selected_schedule_id) {
+            $stc = \App\Models\ScheduleTransportClass::resolveForSchedule($this->selected_schedule_id, $this->selected_transport_class_id);
+            $departureTransportClassTotal = $stc ? $stc->getEffectivePrice() : 0.0;
             if ($stc && $stc->is_promo) $hasPromoClass = true;
         }
 
         $returnTransportClassTotal = 0;
-        if ($this->trip_type === 'round_trip' && $this->selected_return_transport_class_id) {
-            $rstc = \App\Models\ScheduleTransportClass::with('transportClass')->find($this->selected_return_transport_class_id);
-            $returnTransportClassTotal = floatval($rstc->additional_price ?? $rstc->transportClass->price ?? 0);
+        if ($this->trip_type === 'round_trip' && $this->selected_return_transport_class_id && $this->selected_return_schedule_id) {
+            $rstc = \App\Models\ScheduleTransportClass::resolveForSchedule($this->selected_return_schedule_id, $this->selected_return_transport_class_id);
+            $returnTransportClassTotal = $rstc ? $rstc->getEffectivePrice() : 0.0;
             if ($rstc && $rstc->is_promo) $hasPromoClass = true;
         }
 
@@ -3017,16 +3017,16 @@ class BookingForm extends Component
 
         $departureTransportClassTotal = 0;
         $hasPromoClass = false;
-        if ($this->selected_transport_class_id) {
-            $stc = \App\Models\ScheduleTransportClass::with('transportClass')->find($this->selected_transport_class_id);
-            $departureTransportClassTotal = floatval($stc->additional_price ?? $stc->transportClass->price ?? 0);
+        if ($this->selected_transport_class_id && $this->selected_schedule_id) {
+            $stc = \App\Models\ScheduleTransportClass::resolveForSchedule($this->selected_schedule_id, $this->selected_transport_class_id);
+            $departureTransportClassTotal = $stc ? $stc->getEffectivePrice() : 0.0;
             if ($stc && $stc->is_promo) $hasPromoClass = true;
         }
 
         $returnTransportClassTotal = 0;
-        if ($this->trip_type === 'round_trip' && $this->selected_return_transport_class_id) {
-            $rstc = \App\Models\ScheduleTransportClass::with('transportClass')->find($this->selected_return_transport_class_id);
-            $returnTransportClassTotal = floatval($rstc->additional_price ?? $rstc->transportClass->price ?? 0);
+        if ($this->trip_type === 'round_trip' && $this->selected_return_transport_class_id && $this->selected_return_schedule_id) {
+            $rstc = \App\Models\ScheduleTransportClass::resolveForSchedule($this->selected_return_schedule_id, $this->selected_return_transport_class_id);
+            $returnTransportClassTotal = $rstc ? $rstc->getEffectivePrice() : 0.0;
             if ($rstc && $rstc->is_promo) $hasPromoClass = true;
         }
 
