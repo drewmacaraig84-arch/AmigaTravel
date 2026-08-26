@@ -7273,9 +7273,38 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             _booking['status'] != 'pending_rebooking' &&
             _booking['rebooking_status'] != 'pending') ...[
           if (_booking['is_rebooked'] != true &&
-              _booking['rebooking_status'] != 'verified')
+              _booking['rebooking_status'] != 'verified') ...[
+            // Rebook is only allowed when the booking payment has been verified
+            if (_paymentStatus != 'paid') ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF7ED),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFFED7AA)),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.lock_clock_outlined,
+                        color: Color(0xFFEA580C), size: 15),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Rebooking is available once your payment has been verified.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF9A3412),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             OutlinedButton.icon(
-              onPressed: _busy
+              onPressed: (_busy || _paymentStatus != 'paid')
                   ? null
                   : () {
                       if (_booking['can_rebook'] != true) {
@@ -7323,14 +7352,17 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                         if (res == true) _refreshBooking();
                       });
                     },
-              icon: const Icon(Icons.calendar_month),
+              icon: Icon(_paymentStatus != 'paid'
+                  ? Icons.lock_outlined
+                  : Icons.calendar_month),
               label: const Text('Request rebooking'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: _booking['can_rebook'] == true
+                foregroundColor: (_paymentStatus == 'paid' && _booking['can_rebook'] == true)
                     ? const Color(0xFF2563EB)
-                    : Colors.grey.shade700,
+                    : Colors.grey.shade400,
               ),
             ),
+          ],
           if (_booking['can_cancel'] == true ||
               ['unpaid', 'pending', 'paid'].contains(_paymentStatus))
             OutlinedButton.icon(
@@ -9302,124 +9334,156 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                     width: hasBaggage ? 1.5 : 1,
                   ),
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Center(
-                        child: Text(
-                          '${i + 1}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF334155),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 4,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            pName,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF0F172A),
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            pType,
-                            style: const TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF94A3B8),
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      flex: 5,
-                      child: DropdownButtonFormField<String?>(
-                        value: pWeight,
-                        isExpanded: true,
-                        decoration: InputDecoration(
-                          border: OutlineInputBorder(
+                    // Passenger header: number badge + name/type
+                    Row(
+                      children: [
+                        Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: hasBaggage
+                                ? const Color(0xFFD1FAE5)
+                                : const Color(0xFFF1F5F9),
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
                           ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                          filled: true,
-                          fillColor: Colors.white,
-                          isDense: true,
-                        ),
-                        hint: const Text('No Extra Baggage (0 kg) — ₱0', style: TextStyle(fontSize: 11)),
-                        items: [
-                          const DropdownMenuItem<String?>(
-                            value: null,
+                          child: Center(
                             child: Text(
-                              'No Extra Baggage (0 kg) — ₱0',
-                              style: TextStyle(fontSize: 11, color: Colors.black87),
+                              '${i + 1}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: hasBaggage
+                                    ? const Color(0xFF065F46)
+                                    : const Color(0xFF334155),
+                              ),
                             ),
                           ),
-                          ...options.map((opt) {
-                            final pr = double.tryParse(opt['price'].toString()) ?? 0.0;
-                            return DropdownMenuItem<String?>(
-                              value: opt['weight'].toString(),
-                              child: Text(
-                                '${opt['weight']} — ₱${pr.toStringAsFixed(0)}',
-                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-                              ),
-                            );
-                          }),
-                        ],
-                        onChanged: (val) {
-                          setState(() {
-                            if (val == null) {
-                              p['extra_baggage_weight'] = null;
-                              p['extra_baggage_price'] = 0.0;
-                            } else {
-                              final sel = options.firstWhere(
-                                (o) => o['weight'].toString() == val,
-                                orElse: () => {},
-                              );
-                              p['extra_baggage_weight'] = val;
-                              p['extra_baggage_price'] = double.tryParse(sel['price']?.toString() ?? '0') ?? 0.0;
-                            }
-                            widget.booking.hasExtraBaggage = widget.booking.totalExtraBaggagePrice > 0;
-                          });
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      child: Text(
-                        hasBaggage ? '$pWeight added' : '0 kg added',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: hasBaggage ? FontWeight.bold : FontWeight.w500,
-                          color: hasBaggage ? const Color(0xFF047857) : const Color(0xFF94A3B8),
                         ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                pName,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF0F172A),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 1),
+                              Text(
+                                pType,
+                                style: const TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF94A3B8),
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (hasBaggage)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFD1FAE5),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              '$pWeight added',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF047857),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    // Full-width baggage dropdown
+                    DropdownButtonFormField<String?>(
+                      value: pWeight,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: hasBaggage
+                                ? const Color(0xFF86EFAC)
+                                : const Color(0xFFCBD5E1),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF059669),
+                            width: 1.5,
+                          ),
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.luggage_outlined,
+                          size: 18,
+                          color: Color(0xFF64748B),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        filled: true,
+                        fillColor: hasBaggage
+                            ? const Color(0xFFF0FDF4)
+                            : Colors.white,
+                        isDense: true,
                       ),
+                      hint: const Text(
+                        'No extra baggage',
+                        style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                      ),
+                      items: [
+                        const DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text(
+                            'No extra baggage — ₱0',
+                            style: TextStyle(fontSize: 12, color: Colors.black87),
+                          ),
+                        ),
+                        ...options.map((opt) {
+                          final pr = double.tryParse(opt['price'].toString()) ?? 0.0;
+                          return DropdownMenuItem<String?>(
+                            value: opt['weight'].toString(),
+                            child: Text(
+                              '${opt['weight']} — ₱${pr.toStringAsFixed(0)}',
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                            ),
+                          );
+                        }),
+                      ],
+                      onChanged: (val) {
+                        setState(() {
+                          if (val == null) {
+                            p['extra_baggage_weight'] = null;
+                            p['extra_baggage_price'] = 0.0;
+                          } else {
+                            final sel = options.firstWhere(
+                              (o) => o['weight'].toString() == val,
+                              orElse: () => {},
+                            );
+                            p['extra_baggage_weight'] = val;
+                            p['extra_baggage_price'] = double.tryParse(sel['price']?.toString() ?? '0') ?? 0.0;
+                          }
+                          widget.booking.hasExtraBaggage = widget.booking.totalExtraBaggagePrice > 0;
+                        });
+                      },
                     ),
                   ],
                 ),
