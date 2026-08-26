@@ -100,7 +100,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.135+146';
+  static const String appVersion = '1.0.136+147';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -21120,35 +21120,44 @@ class _RebookScreenState extends State<RebookScreen> {
                     final pType = p['type']?.toString().toUpperCase() ?? 'ADULT';
                     final pOrig = _parseDouble(p['original_fare']);
                     final pNew = _parseDouble(p['new_fare']);
-                    final pDiff = pNew - pOrig;
-                    final mult = _parseDouble(p['multiplier']);
-                    final multText = (mult < 1.0) ? ' (${(mult * 100).toInt()}%)' : '';
+                    final pDiff = _parseDouble(p['rate_diff'] ?? (pNew - pOrig > 0 ? pNew - pOrig : 0));
+                    final pReval = _parseDouble(p['revalidation_fee']);
+                    final pSurcharge = _parseDouble(p['surcharge']);
+                    final pTotal = _parseDouble(p['total_to_pay'] ?? (pDiff + pReval + pSurcharge));
                     final isChildOrMinor = ['MINOR', 'CHILD', 'INFANT'].contains(pType);
 
                     return Container(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(10),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: const Color(0xFFE2E8F0)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.02),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Header: Avatar badge + Name + Type pill (without percentage)
                           Row(
                             children: [
                               Container(
-                                width: 22,
-                                height: 22,
+                                width: 24,
+                                height: 24,
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFE2E8F0),
+                                  color: const Color(0xFFF1F5F9),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Center(
                                   child: Text('${idx + 1}',
                                       style: const TextStyle(
-                                          fontSize: 11,
+                                          fontSize: 11.5,
                                           fontWeight: FontWeight.bold,
                                           color: Color(0xFF334155))),
                                 ),
@@ -21157,19 +21166,19 @@ class _RebookScreenState extends State<RebookScreen> {
                               Expanded(
                                 child: Text(pName,
                                     style: const TextStyle(
-                                        fontSize: 13,
+                                        fontSize: 13.5,
                                         fontWeight: FontWeight.bold,
-                                        color: Color(0xFF1E293B)),
+                                        color: Color(0xFF0F172A)),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis),
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
                                   color: isChildOrMinor ? const Color(0xFFDCFCE7) : const Color(0xFFDBEAFE),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
-                                child: Text('$pType$multText',
+                                child: Text(pType,
                                     style: TextStyle(
                                         fontSize: 10,
                                         fontWeight: FontWeight.bold,
@@ -21177,20 +21186,95 @@ class _RebookScreenState extends State<RebookScreen> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 10),
+                          // Fare comparison box
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('ORIGINAL FARE',
+                                        style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w600, color: Color(0xFF94A3B8))),
+                                    const SizedBox(height: 2),
+                                    Text('₱${pOrig.toStringAsFixed(2)}',
+                                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+                                  ],
+                                ),
+                                const Icon(Icons.arrow_forward, size: 14, color: Color(0xFF94A3B8)),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    const Text('NEW FARE',
+                                        style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w600, color: Color(0xFF94A3B8))),
+                                    const SizedBox(height: 2),
+                                    Text('₱${pNew.toStringAsFixed(2)}',
+                                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          // Individual Fees
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 2),
+                            child: Column(
+                              children: [
+                                if (pDiff > 0) ...[
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text('Fare Difference (Upgrade):',
+                                          style: TextStyle(fontSize: 11.5, color: Color(0xFF0369A1), fontWeight: FontWeight.w500)),
+                                      Text('+₱${pDiff.toStringAsFixed(2)}',
+                                          style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF0284C7))),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 5),
+                                ],
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text('Revalidation Fee:',
+                                        style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B))),
+                                    Text('₱${pReval.toStringAsFixed(2)}',
+                                        style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w500, color: Color(0xFF334155))),
+                                  ],
+                                ),
+                                if (pSurcharge > 0) ...[
+                                  const SizedBox(height: 5),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text('Revalidation Surcharge:',
+                                          style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B))),
+                                      Text('₱${pSurcharge.toStringAsFixed(2)}',
+                                          style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w500, color: Color(0xFF334155))),
+                                    ],
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8),
+                            child: Divider(height: 1),
+                          ),
+                          // Passenger subtotal
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text('Original: ₱${pOrig.toStringAsFixed(2)}',
-                                  style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B))),
-                              Text('New: ₱${pNew.toStringAsFixed(2)}',
-                                  style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF0F172A))),
-                              if (pDiff > 0)
-                                Text('+₱${pDiff.toStringAsFixed(2)}',
-                                    style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF0284C7)))
-                              else
-                                const Text('No change',
-                                    style: TextStyle(fontSize: 11.5, color: Color(0xFF94A3B8))),
+                              const Text('Passenger Subtotal:',
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF334155))),
+                              Text('₱${pTotal.toStringAsFixed(2)}',
+                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF059669))),
                             ],
                           ),
                         ],

@@ -1731,14 +1731,22 @@ class Booking extends Model
             $newFare += $paxNewFare;
 
             $pOriginalFare = (float) $p->getEffectiveFareAndClass();
+            $paxRateDiff = max(0.0, round($paxNewFare - $pOriginalFare, 2));
+            $paxSurcharge = round($pOriginalFare * ($surchargePct / 100), 2);
+            $paxRevalFee = $isWithin5Mins ? 0.0 : round(floatval($settings->revalidation_fee ?? 0), 2);
+            $paxTotalToPay = round($paxRateDiff + $paxSurcharge + $paxRevalFee, 2);
 
             $passengersBreakdown[] = [
-                'item_number'   => (int) $p->item_number,
-                'name'          => $p->name ?? 'Passenger',
-                'type'          => strtoupper($pType),
-                'multiplier'    => $paxMultiplier,
-                'original_fare' => round($pOriginalFare, 2),
-                'new_fare'      => round($paxNewFare, 2),
+                'item_number'      => (int) $p->item_number,
+                'name'             => $p->name ?? 'Passenger',
+                'type'             => strtoupper($pType),
+                'multiplier'       => $paxMultiplier,
+                'original_fare'    => round($pOriginalFare, 2),
+                'new_fare'         => round($paxNewFare, 2),
+                'rate_diff'        => $paxRateDiff,
+                'revalidation_fee' => $paxRevalFee,
+                'surcharge'        => $paxSurcharge,
+                'total_to_pay'     => $paxTotalToPay,
             ];
         }
 

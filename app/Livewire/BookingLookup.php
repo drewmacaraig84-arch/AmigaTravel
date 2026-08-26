@@ -59,13 +59,14 @@ class BookingLookup extends Component
     public ?float $rebooking_ret_schedule_price = null;
     public ?float $rebooking_ret_accommodation_price = null;
 
-    // Price computation (before and after booking)
+    public float $rebooking_original_fare = 0.0;
     public float $rebooking_new_total = 0.0;
     public float $rebooking_price_diff = 0.0;
     public float $rebooking_surcharge = 0.0;
     public float $rebooking_revalidation_fee = 0.0;
     public float $rebooking_rate_diff = 0.0;
     public float $rebooking_total_to_pay = 0.0;
+    public array $rebooking_passengers_breakdown = [];
 
     public bool $showCancellationWarning = false;
     public bool $showRebookingWarning = false;
@@ -993,12 +994,14 @@ class BookingLookup extends Component
                 $retAccId
             );
 
-            $this->rebooking_new_total = $calc['new_fare'];
-            $this->rebooking_revalidation_fee = $calc['revalidation_fee'];
-            $this->rebooking_surcharge = $calc['surcharge'];
-            $this->rebooking_rate_diff = $calc['rate_diff'];
-            $this->rebooking_price_diff = $calc['rate_diff'];
-            $this->rebooking_total_to_pay = $calc['total_rebooking_fee'];
+            $this->rebooking_original_fare = (float) $calc['original_fare'];
+            $this->rebooking_new_total = (float) $calc['new_fare'];
+            $this->rebooking_revalidation_fee = (float) $calc['revalidation_fee'];
+            $this->rebooking_surcharge = (float) $calc['surcharge'];
+            $this->rebooking_rate_diff = (float) $calc['rate_diff'];
+            $this->rebooking_price_diff = (float) $calc['rate_diff'];
+            $this->rebooking_total_to_pay = (float) $calc['total_rebooking_fee'];
+            $this->rebooking_passengers_breakdown = $calc['passengers_breakdown'] ?? [];
         } catch (\Exception $e) {
             $this->feedback = "Error in calculateRebookingPriceDiff: " . $e->getMessage();
         }

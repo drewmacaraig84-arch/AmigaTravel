@@ -57,6 +57,7 @@ class BookingReschedule extends Component
     public float $rebookRevalidationFee = 0.0;
     public float $rebookRateDiff = 0.0;
     public float $totalRebookFee = 0.0;
+    public array $passengersBreakdown = [];
     public $paymentProof;
     public bool $isUploading = false;
 
@@ -391,6 +392,7 @@ class BookingReschedule extends Component
             $this->rebookRevalidationFee = $calc['revalidation_fee'];
             $this->totalRebookFee = $calc['total_rebooking_fee'];
             $this->priceDiff = $calc['rate_diff'];
+            $this->passengersBreakdown = $calc['passengers_breakdown'] ?? [];
         } catch (\Exception $e) {
             $this->feedback = "Error calculating price difference: " . $e->getMessage();
         }
