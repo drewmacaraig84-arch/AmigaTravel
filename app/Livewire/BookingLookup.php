@@ -36,6 +36,7 @@ class BookingLookup extends Component
     public $refund_auth_letter = null;
     public bool $rebookingRequested = false;
     public bool $rebookingPaid = false;
+    public bool $isUploadingRebooking = false;
     public bool $rebooking_is_round_trip = false;
     public ?string $rebooking_reference_number = null;
     public $rebookingProof;
