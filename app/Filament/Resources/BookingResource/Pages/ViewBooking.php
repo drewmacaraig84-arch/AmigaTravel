@@ -755,7 +755,7 @@ class ViewBooking extends ViewRecord
         ];
     }
 
-    protected function getAllRelationManagers(): array
+    public function getRelationManagers(): array
     {
         return [];
     }
