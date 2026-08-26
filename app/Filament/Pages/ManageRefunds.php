@@ -97,12 +97,7 @@ class ManageRefunds extends Page implements HasTable, HasInfolists
                     ->placeholder('—'),
                 Tables\Columns\TextColumn::make('request_type')
                     ->label('Type')
-                    ->state(function (Booking $record): string {
-                        $isFullCancellation = in_array($record->status, [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED], true)
-                            || ($record->passengers->isNotEmpty() && $record->passengers->every(fn ($p) => in_array($p->status, ['cancelled', 'refund_pending', 'refunded', 'operator_cancelled'], true)));
-
-                        return $isFullCancellation ? 'Cancel Booking' : 'Refund';
-                    })
+                    ->state(fn (Booking $record): string => $record->getRefundRequestType())
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'Cancel Booking' => 'danger',
@@ -143,13 +138,13 @@ class ManageRefunds extends Page implements HasTable, HasInfolists
                     ->state(function (Booking $record): string {
                         $parsed = $record->getParsedRefundDestination();
                         $parts = [];
-                        if (filled($parsed['institution'])) {
+                        if (filled($parsed['institution'] ?? null)) {
                             $parts[] = $parsed['institution'];
                         }
-                        if (filled($parsed['account_number'])) {
+                        if (filled($parsed['account_number'] ?? null)) {
                             $parts[] = $parsed['account_number'];
                         }
-                        if (filled($parsed['account_name'])) {
+                        if (filled($parsed['account_name'] ?? null)) {
                             $parts[] = '(' . $parsed['account_name'] . ')';
                         }
                         return !empty($parts) ? implode(' • ', $parts) : ($record->refund_destination ?? '—');
@@ -219,20 +214,6 @@ class ManageRefunds extends Page implements HasTable, HasInfolists
                         'pending' => 'Pending Processing',
                         'completed' => 'Disbursed',
                     ]),
-                SelectFilter::make('request_type')
-                    ->label('Type')
-                    ->options([
-                        'cancel_booking' => 'Cancel Booking',
-                        'refund' => 'Refund',
-                    ])
-                    ->query(function (Builder $query, array $data) {
-                        $val = $data['value'] ?? null;
-                        if ($val === 'cancel_booking') {
-                            $query->whereIn('status', [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED]);
-                        } elseif ($val === 'refund') {
-                            $query->whereNotIn('status', [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED]);
-                        }
-                    }),
             ])
             ->actions([
                 Action::make('viewRefund')

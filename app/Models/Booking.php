@@ -298,6 +298,29 @@ class Booking extends Model
         return $result;
     }
 
+    /**
+     * Determine whether the refund is a full "Cancel Booking" or a partial "Refund".
+     */
+    public function getRefundRequestType(): string
+    {
+        $status = strtolower((string) ($this->status ?? ''));
+        if (in_array($status, ['cancelled', 'operator_cancelled'], true)) {
+            return 'Cancel Booking';
+        }
+
+        $passengers = $this->passengers;
+        if ($passengers && $passengers->isNotEmpty()) {
+            $allCancelledOrRefunded = $passengers->every(function ($p) {
+                return in_array(strtolower((string) ($p->status ?? '')), ['cancelled', 'refund_pending', 'refunded', 'operator_cancelled'], true);
+            });
+            if ($allCancelledOrRefunded) {
+                return 'Cancel Booking';
+            }
+        }
+
+        return 'Refund';
+    }
+
     protected $casts = [
         'departure_date' => 'date',
         'return_date' => 'date',
