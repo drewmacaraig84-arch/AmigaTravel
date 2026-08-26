@@ -1324,10 +1324,11 @@
                                     {{-- Discount select --}}
                                     @php
                                         $isDriver = ($passenger['type'] ?? '') === 'driver';
-                                        $isAirlineInfant = ($mode === 'airline') && (($passenger['type'] ?? '') === 'infant');
                                         $isSuperPromo = $this->isSuperPromo || (($passenger['rate_type'] ?? '') === 'super_promotional');
+                                        $isPromo = $this->isPromo || (! empty($passenger['use_promo'])) || (($passenger['rate_type'] ?? '') === 'promotional');
+                                        $isRegularMinor = ! $isSuperPromo && ! $isPromo && in_array(strtolower($passenger['type'] ?? ''), ['minor', 'child', 'infant'], true);
                                     @endphp
-                                    <label class="block min-w-0 {{ ($isDriver || $isAirlineInfant || $isSuperPromo) ? 'opacity-50 pointer-events-none select-none' : '' }}">
+                                    <label class="block min-w-0 {{ ($isDriver || $isSuperPromo || $isRegularMinor) ? 'opacity-75' : '' }}">
                                         <span class="text-slate-900 font-bold text-sm">Discount</span>
                                         @if($isDriver)
                                             <div class="mt-3 rounded-xl border border-[#00a859] bg-[#00a859]/10 px-4 py-3 text-sm text-[#216417] font-bold flex items-center gap-2 shadow-sm">
@@ -1339,12 +1340,7 @@
                                                 <svg class="w-4 h-4 text-purple-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                                                 <span>⚡ Super Promo fare &mdash; Mandated discounts (Senior/PWD/Student) are not applicable to this rate tier.</span>
                                             </div>
-                                        @elseif($isAirlineInfant)
-                                            <div class="mt-3 rounded-xl border border-slate-200 bg-slate-100/80 px-4 py-3 text-sm text-slate-500 font-medium flex items-center gap-2 shadow-sm">
-                                                <svg class="w-4 h-4 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                                <span>Minors traveling on regular fares are automatically entitled to a 50% ticket discount and are not eligible for additional mandated discounts.</span>
-                                            </div>
-                                        @elseif(in_array(strtolower($passenger['type'] ?? ''), ['minor', 'child'], true) && ! ($mode === 'airline' && ! empty($passenger['use_promo'])))
+                                        @elseif($isRegularMinor)
                                             <div class="mt-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-xs text-sky-800 font-medium flex items-start gap-2 shadow-sm">
                                                 <svg class="w-4 h-4 text-sky-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                                 <span>Minors traveling on regular fares are automatically entitled to a 50% ticket discount and are not eligible for additional mandated discounts.</span>

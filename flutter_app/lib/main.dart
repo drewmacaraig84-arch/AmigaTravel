@@ -10378,11 +10378,9 @@ class _DiscountScreenState extends State<DiscountScreen> {
                                   ],
                                 ),
                               ),
-                            ] else if ((widget.booking.mode == 'airline' && type == 'infant') ||
-                                       ((type == 'minor' || type == 'child') &&
-                                        !(widget.booking.mode == 'airline' &&
-                                          (pax[i]['use_promo'] == true ||
-                                           widget.booking.promotionalTicketId != null)))) ...[
+                            ] else if (!widget.booking.isPromo &&
+                                       ((widget.booking.mode == 'airline' && type == 'infant') ||
+                                        (type == 'minor' || type == 'child'))) ...[
                               const SizedBox(height: 10),
                               Container(
                                 padding: const EdgeInsets.all(12),
@@ -11929,8 +11927,9 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                       int payingInfants = widget.booking.mode == 'airline' ? widget.booking.infants : 0;
                       int payingPax = payingAdults + payingChildren + payingMinors + payingInfants;
 
-                      final bool isPromo = widget.booking.usePromoTicket &&
-                          widget.booking.promotionalTicketId != null;
+                      final bool isSuperPromo = widget.booking.isSuperPromo;
+                      final bool isPromo = widget.booking.isPromo ||
+                          (widget.booking.usePromoTicket && widget.booking.promotionalTicketId != null);
 
                       if (widget.booking.selectedSchedule != null) {
                         final rawAdultP = isPromo && widget.booking.selectedSchedule!['promotional_ticket'] != null
@@ -11938,9 +11937,13 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                             : (widget.booking.selectedSchedule!['adult_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0);
                         final adultP = rawAdultP is num ? rawAdultP.toDouble() : (double.tryParse(rawAdultP.toString()) ?? 0.0);
                         
-                        final childP = 0.5 * adultP;
-                        final minorP = isFerryMode ? adultP : (0.5 * adultP);
-                        final infantP = isFerryMode ? adultP : (0.5 * adultP);
+                        final childMultiplier = (isSuperPromo || isPromo) ? 1.0 : 0.5;
+                        final minorMultiplier = (isSuperPromo || isPromo || isFerryMode) ? 1.0 : 0.5;
+                        final infantMultiplier = (isSuperPromo || isPromo || isFerryMode) ? 1.0 : 0.5;
+
+                        final childP = childMultiplier * adultP;
+                        final minorP = minorMultiplier * adultP;
+                        final infantP = infantMultiplier * adultP;
 
                         ticketPrice += (payingAdults * adultP) +
                             (payingChildren * childP) +
@@ -11959,9 +11962,13 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                         final rawAdultP = widget.booking.selectedReturnSchedule!['adult_price'] ?? widget.booking.selectedReturnSchedule!['price'] ?? 0;
                         final adultP = rawAdultP is num ? rawAdultP.toDouble() : (double.tryParse(rawAdultP.toString()) ?? 0.0);
 
-                        final childP = 0.5 * adultP;
-                        final minorP = isFerryMode ? adultP : (0.5 * adultP);
-                        final infantP = isFerryMode ? adultP : (0.5 * adultP);
+                        final childMultiplier = (isSuperPromo || isPromo) ? 1.0 : 0.5;
+                        final minorMultiplier = (isSuperPromo || isPromo || isFerryMode) ? 1.0 : 0.5;
+                        final infantMultiplier = (isSuperPromo || isPromo || isFerryMode) ? 1.0 : 0.5;
+
+                        final childP = childMultiplier * adultP;
+                        final minorP = minorMultiplier * adultP;
+                        final infantP = infantMultiplier * adultP;
 
                         ticketPrice += (payingAdults * adultP) +
                             (payingChildren * childP) +
@@ -11976,25 +11983,27 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                       }
 
                       double passengerDiscount = 0.0;
-                      for (var p in widget.booking.passengers) {
-                        if (p['discount_id'] != null &&
-                            widget.booking.selectedSchedule != null) {
-                          final rawAp = isPromo && widget.booking.selectedSchedule!['promotional_ticket'] != null
-                              ? (widget.booking.selectedSchedule!['promotional_ticket']['promo_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0)
-                              : (widget.booking.selectedSchedule!['adult_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0);
-                          final ap = rawAp is num ? rawAp.toDouble() : (double.tryParse(rawAp.toString()) ?? 0.0);
-                          passengerDiscount += (ap * 0.20);
-                          if (widget.booking.tripType == 'round_trip' &&
-                              widget.booking.selectedReturnSchedule != null) {
-                            final rp = widget.booking
-                                    .selectedReturnSchedule!['adult_price'] ??
-                                widget.booking
-                                    .selectedReturnSchedule!['price'] ??
-                                0;
-                            passengerDiscount += ((rp is num
-                                    ? rp.toDouble()
-                                    : double.tryParse(rp.toString()) ?? 0) *
-                                0.20);
+                      if (!isSuperPromo) {
+                        for (var p in widget.booking.passengers) {
+                          if (p['discount_id'] != null &&
+                              widget.booking.selectedSchedule != null) {
+                            final rawAp = isPromo && widget.booking.selectedSchedule!['promotional_ticket'] != null
+                                ? (widget.booking.selectedSchedule!['promotional_ticket']['promo_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0)
+                                : (widget.booking.selectedSchedule!['adult_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0);
+                            final ap = rawAp is num ? rawAp.toDouble() : (double.tryParse(rawAp.toString()) ?? 0.0);
+                            passengerDiscount += (ap * 0.20);
+                            if (widget.booking.tripType == 'round_trip' &&
+                                widget.booking.selectedReturnSchedule != null) {
+                              final rp = widget.booking
+                                      .selectedReturnSchedule!['adult_price'] ??
+                                  widget.booking
+                                      .selectedReturnSchedule!['price'] ??
+                                  0;
+                              passengerDiscount += ((rp is num
+                                      ? rp.toDouble()
+                                      : double.tryParse(rp.toString()) ?? 0) *
+                                  0.20);
+                            }
                           }
                         }
                       }
@@ -12037,8 +12046,9 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                         final retTc = widget.booking.tripType == 'round_trip'
                             ? (widget.booking.selectedReturnFerryAccommodationPrice ?? 0).toDouble()
                             : 0.0;
+                        final tcMultiplier = (isSuperPromo || isPromo) ? 1.0 : 0.5;
                         transportClassCost = (payingAdults * (depTc + retTc)) +
-                            (payingChildren * (depTc + retTc) * 0.5);
+                            (payingChildren * (depTc + retTc) * tcMultiplier);
                       } else {
                         double depClass = (widget.booking.selectedAirlineClassPrice ?? 0).toDouble();
                         double retClass = widget.booking.tripType == 'round_trip'
@@ -12066,8 +12076,8 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                           passengerDiscount;
                       if (subtotal < 0) subtotal = 0.0;
 
-                      // Voucher and points are blocked when promo ticket is active
-                      final discount = (!isPromo &&
+                      // Voucher and points are blocked on Super Promo
+                      final discount = (!isSuperPromo &&
                               widget.booking.voucherData != null)
                           ? _parseDouble(
                               widget.booking.voucherData!['discount_amount'])
@@ -12076,7 +12086,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                       if (totalBeforePoints < 0) totalBeforePoints = 0.0;
 
                       double pointsDiscount = 0.0;
-                      if (!isPromo && _usePoints) {
+                      if (!isSuperPromo && _usePoints) {
                         pointsDiscount = _availablePoints > totalBeforePoints
                             ? totalBeforePoints.ceilToDouble()
                             : _availablePoints;

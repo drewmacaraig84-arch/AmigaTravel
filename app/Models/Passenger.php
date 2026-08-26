@@ -307,7 +307,9 @@ class Passenger extends Model
         if ($booking) {
             $schedPrice = (float) ($booking->schedule_price ?? 0);
             $retPrice   = (float) ($booking->return_schedule_price ?? 0);
-            $paxMultiplier = in_array(strtolower($this->type ?? 'adult'), ['child', 'minor'], true) ? 0.5 : 1.0;
+            $isPromo    = in_array($this->rate_type ?? 'regular', ['promotional', 'super_promotional'], true)
+                || (bool) ($this->is_promo ?? false);
+            $paxMultiplier = (! $isPromo && in_array(strtolower($this->type ?? 'adult'), ['child', 'minor'], true)) ? 0.5 : 1.0;
             return ($schedPrice + $retPrice) * $paxMultiplier;
         }
 

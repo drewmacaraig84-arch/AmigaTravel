@@ -14,6 +14,7 @@ use App\Models\Passenger;
 use App\Models\PaymentSetting;
 use App\Models\Schedule;
 use App\Models\ScheduleAccommodation;
+use App\Models\ScheduleTransportClass;
 use App\Models\TransportClass;
 use App\Models\VehicleBrand;
 use App\Models\VehicleModel;
@@ -2160,47 +2161,53 @@ class BookingForm extends Component
                 $discountsKeyed = \App\Models\Discount::all()->keyBy('id');
 
                 foreach ($this->passengers as $idx => $passenger) {
-                    $isPromo = strtolower($this->mode) === 'airline' && ! empty($passenger['use_promo']) && $usedPromoTicket;
+                    $isAirlinePromo = strtolower($this->mode) === 'airline' && ! empty($passenger['use_promo']) && $usedPromoTicket;
                     $itemNum = $idx + 1;
 
                     $pType = strtolower($passenger['type'] ?? 'adult');
                     $isAirline = strtolower($this->mode) === 'airline';
+
+                    $paxRateType = $passenger['rate_type'] ?? ($this->isSuperPromo ? 'super_promotional' : (($this->isPromo || $isAirlinePromo) ? 'promotional' : 'regular'));
+                    $isSuperPromoPax = $paxRateType === 'super_promotional';
+                    $isPromoPax = $paxRateType === 'promotional' || (! empty($passenger['is_promo']) && ! $isSuperPromoPax) || $isAirlinePromo;
+
                     $paxMultiplier = 1.0;
-                    if ($isAirline) {
-                        if (in_array($pType, ['minor', 'child', 'infant'], true)) {
-                            $paxMultiplier = 0.5;
-                        }
-                    } else {
-                        // Ferry
-                        if (in_array($pType, ['child', 'minor'], true)) {
-                            $paxMultiplier = 0.5;
+                    // Minor/child/infant 50% multiplier ONLY applies to regular fares.
+                    // For both promo and super promo tickets, the 50% price reduction is removed (100% full rate).
+                    if (! $isSuperPromoPax && ! $isPromoPax) {
+                        if ($isAirline) {
+                            if (in_array($pType, ['minor', 'child', 'infant'], true)) {
+                                $paxMultiplier = 0.5;
+                            }
+                        } else {
+                            // Ferry
+                            if (in_array($pType, ['child', 'minor'], true)) {
+                                $paxMultiplier = 0.5;
+                            }
                         }
                     }
 
                     $isMinorPax = in_array($pType, ['minor', 'child'], true) || ($isAirline && $pType === 'infant');
-                    if ($isPromo) {
+                    if ($isAirlinePromo) {
                         $grossFare = floatval($usedPromoTicket->promo_price) + $depTcPrice + ($retBasePrice + $retTcPrice) * $paxMultiplier;
-                        $grossAcc = $schedAccPrice + $retAccPrice;
-                        $discAmount = 0.0;
-                        $hasDiscount = ! empty($passenger['discount_id']) && ! $this->isSuperPromo;
-                        if ($hasDiscount) {
-                            $disc = $discountsKeyed->get($passenger['discount_id']);
-                            if ($disc) {
-                                $discAmount = ($grossFare + $grossAcc) * ((float) $disc->percentage / 100);
-                            }
-                        }
                     } else {
                         $grossFare = ($schedBasePrice + $depTcPrice + $retBasePrice + $retTcPrice) * $paxMultiplier;
-                        $grossAcc = $schedAccPrice + $retAccPrice;
-                        $discAmount = 0.0;
-                        $hasDiscount = ! empty($passenger['discount_id']) && ! $this->isSuperPromo && ! $isMinorPax;
-                        if ($hasDiscount) {
-                            $disc = $discountsKeyed->get($passenger['discount_id']);
-                            if ($disc) {
-                                $discAmount = ($grossFare + $grossAcc) * ((float) $disc->percentage / 100);
-                            }
+                    }
+                    $grossAcc = $schedAccPrice + $retAccPrice;
+
+                    $discAmount = 0.0;
+                    // Super Promo blocks mandated discounts. Regular minors get auto 50% fare and cannot stack. Promo tickets ALLOW mandated discounts.
+                    $hasDiscount = ! empty($passenger['discount_id'])
+                        && ! $isSuperPromoPax
+                        && ! (! $isSuperPromoPax && ! $isPromoPax && $isMinorPax);
+
+                    if ($hasDiscount) {
+                        $disc = $discountsKeyed->get($passenger['discount_id']);
+                        if ($disc) {
+                            $discAmount = ($grossFare + $grossAcc) * ((float) $disc->percentage / 100);
                         }
                     }
+
                     $extraBaggagePricePax = isset($passenger['extra_baggage_price']) ? floatval($passenger['extra_baggage_price']) : 0.0;
                     $itemTotal = max(0, ($grossFare + $grossAcc) - $discAmount + $webAdminFeePerPax + $txFeePerPax + $extraBaggagePricePax);
 
@@ -2212,10 +2219,11 @@ class BookingForm extends Component
                         'type'                   => $passenger['type'],
                         'name'                   => $passenger['name'] ?: null,
                         'birthdate'              => !empty($passenger['birthdate']) ? $passenger['birthdate'] : null,
-                        'discount_id'            => ($isAirline && $pType === 'infant') ? null : ($passenger['discount_id'] ?: null),
-                        'promotional_ticket_id'  => $isPromo ? $usedPromoTicket->id : null,
-                        'is_promo'               => $isPromo,
-                        'promo_price'            => $isPromo ? floatval($usedPromoTicket->promo_price) : null,
+                        'discount_id'            => $hasDiscount ? ($passenger['discount_id'] ?: null) : null,
+                        'promotional_ticket_id'  => $isAirlinePromo ? $usedPromoTicket->id : null,
+                        'is_promo'               => $paxRateType !== 'regular',
+                        'rate_type'              => $paxRateType,
+                        'promo_price'            => $isAirlinePromo ? floatval($usedPromoTicket->promo_price) : null,
                         'passport_country'       => !empty($passenger['passport_country']) ? $passenger['passport_country'] : null,
                         'passport_number'        => !empty($passenger['passport_number']) ? $passenger['passport_number'] : null,
                         'passport_issuance_date' => !empty($passenger['passport_issuance_date']) ? $passenger['passport_issuance_date'] : null,
@@ -2921,15 +2929,21 @@ class BookingForm extends Component
             }
 
             $type = strtolower($passenger['type'] ?? 'adult');
+            $paxRateType = $passenger['rate_type'] ?? ($this->isSuperPromo ? 'super_promotional' : ($this->isPromo ? 'promotional' : 'regular'));
+            $isSuperPromoPax = $paxRateType === 'super_promotional';
+            $isPromoPax = $paxRateType === 'promotional' || (! empty($passenger['use_promo']) && ! $isSuperPromoPax);
+
             $paxMultiplier = 1.0;
-            if ($isFerry) {
-                if (in_array($type, ['child', 'minor'], true)) {
-                    $paxMultiplier = 0.5;
-                }
-            } else {
-                // Airline
-                if (in_array($type, ['minor', 'child', 'infant'], true)) {
-                    $paxMultiplier = 0.5;
+            if (! $isSuperPromoPax && ! $isPromoPax) {
+                if ($isFerry) {
+                    if (in_array($type, ['child', 'minor'], true)) {
+                        $paxMultiplier = 0.5;
+                    }
+                } else {
+                    // Airline
+                    if (in_array($type, ['minor', 'child', 'infant'], true)) {
+                        $paxMultiplier = 0.5;
+                    }
                 }
             }
 
@@ -2948,10 +2962,9 @@ class BookingForm extends Component
             $fare = $depFare + $retFare;
 
             $isMinorPax = in_array($type, ['child', 'minor'], true) || (! $isFerry && $type === 'infant');
-            $isPromoPax = $activePromoTicket && ! empty($passenger['use_promo']);
             $hasDiscount = ! empty($passenger['discount_id'])
-                && ! $this->isSuperPromo
-                && ! (! $isPromoPax && $isMinorPax);
+                && ! $isSuperPromoPax
+                && ! (! $isSuperPromoPax && ! $isPromoPax && $isMinorPax);
 
             if ($hasDiscount) {
                 $discount = $discountsById->get($passenger['discount_id']);
@@ -3046,15 +3059,21 @@ class BookingForm extends Component
             }
 
             $type = strtolower($passenger['type'] ?? 'adult');
+            $paxRateType = $passenger['rate_type'] ?? ($this->isSuperPromo ? 'super_promotional' : ($this->isPromo ? 'promotional' : 'regular'));
+            $isSuperPromoPax = $paxRateType === 'super_promotional';
+            $isPromoPax = $paxRateType === 'promotional' || (! empty($passenger['use_promo']) && ! $isSuperPromoPax);
+
             $paxMultiplier = 1.0;
-            if ($isFerry) {
-                if (in_array($type, ['child', 'minor'], true)) {
-                    $paxMultiplier = 0.5;
-                }
-            } else {
-                // Airline
-                if (in_array($type, ['minor', 'child', 'infant'], true)) {
-                    $paxMultiplier = 0.5;
+            if (! $isSuperPromoPax && ! $isPromoPax) {
+                if ($isFerry) {
+                    if (in_array($type, ['child', 'minor'], true)) {
+                        $paxMultiplier = 0.5;
+                    }
+                } else {
+                    // Airline
+                    if (in_array($type, ['minor', 'child', 'infant'], true)) {
+                        $paxMultiplier = 0.5;
+                    }
                 }
             }
 
@@ -3070,7 +3089,7 @@ class BookingForm extends Component
             $isMinorPax = in_array($type, ['child', 'minor'], true) || (! $isFerry && $type === 'infant');
             $hasDiscount = ! empty($passenger['discount_id'])
                 && ! $this->isSuperPromo
-                && ! (! $isAirlinePromoPassenger && $isMinorPax);
+                && ! (! $isSuperPromoPax && ! $isPromoPax && $isMinorPax);
 
             if ($hasDiscount) {
                 $discount = $discountsById->get($passenger['discount_id']);
@@ -3478,5 +3497,63 @@ class BookingForm extends Component
         }
         $schedule = Schedule::query()->find($this->selected_schedule_id);
         return $schedule ? $schedule->activePromotionalTicket() : null;
+    }
+
+    public function getIsSuperPromoProperty(): bool
+    {
+        if ($this->selected_schedule_id && $this->selected_transport_class_id) {
+            $stc = ScheduleTransportClass::resolveForSchedule($this->selected_schedule_id, $this->selected_transport_class_id);
+            if ($stc && $stc->isSuperPromo()) {
+                return true;
+            }
+        }
+
+        if ($this->trip_type === 'round_trip' && $this->selected_return_schedule_id && $this->selected_return_transport_class_id) {
+            $rstc = ScheduleTransportClass::resolveForSchedule($this->selected_return_schedule_id, $this->selected_return_transport_class_id);
+            if ($rstc && $rstc->isSuperPromo()) {
+                return true;
+            }
+        }
+
+        foreach ($this->passengers as $p) {
+            if (($p['rate_type'] ?? '') === 'super_promotional') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function getIsPromoProperty(): bool
+    {
+        if ($this->isSuperPromo) {
+            return true;
+        }
+
+        if ($this->selected_schedule_id && $this->selected_transport_class_id) {
+            $stc = ScheduleTransportClass::resolveForSchedule($this->selected_schedule_id, $this->selected_transport_class_id);
+            if ($stc && $stc->isPromo()) {
+                return true;
+            }
+        }
+
+        if ($this->trip_type === 'round_trip' && $this->selected_return_schedule_id && $this->selected_return_transport_class_id) {
+            $rstc = ScheduleTransportClass::resolveForSchedule($this->selected_return_schedule_id, $this->selected_return_transport_class_id);
+            if ($rstc && $rstc->isPromo()) {
+                return true;
+            }
+        }
+
+        if ($this->use_promo_ticket) {
+            return true;
+        }
+
+        foreach ($this->passengers as $p) {
+            if (! empty($p['use_promo']) || ! empty($p['is_promo']) || ($p['rate_type'] ?? '') === 'promotional') {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

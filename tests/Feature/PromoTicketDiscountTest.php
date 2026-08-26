@@ -267,4 +267,172 @@ class PromoTicketDiscountTest extends TestCase
         $action = app(CreateBookingAction::class);
         $action->execute($data);
     }
+
+    public function test_minor_child_infant_pay_100_percent_full_price_on_promotional_ticket(): void
+    {
+        $schedule = $this->createAirlineSchedule();
+
+        $promoTicket = PromotionalTicket::create([
+            'schedule_id' => $schedule->id,
+            'promo_price' => 1200.00,
+            'quantity_available' => 5,
+            'quantity_sold' => 0,
+            'starts_at' => now()->subDay(),
+            'ends_at' => now()->addDays(30),
+            'is_active' => true,
+        ]);
+
+        $data = [
+            'trip_type' => 'one_way',
+            'origin' => 'Manila',
+            'destination' => 'Cebu',
+            'departure_date' => $schedule->departure_time->format('Y-m-d'),
+            'schedule_id' => $schedule->id,
+            'promotional_ticket_id' => $promoTicket->id,
+            'client_name' => 'Parent User',
+            'client_email' => 'parent@example.com',
+            'client_phone' => '09171234567',
+            'payment_method' => 'gcash',
+            'passengers' => [
+                [
+                    'type' => 'child',
+                    'name' => 'Child User',
+                    'birthdate' => '2018-05-15',
+                    'rate_type' => 'promotional',
+                ],
+            ],
+        ];
+
+        $action = app(CreateBookingAction::class);
+        $booking = $action->execute($data);
+
+        $this->assertNotNull($booking);
+        $passenger = $booking->passengers->first();
+        // On promo, child pays 100% full rate (1200), not 50% (600)
+        $this->assertEquals(1200.00, (float)$passenger->fare_amount);
+    }
+
+    public function test_minor_child_infant_pay_100_percent_full_price_on_super_promotional_ticket(): void
+    {
+        $schedule = $this->createAirlineSchedule();
+        $stc = \Illuminate\Support\Facades\DB::table('schedule_transport_class')
+            ->where('schedule_id', $schedule->id)
+            ->first();
+        if ($stc) {
+            \Illuminate\Support\Facades\DB::table('schedule_transport_class')
+                ->where('id', $stc->id)
+                ->update(['rate_type' => 'super_promotional']);
+        }
+
+        $data = [
+            'trip_type' => 'one_way',
+            'origin' => 'Manila',
+            'destination' => 'Cebu',
+            'departure_date' => $schedule->departure_time->format('Y-m-d'),
+            'schedule_id' => $schedule->id,
+            'selected_transport_class_id' => $stc ? $stc->transport_class_id : null,
+            'client_name' => 'Parent User',
+            'client_email' => 'parent@example.com',
+            'client_phone' => '09171234567',
+            'payment_method' => 'gcash',
+            'passengers' => [
+                [
+                    'type' => 'minor',
+                    'name' => 'Minor User',
+                    'birthdate' => '2010-05-15',
+                    'rate_type' => 'super_promotional',
+                ],
+            ],
+        ];
+
+        $action = app(CreateBookingAction::class);
+        $booking = $action->execute($data);
+
+        $this->assertNotNull($booking);
+        $passenger = $booking->passengers->first();
+        // On super promo, minor pays 100% full schedule price (2500), not 50% (1250)
+        $this->assertEquals(2500.00, (float)$passenger->fare_amount);
+    }
+
+    public function test_super_promotional_ticket_blocks_government_mandate_discounts(): void
+    {
+        $schedule = $this->createAirlineSchedule();
+        $stc = \Illuminate\Support\Facades\DB::table('schedule_transport_class')
+            ->where('schedule_id', $schedule->id)
+            ->first();
+        if ($stc) {
+            \Illuminate\Support\Facades\DB::table('schedule_transport_class')
+                ->where('id', $stc->id)
+                ->update(['rate_type' => 'super_promotional']);
+        }
+
+        $discount = Discount::create([
+            'name' => 'Senior Citizen',
+            'percentage' => 20.00,
+        ]);
+
+        $data = [
+            'trip_type' => 'one_way',
+            'origin' => 'Manila',
+            'destination' => 'Cebu',
+            'departure_date' => $schedule->departure_time->format('Y-m-d'),
+            'schedule_id' => $schedule->id,
+            'selected_transport_class_id' => $stc ? $stc->transport_class_id : null,
+            'client_name' => 'Senior User',
+            'client_email' => 'senior@example.com',
+            'client_phone' => '09171234567',
+            'payment_method' => 'gcash',
+            'passengers' => [
+                [
+                    'type' => 'adult',
+                    'name' => 'Senior User',
+                    'birthdate' => '1955-05-15',
+                    'rate_type' => 'super_promotional',
+                    'discount_id' => $discount->id,
+                ],
+            ],
+        ];
+
+        $action = app(CreateBookingAction::class);
+        $booking = $action->execute($data);
+
+        $this->assertNotNull($booking);
+        $passenger = $booking->passengers->first();
+        // Super promo ignores discount
+        $this->assertEquals(0.00, (float)$passenger->discount_amount);
+        $this->assertNull($passenger->discount_id);
+    }
+
+    public function test_regular_ticket_applies_50_percent_to_minor_child_infant(): void
+    {
+        $schedule = $this->createAirlineSchedule();
+
+        $data = [
+            'trip_type' => 'one_way',
+            'origin' => 'Manila',
+            'destination' => 'Cebu',
+            'departure_date' => $schedule->departure_time->format('Y-m-d'),
+            'schedule_id' => $schedule->id,
+            'client_name' => 'Regular User',
+            'client_email' => 'regular@example.com',
+            'client_phone' => '09171234567',
+            'payment_method' => 'gcash',
+            'passengers' => [
+                [
+                    'type' => 'child',
+                    'name' => 'Regular Child',
+                    'birthdate' => '2018-05-15',
+                    'rate_type' => 'regular',
+                ],
+            ],
+        ];
+
+        $action = app(CreateBookingAction::class);
+        $booking = $action->execute($data);
+
+        $this->assertNotNull($booking);
+        $passenger = $booking->passengers->first();
+        // Regular fare gives 50% discount to child (2500 * 0.5 = 1250)
+        $this->assertEquals(1250.00, (float)$passenger->fare_amount);
+    }
 }
