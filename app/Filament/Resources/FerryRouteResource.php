@@ -69,7 +69,7 @@ class FerryRouteResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->with(['vehicle', 'schedules' => function ($query) {
+            ->with(['operatorRecord', 'vehicle.operatorRecord', 'schedules' => function ($query) {
                 $query->select(['id', 'ferry_route_id', 'vehicle_name', 'departure_time', 'arrival_time', 'price', 'is_active'])
                     ->orderBy('departure_time');
             }]);
@@ -461,10 +461,23 @@ class FerryRouteResource extends Resource
                 TextColumn::make('vehicle.full_name')
                     ->label('Vehicle')
                     ->sortable(['name', 'vehicle_id']),
-                TextColumn::make('operatorRecord.name')
+                TextColumn::make('operator_display')
                     ->label('Operator')
-                    ->searchable()
-                    ->sortable(),
+                    ->getStateUsing(fn (FerryRoute $record) => $record->operator_display_name)
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        return $query->where(function ($q) use ($search) {
+                            $q->where('operator', 'like', "%{$search}%")
+                              ->orWhereHas('operatorRecord', fn ($oq) => $oq->where('name', 'like', "%{$search}%"))
+                              ->orWhereHas('vehicle', fn ($vq) => $vq->where('operator', 'like', "%{$search}%")->orWhereHas('operatorRecord', fn ($voq) => $voq->where('name', 'like', "%{$search}%")));
+                        });
+                    })
+                    ->sortable(query: function (Builder $query, string $direction): Builder {
+                        return $query->orderBy(
+                            \App\Models\Operator::select('name')
+                                ->whereColumn('operators.id', 'ferry_routes.operator_id'),
+                            $direction
+                        );
+                    }),
                 TextColumn::make('mode')
                     ->label('Mode')
                     ->sortable(),
@@ -508,7 +521,8 @@ class FerryRouteResource extends Resource
                                     $q->where('origin', 'like', "%{$search}%")
                                       ->orWhere('destination', 'like', "%{$search}%")
                                       ->orWhereHas('operatorRecord', fn($qop) => $qop->where('name', 'like', "%{$search}%"))
-                                      ->orWhereHas('vehicle', fn($qv) => $qv->where('name', 'like', "%{$search}%")->orWhere('vehicle_id', 'like', "%{$search}%"));
+                                      ->orWhereHas('vehicle', fn($qv) => $qv->where('name', 'like', "%{$search}%")->orWhere('vehicle_id', 'like', "%{$search}%"))
+                                      ->orWhereHas('schedules', fn($qs) => $qs->where('service_name', 'like', "%{$search}%")->orWhere('vehicle_name', 'like', "%{$search}%")->orWhere('plate_no', 'like', "%{$search}%"));
                                 });
                             }
                         );
@@ -546,7 +560,10 @@ class FerryRouteResource extends Resource
                     ->query(function (Builder $query, array $data): Builder {
                         return $query->when(
                             $data['vehicle'],
-                            fn (Builder $query, $vehicle): Builder => $query->whereHas('vehicle', fn ($q) => $q->where('name', 'like', "%{$vehicle}%")->orWhere('vehicle_id', 'like', "%{$vehicle}%")),
+                            fn (Builder $query, $vehicle): Builder => $query->where(function ($q) use ($vehicle) {
+                                $q->whereHas('vehicle', fn ($qv) => $qv->where('name', 'like', "%{$vehicle}%")->orWhere('vehicle_id', 'like', "%{$vehicle}%"))
+                                  ->orWhereHas('schedules', fn ($qs) => $qs->where('service_name', 'like', "%{$vehicle}%")->orWhere('vehicle_name', 'like', "%{$vehicle}%")->orWhere('plate_no', 'like', "%{$vehicle}%"));
+                            }),
                         );
                     }),
             ], layout: FiltersLayout::AboveContent)
