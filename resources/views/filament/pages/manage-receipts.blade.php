@@ -242,7 +242,7 @@
                     @if ($search || $dateFilter !== 'all' || $typeFilter !== 'all')
                         Try adjusting your filters or search terms.
                     @else
-                        Official e-receipts will appear here automatically when bookings are confirmed.
+                        E-receipts will appear here automatically when bookings are confirmed.
                     @endif
                 </p>
             </div>

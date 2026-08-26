@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>{{ ($isTicket ?? false) ? 'E-Ticket Itinerary' : 'E-Acknowledgement' }} - {{ $booking->transaction_number }}</title>
+    <title>{{ ($isTicket ?? false) ? 'E-Ticket Itinerary' : 'Payment Acknowledgement Receipt' }} - {{ $booking->transaction_number }}</title>
     <style>
         @page {
             margin: 12mm 15mm;
@@ -235,9 +235,9 @@
                     @php
                         $rType = strtolower($receiptType ?? 'confirmed');
                         $subTitle = match ($rType) {
-                            'rebooked' => 'E-ACKNOWLEDGEMENT (REBOOKED)',
-                            'refunded', 'cancelled' => 'REFUND CREDIT ACKNOWLEDGEMENT',
-                            default => ($isTicket ?? false) ? 'CONFIRMED BOOKING & ITINERARY' : 'E-ACKNOWLEDGEMENT',
+                            'rebooked' => 'PAYMENT ACKNOWLEDGEMENT RECEIPT',
+                            'refunded', 'cancelled' => 'REFUND ACKNOWLEDGEMENT RECEIPT',
+                            default => ($isTicket ?? false) ? 'CONFIRMED BOOKING & ITINERARY' : 'PAYMENT ACKNOWLEDGEMENT RECEIPT',
                         };
                     @endphp
                     <div class="brand-sub brand-sub--ack">{{ $subTitle }}</div>
@@ -492,9 +492,9 @@
         </ol>
     </div>
 
-    <!-- Official Footer -->
+    <!-- Footer -->
     <div class="footer">
-        Amiga Gracia Travel Service &bull; Official E-Acknowledgement &bull; Ref #{{ $booking->transaction_number }}<br>
+        Amiga Gracia Travel Service &bull; {{ $subTitle }} &bull; Ref #{{ $booking->transaction_number }}<br>
         Thank you for choosing Amiga Gracia Travel Service. Have a safe and pleasant trip!
         <div style="color: #ef4444; font-weight: bold; font-size: 10px; margin-top: 6px;">Note: This document is not valid for claiming input taxes</div>
     </div>
