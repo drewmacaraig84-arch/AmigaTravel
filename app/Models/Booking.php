@@ -1670,20 +1670,20 @@ class Booking extends Model
         $breakdown = [];
         $passengers = $this->passengers;
         
-        $depTicketTotal = 0;
-        $depAccTotal = 0;
-        $retTicketTotal = 0;
-        $retAccTotal = 0;
+        $payingPassengers = $passengers->filter(function ($p) {
+            return ! ($this->has_vehicle && $p->type === 'driver');
+        });
+        $payingCount = $payingPassengers->count();
 
-        $allTcs = $this->transportClasses;
-        $depTcs = $allTcs->filter(fn ($tc) => ! (bool) $tc->pivot->is_return);
-        $retTcs = $allTcs->filter(fn ($tc) => (bool) $tc->pivot->is_return);
+        // 1. Gross Ticket & Transport Class total
+        $totalGrossTickets = (float) $payingPassengers->sum(fn ($p) => $p->getEffectiveFareAndClass());
 
-        // Bidirectional fallback: if one bucket is empty AND we have exactly 2 TCs
-        // total, split them by collection index order regardless of which bucket failed.
-        // This handles:
-        //   1. Old bookings with no is_return flag (both default to false → both in depTcs)
-        //   2. Bugged bookings where both TCs got is_return=true (both in retTcs)
+        $schedPrice = (float) ($this->schedule_price ?? 0);
+        $retPrice   = (float) ($this->return_schedule_price ?? 0);
+        $allTcs     = $this->transportClasses;
+        $depTcs     = $allTcs->filter(fn ($tc) => ! (bool) $tc->pivot->is_return);
+        $retTcs     = $allTcs->filter(fn ($tc) => (bool) $tc->pivot->is_return);
+
         if ($allTcs->count() === 2 && ($depTcs->isEmpty() || $retTcs->isEmpty())) {
             $tcArr = $allTcs->values();
             $depTcs = collect([$tcArr[0]]);
@@ -1693,166 +1693,166 @@ class Booking extends Model
         $depTcPrice = $depTcs->sum(fn ($tc) => (float) $tc->pivot->price);
         $retTcPrice = $retTcs->sum(fn ($tc) => (float) $tc->pivot->price);
 
-        $payingPassengers = $passengers->filter(function ($p) {
-            return ! ($this->has_vehicle && $p->type === 'driver');
-        });
-        $payingCount = $payingPassengers->count();
+        $depWeight = $schedPrice + $depTcPrice + (float) ($this->schedule_accommodation_price ?? 0);
+        $retWeight = $retPrice + $retTcPrice + (float) ($this->return_schedule_accommodation_price ?? 0);
+        $totalWeight = $depWeight + $retWeight;
 
-        foreach ($passengers as $p) {
-            if ($this->has_vehicle && $p->type === 'driver') {
-                continue;
+        if ($this->return_schedule_id && $totalWeight > 0 && $retWeight > 0) {
+            $depShare = round($totalGrossTickets * ($depWeight / $totalWeight), 2);
+            $retShare = round($totalGrossTickets - $depShare, 2);
+            if ($depShare > 0) {
+                $breakdown[] = [
+                    'label'  => 'Departure Ticket & Transport Class (' . $payingCount . 'x)',
+                    'amount' => $depShare,
+                    'class'  => '',
+                ];
             }
-
-            if ($p->is_promo) {
-                $depTicketTotal += (float) $p->promo_price;
-            } else {
-                $pDepTicket = (float) ($this->schedule_price ?? 0);
-                $pDepAcc    = (float) ($this->schedule_accommodation_price ?? 0);
-                $pDepTc     = $depTcPrice;
-
-                $pRetTicket = (float) ($this->return_schedule_price ?? 0);
-                $pRetAcc    = (float) ($this->return_schedule_accommodation_price ?? 0);
-                $pRetTc     = $retTcPrice;
-
-                if ($p->discount) {
-                    $multiplier = 1 - ((float) $p->discount->percentage / 100);
-                    $pDepTicket *= $multiplier;
-                    $pDepAcc    *= $multiplier;
-                    $pDepTc     *= $multiplier;
-                    $pRetTicket *= $multiplier;
-                    $pRetAcc    *= $multiplier;
-                    $pRetTc     *= $multiplier;
-                }
-
-                $depTicketTotal += $pDepTicket + $pDepTc;
-                $depAccTotal    += $pDepAcc;
-                $retTicketTotal += $pRetTicket + $pRetTc;
-                $retAccTotal    += $pRetAcc;
+            if ($retShare > 0) {
+                $breakdown[] = [
+                    'label'  => 'Return Ticket & Transport Class (' . $payingCount . 'x)',
+                    'amount' => $retShare,
+                    'class'  => '',
+                ];
+            }
+        } else {
+            if ($totalGrossTickets > 0) {
+                $breakdown[] = [
+                    'label'  => 'Departure Ticket & Transport Class (' . $payingCount . 'x)',
+                    'amount' => $totalGrossTickets,
+                    'class'  => '',
+                ];
             }
         }
-        
-        // Combine ticket + accommodation/transport class into one line
-        if ($depTicketTotal + $depAccTotal > 0) {
-            $breakdown[] = [
-                'label' => 'Departure Ticket & Transport Class (' . $payingCount . 'x)',
-                'amount' => $depTicketTotal + $depAccTotal,
-                'class' => ''
-            ];
+
+        // 2. Mandated Passenger Discounts (Senior Citizen, Student, PWD, etc.)
+        $discountGroups = [];
+        foreach ($payingPassengers as $p) {
+            $discAmt = (float) ($p->discount_amount ?? 0);
+            if ($discAmt <= 0 && $p->discount) {
+                $discAmt = $p->getEffectiveFareAndClass() * ((float) $p->discount->percentage / 100);
+            }
+            if ($discAmt > 0) {
+                $discName = $p->discount?->name ?? 'Discount';
+                $discountGroups[$discName] = ($discountGroups[$discName] ?? 0) + $discAmt;
+            }
         }
-        
-        if ($retTicketTotal + $retAccTotal > 0) {
+        foreach ($discountGroups as $discName => $discAmt) {
             $breakdown[] = [
-                'label' => 'Return Ticket & Transport Class (' . $payingCount . 'x)',
-                'amount' => $retTicketTotal + $retAccTotal,
-                'class' => ''
+                'label'  => 'Discount (' . $discName . ')',
+                'amount' => - round($discAmt, 2),
+                'class'  => 'text-green-600',
             ];
         }
 
+        // 3. Accommodations (Rooms/Beds)
         foreach ($this->accommodations as $acc) {
             $breakdown[] = [
-                'label' => $acc->name,
+                'label'  => $acc->name,
                 'amount' => (float) $acc->pivot->price,
-                'class' => ''
+                'class'  => '',
             ];
         }
 
-        // Transport classes are now combined into the tickets above
-
+        // 4. Vehicle Freight
         if ($this->has_vehicle && $this->vehicle_price > 0) {
             $breakdown[] = [
-                'label' => 'Vehicle Freight (' . $this->vehicle_type . ')',
+                'label'  => 'Vehicle Freight (' . $this->vehicle_type . ')',
                 'amount' => (float) $this->vehicle_price,
-                'class' => ''
+                'class'  => '',
             ];
         }
         
-        if ($this->has_extra_baggage && $this->extra_baggage_price > 0) {
-            $w = trim((string) $this->extra_baggage_weight);
-            $label = 'Extra Baggage';
-            if ($w !== '') {
-                $label .= ' (' . (str_ends_with(strtolower($w), 'kg') ? $w : $w . ' kg') . ')';
-            }
-            $breakdown[] = [
-                'label' => $label,
-                'amount' => (float) $this->extra_baggage_price,
-                'class' => ''
-            ];
-        }
-
-        if ($this->voucher_discount_amount > 0) {
-            $breakdown[] = [
-                'label' => 'Voucher Discount (' . $this->voucher_code . ')',
-                'amount' => - (float) $this->voucher_discount_amount,
-                'class' => 'text-green-600'
-            ];
-        }
-
-        if ($this->points_discount > 0) {
-            $breakdown[] = [
-                'label' => 'Gracia Points Applied',
-                'amount' => - (float) $this->points_discount,
-                'class' => 'text-green-600'
-            ];
-        }
-
-        $sumSoFar = array_sum(array_column($breakdown, 'amount'));
-        $fees = (float) $this->total_price - $sumSoFar;
-        
-        if ($fees > 0.01) {
-            $settings = \App\Models\PaymentSetting::current();
-            $paxCount = max(1, $this->passengers->count());
-            $isShortHaul = $this->isShortHaul();
-
-            $expectedWebAdminFee = $paxCount * $settings->getWebAdminFee($isShortHaul);
-            $expectedTransactionFee = $paxCount * $settings->getTransactionFee($isShortHaul);
-            $expectedHotelFee = $this->accommodations->count() > 0 ? (float) $settings->fee_per_accommodation : 0;
-            
-            $hotelFee = 0;
-            if ($expectedHotelFee > 0 && $fees >= $expectedHotelFee) {
-                $hotelFee = $expectedHotelFee;
-                $fees -= $expectedHotelFee;
-            }
-
-            $webAdminFee = 0;
-            if ($expectedWebAdminFee > 0 && $fees >= $expectedWebAdminFee) {
-                $webAdminFee = $expectedWebAdminFee;
-                $fees -= $expectedWebAdminFee;
-            }
-
-            $transactionFee = 0;
-            if ($expectedTransactionFee > 0 && $fees >= $expectedTransactionFee) {
-                $transactionFee = $expectedTransactionFee;
-                $fees -= $expectedTransactionFee;
-            }
-
-            // If there's remaining fees or exact match didn't trigger, distribute proportionally
-            if ($fees > 0.01) {
-                if ($webAdminFee === 0 && $transactionFee === 0) {
-                    $defaultWeb = $settings->getWebAdminFee($isShortHaul);
-                    $defaultTx  = $settings->getTransactionFee($isShortHaul);
-                    $defaultSum = ($defaultWeb + $defaultTx) * $paxCount;
-                    if ($defaultSum > 0) {
-                        $webAdminFee = round($fees * (($defaultWeb * $paxCount) / $defaultSum), 2);
-                        $transactionFee = round($fees - $webAdminFee, 2);
-                    } else {
-                        $webAdminFee = $fees;
+        // 5. Extra Baggage
+        $paxBaggageTotal = (float) $passengers->sum(fn ($p) => (float) ($p->extra_baggage_price ?? 0));
+        $bookingBaggage  = (float) ($this->extra_baggage_price ?? 0);
+        $totalBaggage    = max($paxBaggageTotal, $bookingBaggage);
+        if ($totalBaggage > 0) {
+            $baggageDetails = [];
+            foreach ($passengers as $p) {
+                if ($p->extra_baggage_weight && (float) $p->extra_baggage_price > 0) {
+                    $w = trim((string) $p->extra_baggage_weight);
+                    if (!str_ends_with(strtolower($w), 'kg')) {
+                        $w .= ' kg';
                     }
-                } else {
-                    $webAdminFee += $fees;
+                    $baggageDetails[] = $p->name . ' (' . $w . ')';
                 }
             }
+            $label = 'Extra Baggage';
+            if (!empty($baggageDetails)) {
+                $label .= ' (' . implode(', ', $baggageDetails) . ')';
+            } elseif ($this->extra_baggage_weight) {
+                $w = trim((string) $this->extra_baggage_weight);
+                if (!str_ends_with(strtolower($w), 'kg')) {
+                    $w .= ' kg';
+                }
+                $label .= ' (' . $w . ')';
+            }
+            $breakdown[] = [
+                'label'  => $label,
+                'amount' => round($totalBaggage, 2),
+                'class'  => '',
+            ];
+        }
 
-            if ($hotelFee > 0) {
-                $breakdown[] = ['label' => 'Hotel Service Fee', 'amount' => $hotelFee, 'class' => 'text-slate-500'];
-            }
-            if ($webAdminFee > 0) {
-                $breakdown[] = ['label' => 'Web Admin Fee', 'amount' => $webAdminFee, 'class' => 'text-slate-500'];
-            }
-            if ($transactionFee > 0) {
-                $breakdown[] = ['label' => 'Transaction Fee', 'amount' => $transactionFee, 'class' => 'text-slate-500'];
-            }
+        // 6. Voucher Discount
+        $paxVoucherTotal = (float) $passengers->sum(fn ($p) => (float) ($p->voucher_discount_share ?? 0));
+        $voucherTotal    = max((float) ($this->voucher_discount_amount ?? 0), $paxVoucherTotal);
+        if ($voucherTotal > 0) {
+            $breakdown[] = [
+                'label'  => 'Voucher Discount' . ($this->voucher_code ? ' (' . $this->voucher_code . ')' : ''),
+                'amount' => - round($voucherTotal, 2),
+                'class'  => 'text-green-600',
+            ];
+        }
+
+        // 7. Gracia Points Applied
+        $paxPointsTotal = (float) $passengers->sum(fn ($p) => (float) ($p->points_discount_share ?? 0));
+        $pointsTotal    = max((float) ($this->points_discount ?? 0), $paxPointsTotal);
+        if ($pointsTotal > 0) {
+            $breakdown[] = [
+                'label'  => 'Gracia Points Applied',
+                'amount' => - round($pointsTotal, 2),
+                'class'  => 'text-green-600',
+            ];
+        }
+
+        // 8. Web Admin Fee & Transaction Fee & Hotel Fee
+        $webAdminFee    = (float) $payingPassengers->sum(fn ($p) => $p->getEffectiveWebAdminFee());
+        $transactionFee = (float) $payingPassengers->sum(fn ($p) => $p->getEffectiveTransactionFee());
+
+        $settings = \App\Models\PaymentSetting::current();
+        if ($webAdminFee <= 0 && $payingCount > 0) {
+            $webAdminFee = $payingCount * $settings->getWebAdminFee($this->isShortHaul());
+        }
+        if ($transactionFee <= 0 && $payingCount > 0) {
+            $transactionFee = $payingCount * $settings->getTransactionFee($this->isShortHaul());
+        }
+
+        $hotelFee = $this->accommodations->count() > 0 ? (float) $settings->fee_per_accommodation : 0;
+
+        if ($hotelFee > 0) {
+            $breakdown[] = [
+                'label'  => 'Hotel Service Fee',
+                'amount' => round($hotelFee, 2),
+                'class'  => 'text-slate-500',
+            ];
+        }
+        if ($webAdminFee > 0) {
+            $breakdown[] = [
+                'label'  => 'Web Admin Fee',
+                'amount' => round($webAdminFee, 2),
+                'class'  => 'text-slate-500',
+            ];
+        }
+        if ($transactionFee > 0) {
+            $breakdown[] = [
+                'label'  => 'Transaction Fee',
+                'amount' => round($transactionFee, 2),
+                'class'  => 'text-slate-500',
+            ];
         }
         
+        // 9. Rebooking & Disruption Fees
         if ($this->transaction && (float) $this->transaction->rebooking_fee > 0) {
             $notes = $this->disruption_notes ? json_decode($this->disruption_notes, true) : [];
             $surcharge = (float) ($notes['surcharge'] ?? 0);
@@ -1862,43 +1862,43 @@ class Booking extends Model
 
             if ($rateDiff > 0) {
                 $breakdown[] = [
-                    'label' => 'Original Price',
+                    'label'  => 'Original Price',
                     'amount' => (float) $this->total_price,
-                    'class' => 'text-slate-600',
+                    'class'  => 'text-slate-600',
                 ];
                 $breakdown[] = [
-                    'label' => 'New Ticket Price',
+                    'label'  => 'New Ticket Price',
                     'amount' => (float) $this->total_price + $rateDiff,
-                    'class' => 'text-slate-900 font-semibold',
+                    'class'  => 'text-slate-900 font-semibold',
                 ];
             }
 
             if ($reval > 0) {
                 $breakdown[] = [
-                    'label' => 'Revalidation Fee',
+                    'label'  => 'Revalidation Fee',
                     'amount' => $reval,
-                    'class' => 'text-amber-700',
+                    'class'  => 'text-amber-700',
                 ];
             }
             if ($surcharge > 0) {
                 $breakdown[] = [
-                    'label' => 'Revalidation Surcharge',
+                    'label'  => 'Revalidation Surcharge',
                     'amount' => $surcharge,
-                    'class' => 'text-amber-700',
+                    'class'  => 'text-amber-700',
                 ];
             }
             if ($rateDiff > 0) {
                 $breakdown[] = [
-                    'label' => 'Rate Diff (if applicable)',
+                    'label'  => 'Rate Diff (if applicable)',
                     'amount' => $rateDiff,
-                    'class' => 'text-amber-700',
+                    'class'  => 'text-amber-700',
                 ];
             }
             if ($totalRebookFee > 0) {
                 $breakdown[] = [
-                    'label' => 'Total Revalidation Fees',
+                    'label'  => 'Total Revalidation Fees',
                     'amount' => $totalRebookFee,
-                    'class' => 'text-amber-800 font-bold',
+                    'class'  => 'text-amber-800 font-bold',
                 ];
             }
         }
