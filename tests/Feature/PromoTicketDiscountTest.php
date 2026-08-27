@@ -435,4 +435,179 @@ class PromoTicketDiscountTest extends TestCase
         // Regular fare gives 50% discount to child (2500 * 0.5 = 1250)
         $this->assertEquals(1250.00, (float)$passenger->fare_amount);
     }
+
+    public function test_promotional_ticket_rejects_vouchers(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Vouchers cannot be used with Promotional tickets.');
+
+        $schedule = $this->createAirlineSchedule();
+        $promoTicket = PromotionalTicket::create([
+            'schedule_id' => $schedule->id,
+            'promo_price' => 1000.00,
+            'quantity_available' => 5,
+            'quantity_sold' => 0,
+            'starts_at' => now()->subDay(),
+            'ends_at' => now()->addDays(30),
+            'is_active' => true,
+        ]);
+
+        $data = [
+            'trip_type' => 'one_way',
+            'origin' => 'Manila',
+            'destination' => 'Cebu',
+            'departure_date' => $schedule->departure_time->format('Y-m-d'),
+            'schedule_id' => $schedule->id,
+            'promotional_ticket_id' => $promoTicket->id,
+            'voucher_code' => 'PROMOVOUCHER',
+            'client_name' => 'Test User',
+            'client_email' => 'test@example.com',
+            'client_phone' => '09171234567',
+            'payment_method' => 'gcash',
+            'passengers' => [
+                [
+                    'type' => 'adult',
+                    'name' => 'Test User',
+                    'birthdate' => '1995-05-15',
+                    'rate_type' => 'promotional',
+                ],
+            ],
+        ];
+
+        $action = app(CreateBookingAction::class);
+        $action->execute($data);
+    }
+
+    public function test_promotional_ticket_rejects_gracia_points(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Gracia points cannot be used with Promotional tickets.');
+
+        $schedule = $this->createAirlineSchedule();
+        $promoTicket = PromotionalTicket::create([
+            'schedule_id' => $schedule->id,
+            'promo_price' => 1000.00,
+            'quantity_available' => 5,
+            'quantity_sold' => 0,
+            'starts_at' => now()->subDay(),
+            'ends_at' => now()->addDays(30),
+            'is_active' => true,
+        ]);
+
+        $data = [
+            'trip_type' => 'one_way',
+            'origin' => 'Manila',
+            'destination' => 'Cebu',
+            'departure_date' => $schedule->departure_time->format('Y-m-d'),
+            'schedule_id' => $schedule->id,
+            'promotional_ticket_id' => $promoTicket->id,
+            'use_points' => true,
+            'client_name' => 'Test User',
+            'client_email' => 'test@example.com',
+            'client_phone' => '09171234567',
+            'payment_method' => 'gcash',
+            'passengers' => [
+                [
+                    'type' => 'adult',
+                    'name' => 'Test User',
+                    'birthdate' => '1995-05-15',
+                    'rate_type' => 'promotional',
+                ],
+            ],
+        ];
+
+        $action = app(CreateBookingAction::class);
+        $action->execute($data);
+    }
+
+    public function test_regular_ticket_minor_cannot_use_government_mandate_discount(): void
+    {
+        $schedule = $this->createAirlineSchedule();
+        $discount = Discount::create([
+            'name' => 'Student',
+            'percentage' => 20.00,
+        ]);
+
+        $data = [
+            'trip_type' => 'one_way',
+            'origin' => 'Manila',
+            'destination' => 'Cebu',
+            'departure_date' => $schedule->departure_time->format('Y-m-d'),
+            'schedule_id' => $schedule->id,
+            'client_name' => 'Parent User',
+            'client_email' => 'parent@example.com',
+            'client_phone' => '09171234567',
+            'payment_method' => 'gcash',
+            'passengers' => [
+                [
+                    'type' => 'child',
+                    'name' => 'Regular Child',
+                    'birthdate' => '2018-05-15',
+                    'rate_type' => 'regular',
+                    'discount_id' => $discount->id, // Attempt to double-dip
+                ],
+            ],
+        ];
+
+        $action = app(CreateBookingAction::class);
+        $booking = $action->execute($data);
+
+        $this->assertNotNull($booking);
+        $passenger = $booking->passengers->first();
+        // Regular minor receives 50% fare (1250), but no stacked government discount
+        $this->assertEquals(1250.00, (float)$passenger->fare_amount);
+        $this->assertEquals(0.00, (float)$passenger->discount_amount);
+        $this->assertNull($passenger->discount_id);
+    }
+
+    public function test_promotional_ticket_minor_can_use_government_mandate_discount_without_50_percent_discount(): void
+    {
+        $schedule = $this->createAirlineSchedule();
+        $promoTicket = PromotionalTicket::create([
+            'schedule_id' => $schedule->id,
+            'promo_price' => 1000.00,
+            'quantity_available' => 5,
+            'quantity_sold' => 0,
+            'starts_at' => now()->subDay(),
+            'ends_at' => now()->addDays(30),
+            'is_active' => true,
+        ]);
+        $discount = Discount::create([
+            'name' => 'Student',
+            'percentage' => 20.00,
+        ]);
+
+        $data = [
+            'trip_type' => 'one_way',
+            'origin' => 'Manila',
+            'destination' => 'Cebu',
+            'departure_date' => $schedule->departure_time->format('Y-m-d'),
+            'schedule_id' => $schedule->id,
+            'promotional_ticket_id' => $promoTicket->id,
+            'client_name' => 'Parent User',
+            'client_email' => 'parent@example.com',
+            'client_phone' => '09171234567',
+            'payment_method' => 'gcash',
+            'passengers' => [
+                [
+                    'type' => 'child',
+                    'name' => 'Promo Student Child',
+                    'birthdate' => '2018-05-15',
+                    'rate_type' => 'promotional',
+                    'discount_id' => $discount->id,
+                ],
+            ],
+        ];
+
+        $action = app(CreateBookingAction::class);
+        $booking = $action->execute($data);
+
+        $this->assertNotNull($booking);
+        $passenger = $booking->passengers->first();
+        // Promo child pays full promo rate (1000) minus 20% Student discount (200) = net 800
+        $this->assertEquals(1000.00, (float)$passenger->fare_amount);
+        $this->assertEquals(200.00, (float)$passenger->discount_amount);
+        $this->assertEquals($discount->id, $passenger->discount_id);
+    }
 }
+

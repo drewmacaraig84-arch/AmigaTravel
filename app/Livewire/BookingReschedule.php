@@ -57,6 +57,7 @@ class BookingReschedule extends Component
     public float $rebookRevalidationFee = 0.0;
     public float $rebookRateDiff = 0.0;
     public float $totalRebookFee = 0.0;
+    public array $passengersBreakdown = [];
     public $paymentProof;
     public bool $isUploading = false;
 
@@ -85,11 +86,32 @@ class BookingReschedule extends Component
             return;
         }
 
+        if ($this->booking && $this->booking->hasSingleAdultWithNonAdults()) {
+            $this->selectAllPassengers();
+            $this->feedback = 'This booking has only one adult accompanying minor/child passengers. All passengers must be rebooked, cancelled, or refunded together.';
+            return;
+        }
+
         if (in_array($itemNumber, $this->selectedPassengerItems, true)) {
             $this->selectedPassengerItems = array_values(array_diff($this->selectedPassengerItems, [$itemNumber]));
         } else {
             $this->selectedPassengerItems[] = $itemNumber;
             sort($this->selectedPassengerItems);
+        }
+    }
+
+    public function updatedSelectedPassengerItems(): void
+    {
+        if (! $this->booking) {
+            return;
+        }
+
+        if ($this->booking->hasSingleAdultWithNonAdults()) {
+            $activeItems = $this->booking->getActivePassengers()->pluck('item_number')->map(fn ($n) => (int) $n)->toArray();
+            if (count($this->selectedPassengerItems) !== count($activeItems)) {
+                $this->selectedPassengerItems = $activeItems;
+                $this->feedback = 'This booking has only one adult accompanying minor/child passengers. All passengers must be rebooked, cancelled, or refunded together.';
+            }
         }
     }
 
@@ -370,6 +392,7 @@ class BookingReschedule extends Component
             $this->rebookRevalidationFee = $calc['revalidation_fee'];
             $this->totalRebookFee = $calc['total_rebooking_fee'];
             $this->priceDiff = $calc['rate_diff'];
+            $this->passengersBreakdown = $calc['passengers_breakdown'] ?? [];
         } catch (\Exception $e) {
             $this->feedback = "Error calculating price difference: " . $e->getMessage();
         }
@@ -448,8 +471,9 @@ class BookingReschedule extends Component
                 ? $this->selectedPassengerItems
                 : $this->booking->passengers->whereNotIn('status', ['cancelled', 'operator_cancelled', 'refunded'])->pluck('item_number')->toArray();
 
-            if (! $this->booking->hasSelectedAdult($selectedItems)) {
-                $this->feedback = 'Minors, children, and infants cannot rebook without an accompanying adult.';
+            $policy = $this->booking->validatePassengerPartyPolicy($selectedItems, 'reschedule');
+            if (! $policy['valid']) {
+                $this->feedback = $policy['error'];
                 return;
             }
 
@@ -571,18 +595,10 @@ class BookingReschedule extends Component
             ? $this->selectedPassengerItems
             : $this->booking->passengers->whereNotIn('status', ['cancelled', 'operator_cancelled', 'refunded'])->pluck('item_number')->toArray();
 
-        $allPax = $this->booking->passengers->whereNotIn('status', ['cancelled', 'operator_cancelled', 'refunded']);
-        $isFullCancellation = count($selectedItems) >= $allPax->count();
-
-        if (! $isFullCancellation) {
-            if (! $this->booking->hasSelectedAdult($selectedItems)) {
-                $this->feedback = 'Minors, children, and infants cannot cancel or request a refund without an accompanying adult.';
-                return;
-            }
-            if (! $this->booking->remainingActivePassengersHaveAdult($selectedItems)) {
-                $this->feedback = 'Cannot cancel the adult passenger(s) because minor/child passengers cannot remain on a booking without an adult.';
-                return;
-            }
+        $policy = $this->booking->validatePassengerPartyPolicy($selectedItems, 'cancel');
+        if (! $policy['valid']) {
+            $this->feedback = $policy['error'];
+            return;
         }
 
         $selectedPassengers = $this->booking->passengers->filter(fn ($p) => in_array((int) $p->item_number, array_map('intval', $selectedItems), true));

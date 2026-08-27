@@ -665,6 +665,97 @@ class Booking extends Model
     }
 
     /**
+     * Check if this booking's active passengers have exactly one adult accompanied by non-adults.
+     */
+    public function hasSingleAdultWithNonAdults(): bool
+    {
+        $activePax = $this->getActivePassengers();
+        if ($activePax->isEmpty()) {
+            $activePax = $this->passengers->filter(fn ($p) => ! in_array($p->status, ['cancelled', 'operator_cancelled', 'refunded'], true));
+        }
+
+        if ($activePax->isEmpty()) {
+            return false;
+        }
+
+        $adultCount = $activePax->filter(fn ($p) => $p->isAdult())->count();
+        $nonAdultCount = $activePax->filter(fn ($p) => $p->isNonAdult())->count();
+
+        return ($adultCount === 1 && $nonAdultCount > 0);
+    }
+
+    /**
+     * Validate party accompaniment policy for a requested passenger action (rebook, cancel, refund, reschedule).
+     *
+     * @param array $selectedItemNumbers
+     * @param string $actionType e.g. 'rebook', 'cancel', 'refund', 'reschedule'
+     * @return array ['valid' => bool, 'error' => ?string]
+     */
+    public function validatePassengerPartyPolicy(array $selectedItemNumbers = [], string $actionType = 'action'): array
+    {
+        $activePax = $this->getActivePassengers();
+        if ($activePax->isEmpty()) {
+            $activePax = $this->passengers->filter(fn ($p) => ! in_array($p->status, ['cancelled', 'operator_cancelled', 'refunded'], true));
+        }
+
+        if ($activePax->isEmpty()) {
+            return ['valid' => true, 'error' => null];
+        }
+
+        $selected = array_map('intval', $selectedItemNumbers);
+        if (empty($selected)) {
+            $selected = $activePax->pluck('item_number')->map(fn ($n) => (int) $n)->toArray();
+        }
+
+        $selectedPax = $activePax->filter(fn ($p) => in_array((int) $p->item_number, $selected, true));
+        $remainingPax = $activePax->filter(fn ($p) => ! in_array((int) $p->item_number, $selected, true));
+
+        $totalAdults = $activePax->filter(fn ($p) => $p->isAdult())->count();
+        $totalNonAdults = $activePax->filter(fn ($p) => $p->isNonAdult())->count();
+
+        $selectedAdults = $selectedPax->filter(fn ($p) => $p->isAdult())->count();
+        $selectedNonAdults = $selectedPax->filter(fn ($p) => $p->isNonAdult())->count();
+
+        $remainingAdults = $remainingPax->filter(fn ($p) => $p->isAdult())->count();
+        $remainingNonAdults = $remainingPax->filter(fn ($p) => $p->isNonAdult())->count();
+
+        $actionVerb = match ($actionType) {
+            'rebook', 'reschedule' => 'rebook',
+            'cancel'               => 'cancel',
+            'refund'               => 'request a refund for',
+            default                => 'modify',
+        };
+
+        // 1. If booking has only 1 adult and has non-adults, party must not be split
+        if ($totalAdults === 1 && $totalNonAdults > 0) {
+            if ($selectedPax->count() < $activePax->count()) {
+                return [
+                    'valid' => false,
+                    'error' => "This booking has only one adult accompanying minor/child passenger(s). Minors cannot travel or be modified unaccompanied. To {$actionVerb}, all passengers must be processed together, or no action can be taken.",
+                ];
+            }
+        }
+
+        // 2. Selected group: Non-adults cannot act without an accompanying adult in their selected group
+        if ($selectedNonAdults > 0 && $selectedAdults === 0) {
+            return [
+                'valid' => false,
+                'error' => "Minors, children, and infants cannot {$actionVerb} without an accompanying adult.",
+            ];
+        }
+
+        // 3. Remaining group: Remaining non-adults cannot be left on the booking without an accompanying adult
+        if ($remainingNonAdults > 0 && $remainingAdults === 0) {
+            return [
+                'valid' => false,
+                'error' => "Cannot {$actionVerb} the selected adult passenger(s) because minor/child passengers cannot remain on a booking without an adult.",
+            ];
+        }
+
+        return ['valid' => true, 'error' => null];
+    }
+
+    /**
      * Check if the given passenger item numbers include at least one adult.
      */
     public function hasSelectedAdult(array $selectedItemNumbers = []): bool
@@ -1524,7 +1615,7 @@ class Booking extends Model
         }
 
         $selectedCount = max(1, $selectedPassengers->count());
-        $isFerry = $this->getMode() === 'ferry';
+        $isAirline = $this->getMode() === 'airline';
         $settings = \App\Models\PaymentSetting::current();
 
         $created_at = $this->created_at ? \Carbon\Carbon::parse($this->created_at) : now();
@@ -1544,7 +1635,7 @@ class Booking extends Model
         // 2. Rebooking Surcharge
         $surchargePct = 0;
         if (! $isWithin5Mins) {
-            if ($this->getMode() === 'airline') {
+            if ($isAirline) {
                 $surchargePct = (float) $settings->rebook_airline_before_departure_surcharge_pct;
             } else {
                 if ($this->isAfterDeparture()) {
@@ -1559,30 +1650,107 @@ class Booking extends Model
         // 3. Revalidation fee (charged per passenger)
         $revalidationFee = $isWithin5Mins ? 0.0 : round(floatval($settings->revalidation_fee ?? 0) * $selectedCount, 2);
 
-        // 4. Rate Difference calculation if replacement schedules provided
-        $newFare = 0.0;
+        // 4. Resolve new schedule prices for departure and return
+        $depSchedPrice = 0.0;
+        $depClassOrAccPrice = 0.0;
+        $depAccPrice = 0.0; // ferry accommodation (non-multiplied)
         if ($depScheduleId) {
             $depSched = \App\Models\Schedule::find($depScheduleId);
             $depSchedPrice = (float) ($depSched?->price ?? 0);
-            $depAccPrice = 0.0;
+
             if ($depAccommodationId) {
-                $acc = \App\Models\ScheduleAccommodation::find($depAccommodationId);
-                $depAccPrice = (float) ($acc?->price ?? 0);
+                if ($isAirline) {
+                    // For airlines, dep_accommodation_id is a TransportClass ID
+                    $stc = \App\Models\ScheduleTransportClass::resolveForSchedule($depScheduleId, $depAccommodationId);
+                    $depClassOrAccPrice = $stc ? $stc->getEffectivePrice() : 0.0;
+                    // Fallback: try TransportClass directly
+                    if ($depClassOrAccPrice <= 0) {
+                        $tc = \App\Models\TransportClass::find($depAccommodationId);
+                        $depClassOrAccPrice = (float) ($tc?->effective_price ?? $tc?->price ?? 0);
+                    }
+                } else {
+                    // For ferry, dep_accommodation_id is a ScheduleAccommodation ID
+                    $acc = \App\Models\ScheduleAccommodation::find($depAccommodationId);
+                    $depAccPrice = (float) ($acc?->price ?? 0);
+                }
             }
-            $newFare += ($depSchedPrice + $depAccPrice) * $selectedCount;
         }
 
+        $retSchedPrice = 0.0;
+        $retClassOrAccPrice = 0.0;
+        $retAccPrice = 0.0;
         if ($retScheduleId) {
             $retSched = \App\Models\Schedule::find($retScheduleId);
             $retSchedPrice = (float) ($retSched?->price ?? 0);
-            $retAccPrice = 0.0;
+
             if ($retAccommodationId) {
-                $rAcc = \App\Models\ScheduleAccommodation::find($retAccommodationId);
-                $retAccPrice = (float) ($rAcc?->price ?? 0);
+                if ($isAirline) {
+                    $rStc = \App\Models\ScheduleTransportClass::resolveForSchedule($retScheduleId, $retAccommodationId);
+                    $retClassOrAccPrice = $rStc ? $rStc->getEffectivePrice() : 0.0;
+                    if ($retClassOrAccPrice <= 0) {
+                        $rTc = \App\Models\TransportClass::find($retAccommodationId);
+                        $retClassOrAccPrice = (float) ($rTc?->effective_price ?? $rTc?->price ?? 0);
+                    }
+                } else {
+                    $rAcc = \App\Models\ScheduleAccommodation::find($retAccommodationId);
+                    $retAccPrice = (float) ($rAcc?->price ?? 0);
+                }
             }
-            $newFare += ($retSchedPrice + $retAccPrice) * $selectedCount;
         }
 
+        // 5. Calculate new fare per passenger with correct multipliers
+        $newFare = 0.0;
+        $passengersBreakdown = [];
+
+        foreach ($selectedPassengers as $p) {
+            $pType = strtolower($p->type ?? 'adult');
+            $rateType = $p->rate_type ?? 'regular';
+            $isPromo = in_array($rateType, ['promotional', 'super_promotional'], true)
+                || (bool) ($p->is_promo ?? false);
+
+            // Apply 50% multiplier for minor/child/infant on regular fares
+            $paxMultiplier = 1.0;
+            if (! $isPromo) {
+                if ($isAirline) {
+                    if (in_array($pType, ['minor', 'child', 'infant'], true)) {
+                        $paxMultiplier = 0.5;
+                    }
+                } else {
+                    // Ferry — minor and child get 50%
+                    if (in_array($pType, ['child', 'minor'], true)) {
+                        $paxMultiplier = 0.5;
+                    }
+                }
+            }
+
+            // For airlines: base fare + transport class get multiplied together
+            // For ferries: base fare gets multiplied, accommodation is flat
+            $paxNewFare = (($depSchedPrice + $depClassOrAccPrice + $retSchedPrice + $retClassOrAccPrice) * $paxMultiplier)
+                + $depAccPrice + $retAccPrice;
+
+            $newFare += $paxNewFare;
+
+            $pOriginalFare = (float) $p->getEffectiveFareAndClass();
+            $paxRateDiff = max(0.0, round($paxNewFare - $pOriginalFare, 2));
+            $paxSurcharge = round($pOriginalFare * ($surchargePct / 100), 2);
+            $paxRevalFee = $isWithin5Mins ? 0.0 : round(floatval($settings->revalidation_fee ?? 0), 2);
+            $paxTotalToPay = round($paxRateDiff + $paxSurcharge + $paxRevalFee, 2);
+
+            $passengersBreakdown[] = [
+                'item_number'      => (int) $p->item_number,
+                'name'             => $p->name ?? 'Passenger',
+                'type'             => strtoupper($pType),
+                'multiplier'       => $paxMultiplier,
+                'original_fare'    => round($pOriginalFare, 2),
+                'new_fare'         => round($paxNewFare, 2),
+                'rate_diff'        => $paxRateDiff,
+                'revalidation_fee' => $paxRevalFee,
+                'surcharge'        => $paxSurcharge,
+                'total_to_pay'     => $paxTotalToPay,
+            ];
+        }
+
+        $newFare = round($newFare, 2);
         $rateDiff = max(0.0, round($newFare - $originalFareBase, 2));
         $totalToPay = round($rateDiff + $surcharge + $revalidationFee, 2);
 
@@ -1596,6 +1764,7 @@ class Booking extends Model
             'total_rebooking_fee'   => $totalToPay,
             'selected_count'        => $selectedCount,
             'affected_items'        => $this->getAffectedItemsLabel($selectedPassengers->pluck('item_number')->toArray()),
+            'passengers_breakdown'  => $passengersBreakdown,
         ];
     }
 

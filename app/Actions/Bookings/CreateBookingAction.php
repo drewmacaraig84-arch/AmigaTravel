@@ -75,13 +75,20 @@ class CreateBookingAction
             }
         }
 
-        // Super Promo strictly blocks vouchers and points
+        // Promotional and Super Promotional tickets strictly block vouchers and points
         if ($isSuperPromoBooking) {
             if (! empty($data['voucher_code'])) {
                 throw new \InvalidArgumentException('Vouchers cannot be used with Super Promotional tickets.');
             }
             if (! empty($data['use_points'])) {
                 throw new \InvalidArgumentException('Gracia points cannot be used with Super Promotional tickets.');
+            }
+        } elseif ($isPromoBooking) {
+            if (! empty($data['voucher_code'])) {
+                throw new \InvalidArgumentException('Vouchers cannot be used with Promotional tickets.');
+            }
+            if (! empty($data['use_points'])) {
+                throw new \InvalidArgumentException('Gracia points cannot be used with Promotional tickets.');
             }
         }
 

@@ -215,7 +215,7 @@
 
                                         <div class="flex items-start gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 font-medium">
                                             <span class="text-sm">⚠️</span>
-                                            <span><strong>Notice:</strong> Minors, children, and infants cannot rebook, cancel, or request a refund without an accompanying adult.</span>
+                                            <span><strong>Accompaniment Policy:</strong> Minors, children, and infants cannot rebook, cancel, or request a refund without an accompanying adult. If this booking has only one adult, all passengers must rebook, cancel, or refund together so minors are not left unaccompanied.</span>
                                         </div>
                                     </div>
 
@@ -450,6 +450,14 @@
                                         All passenger items on this booking have been refunded or rescheduled.
                                     </div>
                                 @else
+                                    @if($booking->hasSingleAdultWithNonAdults())
+                                        <div class="rounded-2xl border border-amber-200 bg-amber-50/90 p-3.5 text-xs text-amber-900 font-medium flex items-start gap-2.5 mb-3">
+                                            <span class="text-base">⚠️</span>
+                                            <div>
+                                                <strong class="font-bold">Accompaniment Policy:</strong> This booking contains 1 adult accompanying minor/child passenger(s). Under safety regulations, non-adults cannot travel or be modified unaccompanied. Any rebooking, cancellation, or refund must apply to all passengers together.
+                                            </div>
+                                        </div>
+                                    @endif
                                     <div class="space-y-3">
                                         @foreach($activePax->sortBy('item_number') as $passenger)
                                             @php
@@ -1334,49 +1342,137 @@
                                                     @endif
                                                 </div>
 
+                                                <!-- General Breakdown Card -->
                                                 <div class="rounded-2xl border border-blue-300 bg-white p-6 shadow-sm">
                                                     <div class="flex items-center justify-between mb-4">
-                                                        <h4 class="text-xs font-bold uppercase tracking-wider text-blue-800">Rebooking Breakdown</h4>
+                                                        <div class="flex items-center gap-2">
+                                                            <div class="rounded-lg bg-blue-50 p-1.5 text-blue-700">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                                            </div>
+                                                            <h4 class="text-xs font-bold uppercase tracking-wider text-blue-900">General Breakdown</h4>
+                                                        </div>
                                                         <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
                                                             {{ $this->selectedItemsLabel }}
                                                         </span>
                                                     </div>
                                                     <div class="space-y-3 text-sm">
                                                         <div class="flex justify-between text-slate-600">
-                                                            <span>Original Price</span>
-                                                            <span class="font-medium">₱{{ number_format(max(0, $rebooking_new_total - $rebooking_rate_diff), 2) }}</span>
+                                                            <span>Original Ticket Price</span>
+                                                            <span class="font-medium">₱{{ number_format($rebooking_original_fare > 0 ? $rebooking_original_fare : max(0, $rebooking_new_total - $rebooking_rate_diff), 2) }}</span>
                                                         </div>
                                                         <div class="flex justify-between text-slate-900 font-semibold">
                                                             <span>New Ticket Price</span>
                                                             <span>₱{{ number_format($rebooking_new_total, 2) }}</span>
                                                         </div>
                                                         <div class="pt-3 border-t border-slate-100 mt-2">
-                                                            <div class="text-xs font-bold uppercase tracking-wider text-blue-700 mb-2">Revalidation Breakdown</div>
-                                                            <div class="space-y-2 pl-2 border-l-2 border-blue-200">
+                                                            <div class="text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">Fees & Fare Adjustment</div>
+                                                            <div class="space-y-2 pl-3 border-l-2 border-blue-200">
+                                                                @if($rebooking_rate_diff > 0)
+                                                                    <div class="flex justify-between text-xs text-sky-800 font-semibold">
+                                                                        <span class="flex items-center gap-1">
+                                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-sky-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                                                                            Rate Difference (Upgrade):
+                                                                        </span>
+                                                                        <span>+₱{{ number_format($rebooking_rate_diff, 2) }}</span>
+                                                                    </div>
+                                                                @endif
                                                                 <div class="flex justify-between text-xs text-slate-600">
                                                                     <span>Revalidation Fee:</span>
-                                                                    <span class="font-medium">₱{{ number_format($rebooking_revalidation_fee, 2) }}</span>
+                                                                    <span class="font-medium text-slate-800">₱{{ number_format($rebooking_revalidation_fee, 2) }}</span>
                                                                 </div>
                                                                 @if($rebooking_surcharge > 0)
                                                                     <div class="flex justify-between text-xs text-slate-600">
                                                                         <span>Revalidation Surcharge:</span>
-                                                                        <span class="font-medium">₱{{ number_format($rebooking_surcharge, 2) }}</span>
-                                                                    </div>
-                                                                @endif
-                                                                @if($rebooking_rate_diff > 0)
-                                                                    <div class="flex justify-between text-xs text-slate-600">
-                                                                        <span>Rate Diff (if applicable):</span>
-                                                                        <span class="font-medium">₱{{ number_format($rebooking_rate_diff, 2) }}</span>
+                                                                        <span class="font-medium text-slate-800">₱{{ number_format($rebooking_surcharge, 2) }}</span>
                                                                     </div>
                                                                 @endif
                                                             </div>
                                                         </div>
-                                                        <div class="border-t border-slate-200 pt-3 flex justify-between text-base font-bold text-blue-900">
-                                                            <span>Total Revalidation Fees:</span>
-                                                            <span>₱{{ number_format($rebooking_total_to_pay, 2) }}</span>
+                                                        <div class="border-t border-slate-200 pt-3 flex justify-between text-base font-bold text-slate-900">
+                                                            <span>Total Amount to Pay:</span>
+                                                            <span class="text-pink-600">₱{{ number_format($rebooking_total_to_pay, 2) }}</span>
                                                         </div>
                                                     </div>
                                                 </div>
+
+                                                <!-- Per-Passenger Breakdown Card (When more than 1 passenger) -->
+                                                @if(!empty($rebooking_passengers_breakdown) && count($rebooking_passengers_breakdown) > 1)
+                                                    <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                                                        <div class="flex items-center gap-2 mb-2">
+                                                            <div class="rounded-lg bg-emerald-50 p-1.5 text-emerald-700">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                                                            </div>
+                                                            <h4 class="text-sm font-bold text-slate-900">Breakdown Per Passenger</h4>
+                                                        </div>
+                                                        <p class="text-xs text-slate-500 mb-4">Comparison of original vs new fare and individual revalidation fees per traveler category.</p>
+
+                                                        <div class="space-y-3">
+                                                            @foreach($rebooking_passengers_breakdown as $idx => $pax)
+                                                                @php
+                                                                    $pType = strtoupper($pax['type'] ?? 'ADULT');
+                                                                    $isMinor = in_array($pType, ['MINOR', 'CHILD', 'INFANT']);
+                                                                    $origFare = (float) ($pax['original_fare'] ?? 0);
+                                                                    $newFare = (float) ($pax['new_fare'] ?? 0);
+                                                                    $rateDiff = (float) ($pax['rate_diff'] ?? max(0, $newFare - $origFare));
+                                                                    $pReval = (float) ($pax['revalidation_fee'] ?? 0);
+                                                                    $pSurch = (float) ($pax['surcharge'] ?? 0);
+                                                                    $pTotal = (float) ($pax['total_to_pay'] ?? ($rateDiff + $pReval + $pSurch));
+                                                                @endphp
+                                                                <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                                                                    <!-- Header -->
+                                                                    <div class="flex items-center justify-between gap-2 mb-3">
+                                                                        <div class="flex items-center gap-2">
+                                                                            <span class="flex h-5 w-5 items-center justify-center rounded bg-slate-200 text-xs font-bold text-slate-700">{{ $idx + 1 }}</span>
+                                                                            <span class="text-xs font-bold text-slate-900">{{ $pax['name'] ?? ('Traveler #' . ($idx + 1)) }}</span>
+                                                                        </div>
+                                                                        <span class="rounded-md px-2 py-0.5 text-[11px] font-bold {{ $isMinor ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800' }}">
+                                                                            {{ $pType }}
+                                                                        </span>
+                                                                    </div>
+
+                                                                    <!-- Fare Comparison Box -->
+                                                                    <div class="rounded-lg bg-white p-2.5 border border-slate-200/80 flex items-center justify-between text-xs mb-2.5">
+                                                                        <div>
+                                                                            <p class="text-[10px] font-semibold text-slate-400 uppercase">Original Fare</p>
+                                                                            <p class="font-medium text-slate-700">₱{{ number_format($origFare, 2) }}</p>
+                                                                        </div>
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                                                                        <div class="text-right">
+                                                                            <p class="text-[10px] font-semibold text-slate-400 uppercase">New Fare</p>
+                                                                            <p class="font-bold text-slate-900">₱{{ number_format($newFare, 2) }}</p>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <!-- Itemized Fees -->
+                                                                    <div class="space-y-1.5 text-xs text-slate-600 px-0.5">
+                                                                        @if($rateDiff > 0)
+                                                                            <div class="flex justify-between font-semibold text-sky-700">
+                                                                                <span>Fare Difference (Upgrade):</span>
+                                                                                <span>+₱{{ number_format($rateDiff, 2) }}</span>
+                                                                            </div>
+                                                                        @endif
+                                                                        <div class="flex justify-between">
+                                                                            <span>Revalidation Fee:</span>
+                                                                            <span class="font-medium text-slate-800">₱{{ number_format($pReval, 2) }}</span>
+                                                                        </div>
+                                                                        @if($pSurch > 0)
+                                                                            <div class="flex justify-between">
+                                                                                <span>Revalidation Surcharge:</span>
+                                                                                <span class="font-medium text-slate-800">₱{{ number_format($pSurch, 2) }}</span>
+                                                                            </div>
+                                                                        @endif
+                                                                    </div>
+
+                                                                    <!-- Subtotal -->
+                                                                    <div class="mt-2.5 pt-2 border-t border-slate-200 flex justify-between items-center text-xs font-bold">
+                                                                        <span class="text-slate-700">Passenger Subtotal:</span>
+                                                                        <span class="text-emerald-700 font-bold">₱{{ number_format($pTotal, 2) }}</span>
+                                                                    </div>
+                                                                </div>
+                                                            @endforeach
+                                                        </div>
+                                                    </div>
+                                                @endif
 
                                                 @php 
                                                     $rebookingQrPath = App\Models\PaymentSetting::current()->qr_code_path ?? null;
