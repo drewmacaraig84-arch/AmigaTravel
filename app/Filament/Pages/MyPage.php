@@ -107,47 +107,68 @@ class MyPage extends Page
         ->latest()
         ->get();
 
-        $confirmed = $myBookings->filter(function ($b) {
-            $isRebooked = $b->is_rebooked || in_array($b->status, ['rebooked', 'operator_rebooking']) || $b->rebooking_status === 'approved';
-            $isCancelled = in_array($b->status, [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED]);
-            $isRefunded = $b->status === 'refunded' || (float) $b->refund_amount > 0;
-            return $b->status === Booking::STATUS_CONFIRMED && ! $isRebooked && ! $isCancelled && ! $isRefunded;
-        });
-
-        $rebooked = $myBookings->filter(function ($b) {
-            $isPendingRebook = $b->rebooking_status === 'pending' || $b->status === Booking::STATUS_PENDING_REBOOKING;
-            if ($isPendingRebook) return false;
-            return (bool) $b->is_rebooked 
-                || in_array($b->rebooking_status, ['verified', 'approved', 'completed'], true)
-                || in_array($b->status, ['rebooked', 'operator_rebooking']);
-        });
-
         $refunded = $myBookings->filter(function ($b) {
             $isPendingRefund = $b->status === 'refund_pending' || $b->refund_status === 'pending';
-            return ! $isPendingRefund && ($b->status === 'refunded' || ((float) $b->refund_amount > 0 && in_array($b->status, [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED, 'refunded'])));
+            if ($isPendingRefund) return false;
+
+            return $b->status === 'refunded' 
+                || $b->refund_status === 'completed'
+                || (float) $b->refund_amount > 0
+                || $b->passengers->contains(fn ($p) => ($p->status === 'refunded' || $p->refund_status === 'completed' || (float) $p->refund_amount > 0) && ! $p->isRefundPending());
         });
 
-        $pendingRebook = $myBookings->filter(function ($b) {
-            return $b->rebooking_status === 'pending' || $b->status === Booking::STATUS_PENDING_REBOOKING;
+        $pendingRefund = $myBookings->filter(function ($b) {
+            $isPendingRefund = $b->status === 'refund_pending' || $b->refund_status === 'pending';
+            return ($isPendingRefund && (float) $b->refund_amount > 0)
+                || $b->passengers->contains(fn ($p) => $p->status === 'refund_pending' || $p->refund_status === 'pending' || $p->isRefundPending());
         });
 
-        $pending = $myBookings->filter(function ($b) {
+        $rebooked = $myBookings->filter(function ($b) use ($refunded, $pendingRefund) {
+            if ($refunded->contains('id', $b->id) || $pendingRefund->contains('id', $b->id)) return false;
+
             $isPendingRebook = $b->rebooking_status === 'pending' || $b->status === Booking::STATUS_PENDING_REBOOKING;
-            return $b->status === Booking::STATUS_PENDING && ! $isPendingRebook;
+            if ($isPendingRebook) return false;
+
+            return (bool) $b->is_rebooked 
+                || in_array($b->rebooking_status, ['verified', 'approved', 'completed'], true)
+                || in_array($b->status, ['rebooked', 'operator_rebooking'])
+                || $b->passengers->contains(fn ($p) => $p->isRebooked() && ! $p->isRebookingPending());
         });
 
-        $cancelled = $myBookings->filter(function ($b) {
-            return in_array($b->status, [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED]) 
-                && (float) $b->refund_amount <= 0;
+        $pendingRebook = $myBookings->filter(function ($b) use ($refunded, $pendingRefund) {
+            if ($refunded->contains('id', $b->id) || $pendingRefund->contains('id', $b->id)) return false;
+
+            return $b->rebooking_status === 'pending' || $b->status === Booking::STATUS_PENDING_REBOOKING || $b->passengers->contains(fn ($p) => $p->isRebookingPending());
+        });
+
+        $pending = $myBookings->filter(function ($b) use ($refunded, $pendingRefund, $pendingRebook) {
+            if ($refunded->contains('id', $b->id) || $pendingRefund->contains('id', $b->id) || $pendingRebook->contains('id', $b->id)) return false;
+
+            return $b->status === Booking::STATUS_PENDING;
+        });
+
+        $confirmed = $myBookings->filter(function ($b) use ($refunded, $rebooked, $pending, $pendingRebook, $pendingRefund) {
+            if ($refunded->contains('id', $b->id) || $rebooked->contains('id', $b->id) || $pending->contains('id', $b->id) || $pendingRebook->contains('id', $b->id) || $pendingRefund->contains('id', $b->id)) {
+                return false;
+            }
+            return $b->status === Booking::STATUS_CONFIRMED;
+        });
+
+        $cancelled = $myBookings->filter(function ($b) use ($refunded, $rebooked, $pending, $confirmed, $pendingRebook, $pendingRefund) {
+            if ($refunded->contains('id', $b->id) || $rebooked->contains('id', $b->id) || $pending->contains('id', $b->id) || $confirmed->contains('id', $b->id) || $pendingRebook->contains('id', $b->id) || $pendingRefund->contains('id', $b->id)) {
+                return false;
+            }
+            return in_array($b->status, [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED]);
         });
 
         return [
-            'Confirmed Bookings'  => $confirmed,
-            'Rebooked Bookings'   => $rebooked,
-            'Refunded Bookings'   => $refunded,
-            'Pending Rebook'      => $pendingRebook,
-            'Pending Bookings'    => $pending,
-            'Cancelled Bookings'  => $cancelled,
+            'Confirmed Bookings'       => $confirmed,
+            'Rebooked Bookings'        => $rebooked,
+            'Refunded Bookings'        => $refunded,
+            'Pending Refund Bookings'  => $pendingRefund,
+            'Pending Rebook'           => $pendingRebook,
+            'Pending Bookings'         => $pending,
+            'Cancelled Bookings'       => $cancelled,
         ];
     }
 

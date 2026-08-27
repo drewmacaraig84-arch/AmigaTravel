@@ -28,12 +28,13 @@
             margin-bottom: 4px;
             border-radius: 4px;
         }
-        .section-confirmed { background-color: #ecfdf5; color: #065f46; border-left: 4px solid #10b981; }
-        .section-rebooked  { background-color: #eff6ff; color: #1e40af; border-left: 4px solid #3b82f6; }
-        .section-refunded  { background-color: #f5f3ff; color: #5b21b6; border-left: 4px solid #8b5cf6; }
+        .section-confirmed      { background-color: #ecfdf5; color: #065f46; border-left: 4px solid #10b981; }
+        .section-rebooked       { background-color: #eff6ff; color: #1e40af; border-left: 4px solid #3b82f6; }
+        .section-refunded       { background-color: #f5f3ff; color: #5b21b6; border-left: 4px solid #8b5cf6; }
+        .section-pending-refund { background-color: #fdf2f8; color: #9d174d; border-left: 4px solid #db2777; }
         .section-pending-rebook { background-color: #fff7ed; color: #9a3412; border-left: 4px solid #ea580c; }
-        .section-pending   { background-color: #fefce8; color: #854d0e; border-left: 4px solid #eab308; }
-        .section-cancelled { background-color: #fef2f2; color: #991b1b; border-left: 4px solid #ef4444; }
+        .section-pending        { background-color: #fefce8; color: #854d0e; border-left: 4px solid #eab308; }
+        .section-cancelled      { background-color: #fef2f2; color: #991b1b; border-left: 4px solid #ef4444; }
 
         table {
             width: 100%;
@@ -129,6 +130,7 @@
                 'Confirmed Bookings' => 'section-confirmed',
                 'Rebooked Bookings' => 'section-rebooked',
                 'Refunded Bookings' => 'section-refunded',
+                'Pending Refund Bookings' => 'section-pending-refund',
                 'Pending Rebook' => 'section-pending-rebook',
                 'Pending Bookings' => 'section-pending',
                 'Cancelled Bookings' => 'section-cancelled',
@@ -139,6 +141,7 @@
                 'Confirmed Bookings' => '#059669',
                 'Rebooked Bookings' => '#2563eb',
                 'Refunded Bookings' => '#7c3aed',
+                'Pending Refund Bookings' => '#db2777',
                 'Pending Rebook' => '#ea580c',
                 'Pending Bookings' => '#d97706',
                 'Cancelled Bookings' => '#dc2626',
@@ -162,18 +165,28 @@
                     <th style="width: 60px; background-color: {{ $thColor }};">Travel Date</th>
                     <th style="width: 60px; background-color: {{ $thColor }};">Operator</th>
                     <th style="width: 55px; text-align: center; background-color: {{ $thColor }};">Status</th>
-                    <th style="width: 70px; text-align: right; background-color: {{ $thColor }};">Total Amount</th>
+                    @if($groupTitle === 'Refunded Bookings')
+                        <th style="width: 70px; text-align: right; background-color: {{ $thColor }};">Refund Amount</th>
+                    @else
+                        <th style="width: 70px; text-align: right; background-color: {{ $thColor }};">Total Amount</th>
+                    @endif
                     <th style="width: 65px; background-color: {{ $thColor }};">Payment Ref</th>
-                    <th style="width: 75px; background-color: {{ $thColor }};">Handled / Verified Date</th>
+                    <th style="width: 75px; background-color: {{ $thColor }};">Processed Date</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($bookings as $idx => $row)
                     @php
-                        $subtotal += (float) $row->total_price;
-                        $overallTotalAmount += (float) $row->total_price;
+                        $displayAmount = ($groupTitle === 'Refunded Bookings' && (float) $row->refund_amount > 0)
+                            ? (float) $row->refund_amount
+                            : (float) $row->total_price;
+                        $subtotal += $displayAmount;
+                        $overallTotalAmount += $displayAmount;
                         $ferryRoute = $row->schedule?->ferryRoute;
                         $status = strtolower($row->status ?: 'pending');
+                        if ($groupTitle === 'Refunded Bookings') {
+                            $status = 'refunded';
+                        }
                         $badgeClass = match($status) {
                             'confirmed' => 'badge-confirmed',
                             'rebooked', 'operator_rebooking' => 'badge-rebooked',
@@ -194,7 +207,7 @@
                         <td style="text-align: center;">
                             <span class="status-badge {{ $badgeClass }}">{{ ucfirst(str_replace('_', ' ', $status)) }}</span>
                         </td>
-                        <td style="text-align: right; font-weight: bold;">₱{{ number_format($row->total_price, 2) }}</td>
+                        <td style="text-align: right; font-weight: bold;">₱{{ number_format($displayAmount, 2) }}</td>
                         <td>{{ $row->transaction?->payment_reference ?: '—' }}</td>
                         <td>{{ $handledAt ? $handledAt->format('M d, Y h:i A') : 'N/A' }}</td>
                     </tr>
