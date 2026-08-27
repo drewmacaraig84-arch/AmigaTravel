@@ -113,6 +113,8 @@ class BookingExportController extends Controller
 
     protected function generatePdfResponse(string $filename, bool $inline = false): Response
     {
+        $grouped = $this->getGroupedBookings();
+
         $fromDate = request()->input('from_date') ?? request()->input('start') ?? request()->input('startDate') ?? request()->input('from');
         $toDate   = request()->input('to_date') ?? request()->input('end') ?? request()->input('endDate') ?? request()->input('to');
 
