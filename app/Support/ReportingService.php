@@ -735,38 +735,83 @@ class ReportingService
 
     // ─── Staff Stats (kept for StaffPerformance page) ───────────
 
-    public function getStaffStats(?string $date = null): Collection
+    public function getStaffStats(?string $period = null, ?string $startDate = null, ?string $endDate = null, ?string $date = null): Collection
     {
         $staffUsers = User::where('is_staff', true)
             ->orWhere('is_admin', true)
+            ->orderBy('name')
             ->get();
 
-        return $staffUsers->map(function (User $user) use ($date) {
-            $query = Booking::where('verified_by_user_id', $user->id);
+        return $staffUsers->map(function (User $user) use ($period, $startDate, $endDate, $date) {
+            $baseQuery = Booking::query()->where(function ($q) use ($user) {
+                $q->where('verified_by_user_id', $user->id)
+                  ->orWhere('refund_processed_by_user_id', $user->id)
+                  ->orWhereHas('transactions', fn (Builder $tq) => $tq->where('verified_by_user_id', $user->id))
+                  ->orWhereHas('passengers', fn (Builder $pq) => $pq->where('verified_by_user_id', $user->id)->orWhere('refund_processed_by_user_id', $user->id));
+            });
 
             if ($date) {
-                $query->whereDate('verified_at', $date);
+                $baseQuery->where(function ($dq) use ($date) {
+                    $dq->whereDate('verified_at', $date)
+                       ->orWhereDate('refund_processed_at', $date)
+                       ->orWhere(function ($sub) use ($date) {
+                           $sub->whereNull('verified_at')->whereDate('created_at', $date);
+                       });
+                });
+            } elseif ($startDate && $endDate) {
+                $hasStartTime = strlen($startDate) > 10;
+                $hasEndTime   = strlen($endDate) > 10;
+                $start = $hasStartTime ? Carbon::parse($startDate) : Carbon::parse($startDate)->startOfDay();
+                $end   = $hasEndTime   ? Carbon::parse($endDate)   : Carbon::parse($endDate)->endOfDay();
+
+                $baseQuery->where(function ($dq) use ($start, $end) {
+                    $dq->whereBetween('verified_at', [$start, $end])
+                       ->orWhereBetween('refund_processed_at', [$start, $end])
+                       ->orWhere(function ($sub) use ($start, $end) {
+                           $sub->whereNull('verified_at')->whereBetween('created_at', [$start, $end]);
+                       });
+                });
+            } elseif ($period) {
+                $this->applyPeriodFilter($baseQuery, $period, null, null, 'created_at');
             }
 
-            $total = (clone $query)->count();
-            $confirmed = (clone $query)->where('status', 'confirmed')->count();
-            $pending = (clone $query)->where('status', 'pending')->count();
-            $cancelled = (clone $query)->where('status', 'cancelled')->count();
+            $total = (clone $baseQuery)->count();
+            $confirmed = (clone $baseQuery)->where('status', Booking::STATUS_CONFIRMED)->count();
+            $pending = (clone $baseQuery)->whereIn('status', [Booking::STATUS_PENDING, Booking::STATUS_PENDING_REBOOKING, 'refund_pending'])->count();
+            $cancelled = (clone $baseQuery)->whereIn('status', [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED])->count();
+            $refunded = (clone $baseQuery)->where(function ($rq) {
+                $rq->where('refund_amount', '>', 0)->orWhere('refund_status', 'completed');
+            })->count();
 
-            $revenue = (float) (clone $query)
-                ->whereHas('transactions', fn (Builder $q) => $q->where('payment_status', 'paid'))
+            $revenue = (float) (clone $baseQuery)
+                ->where(function ($q) {
+                    $q->where('status', Booking::STATUS_CONFIRMED)
+                      ->orWhereHas('transactions', fn (Builder $tq) => $tq->where('payment_status', 'paid'));
+                })
                 ->sum('total_price');
+
+            $completionRate = $total > 0 ? round(($confirmed / $total) * 100, 1) : 0;
+
+            $latestAction = (clone $baseQuery)
+                ->orderByDesc(DB::raw('COALESCE(verified_at, refund_processed_at, updated_at, created_at)'))
+                ->first();
+
+            $latestActionAt = $latestAction ? ($latestAction->verified_at ?? $latestAction->refund_processed_at ?? $latestAction->updated_at ?? $latestAction->created_at) : null;
 
             return [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
-                'is_admin' => $user->is_admin,
+                'is_admin' => (bool) $user->is_admin,
+                'is_staff' => (bool) $user->is_staff,
                 'total_bookings_handled' => $total,
                 'completed_bookings' => $confirmed,
                 'pending_bookings' => $pending,
                 'cancelled_bookings' => $cancelled,
+                'refunded_bookings' => $refunded,
                 'total_revenue_handled' => $revenue,
+                'completion_rate' => $completionRate,
+                'latest_action_at' => $latestActionAt,
                 'created_at' => $user->created_at,
             ];
         });
