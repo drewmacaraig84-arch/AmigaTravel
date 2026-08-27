@@ -89,13 +89,24 @@ $fbFromEnv = envv('FIREBASE_CREDENTIALS_PATH', '', 'raw');
 if ($fbFromEnv !== '') {
     $fb = $fbFromEnv;
 }
+if ($fb === '') {
+    $rawFb = getenv('FIREBASE_CREDENTIALS') ?: getenv('FIREBASE_CREDENTIALS_JSON') ?: '';
+    if (!empty($rawFb)) {
+        $rawFbTrimmed = trim((string) $rawFb, "\" \t\n\r\0\x0B");
+        $decoded = json_decode($rawFbTrimmed, true);
+        if (is_array($decoded)) {
+            @file_put_contents($fbJson, json_encode($decoded));
+            $fb = $fbJson;
+        }
+    }
+}
 
 $env = [
     'APP_NAME'             => envv('APP_NAME',           'Amiga Gracia', 'name'),
     'APP_ENV'              => envv('APP_ENV',            'production'),
     'APP_DEBUG'            => envv('APP_DEBUG',          'false'),
     'APP_KEY'              => envv('APP_KEY',            '',           'key'),
-    'APP_URL'              => envv('APP_URL',            'https://amiga-travel-production.up.railway.app', 'url'),
+    'APP_URL'              => envv('APP_URL',            'https://www.amigagracia.com', 'url'),
     'APP_LOCALE'           => envv('APP_LOCALE',         'en'),
     'APP_FALLBACK_LOCALE'  => envv('APP_FALLBACK_LOCALE','en'),
     'APP_FAKER_LOCALE'     => envv('APP_FAKER_LOCALE',   'en_US'),
@@ -113,8 +124,15 @@ $env = [
     'DB_PASSWORD'   => envv('DB_PASSWORD',   fallbackEnv('MYSQLPASSWORD', 'MYSQL_ROOT_PASSWORD'), 'key'),
 
     'SESSION_DRIVER'   => envv('SESSION_DRIVER',   'database'),
-    'CACHE_STORE'      => envv('CACHE_STORE',      'database'),
+    'CACHE_STORE'      => envv('CACHE_STORE',      envv('CACHE_DRIVER', 'database')),
+    'CACHE_DRIVER'     => envv('CACHE_DRIVER',     envv('CACHE_STORE', 'database')),
     'QUEUE_CONNECTION' => envv('QUEUE_CONNECTION', 'database'),
+
+    'REDIS_CLIENT'   => envv('REDIS_CLIENT',   'predis', 'raw'),
+    'REDIS_HOST'     => envv('REDIS_HOST',     fallbackEnv('REDISHOST', 'REDIS_HOST', '127.0.0.1'), 'host'),
+    'REDIS_PASSWORD' => envv('REDIS_PASSWORD', fallbackEnv('REDISPASSWORD', 'REDIS_PASSWORD', ''), 'key'),
+    'REDIS_PORT'     => envv('REDIS_PORT',     fallbackEnv('REDISPORT', 'REDIS_PORT', '6379'), 'host'),
+    'REDIS_URL'      => envv('REDIS_URL',      fallbackEnv('REDIS_URL', ''), 'url'),
 
     'MAIL_MAILER'       => envv('MAIL_MAILER',       'smtp'),
     'MAIL_HOST'         => envv('MAIL_HOST',         'smtp.gmail.com', 'host'),
@@ -123,14 +141,22 @@ $env = [
     'MAIL_PASSWORD'     => envv('MAIL_PASSWORD',     '',   'key'),
     'MAIL_ENCRYPTION'   => envv('MAIL_ENCRYPTION',   'tls'),
     'MAIL_FROM_ADDRESS' => envv('MAIL_FROM_ADDRESS', '',   'key'),
+    'MAIL_FROM_NAME'    => envv('MAIL_FROM_NAME',    'Amiga Gracia Travel Service', 'name'),
+    'MAIL_SCHEME'       => envv('MAIL_SCHEME',       '', 'raw'),
+
+    'MAILGUN_DOMAIN'   => envv('MAILGUN_DOMAIN',   '', 'raw'),
+    'MAILGUN_SECRET'   => envv('MAILGUN_SECRET',   '', 'key'),
+    'MAILGUN_ENDPOINT' => envv('MAILGUN_ENDPOINT', 'api.mailgun.net', 'host'),
+
     'RESEND_API_KEY'    => envv('RESEND_API_KEY',    '',   'key'),
+    'SENDGRID_API_KEY'  => envv('SENDGRID_API_KEY',  '', 'key'),
 
     'NOCAPTCHA_SITEKEY'    => envv('NOCAPTCHA_SITEKEY',   '', 'key'),
     'NOCAPTCHA_SECRET'     => envv('NOCAPTCHA_SECRET',    '', 'key'),
     'FIREBASE_CREDENTIALS' => $fb,
-    'MAIL_FROM_NAME'       => envv('MAIL_FROM_NAME',      '', 'name'),
-    'MAIL_SCHEME'          => envv('MAIL_SCHEME',         '', 'raw'),
-    'SENDGRID_API_KEY'     => envv('SENDGRID_API_KEY',    '', 'key'),
+
+    'ADMIN_PANEL_ENABLED'  => envv('ADMIN_PANEL_ENABLED', 'true'),
+    'APP_INSTANCE'         => envv('APP_INSTANCE',        'admin'),
 
     'FILESYSTEM_DISK'      => envv('FILESYSTEM_DISK',     'local'),
     'BROADCAST_CONNECTION' => envv('BROADCAST_CONNECTION','log'),

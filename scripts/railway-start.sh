@@ -31,12 +31,21 @@ export RESEND_API_KEY="${RESEND_API_KEY}"
 
 export NOCAPTCHA_SITEKEY="${NOCAPTCHA_SITEKEY}"
 export NOCAPTCHA_SECRET="${NOCAPTCHA_SECRET}"
-export MAIL_FROM_NAME="${MAIL_FROM_NAME}"
-export MAIL_SCHEME="${MAIL_SCHEME}"
+export REDIS_CLIENT="${REDIS_CLIENT:-predis}"
+export REDIS_HOST="${REDIS_HOST:-${REDISHOST:-127.0.0.1}}"
+export REDIS_PASSWORD="${REDIS_PASSWORD:-${REDISPASSWORD}}"
+export REDIS_PORT="${REDIS_PORT:-${REDISPORT:-6379}}"
+export REDIS_URL="${REDIS_URL}"
+
+export MAILGUN_DOMAIN="${MAILGUN_DOMAIN}"
+export MAILGUN_SECRET="${MAILGUN_SECRET}"
+export MAILGUN_ENDPOINT="${MAILGUN_ENDPOINT:-api.mailgun.net}"
 
 # Handle Firebase Credentials safely to avoid .env parsing errors
-if [ -n "$FIREBASE_CREDENTIALS" ]; then
+FB_RAW="${FIREBASE_CREDENTIALS:-$FIREBASE_CREDENTIALS_JSON}"
+if [ -n "$FB_RAW" ]; then
     echo "=== Writing Firebase credentials via PHP parser ==="
+    export FIREBASE_CREDENTIALS="$FB_RAW"
     # Use PHP to properly parse the JSON blob (handles actual newlines in private_key)
     # and write a clean, valid JSON file.
     php -r "
