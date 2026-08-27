@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <meta charset="UTF-8">
+    <title>Trip Schedules Master List</title>
+    <style>
+        @page {
+            size: legal landscape;
+            margin: 8mm;
+        }
+        body {
+            font-family: 'DejaVu Sans', Arial, sans-serif;
+            margin: 0;
+            color: #333;
+            font-size: 8px;
+        }
+        .header {
+            margin-bottom: 12px;
+            border-bottom: 2px solid #2563eb;
+            padding-bottom: 8px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+        th {
+            background-color: #2563eb;
+            color: white;
+            padding: 5px 4px;
+            text-align: left;
+            font-weight: bold;
+            border: 1px solid #1d4ed8;
+            font-size: 7.5px;
+        }
+        td {
+            padding: 4px;
+            border: 1px solid #e2e8f0;
+            font-size: 7.5px;
+        }
+        tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+        .footer {
+            margin-top: 15px;
+            text-align: center;
+            font-size: 7.5px;
+            color: #64748b;
+            border-top: 1px solid #cbd5e1;
+            padding-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <table style="width: 100%; border: none; margin: 0;">
+            <tr>
+                <td style="border: none; padding: 0; vertical-align: middle;">
+                    <h1 style="margin: 0; text-align: left; font-size: 16px; color: #1e293b; border: none; padding: 0;">Amiga Gracia Travel Services</h1>
+                    <div style="font-size: 11px; font-weight: bold; color: #2563eb; margin-top: 2px;">TRIP SCHEDULES &amp; TIMETABLE MASTER</div>
+                </td>
+                <td style="border: none; padding: 0; text-align: right; vertical-align: middle;">
+                    <div style="font-size: 8px; color: #334155; background: #f8fafc; border: 1px solid #cbd5e1; padding: 5px 9px; border-radius: 4px; display: inline-block;">
+                        <strong>Total Schedules:</strong> {{ count($schedules) }} trips<br>
+                        <strong>Generated On:</strong> {{ now()->format('M d, Y h:i A') }}
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 25px;">#</th>
+                <th>Route (Origin → Destination)</th>
+                <th>Operator</th>
+                <th style="width: 60px;">Mode</th>
+                <th style="width: 90px;">Departure Time</th>
+                <th style="width: 90px;">Arrival Time</th>
+                <th>Vehicle / Vessel</th>
+                <th style="width: 70px; text-align: right;">Base Price</th>
+                <th style="width: 70px; text-align: center;">Availability</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse($schedules as $idx => $row)
+                <tr>
+                    <td>{{ $idx + 1 }}</td>
+                    <td><strong>{{ $row->ferryRoute ? "{$row->ferryRoute->origin} → {$row->ferryRoute->destination}" : 'N/A' }}</strong></td>
+                    <td>{{ $row->ferryRoute?->operator ?: '—' }}</td>
+                    <td>{{ $row->ferryRoute?->mode ?: 'Ferry' }}</td>
+                    <td>{{ $row->formatted_departure }}</td>
+                    <td>{{ $row->formatted_arrival }}</td>
+                    <td>{{ $row->vehicle_name ?: 'Standard Vessel' }}</td>
+                    <td style="text-align: right; font-weight: bold; color: #2563eb;">₱{{ number_format($row->price, 2) }}</td>
+                    <td style="text-align: center;">{{ $row->availability_label ?? 'Available' }}</td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="9" style="text-align: center; padding: 15px; color: #64748b;">
+                        No schedules recorded.
+                    </td>
+                </tr>
+            @endforelse
+        </tbody>
+    </table>
+
+    <div class="footer">
+        Amiga Gracia Travel Services &bull; Official Timetable &amp; Schedule Master
+    </div>
+</body>
+</html>

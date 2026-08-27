@@ -267,6 +267,70 @@ class MyPage extends Page
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ]);
     }
+
+    public function downloadPdf(string $type)
+    {
+        $filename = "{$type}_report_" . now()->format('Y-m-d_H-i-s') . ".pdf";
+
+        if ($type === 'my_transactions') {
+            $user = auth()->user();
+            $userId = $user?->id;
+
+            $myBookings = Booking::with(['transaction', 'schedule.ferryRoute'])
+                ->where(function ($q) use ($userId) {
+                    $q->where('verified_by_user_id', $userId)
+                      ->orWhere('user_id', $userId);
+                })->latest()->get();
+
+            $html = view('exports.my-transactions-pdf', [
+                'bookings'   => $myBookings,
+                'staffName'  => $user?->name ?? 'Staff',
+                'staffEmail' => $user?->email ?? 'N/A',
+            ])->render();
+
+            return $this->renderPdfResponse($html, $filename, 'legal', 'landscape');
+
+        } elseif ($type === 'bookings') {
+            return redirect()->route('bookings.export.pdf');
+
+        } elseif ($type === 'ferry_routes') {
+            $routes = FerryRoute::orderBy('origin')->get();
+            $html = view('exports.routes-pdf', [
+                'routes' => $routes,
+            ])->render();
+
+            return $this->renderPdfResponse($html, $filename, 'letter', 'portrait');
+
+        } elseif ($type === 'schedules') {
+            $schedules = Schedule::with('ferryRoute')->orderBy('departure_time')->get();
+            $html = view('exports.schedules-pdf', [
+                'schedules' => $schedules,
+            ])->render();
+
+            return $this->renderPdfResponse($html, $filename, 'legal', 'landscape');
+        }
+
+        return redirect()->back();
+    }
+
+    protected function renderPdfResponse(string $html, string $filename, string $paper = 'letter', string $orientation = 'portrait')
+    {
+        $options = new \Dompdf\Options();
+        $options->set('isRemoteEnabled', true);
+        $options->set('defaultFont', 'DejaVu Sans');
+
+        $dompdf = new \Dompdf\Dompdf($options);
+        $dompdf->loadHtml($html, 'UTF-8');
+        $dompdf->setPaper($paper, $orientation);
+        $dompdf->render();
+
+        return response()->streamDownload(function () use ($dompdf) {
+            echo $dompdf->output();
+        }, $filename, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
+    }
 }
 
 

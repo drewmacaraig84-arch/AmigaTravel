@@ -231,10 +231,10 @@
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-2 border-b border-gray-200/60 dark:border-gray-800">
                 <div>
                     <h3 class="text-lg font-bold tracking-tight text-gray-900 dark:text-white">
-                        Downloadable CSV Reports & Data Exports
+                        Downloadable Reports &amp; Data Exports (PDF &amp; CSV)
                     </h3>
                     <p class="text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5">
-                        Export your personal transaction logs or general system reports instantly to CSV.
+                        Export your personal transaction logs or general system reports instantly in PDF or CSV format.
                     </p>
                 </div>
                 <span class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3.5 py-1 text-xs font-bold text-gray-900 dark:text-white w-fit">
@@ -244,7 +244,7 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {{-- My Handled Transactions --}}
-                <div class="flex items-center justify-between p-5 rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-800/40">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between p-5 rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-800/40 gap-4">
                     <div class="flex items-center gap-4">
                         <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -258,24 +258,37 @@
                                     Personal Log
                                 </span>
                             </div>
-                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Export only your completed, pending & cancelled bookings</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Export only your completed, pending &amp; cancelled bookings</p>
                         </div>
                     </div>
-                    <button
-                        type="button"
-                        wire:click="downloadReport('my_transactions')"
-                        style="background-color: #d97706 !important; color: #ffffff !important;"
-                        class="inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-bold shadow-sm hover:opacity-90 focus:outline-none whitespace-nowrap transition-all cursor-pointer"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                        </svg>
-                        <span>Download CSV</span>
-                    </button>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <button
+                            type="button"
+                            wire:click="downloadReport('my_transactions')"
+                            style="background-color: #d97706 !important; color: #ffffff !important;"
+                            class="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold shadow-sm hover:opacity-90 focus:outline-none whitespace-nowrap transition-all cursor-pointer"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            <span>CSV</span>
+                        </button>
+                        <button
+                            type="button"
+                            wire:click="downloadPdf('my_transactions')"
+                            style="background-color: #dc2626 !important; color: #ffffff !important;"
+                            class="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold shadow-sm hover:opacity-90 focus:outline-none whitespace-nowrap transition-all cursor-pointer"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            </svg>
+                            <span>PDF</span>
+                        </button>
+                    </div>
                 </div>
 
                 {{-- All System Bookings --}}
-                <div class="flex items-center justify-between p-5 rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-800/40">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between p-5 rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-800/40 gap-4">
                     <div class="flex items-center gap-4">
                         <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-400">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -292,21 +305,34 @@
                             <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Full reservation list across all staff members</p>
                         </div>
                     </div>
-                    <button
-                        type="button"
-                        wire:click="downloadReport('bookings')"
-                        style="background-color: #d97706 !important; color: #ffffff !important;"
-                        class="inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-bold shadow-sm hover:opacity-90 focus:outline-none whitespace-nowrap transition-all cursor-pointer"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                        </svg>
-                        <span>Download CSV</span>
-                    </button>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <button
+                            type="button"
+                            wire:click="downloadReport('bookings')"
+                            style="background-color: #d97706 !important; color: #ffffff !important;"
+                            class="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold shadow-sm hover:opacity-90 focus:outline-none whitespace-nowrap transition-all cursor-pointer"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            <span>CSV</span>
+                        </button>
+                        <button
+                            type="button"
+                            wire:click="downloadPdf('bookings')"
+                            style="background-color: #dc2626 !important; color: #ffffff !important;"
+                            class="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold shadow-sm hover:opacity-90 focus:outline-none whitespace-nowrap transition-all cursor-pointer"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            </svg>
+                            <span>PDF</span>
+                        </button>
+                    </div>
                 </div>
 
                 {{-- Ferry & Airline Routes --}}
-                <div class="flex items-center justify-between p-5 rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-800/40">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between p-5 rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-800/40 gap-4">
                     <div class="flex items-center gap-4">
                         <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -315,7 +341,7 @@
                         </div>
                         <div>
                             <div class="flex items-center gap-2">
-                                <h4 class="font-bold text-gray-900 dark:text-white text-sm">Ferry & Airline Routes</h4>
+                                <h4 class="font-bold text-gray-900 dark:text-white text-sm">Ferry &amp; Airline Routes</h4>
                                 <span class="rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
                                     Directory
                                 </span>
@@ -323,21 +349,34 @@
                             <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">All routes, operators, travel modes, and active status</p>
                         </div>
                     </div>
-                    <button
-                        type="button"
-                        wire:click="downloadReport('ferry_routes')"
-                        style="background-color: #d97706 !important; color: #ffffff !important;"
-                        class="inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-bold shadow-sm hover:opacity-90 focus:outline-none whitespace-nowrap transition-all cursor-pointer"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                        </svg>
-                        <span>Download CSV</span>
-                    </button>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <button
+                            type="button"
+                            wire:click="downloadReport('ferry_routes')"
+                            style="background-color: #d97706 !important; color: #ffffff !important;"
+                            class="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold shadow-sm hover:opacity-90 focus:outline-none whitespace-nowrap transition-all cursor-pointer"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            <span>CSV</span>
+                        </button>
+                        <button
+                            type="button"
+                            wire:click="downloadPdf('ferry_routes')"
+                            style="background-color: #dc2626 !important; color: #ffffff !important;"
+                            class="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold shadow-sm hover:opacity-90 focus:outline-none whitespace-nowrap transition-all cursor-pointer"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            </svg>
+                            <span>PDF</span>
+                        </button>
+                    </div>
                 </div>
 
                 {{-- Schedules Report --}}
-                <div class="flex items-center justify-between p-5 rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-800/40">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between p-5 rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-800/40 gap-4">
                     <div class="flex items-center gap-4">
                         <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 text-blue-600 dark:text-blue-400">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -351,20 +390,33 @@
                                     Schedules
                                 </span>
                             </div>
-                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Departure & arrival times, vehicles, and pricing</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Departure &amp; arrival times, vehicles, and pricing</p>
                         </div>
                     </div>
-                    <button
-                        type="button"
-                        wire:click="downloadReport('schedules')"
-                        style="background-color: #d97706 !important; color: #ffffff !important;"
-                        class="inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-bold shadow-sm hover:opacity-90 focus:outline-none whitespace-nowrap transition-all cursor-pointer"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                        </svg>
-                        <span>Download CSV</span>
-                    </button>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <button
+                            type="button"
+                            wire:click="downloadReport('schedules')"
+                            style="background-color: #d97706 !important; color: #ffffff !important;"
+                            class="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold shadow-sm hover:opacity-90 focus:outline-none whitespace-nowrap transition-all cursor-pointer"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            <span>CSV</span>
+                        </button>
+                        <button
+                            type="button"
+                            wire:click="downloadPdf('schedules')"
+                            style="background-color: #dc2626 !important; color: #ffffff !important;"
+                            class="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold shadow-sm hover:opacity-90 focus:outline-none whitespace-nowrap transition-all cursor-pointer"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            </svg>
+                            <span>PDF</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

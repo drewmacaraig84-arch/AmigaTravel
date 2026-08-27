@@ -139,12 +139,19 @@
                     </div>
                 </div>
 
-                {{-- Export CSV --}}
-                <button type="button" wire:click="exportCsv"
-                    class="inline-flex items-center gap-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 transition border border-gray-300 dark:border-gray-700">
-                    <x-heroicon-m-arrow-down-tray class="h-4 w-4 text-gray-500" />
-                    Export CSV
-                </button>
+                {{-- Export CSV & PDF --}}
+                <div class="flex items-center gap-1.5">
+                    <button type="button" wire:click="exportCsv"
+                        class="inline-flex items-center gap-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 transition border border-gray-300 dark:border-gray-700">
+                        <x-heroicon-m-arrow-down-tray class="h-4 w-4 text-gray-500" />
+                        CSV
+                    </button>
+                    <button type="button" wire:click="exportPdf"
+                        class="inline-flex items-center gap-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 text-xs font-semibold transition shadow-sm">
+                        <x-heroicon-m-document-arrow-down class="h-4 w-4 text-white" />
+                        PDF
+                    </button>
+                </div>
             </div>
         </div>
 

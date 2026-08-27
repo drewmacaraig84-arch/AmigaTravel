@@ -205,4 +205,45 @@ class StaffPerformance extends Page
             'Content-Type' => 'text/csv',
         ]);
     }
+
+    public function exportPdf()
+    {
+        $filename = 'staff_performance_' . now()->format('Y-m-d_H-i-s') . '.pdf';
+
+        $periodLabel = match ($this->period) {
+            'today' => 'Today (' . now()->format('M d, Y') . ')',
+            'yesterday' => 'Yesterday (' . now()->subDay()->format('M d, Y') . ')',
+            'this_week' => 'This Week',
+            'last_7_days' => 'Last 7 Days',
+            'this_month' => 'This Month (' . now()->format('F Y') . ')',
+            'last_month' => 'Last Month (' . now()->subMonth()->format('F Y') . ')',
+            'this_year' => 'This Year (' . now()->format('Y') . ')',
+            'custom' => ($this->startDate && $this->endDate)
+                ? Carbon::parse($this->startDate)->format('M d, Y') . ' — ' . Carbon::parse($this->endDate)->format('M d, Y')
+                : 'Custom Range',
+            default => 'All Recorded Time',
+        };
+
+        $html = view('exports.staff-performance-pdf', [
+            'staffStats'  => $this->staffStats,
+            'summaryKpis' => $this->summaryKpis,
+            'periodLabel' => $periodLabel,
+        ])->render();
+
+        $options = new \Dompdf\Options();
+        $options->set('isRemoteEnabled', true);
+        $options->set('defaultFont', 'DejaVu Sans');
+
+        $dompdf = new \Dompdf\Dompdf($options);
+        $dompdf->loadHtml($html, 'UTF-8');
+        $dompdf->setPaper('legal', 'landscape');
+        $dompdf->render();
+
+        return response()->streamDownload(function () use ($dompdf) {
+            echo $dompdf->output();
+        }, $filename, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
+    }
 }

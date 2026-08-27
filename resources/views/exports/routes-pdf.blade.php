@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <meta charset="UTF-8">
+    <title>Ferry & Airline Routes Directory</title>
+    <style>
+        @page {
+            size: letter portrait;
+            margin: 10mm;
+        }
+        body {
+            font-family: 'DejaVu Sans', Arial, sans-serif;
+            margin: 0;
+            color: #333;
+            font-size: 8.5px;
+        }
+        .header {
+            margin-bottom: 15px;
+            border-bottom: 2px solid #059669;
+            padding-bottom: 8px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th {
+            background-color: #059669;
+            color: white;
+            padding: 6px 5px;
+            text-align: left;
+            font-weight: bold;
+            border: 1px solid #047857;
+            font-size: 8px;
+        }
+        td {
+            padding: 5px;
+            border: 1px solid #e2e8f0;
+            font-size: 8px;
+        }
+        tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+        .status-active   { color: #059669; font-weight: bold; }
+        .status-inactive { color: #dc2626; font-weight: bold; }
+        .footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 8px;
+            color: #64748b;
+            border-top: 1px solid #cbd5e1;
+            padding-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <table style="width: 100%; border: none; margin: 0;">
+            <tr>
+                <td style="border: none; padding: 0; vertical-align: middle;">
+                    <h1 style="margin: 0; text-align: left; font-size: 16px; color: #1e293b; border: none; padding: 0;">Amiga Gracia Travel Services</h1>
+                    <div style="font-size: 11px; font-weight: bold; color: #059669; margin-top: 2px;">FERRY &amp; AIRLINE ROUTES DIRECTORY</div>
+                </td>
+                <td style="border: none; padding: 0; text-align: right; vertical-align: middle;">
+                    <div style="font-size: 8.5px; color: #334155; background: #f8fafc; border: 1px solid #cbd5e1; padding: 6px 10px; border-radius: 4px; display: inline-block;">
+                        <strong>Total Routes:</strong> {{ count($routes) }} active/listed<br>
+                        <strong>Generated On:</strong> {{ now()->format('M d, Y h:i A') }}
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 30px;">#</th>
+                <th>Origin Port / Terminal</th>
+                <th>Destination Port / Terminal</th>
+                <th>Operator</th>
+                <th>Mode</th>
+                <th style="width: 60px; text-align: center;">Status</th>
+                <th style="width: 90px;">Created Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse($routes as $idx => $row)
+                <tr>
+                    <td>{{ $idx + 1 }}</td>
+                    <td><strong>{{ $row->origin }}</strong></td>
+                    <td><strong>{{ $row->destination }}</strong></td>
+                    <td>{{ $row->operator }}</td>
+                    <td>{{ $row->mode ?: 'Ferry' }}</td>
+                    <td style="text-align: center;">
+                        <span class="{{ $row->is_active ? 'status-active' : 'status-inactive' }}">
+                            {{ $row->is_active ? 'Active' : 'Inactive' }}
+                        </span>
+                    </td>
+                    <td>{{ $row->created_at ? $row->created_at->format('M d, Y') : 'N/A' }}</td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 15px; color: #64748b;">
+                        No routes recorded in directory.
+                    </td>
+                </tr>
+            @endforelse
+        </tbody>
+    </table>
+
+    <div class="footer">
+        Amiga Gracia Travel Services &bull; Official Routes Directory Catalog
+    </div>
+</body>
+</html>
