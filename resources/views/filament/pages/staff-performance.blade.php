@@ -9,7 +9,6 @@
             background-color: #0f172a;
             border-color: #1e293b;
             color: #e2e8f0;
-            font-family: inherit;
         }
         .dark .daterangepicker .calendar-table {
             background-color: #0f172a;
@@ -33,7 +32,7 @@
         }
         .dark .daterangepicker td.active, 
         .dark .daterangepicker td.active:hover {
-            background-color: #d97706;
+            background-color: #f59e0b;
             color: #fff;
         }
         .dark .daterangepicker .ranges li {
@@ -44,7 +43,7 @@
             background-color: #1e293b;
         }
         .dark .daterangepicker .ranges li.active {
-            background-color: #d97706;
+            background-color: #f59e0b;
             color: #fff;
         }
         .dark .daterangepicker .drp-buttons {
@@ -53,193 +52,153 @@
     </style>
 
     <div class="space-y-6">
-        {{-- ═══ Header Filter & Control Banner ═══ --}}
-        <div class="rounded-2xl bg-white p-6 shadow-sm border border-gray-200 dark:bg-gray-900 dark:border-gray-800">
-            <div class="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6">
-                <div class="flex items-center gap-4">
-                    <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl font-extrabold shadow-sm" style="background-color: #d97706 !important; color: #ffffff !important;">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                        </svg>
-                    </div>
-                    <div>
-                        <div class="flex items-center gap-3 flex-wrap">
-                            <h2 class="text-xl font-bold text-gray-900 dark:text-white">
-                                Staff Performance Overview
-                            </h2>
-                            <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30">
-                                Staff Audit &amp; Verification
-                            </span>
+        {{-- ═══ Header Filter Bar ═══ --}}
+        <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
+            <div>
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <x-heroicon-o-user-group class="h-6 w-6 text-amber-500" />
+                    Staff Performance Overview
+                </h2>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    Comprehensive metrics for staff activity, ticket verifications, payment approvals, and revenue handled.
+                </p>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-2 w-full xl:w-auto justify-start xl:justify-end">
+                {{-- Quick Period Filter Buttons --}}
+                <div class="inline-flex rounded-xl bg-gray-100 p-1 dark:bg-gray-800 flex-wrap gap-1 text-xs">
+                    <button type="button" 
+                        wire:click="setPeriod('all_time')"
+                        class="rounded-lg px-3 py-1.5 font-medium transition {{ $period === 'all_time' ? 'bg-amber-600 text-white shadow' : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white' }}">
+                        All Time
+                    </button>
+                    <button type="button" 
+                        wire:click="setPeriod('today')"
+                        class="rounded-lg px-3 py-1.5 font-medium transition {{ $period === 'today' ? 'bg-amber-600 text-white shadow' : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white' }}">
+                        Today
+                    </button>
+                    <button type="button" 
+                        wire:click="setPeriod('this_week')"
+                        class="rounded-lg px-3 py-1.5 font-medium transition {{ $period === 'this_week' ? 'bg-amber-600 text-white shadow' : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white' }}">
+                        This Week
+                    </button>
+                    <button type="button" 
+                        wire:click="setPeriod('this_month')"
+                        class="rounded-lg px-3 py-1.5 font-medium transition {{ $period === 'this_month' ? 'bg-amber-600 text-white shadow' : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white' }}">
+                        This Month
+                    </button>
+                </div>
+
+                {{-- DateRangePicker --}}
+                <div class="flex-none" wire:ignore
+                     x-data="{ 
+                         initPicker() {
+                             const el = $(this.$refs.picker);
+                             el.daterangepicker({
+                                 timePicker: false,
+                                 opens: 'left',
+                                 autoApply: false,
+                                 startDate: '{{ $startDate ? \Carbon\Carbon::parse($startDate)->format('m/d/Y') : now()->startOfMonth()->format('m/d/Y') }}',
+                                 endDate: '{{ $endDate ? \Carbon\Carbon::parse($endDate)->format('m/d/Y') : now()->endOfMonth()->format('m/d/Y') }}',
+                                 ranges: {
+                                    'Today': [moment().startOf('day'), moment().endOf('day')],
+                                    'Yesterday': [moment().subtract(1, 'days').startOf('day'), moment().subtract(1, 'days').endOf('day')],
+                                    'Last 7 Days': [moment().subtract(6, 'days').startOf('day'), moment().endOf('day')],
+                                    'This Month': [moment().startOf('month').startOf('day'), moment().endOf('month').endOf('day')],
+                                    'Last Month': [moment().subtract(1, 'month').startOf('month').startOf('day'), moment().subtract(1, 'month').endOf('month').endOf('day')],
+                                    'This Year': [moment().startOf('year').startOf('day'), moment().endOf('year').endOf('day')]
+                                 },
+                                 locale: { 
+                                     format: 'MM/DD/YYYY' 
+                                 }
+                             });
+                             el.on('apply.daterangepicker', (ev, picker) => {
+                                 @this.updateDateRange(picker.startDate.format('YYYY-MM-DD 00:00:00'), picker.endDate.format('YYYY-MM-DD 23:59:59'));
+                             });
+                         }
+                     }"
+                     x-init="
+                         if (window.jQuery && window.moment && $.fn.daterangepicker) {
+                             initPicker();
+                         } else {
+                             let interval = setInterval(() => {
+                                 if (window.jQuery && window.moment && $.fn.daterangepicker) {
+                                     clearInterval(interval);
+                                     initPicker();
+                                 }
+                             }, 100);
+                         }
+                     ">
+                    <div class="relative w-[220px]">
+                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                            <x-heroicon-m-calendar class="h-4 w-4 text-gray-400" />
                         </div>
-                        <p class="mt-1 text-sm font-medium text-gray-600 dark:text-gray-300">
-                            Real-time metrics for staff transaction volume, verification efficiency, and handled revenue
-                        </p>
+                        <input type="text" x-ref="picker" readonly
+                               placeholder="Custom Date Range"
+                               class="w-full cursor-pointer rounded-lg bg-white dark:bg-gray-800 py-1.5 pl-9 pr-3 text-xs font-medium text-gray-900 shadow-sm border border-gray-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-center dark:border-gray-700 dark:text-gray-100" />
                     </div>
                 </div>
 
-                {{-- Action Controls --}}
-                <div class="flex flex-wrap items-center gap-2.5 w-full xl:w-auto justify-start xl:justify-end">
-                    {{-- Quick Period Filter Buttons --}}
-                    <div class="inline-flex rounded-xl bg-gray-100 p-1 dark:bg-gray-800 border border-gray-200 dark:border-gray-700/60 flex-wrap gap-1 text-xs">
-                        <button type="button" 
-                            wire:click="setPeriod('all_time')"
-                            class="rounded-lg px-3 py-1.5 font-bold transition {{ $period === 'all_time' ? 'bg-amber-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-700' }}">
-                            All Time
-                        </button>
-                        <button type="button" 
-                            wire:click="setPeriod('today')"
-                            class="rounded-lg px-3 py-1.5 font-bold transition {{ $period === 'today' ? 'bg-amber-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-700' }}">
-                            Today
-                        </button>
-                        <button type="button" 
-                            wire:click="setPeriod('this_week')"
-                            class="rounded-lg px-3 py-1.5 font-bold transition {{ $period === 'this_week' ? 'bg-amber-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-700' }}">
-                            This Week
-                        </button>
-                        <button type="button" 
-                            wire:click="setPeriod('this_month')"
-                            class="rounded-lg px-3 py-1.5 font-bold transition {{ $period === 'this_month' ? 'bg-amber-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-700' }}">
-                            This Month
-                        </button>
-                    </div>
-
-                    {{-- DateRangePicker --}}
-                    <div class="flex-none" wire:ignore
-                         x-data="{ 
-                             initPicker() {
-                                 const el = $(this.$refs.picker);
-                                 el.daterangepicker({
-                                     timePicker: false,
-                                     opens: 'left',
-                                     autoApply: false,
-                                     startDate: '{{ $startDate ? \Carbon\Carbon::parse($startDate)->format('m/d/Y') : now()->startOfMonth()->format('m/d/Y') }}',
-                                     endDate: '{{ $endDate ? \Carbon\Carbon::parse($endDate)->format('m/d/Y') : now()->endOfMonth()->format('m/d/Y') }}',
-                                     ranges: {
-                                        'Today': [moment().startOf('day'), moment().endOf('day')],
-                                        'Yesterday': [moment().subtract(1, 'days').startOf('day'), moment().subtract(1, 'days').endOf('day')],
-                                        'Last 7 Days': [moment().subtract(6, 'days').startOf('day'), moment().endOf('day')],
-                                        'This Month': [moment().startOf('month').startOf('day'), moment().endOf('month').endOf('day')],
-                                        'Last Month': [moment().subtract(1, 'month').startOf('month').startOf('day'), moment().subtract(1, 'month').endOf('month').endOf('day')],
-                                        'This Year': [moment().startOf('year').startOf('day'), moment().endOf('year').endOf('day')]
-                                     },
-                                     locale: { 
-                                         format: 'MM/DD/YYYY' 
-                                     }
-                                 });
-                                 el.on('apply.daterangepicker', (ev, picker) => {
-                                     @this.updateDateRange(picker.startDate.format('YYYY-MM-DD 00:00:00'), picker.endDate.format('YYYY-MM-DD 23:59:59'));
-                                 });
-                             }
-                         }"
-                         x-init="
-                             if (window.jQuery && window.moment && $.fn.daterangepicker) {
-                                 initPicker();
-                             } else {
-                                 let interval = setInterval(() => {
-                                     if (window.jQuery && window.moment && $.fn.daterangepicker) {
-                                         clearInterval(interval);
-                                         initPicker();
-                                     }
-                                 }, 100);
-                             }
-                         ">
-                        <div class="relative w-[190px]">
-                            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                            </div>
-                            <input type="text" x-ref="picker" readonly
-                                   placeholder="Custom Date Range"
-                                   class="w-full cursor-pointer rounded-xl bg-gray-50 dark:bg-gray-800 py-1.5 pl-9 pr-3 text-xs font-bold text-gray-900 shadow-sm border border-gray-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-center dark:border-gray-700 dark:text-gray-100" />
-                        </div>
-                    </div>
-
-                    {{-- Export CSV & PDF --}}
-                    <div class="flex items-center gap-1.5">
-                        <button type="button" wire:click="exportCsv"
-                            class="inline-flex items-center gap-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 px-3.5 py-1.5 text-xs font-bold text-gray-700 dark:text-gray-200 transition border border-gray-200 dark:border-gray-700 shadow-sm">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                            </svg>
-                            CSV
-                        </button>
-                        <button type="button" wire:click="exportPdf"
-                            class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white px-3.5 py-1.5 text-xs font-bold transition shadow-sm">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                            </svg>
-                            PDF
-                        </button>
-                    </div>
+                {{-- Export CSV & PDF --}}
+                <div class="flex items-center gap-1.5">
+                    <button type="button" wire:click="exportCsv"
+                        class="inline-flex items-center gap-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 transition border border-gray-300 dark:border-gray-700">
+                        <x-heroicon-m-arrow-down-tray class="h-4 w-4 text-gray-500" />
+                        CSV
+                    </button>
+                    <button type="button" wire:click="exportPdf"
+                        class="inline-flex items-center gap-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 text-xs font-semibold transition shadow-sm">
+                        <x-heroicon-m-document-arrow-down class="h-4 w-4 text-white" />
+                        PDF
+                    </button>
                 </div>
             </div>
         </div>
 
-        {{-- ═══ 4-Column KPI Metric Cards (Matching MyPage Architecture) ═══ --}}
-        <div class="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-            {{-- Total Handled --}}
-            <div class="rounded-2xl bg-white p-6 shadow-sm border border-gray-200 dark:bg-gray-900 dark:border-gray-800 transition-all hover:shadow-md hover:border-amber-300 dark:hover:border-amber-700">
-                <div class="flex items-center justify-between gap-3 mb-3">
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Bookings Handled</span>
-                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-                        </svg>
+        {{-- ═══ Summary KPI Cards ═══ --}}
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                <div class="flex items-center justify-between">
+                    <p class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Bookings Handled</p>
+                    <div class="rounded-lg bg-amber-50 dark:bg-amber-950/50 p-2 text-amber-600">
+                        <x-heroicon-o-ticket class="h-5 w-5" />
                     </div>
                 </div>
-                <div class="text-3xl font-extrabold text-gray-900 dark:text-white tabular-nums tracking-tight mb-2">
-                    {{ number_format($summaryKpis['total_bookings']) }}
-                </div>
-                <p class="text-xs text-gray-500 dark:text-gray-400 font-medium">Total staff actions performed</p>
+                <p class="mt-3 text-2xl font-extrabold text-gray-900 dark:text-white">{{ number_format($summaryKpis['total_bookings']) }}</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Total actions performed across staff</p>
             </div>
 
-            {{-- Revenue Handled --}}
-            <div class="rounded-2xl bg-white p-6 shadow-sm border border-gray-200 dark:bg-gray-900 dark:border-gray-800 transition-all hover:shadow-md hover:border-emerald-300 dark:hover:border-emerald-700">
-                <div class="flex items-center justify-between gap-3 mb-3">
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Revenue Handled</span>
-                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
+            <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                <div class="flex items-center justify-between">
+                    <p class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Revenue Handled</p>
+                    <div class="rounded-lg bg-emerald-50 dark:bg-emerald-950/50 p-2 text-emerald-600">
+                        <x-heroicon-o-banknotes class="h-5 w-5" />
                     </div>
                 </div>
-                <div class="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 tabular-nums tracking-tight mb-2">
-                    ₱{{ number_format($summaryKpis['total_revenue'], 2) }}
-                </div>
-                <p class="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Total verified payment volume</p>
+                <p class="mt-3 text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">₱{{ number_format($summaryKpis['total_revenue'], 2) }}</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Total verified payment volume</p>
             </div>
 
-            {{-- Completed Bookings --}}
-            <div class="rounded-2xl bg-white p-6 shadow-sm border border-gray-200 dark:bg-gray-900 dark:border-gray-800 transition-all hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700">
-                <div class="flex items-center justify-between gap-3 mb-3">
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Completed Bookings</span>
-                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
+            <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                <div class="flex items-center justify-between">
+                    <p class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Completed Bookings</p>
+                    <div class="rounded-lg bg-blue-50 dark:bg-blue-950/50 p-2 text-blue-600">
+                        <x-heroicon-o-check-circle class="h-5 w-5" />
                     </div>
                 </div>
-                <div class="text-3xl font-extrabold text-gray-900 dark:text-white tabular-nums tracking-tight mb-2">
-                    {{ number_format($summaryKpis['total_completed']) }}
-                </div>
-                <p class="text-xs text-gray-500 dark:text-gray-400 font-medium">Fully confirmed &amp; verified trips</p>
+                <p class="mt-3 text-2xl font-extrabold text-gray-900 dark:text-white">{{ number_format($summaryKpis['total_completed']) }}</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Fully confirmed &amp; verified trips</p>
             </div>
 
-            {{-- Top Performer --}}
-            <div class="rounded-2xl bg-white p-6 shadow-sm border border-gray-200 dark:bg-gray-900 dark:border-gray-800 transition-all hover:shadow-md hover:border-purple-300 dark:hover:border-purple-700">
-                <div class="flex items-center justify-between gap-3 mb-3">
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Top Performer</span>
-                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-500/10 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                        </svg>
+            <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                <div class="flex items-center justify-between">
+                    <p class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Top Performer</p>
+                    <div class="rounded-lg bg-purple-50 dark:bg-purple-950/50 p-2 text-purple-600">
+                        <x-heroicon-o-trophy class="h-5 w-5" />
                     </div>
                 </div>
-                <div class="text-xl font-extrabold text-purple-600 dark:text-purple-300 truncate mb-2">
-                    {{ $summaryKpis['top_staff_name'] }}
-                </div>
-                <p class="text-xs text-purple-600 dark:text-purple-400 font-medium">{{ $summaryKpis['top_staff_count'] }} bookings handled</p>
+                <p class="mt-3 text-lg font-bold text-purple-700 dark:text-purple-300 truncate">{{ $summaryKpis['top_staff_name'] }}</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ $summaryKpis['top_staff_count'] }} bookings handled</p>
             </div>
         </div>
 
@@ -247,7 +206,7 @@
         <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 px-1">
             <span>
                 Showing metrics for: 
-                <strong class="text-gray-900 dark:text-white font-bold">
+                <strong class="text-gray-900 dark:text-white">
                     @if($period === 'all_time')
                         All Recorded Time
                     @elseif($startDate && $endDate)
@@ -257,47 +216,37 @@
                     @endif
                 </strong>
             </span>
-            <span>Total Staff Registered: <strong class="text-gray-900 dark:text-white font-bold">{{ $staffStats->count() }}</strong></span>
+            <span>Total Staff Registered: <strong class="text-gray-900 dark:text-white">{{ $staffStats->count() }}</strong></span>
         </div>
 
-        {{-- ═══ Staff Performance Table ═══ --}}
-        <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 overflow-hidden">
-            <div class="p-6 border-b border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <div>
-                    <h3 class="text-lg font-bold tracking-tight text-gray-900 dark:text-white">Staff Audit &amp; Performance Records</h3>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5">Summary of transaction verifications, revenue totals, and completion metrics per staff account</p>
-                </div>
-                <span class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3.5 py-1 text-xs font-bold text-gray-900 dark:text-white w-fit">
-                    {{ $staffStats->count() }} Staff Accounts
-                </span>
-            </div>
-
+        {{-- ═══ Staff Table ═══ --}}
+        <div class="overflow-hidden rounded-xl border border-gray-200 shadow-sm dark:border-gray-800 bg-white dark:bg-gray-900">
             <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm">
-                    <thead class="bg-gray-100 dark:bg-gray-800 text-xs uppercase tracking-wider text-gray-900 dark:text-white font-bold border-b border-gray-200 dark:border-gray-700/60">
+                <table class="w-full text-left border-collapse">
+                    <thead class="border-b border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-800/80">
                         <tr>
-                            <th class="px-6 py-3.5 font-bold text-gray-900 dark:text-white">
+                            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300">
                                 Staff Member
                             </th>
-                            <th class="px-6 py-3.5 font-bold text-gray-900 dark:text-white text-center">
+                            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300 text-center">
                                 Total Handled
                             </th>
-                            <th class="px-6 py-3.5 font-bold text-gray-900 dark:text-white text-center">
+                            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300 text-center">
                                 Completed
                             </th>
-                            <th class="px-6 py-3.5 font-bold text-gray-900 dark:text-white text-center">
+                            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300 text-center">
                                 Pending
                             </th>
-                            <th class="px-6 py-3.5 font-bold text-gray-900 dark:text-white text-center">
+                            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300 text-center">
                                 Cancelled
                             </th>
-                            <th class="px-6 py-3.5 font-bold text-gray-900 dark:text-white text-right">
+                            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300 text-right">
                                 Revenue Handled
                             </th>
-                            <th class="px-6 py-3.5 font-bold text-gray-900 dark:text-white text-center">
+                            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300 text-center">
                                 Success Rate
                             </th>
-                            <th class="px-6 py-3.5 text-right font-bold text-gray-900 dark:text-white">
+                            <th class="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300">
                                 Actions
                             </th>
                         </tr>
@@ -306,8 +255,8 @@
                         @forelse($staffStats as $staff)
                             <tr class="hover:bg-gray-50/80 dark:hover:bg-gray-800/40 transition">
                                 <td class="px-6 py-4">
-                                    <div class="flex items-center gap-3.5">
-                                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-extrabold text-sm shadow-sm" style="background-color: #d97706 !important; color: #ffffff !important;">
+                                    <div class="flex items-center gap-3">
+                                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-bold text-sm bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-sm">
                                             {{ strtoupper(substr($staff['name'], 0, 2)) }}
                                         </div>
                                         <div>
@@ -333,35 +282,35 @@
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 text-center">
-                                    <span class="inline-flex items-center justify-center rounded-xl bg-gray-100 px-3 py-1 font-black text-sm text-gray-900 dark:bg-gray-800 dark:text-white border border-gray-200 dark:border-gray-700">
+                                    <span class="inline-flex items-center justify-center rounded-xl bg-gray-100 px-3 py-1 font-extrabold text-sm text-gray-900 dark:bg-gray-800 dark:text-white">
                                         {{ $staff['total_bookings_handled'] }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 text-center">
-                                    <span class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800/60">
+                                    <span class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200">
                                         {{ $staff['completed_bookings'] }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 text-center">
-                                    <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300 dark:border-amber-800/60">
+                                    <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-900/60 dark:text-amber-200">
                                         {{ $staff['pending_bookings'] }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 text-center">
-                                    <span class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-bold text-red-800 dark:bg-red-950/80 dark:text-red-300 border border-red-300 dark:border-red-800/60">
+                                    <span class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-800 dark:bg-red-900/60 dark:text-red-200">
                                         {{ $staff['cancelled_bookings'] }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 text-right">
-                                    <span class="font-extrabold text-sm text-emerald-600 dark:text-emerald-400 tabular-nums">
+                                    <span class="font-extrabold text-sm text-gray-900 dark:text-white tabular-nums">
                                         ₱{{ number_format($staff['total_revenue_handled'], 2) }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 text-center">
-                                    <div class="flex flex-col items-center gap-1.5">
+                                    <div class="flex flex-col items-center gap-1">
                                         <span class="text-xs font-bold text-gray-700 dark:text-gray-300">{{ $staff['completion_rate'] }}%</span>
                                         <div class="w-16 bg-gray-200 rounded-full h-1.5 dark:bg-gray-700 overflow-hidden">
-                                            <div class="bg-gradient-to-r from-emerald-500 to-teal-400 h-1.5 rounded-full" style="width: {{ min(100, $staff['completion_rate']) }}%"></div>
+                                            <div class="bg-emerald-500 h-1.5 rounded-full" style="width: {{ min(100, $staff['completion_rate']) }}%"></div>
                                         </div>
                                     </div>
                                 </td>
@@ -369,11 +318,8 @@
                                     <button type="button" 
                                         x-data 
                                         x-on:click="$dispatch('open-modal', { id: 'staff-bookings-{{ $staff['id'] }}' })"
-                                        class="inline-flex items-center gap-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 px-3.5 py-1.5 text-xs font-bold text-white transition shadow-sm">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                        </svg>
+                                        class="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white transition shadow-sm">
+                                        <x-heroicon-m-eye class="h-3.5 w-3.5" />
                                         View Bookings ({{ $staff['total_bookings_handled'] }})
                                     </button>
                                     
@@ -388,7 +334,7 @@
                                         
                                         <div class="overflow-x-auto max-h-[65vh]">
                                             <table class="w-full text-sm text-left">
-                                                <thead class="text-xs text-gray-900 dark:text-white uppercase bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10 font-bold">
+                                                <thead class="text-xs text-gray-600 uppercase bg-gray-50 dark:bg-gray-800 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10">
                                                     <tr>
                                                         <th class="px-4 py-3">Transaction #</th>
                                                         <th class="px-4 py-3">Client</th>
@@ -417,7 +363,7 @@
                                                                 {{ $booking->transaction_number ?: "BK-{$booking->id}" }}
                                                             </td>
                                                             <td class="px-4 py-3">
-                                                                <p class="text-xs font-bold text-gray-900 dark:text-white">{{ $booking->client_name ?: 'Guest User' }}</p>
+                                                                <p class="text-xs font-semibold text-gray-900 dark:text-white">{{ $booking->client_name ?: 'Guest User' }}</p>
                                                                 <p class="text-[10px] text-gray-500">{{ $booking->client_email }}</p>
                                                             </td>
                                                             <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-300">
@@ -440,11 +386,9 @@
                                                             <td class="px-4 py-3 text-right">
                                                                 <a href="{{ \App\Filament\Resources\BookingResource::getUrl('view', ['record' => $booking->id]) }}" 
                                                                     target="_blank"
-                                                                    class="inline-flex items-center gap-1 text-xs font-bold text-amber-600 hover:text-amber-500 dark:text-amber-400">
+                                                                    class="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400">
                                                                     View
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                                                    </svg>
+                                                                    <x-heroicon-m-arrow-top-right-on-square class="h-3.5 w-3.5" />
                                                                 </a>
                                                             </td>
                                                         </tr>
