@@ -166,9 +166,11 @@
                     <th style="width: 60px; background-color: {{ $thColor }};">Operator</th>
                     <th style="width: 55px; text-align: center; background-color: {{ $thColor }};">Status</th>
                     @if($groupTitle === 'Refunded Bookings')
-                        <th style="width: 70px; text-align: right; background-color: {{ $thColor }};">Refund Amount</th>
+                        <th style="width: 75px; text-align: right; background-color: {{ $thColor }};">Amount Retained</th>
+                    @elseif($groupTitle === 'Rebooked Bookings')
+                        <th style="width: 75px; text-align: right; background-color: {{ $thColor }};">Total Amount</th>
                     @else
-                        <th style="width: 70px; text-align: right; background-color: {{ $thColor }};">Total Amount</th>
+                        <th style="width: 75px; text-align: right; background-color: {{ $thColor }};">Total Amount</th>
                     @endif
                     <th style="width: 65px; background-color: {{ $thColor }};">Payment Ref</th>
                     <th style="width: 75px; background-color: {{ $thColor }};">Processed Date</th>
@@ -177,9 +179,14 @@
             <tbody>
                 @foreach($bookings as $idx => $row)
                     @php
-                        $displayAmount = ($groupTitle === 'Refunded Bookings' && (float) $row->refund_amount > 0)
-                            ? (float) $row->refund_amount
-                            : (float) $row->total_price;
+                        if ($groupTitle === 'Refunded Bookings') {
+                            $origTotal = (float) ($row->transaction?->amount_paid ?: $row->total_price);
+                            $refundPaid = (float) $row->refund_amount;
+                            $cancelFee = (float) $row->cancellation_fee;
+                            $displayAmount = max(0.0, $cancelFee > 0 ? $cancelFee : ($origTotal - $refundPaid));
+                        } else {
+                            $displayAmount = (float) $row->total_price;
+                        }
                         $subtotal += $displayAmount;
                         $overallTotalAmount += $displayAmount;
                         $ferryRoute = $row->schedule?->ferryRoute;

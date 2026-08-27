@@ -37,6 +37,8 @@ class MyTransactionsSheet implements FromCollection, WithTitle, WithHeadings, Wi
 
     public function headings(): array
     {
+        $amountHeader = $this->title === 'Refunded Bookings' ? 'Amount Retained (PHP)' : 'Total Amount (PHP)';
+
         return [
             'ID',
             'Transaction #',
@@ -50,7 +52,7 @@ class MyTransactionsSheet implements FromCollection, WithTitle, WithHeadings, Wi
             'Travel Mode',
             'Operator',
             'Status',
-            'Total Amount (PHP)',
+            $amountHeader,
             'Payment Reference',
             'Voucher Code',
             'Voucher Discount (PHP)',
@@ -65,6 +67,17 @@ class MyTransactionsSheet implements FromCollection, WithTitle, WithHeadings, Wi
         $ferryRoute = $booking->schedule?->ferryRoute;
         $processedAt = $booking->verified_at ?? $booking->refund_processed_at ?? $booking->updated_at ?? $booking->created_at;
 
+        if ($this->title === 'Refunded Bookings') {
+            $origTotal = (float) ($booking->transaction?->amount_paid ?: $booking->total_price);
+            $refundPaid = (float) $booking->refund_amount;
+            $cancelFee = (float) $booking->cancellation_fee;
+            $displayAmount = max(0.0, $cancelFee > 0 ? $cancelFee : ($origTotal - $refundPaid));
+            $statusLabel = 'Refunded';
+        } else {
+            $displayAmount = (float) $booking->total_price;
+            $statusLabel = ucfirst(str_replace('_', ' ', $booking->status ?: 'pending'));
+        }
+
         return [
             $booking->id,
             $booking->transaction_number ?: "BK-{$booking->id}",
@@ -77,8 +90,8 @@ class MyTransactionsSheet implements FromCollection, WithTitle, WithHeadings, Wi
             $booking->return_date ? $booking->return_date->format('Y-m-d') : '',
             $ferryRoute?->mode ?: ($booking->schedule_service ?: 'Ferry'),
             $ferryRoute?->operator ?: 'N/A',
-            ucfirst(str_replace('_', ' ', $booking->status ?: 'pending')),
-            (float) $booking->total_price,
+            $statusLabel,
+            $displayAmount,
             $booking->transaction?->payment_reference ?: 'N/A',
             $booking->voucher_code ?: '',
             $booking->voucher_discount_amount > 0 ? (float) $booking->voucher_discount_amount : 0,
