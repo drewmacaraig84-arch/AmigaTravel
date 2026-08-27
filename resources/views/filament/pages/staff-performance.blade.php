@@ -5,6 +5,50 @@
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
 
     <style>
+        /* ═══ Bulletproof KPI 4-Column Grid ═══ */
+        .staff-kpi-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            width: 100%;
+        }
+        @media (min-width: 640px) {
+            .staff-kpi-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        @media (min-width: 1024px) {
+            .staff-kpi-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        .staff-kpi-card {
+            border-radius: 1rem;
+            padding: 1.25rem;
+            border: 1px solid #e2e8f0;
+            background-color: #ffffff;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 125px;
+            transition: all 0.2s ease-in-out;
+        }
+        .dark .staff-kpi-card {
+            border-color: #1e293b;
+            background-color: #0f172a;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+        .staff-kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+        }
+        .dark .staff-kpi-card:hover {
+            border-color: #334155;
+        }
+
+        /* ═══ Dark Mode DateRangePicker ═══ */
         .dark .daterangepicker {
             background-color: #0f172a;
             border-color: #1e293b;
@@ -55,36 +99,38 @@
         {{-- ═══ Header Filter Bar ═══ --}}
         <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
             <div>
-                <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                    <x-heroicon-o-user-group class="h-6 w-6 text-amber-500" />
-                    Staff Performance Overview
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2.5">
+                    <div class="p-2 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                        <x-heroicon-o-user-group class="h-6 w-6" />
+                    </div>
+                    <span>Staff Performance Overview</span>
                 </h2>
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                <p class="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                     Comprehensive metrics for staff activity, ticket verifications, payment approvals, and revenue handled.
                 </p>
             </div>
             
-            <div class="flex flex-wrap items-center gap-2 w-full xl:w-auto justify-start xl:justify-end">
+            <div class="flex flex-wrap items-center gap-2.5 w-full xl:w-auto justify-start xl:justify-end">
                 {{-- Quick Period Filter Buttons --}}
-                <div class="inline-flex rounded-xl bg-gray-100 p-1 dark:bg-gray-800 flex-wrap gap-1 text-xs">
+                <div class="inline-flex rounded-xl bg-gray-100 p-1 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700/60 flex-wrap gap-1 text-xs">
                     <button type="button" 
                         wire:click="setPeriod('all_time')"
-                        class="rounded-lg px-3 py-1.5 font-medium transition {{ $period === 'all_time' ? 'bg-amber-600 text-white shadow' : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white' }}">
+                        class="rounded-lg px-3 py-1.5 font-semibold transition {{ $period === 'all_time' ? 'bg-amber-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-700' }}">
                         All Time
                     </button>
                     <button type="button" 
                         wire:click="setPeriod('today')"
-                        class="rounded-lg px-3 py-1.5 font-medium transition {{ $period === 'today' ? 'bg-amber-600 text-white shadow' : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white' }}">
+                        class="rounded-lg px-3 py-1.5 font-semibold transition {{ $period === 'today' ? 'bg-amber-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-700' }}">
                         Today
                     </button>
                     <button type="button" 
                         wire:click="setPeriod('this_week')"
-                        class="rounded-lg px-3 py-1.5 font-medium transition {{ $period === 'this_week' ? 'bg-amber-600 text-white shadow' : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white' }}">
+                        class="rounded-lg px-3 py-1.5 font-semibold transition {{ $period === 'this_week' ? 'bg-amber-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-700' }}">
                         This Week
                     </button>
                     <button type="button" 
                         wire:click="setPeriod('this_month')"
-                        class="rounded-lg px-3 py-1.5 font-medium transition {{ $period === 'this_month' ? 'bg-amber-600 text-white shadow' : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white' }}">
+                        class="rounded-lg px-3 py-1.5 font-semibold transition {{ $period === 'this_month' ? 'bg-amber-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-700' }}">
                         This Month
                     </button>
                 </div>
@@ -129,25 +175,25 @@
                              }, 100);
                          }
                      ">
-                    <div class="relative w-[220px]">
+                    <div class="relative w-[210px]">
                         <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                            <x-heroicon-m-calendar class="h-4 w-4 text-gray-400" />
+                            <x-heroicon-m-calendar class="h-4 w-4 text-amber-500" />
                         </div>
                         <input type="text" x-ref="picker" readonly
                                placeholder="Custom Date Range"
-                               class="w-full cursor-pointer rounded-lg bg-white dark:bg-gray-800 py-1.5 pl-9 pr-3 text-xs font-medium text-gray-900 shadow-sm border border-gray-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-center dark:border-gray-700 dark:text-gray-100" />
+                               class="w-full cursor-pointer rounded-xl bg-white dark:bg-gray-800 py-1.5 pl-9 pr-3 text-xs font-semibold text-gray-900 shadow-sm border border-gray-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-center dark:border-gray-700 dark:text-gray-100" />
                     </div>
                 </div>
 
                 {{-- Export CSV & PDF --}}
                 <div class="flex items-center gap-1.5">
                     <button type="button" wire:click="exportCsv"
-                        class="inline-flex items-center gap-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 transition border border-gray-300 dark:border-gray-700">
-                        <x-heroicon-m-arrow-down-tray class="h-4 w-4 text-gray-500" />
+                        class="inline-flex items-center gap-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 px-3.5 py-1.5 text-xs font-bold text-gray-700 dark:text-gray-200 transition border border-gray-300 dark:border-gray-700 shadow-sm">
+                        <x-heroicon-m-arrow-down-tray class="h-4 w-4 text-gray-500 dark:text-gray-400" />
                         CSV
                     </button>
                     <button type="button" wire:click="exportPdf"
-                        class="inline-flex items-center gap-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 text-xs font-semibold transition shadow-sm">
+                        class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white px-3.5 py-1.5 text-xs font-bold transition shadow-sm">
                         <x-heroicon-m-document-arrow-down class="h-4 w-4 text-white" />
                         PDF
                     </button>
@@ -155,50 +201,62 @@
             </div>
         </div>
 
-        {{-- ═══ Summary KPI Cards ═══ --}}
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+        {{-- ═══ Summary KPI 4-Column Grid ═══ --}}
+        <div class="staff-kpi-grid">
+            {{-- KPI 1: Bookings Handled --}}
+            <div class="staff-kpi-card">
                 <div class="flex items-center justify-between">
-                    <p class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Bookings Handled</p>
-                    <div class="rounded-lg bg-amber-50 dark:bg-amber-950/50 p-2 text-amber-600">
+                    <span class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Bookings Handled</span>
+                    <div class="rounded-xl bg-amber-50 dark:bg-amber-950/60 p-2.5 text-amber-600 dark:text-amber-400 border border-amber-200/50 dark:border-amber-900/50">
                         <x-heroicon-o-ticket class="h-5 w-5" />
                     </div>
                 </div>
-                <p class="mt-3 text-2xl font-extrabold text-gray-900 dark:text-white">{{ number_format($summaryKpis['total_bookings']) }}</p>
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Total actions performed across staff</p>
+                <div class="mt-2">
+                    <p class="text-2xl font-black text-gray-900 dark:text-white tracking-tight">{{ number_format($summaryKpis['total_bookings']) }}</p>
+                    <p class="text-[11px] font-medium text-gray-500 dark:text-gray-400 mt-0.5">Total actions performed across staff</p>
+                </div>
             </div>
 
-            <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+            {{-- KPI 2: Revenue Handled --}}
+            <div class="staff-kpi-card">
                 <div class="flex items-center justify-between">
-                    <p class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Revenue Handled</p>
-                    <div class="rounded-lg bg-emerald-50 dark:bg-emerald-950/50 p-2 text-emerald-600">
+                    <span class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Revenue Handled</span>
+                    <div class="rounded-xl bg-emerald-50 dark:bg-emerald-950/60 p-2.5 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-900/50">
                         <x-heroicon-o-banknotes class="h-5 w-5" />
                     </div>
                 </div>
-                <p class="mt-3 text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">₱{{ number_format($summaryKpis['total_revenue'], 2) }}</p>
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Total verified payment volume</p>
+                <div class="mt-2">
+                    <p class="text-2xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">₱{{ number_format($summaryKpis['total_revenue'], 2) }}</p>
+                    <p class="text-[11px] font-medium text-gray-500 dark:text-gray-400 mt-0.5">Total verified payment volume</p>
+                </div>
             </div>
 
-            <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+            {{-- KPI 3: Completed Bookings --}}
+            <div class="staff-kpi-card">
                 <div class="flex items-center justify-between">
-                    <p class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Completed Bookings</p>
-                    <div class="rounded-lg bg-blue-50 dark:bg-blue-950/50 p-2 text-blue-600">
+                    <span class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Completed Bookings</span>
+                    <div class="rounded-xl bg-blue-50 dark:bg-blue-950/60 p-2.5 text-blue-600 dark:text-blue-400 border border-blue-200/50 dark:border-blue-900/50">
                         <x-heroicon-o-check-circle class="h-5 w-5" />
                     </div>
                 </div>
-                <p class="mt-3 text-2xl font-extrabold text-gray-900 dark:text-white">{{ number_format($summaryKpis['total_completed']) }}</p>
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Fully confirmed &amp; verified trips</p>
+                <div class="mt-2">
+                    <p class="text-2xl font-black text-gray-900 dark:text-white tracking-tight">{{ number_format($summaryKpis['total_completed']) }}</p>
+                    <p class="text-[11px] font-medium text-gray-500 dark:text-gray-400 mt-0.5">Fully confirmed &amp; verified trips</p>
+                </div>
             </div>
 
-            <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+            {{-- KPI 4: Top Performer --}}
+            <div class="staff-kpi-card">
                 <div class="flex items-center justify-between">
-                    <p class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Top Performer</p>
-                    <div class="rounded-lg bg-purple-50 dark:bg-purple-950/50 p-2 text-purple-600">
+                    <span class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Top Performer</span>
+                    <div class="rounded-xl bg-purple-50 dark:bg-purple-950/60 p-2.5 text-purple-600 dark:text-purple-400 border border-purple-200/50 dark:border-purple-900/50">
                         <x-heroicon-o-trophy class="h-5 w-5" />
                     </div>
                 </div>
-                <p class="mt-3 text-lg font-bold text-purple-700 dark:text-purple-300 truncate">{{ $summaryKpis['top_staff_name'] }}</p>
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ $summaryKpis['top_staff_count'] }} bookings handled</p>
+                <div class="mt-2">
+                    <p class="text-lg font-extrabold text-purple-600 dark:text-purple-300 truncate">{{ $summaryKpis['top_staff_name'] }}</p>
+                    <p class="text-[11px] font-medium text-gray-500 dark:text-gray-400 mt-0.5">{{ $summaryKpis['top_staff_count'] }} bookings handled</p>
+                </div>
             </div>
         </div>
 
@@ -206,7 +264,7 @@
         <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 px-1">
             <span>
                 Showing metrics for: 
-                <strong class="text-gray-900 dark:text-white">
+                <strong class="text-gray-900 dark:text-white font-semibold">
                     @if($period === 'all_time')
                         All Recorded Time
                     @elseif($startDate && $endDate)
@@ -216,14 +274,14 @@
                     @endif
                 </strong>
             </span>
-            <span>Total Staff Registered: <strong class="text-gray-900 dark:text-white">{{ $staffStats->count() }}</strong></span>
+            <span>Total Staff Registered: <strong class="text-gray-900 dark:text-white font-semibold">{{ $staffStats->count() }}</strong></span>
         </div>
 
         {{-- ═══ Staff Table ═══ --}}
-        <div class="overflow-hidden rounded-xl border border-gray-200 shadow-sm dark:border-gray-800 bg-white dark:bg-gray-900">
+        <div class="overflow-hidden rounded-2xl border border-gray-200 shadow-sm dark:border-gray-800 bg-white dark:bg-gray-900">
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
-                    <thead class="border-b border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-800/80">
+                    <thead class="border-b border-gray-200 bg-gray-50/80 dark:border-gray-800 dark:bg-gray-800/80">
                         <tr>
                             <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300">
                                 Staff Member
@@ -253,10 +311,10 @@
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
                         @forelse($staffStats as $staff)
-                            <tr class="hover:bg-gray-50/80 dark:hover:bg-gray-800/40 transition">
+                            <tr class="hover:bg-gray-50/80 dark:hover:bg-gray-800/50 transition">
                                 <td class="px-6 py-4">
-                                    <div class="flex items-center gap-3">
-                                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-bold text-sm bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-sm">
+                                    <div class="flex items-center gap-3.5">
+                                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-extrabold text-sm bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-sm">
                                             {{ strtoupper(substr($staff['name'], 0, 2)) }}
                                         </div>
                                         <div>
@@ -282,35 +340,35 @@
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 text-center">
-                                    <span class="inline-flex items-center justify-center rounded-xl bg-gray-100 px-3 py-1 font-extrabold text-sm text-gray-900 dark:bg-gray-800 dark:text-white">
+                                    <span class="inline-flex items-center justify-center rounded-xl bg-gray-100 px-3 py-1 font-black text-sm text-gray-900 dark:bg-gray-800 dark:text-white border border-gray-200 dark:border-gray-700">
                                         {{ $staff['total_bookings_handled'] }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 text-center">
-                                    <span class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200">
+                                    <span class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800/60">
                                         {{ $staff['completed_bookings'] }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 text-center">
-                                    <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-900/60 dark:text-amber-200">
+                                    <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300 dark:border-amber-800/60">
                                         {{ $staff['pending_bookings'] }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 text-center">
-                                    <span class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-800 dark:bg-red-900/60 dark:text-red-200">
+                                    <span class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-bold text-red-800 dark:bg-red-950/80 dark:text-red-300 border border-red-300 dark:border-red-800/60">
                                         {{ $staff['cancelled_bookings'] }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 text-right">
-                                    <span class="font-extrabold text-sm text-gray-900 dark:text-white tabular-nums">
+                                    <span class="font-extrabold text-sm text-emerald-600 dark:text-emerald-400 tabular-nums">
                                         ₱{{ number_format($staff['total_revenue_handled'], 2) }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 text-center">
-                                    <div class="flex flex-col items-center gap-1">
+                                    <div class="flex flex-col items-center gap-1.5">
                                         <span class="text-xs font-bold text-gray-700 dark:text-gray-300">{{ $staff['completion_rate'] }}%</span>
                                         <div class="w-16 bg-gray-200 rounded-full h-1.5 dark:bg-gray-700 overflow-hidden">
-                                            <div class="bg-emerald-500 h-1.5 rounded-full" style="width: {{ min(100, $staff['completion_rate']) }}%"></div>
+                                            <div class="bg-gradient-to-r from-emerald-500 to-teal-400 h-1.5 rounded-full" style="width: {{ min(100, $staff['completion_rate']) }}%"></div>
                                         </div>
                                     </div>
                                 </td>
@@ -318,7 +376,7 @@
                                     <button type="button" 
                                         x-data 
                                         x-on:click="$dispatch('open-modal', { id: 'staff-bookings-{{ $staff['id'] }}' })"
-                                        class="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white transition shadow-sm">
+                                        class="inline-flex items-center gap-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 px-3.5 py-1.5 text-xs font-bold text-white transition shadow-sm">
                                         <x-heroicon-m-eye class="h-3.5 w-3.5" />
                                         View Bookings ({{ $staff['total_bookings_handled'] }})
                                     </button>
