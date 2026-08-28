@@ -69,7 +69,8 @@ Route::middleware('throttle:60,1')->group(function () {
                 $version = trim($matches[1]);
             }
         }
-        return response()->json(['version' => $version, 'force_update' => true]);
+        $forceUpdate = filter_var(env('APP_FORCE_UPDATE', false), FILTER_VALIDATE_BOOLEAN);
+        return response()->json(['version' => $version, 'force_update' => $forceUpdate]);
     });
 });
 
