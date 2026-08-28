@@ -1529,8 +1529,8 @@
                                                         @error('rebooking_reference_number')<p class="mt-2 text-sm font-bold text-rose-600">{{ $message }}</p>@enderror
                                                     </div>
 
-                                                    <div class="border-2 border-dashed border-blue-200 bg-blue-50/50 rounded-2xl p-6 text-center hover:bg-blue-50 transition">
-                                                        <label class="cursor-pointer">
+                                                    <div wire:key="upload-rebooking-proof-container" class="border-2 border-dashed border-blue-200 bg-blue-50/50 rounded-2xl p-6 text-center hover:bg-blue-50 transition">
+                                                        <label wire:key="rebooking-proof-label" class="cursor-pointer">
                                                             <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 mb-3">
                                                                 <svg class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
                                                             </div>
@@ -1543,14 +1543,14 @@
                                                             Uploading file...
                                                         </div>
                                                         @if($rebookingProof)
-                                                            <div class="mt-4 flex items-center justify-center gap-3 rounded-xl border border-emerald-200 bg-white p-3 text-left shadow-sm">
+                                                            <div wire:key="rebooking-proof-preview" class="mt-4 flex items-center justify-center gap-3 rounded-xl border border-emerald-200 bg-white p-3 text-left shadow-sm">
                                                                 <img src="{{ $rebookingProof->temporaryUrl() }}" alt="Rebooking proof preview" class="h-16 w-16 rounded-lg object-cover border border-slate-200" />
                                                                 <div class="flex-1 min-w-0">
                                                                     <p class="text-sm font-bold text-emerald-700 truncate">{{ $rebookingProof->getClientOriginalName() }}</p>
                                                                     <p class="text-xs text-slate-500">File selected successfully</p>
                                                                 </div>
                                                                 <label class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 cursor-pointer" title="Change image">
-                                                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                                                                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
                                                                     <input type="file" wire:model="rebookingProof" class="hidden" accept="image/*" />
                                                                 </label>
                                                             </div>
@@ -1616,7 +1616,6 @@
         wire:key="action-otp-modal-backdrop"
         class="fixed inset-0 z-[999999] flex items-center justify-center bg-slate-900/70 p-4 backdrop-blur-sm"
         style="position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; z-index: 999999 !important; display: flex !important; align-items: center !important; justify-content: center !important; background-color: rgba(15, 23, 42, 0.7) !important; backdrop-filter: blur(4px) !important;"
-        wire:poll.1s="tickOtpCooldown"
     >
         <div wire:key="action-otp-modal-dialog" class="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-100 transform transition-all" style="position: relative !important; z-index: 1000000 !important; background: #ffffff !important; opacity: 1 !important;">
             <!-- Close Button -->
@@ -1709,12 +1708,13 @@
                         &larr; Back to form
                     </button>
 
-                    <div>
-                        @if($otpResendCooldown > 0)
+                    <div x-data="{ cooldown: @entangle('otpResendCooldown') }" x-init="setInterval(() => { if (cooldown > 0) cooldown-- }, 1000)">
+                        <template x-if="cooldown > 0">
                             <span class="text-slate-400 font-medium">
-                                Resend code in <strong class="text-slate-600 font-mono">{{ $otpResendCooldown }}s</strong>
+                                Resend code in <strong class="text-slate-600 font-mono" x-text="cooldown + 's'"></strong>
                             </span>
-                        @else
+                        </template>
+                        <template x-if="cooldown <= 0">
                             <button 
                                 type="button" 
                                 wire:click.prevent="resendActionOtp" 
@@ -1723,7 +1723,7 @@
                             >
                                 Resend Code
                             </button>
-                        @endif
+                        </template>
                     </div>
                 </div>
             </form>
