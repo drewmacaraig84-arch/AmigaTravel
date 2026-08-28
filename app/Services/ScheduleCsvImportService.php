@@ -245,7 +245,11 @@ class ScheduleCsvImportService
         $arrTimeStr = $this->getValue($row, ['arrivaltime', 'arrtime']);
         $returnDateStr = $this->getValue($row, ['returndate', 'retdate']);
         $transportClassStr = $this->getValue($row, ['transportclass', 'class', 'accommodation']);
-        $rateRaw = $this->getValue($row, ['rate', 'price', 'fare']);
+        $rateRaw = $this->getValue($row, ['rate', 'price', 'fare', 'basefare', 'base_fare']);
+        $additionalPriceRaw = $this->getValue($row, ['additionalprice', 'additional_price', 'classprice', 'class_price', 'extraprice', 'addonprice']);
+        $rateTierRaw = $this->getValue($row, ['ratetier', 'rate_tier', 'ratetype', 'rate_type', 'tier', 'farepolicy', 'fare_policy', 'policy']);
+        $ticketsAvailableRaw = $this->getValue($row, ['ticketsavailable', 'tickets_available', 'tickets', 'seats', 'capacity', 'inventory', 'qty']);
+        $hasBedRaw = $this->getValue($row, ['hasbed', 'has_bed', 'bed', 'includesbed', 'includes_bed', 'berth']);
         $rateCodeStr = $this->getValue($row, ['ratecode', 'rate_code', 'code']);
 
         if (blank($origin) || blank($destination) || blank($depDateStr) || blank($depTimeStr)) {
@@ -257,7 +261,40 @@ class ScheduleCsvImportService
         $operator = $this->normalizeOperatorName($operator, $mode);
         $vehicleTailNo = filled($vehicleTailNo) ? trim($vehicleTailNo) : ($mode === 'airline' ? "{$operator} Aircraft" : "{$operator} Vessel");
         $transportClassStr = filled($transportClassStr) ? trim($transportClassStr) : ($mode === 'airline' ? 'Economy' : 'Standard');
+        
         $rate = floatval(preg_replace('/[^0-9.]/', '', $rateRaw ?? '0'));
+        $additionalPrice = filled($additionalPriceRaw) ? floatval(preg_replace('/[^0-9.]/', '', $additionalPriceRaw)) : 0.0;
+
+        // Rate Tier / Policy Normalization
+        $rateType = 'regular';
+        if (filled($rateTierRaw)) {
+            $cleanTier = strtolower(trim((string) $rateTierRaw));
+            if (str_contains($cleanTier, 'super')) {
+                $rateType = 'super_promotional';
+            } elseif (str_contains($cleanTier, 'promo')) {
+                $rateType = 'promotional';
+            } else {
+                $rateType = 'regular';
+            }
+        }
+        $isPromo = in_array($rateType, ['promotional', 'super_promotional'], true);
+
+        // Tickets available inventory
+        $ticketsAvailable = 50;
+        if (filled($ticketsAvailableRaw)) {
+            $parsedTickets = intval(preg_replace('/[^0-9]/', '', (string) $ticketsAvailableRaw));
+            if ($parsedTickets > 0) {
+                $ticketsAvailable = $parsedTickets;
+            }
+        }
+
+        // Has Bed / Berth
+        $hasBed = false;
+        if (filled($hasBedRaw)) {
+            $cleanBed = strtolower(trim((string) $hasBedRaw));
+            $hasBed = in_array($cleanBed, ['1', 'true', 'yes', 'y'], true);
+        }
+
         $rateCode = filled($rateCodeStr) ? trim($rateCodeStr) : null;
 
         // 1. Resolve or Create Vehicle
@@ -337,6 +374,7 @@ class ScheduleCsvImportService
 
         // 5. Resolve or Attach Transport Class / Accommodation
         $status = 'imported';
+        $itemPrice = $additionalPrice > 0 ? $additionalPrice : $rate;
 
         if ($mode === 'airline') {
             $transportClass = TransportClass::where('name', $transportClassStr)
@@ -350,7 +388,7 @@ class ScheduleCsvImportService
                     'name' => $transportClassStr,
                     'code' => str($transportClassStr)->slug()->value(),
                     'operator' => $operator,
-                    'price' => $rate,
+                    'price' => $itemPrice,
                     'is_active' => true,
                 ]);
             }
@@ -364,10 +402,13 @@ class ScheduleCsvImportService
             } else {
                 if (! $alreadyAttached) {
                     $schedule->transportClasses()->attach($transportClass->id, [
-                        'additional_price' => $rate,
-                        'tickets_available' => 50,
+                        'additional_price' => $itemPrice,
+                        'tickets_available' => $ticketsAvailable,
+                        'rate_type' => $rateType,
+                        'is_promo' => $isPromo,
+                        'rate_code' => $rateCode,
+                        'has_bed' => $hasBed,
                         'is_active' => true,
-                        'has_bed' => false,
                     ]);
                 }
             }
@@ -385,10 +426,10 @@ class ScheduleCsvImportService
                         'schedule_id' => $schedule->id,
                         'name' => $transportClassStr,
                         'rate_code' => $rateCode,
-                        'price' => $rate,
-                        'tickets_available' => 50,
+                        'price' => $itemPrice,
+                        'tickets_available' => $ticketsAvailable,
+                        'has_bed' => $hasBed,
                         'is_active' => true,
-                        'has_bed' => false,
                     ]);
                 }
             }
@@ -396,7 +437,24 @@ class ScheduleCsvImportService
 
         // 6. Handle optional Return Date if present
         if (filled($returnDateStr)) {
-            $this->processReturnSchedule($route, $vehicleTailNo, $plateNo, $operator, $mode, trim($returnDateStr), $depTimeStrClean, $arrTimeStr, $transportClassStr, $rate, $rateCode);
+            $this->processReturnSchedule(
+                $route,
+                $vehicleTailNo,
+                $plateNo,
+                $operator,
+                $mode,
+                trim($returnDateStr),
+                $depTimeStrClean,
+                $arrTimeStr,
+                $transportClassStr,
+                $rate,
+                $itemPrice,
+                $rateType,
+                $isPromo,
+                $ticketsAvailable,
+                $hasBed,
+                $rateCode
+            );
         }
 
         return $status;
@@ -416,6 +474,11 @@ class ScheduleCsvImportService
         ?string $arrTimeStr,
         string $transportClassStr,
         float $rate,
+        float $itemPrice,
+        string $rateType,
+        bool $isPromo,
+        int $ticketsAvailable,
+        bool $hasBed,
         ?string $rateCode = null
     ): void {
         $returnRoute = FerryRoute::where('origin', $forwardRoute->destination)
@@ -468,10 +531,13 @@ class ScheduleCsvImportService
             $transportClass = TransportClass::where('name', $transportClassStr)->first();
             if ($transportClass && ! $schedule->transportClasses()->where('transport_classes.id', $transportClass->id)->exists()) {
                 $schedule->transportClasses()->attach($transportClass->id, [
-                    'additional_price' => $rate,
-                    'tickets_available' => 50,
+                    'additional_price' => $itemPrice,
+                    'tickets_available' => $ticketsAvailable,
+                    'rate_type' => $rateType,
+                    'is_promo' => $isPromo,
+                    'rate_code' => $rateCode,
+                    'has_bed' => $hasBed,
                     'is_active' => true,
-                    'has_bed' => false,
                 ]);
             }
         } else {
@@ -480,10 +546,10 @@ class ScheduleCsvImportService
                     'schedule_id' => $schedule->id,
                     'name' => $transportClassStr,
                     'rate_code' => $rateCode,
-                    'price' => $rate,
-                    'tickets_available' => 50,
+                    'price' => $itemPrice,
+                    'tickets_available' => $ticketsAvailable,
+                    'has_bed' => $hasBed,
                     'is_active' => true,
-                    'has_bed' => false,
                 ]);
             }
         }
