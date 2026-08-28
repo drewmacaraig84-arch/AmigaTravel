@@ -856,7 +856,7 @@
                                                 <label class="mb-1 block text-sm font-medium text-slate-700">
                                                     {{ $refund_method === 'Bank Account' ? 'Bank Name' : 'Wallet Provider' }}
                                                 </label>
-                                                <input type="text" wire:model.defer="refund_bank_name"
+                                                <input type="text" wire:model="refund_bank_name"
                                                     placeholder="{{ $refund_method === 'Bank Account' ? 'e.g. BDO, BPI, Metrobank' : 'e.g. Maya, PayMaya, GrabPay' }}"
                                                     class="block w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-2" style="--tw-ring-color:#ee018d;" />
                                                 @error('refund_bank_name')<p class="mt-1 text-sm text-rose-600">{{ $message }}</p>@enderror
@@ -868,7 +868,7 @@
                                                 <label class="mb-1 block text-sm font-medium text-slate-700">
                                                     {{ $refund_method === 'GCash' ? 'GCash Mobile Number' : 'Account Number' }}
                                                 </label>
-                                                <input type="text" wire:model.defer="refund_account_number"
+                                                <input type="text" wire:model="refund_account_number"
                                                     placeholder="{{ $refund_method === 'GCash' ? 'e.g. 0917xxxxxxx' : 'e.g. 1234-5678-9012' }}"
                                                     class="block w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-2" style="--tw-ring-color:#ee018d;" />
                                                 @error('refund_account_number')<p class="mt-1 text-sm text-rose-600">{{ $message }}</p>@enderror
@@ -877,7 +877,7 @@
                                             {{-- Account Name --}}
                                             <div>
                                                 <label class="mb-1 block text-sm font-medium text-slate-700">Account Name</label>
-                                                <input type="text" wire:model.defer="refund_account_name"
+                                                <input type="text" wire:model="refund_account_name"
                                                     placeholder="Full name registered on the account"
                                                     class="block w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-2" style="--tw-ring-color:#ee018d;" />
                                                 @error('refund_account_name')<p class="mt-1 text-sm text-rose-600">{{ $message }}</p>@enderror
@@ -1020,13 +1020,30 @@
                                             @endif
                                         </div>
 
-                                        <div class="mt-4 flex flex-wrap gap-3" x-data="{ showRefundModal: false }">
-                                            <button @click="showRefundModal = true" type="button" class="inline-flex items-center justify-center rounded-3xl px-6 py-3 text-sm font-semibold text-white shadow-sm transition" style="background:#ee018d;" onmouseover="this.style.background='#c30172'" onmouseout="this.style.background='#ee018d'">
-                                                @if(! $cancellationExpired)
-                                                    Confirm Cancellation (100% Refund)
-                                                @else
-                                                    Confirm Refund
-                                                @endif
+                                        <div class="mt-4 flex flex-wrap gap-3">
+                                            <button 
+                                                wire:click.prevent="confirmCancellation" 
+                                                wire:loading.attr="disabled"
+                                                type="button" 
+                                                class="inline-flex items-center justify-center rounded-3xl px-6 py-3 text-sm font-semibold text-white shadow-sm transition disabled:opacity-50" 
+                                                style="background:#ee018d;" 
+                                                onmouseover="this.style.background='#c30172'" 
+                                                onmouseout="this.style.background='#ee018d'"
+                                            >
+                                                <span wire:loading.remove wire:target="confirmCancellation">
+                                                    @if(! $cancellationExpired)
+                                                        Confirm Cancellation (100% Refund)
+                                                    @else
+                                                        Confirm Refund
+                                                    @endif
+                                                </span>
+                                                <span wire:loading wire:target="confirmCancellation" class="inline-flex items-center gap-2">
+                                                    <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
+                                                    Processing...
+                                                </span>
                                             </button>
                                             <button wire:click.prevent="cancelCancellationRequest" type="button" class="inline-flex items-center justify-center rounded-3xl border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
                                                 Cancel Request
@@ -1038,22 +1055,7 @@
                                                     </button>
                                                 @endif
                                             @endif
-
-                                            <!-- Alpine.js Refund Modal -->
-                                            <div x-cloak x-show="showRefundModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm px-4" x-transition.opacity>
-                                                <div @click.away="showRefundModal = false" class="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl transform" x-transition.scale.origin.bottom>
-                                                    <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-                                                        <svg class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                                                    </div>
-                                                    <h3 class="text-center text-lg font-bold text-slate-900">Refund Processing</h3>
-                                                    <p class="mt-2 text-center text-sm text-slate-500">Your refund will be processed within 48 hours.</p>
-                                                    <div class="mt-6 flex justify-center">
-                                                        <button @click="showRefundModal = false; $wire.confirmCancellation()" type="button" class="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2">
-                                                            OK
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                        </div>
                                         </div>
                                     </div>
                                 @endif
@@ -1523,7 +1525,7 @@
                                                 <div class="mt-4 space-y-4">
                                                     <div>
                                                         <label for="rebooking-reference-number" class="mb-2 block text-sm font-semibold text-slate-700">Reference Number</label>
-                                                        <input id="rebooking-reference-number" type="text" wire:model.defer="rebooking_reference_number" class="block w-full rounded-xl border border-slate-300 bg-white px-4 py-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all" placeholder="e.g., GCash Ref No. / Bank Transfer Ref No." />
+                                                        <input id="rebooking-reference-number" type="text" wire:model="rebooking_reference_number" class="block w-full rounded-xl border border-slate-300 bg-white px-4 py-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all" placeholder="e.g., GCash Ref No. / Bank Transfer Ref No." />
                                                         @error('rebooking_reference_number')<p class="mt-2 text-sm font-bold text-rose-600">{{ $message }}</p>@enderror
                                                     </div>
 
@@ -1589,7 +1591,6 @@
                                         <p class="mt-2 text-sm text-green-700">Your rebooking fee payment has been received. we will email you for your confirmation.</p>
                                     </div>
                                 @endif
-                            </div>
                         </div>
                     @else
                         <div class="text-center py-10">
@@ -1611,10 +1612,12 @@
     {{-- Email OTP Verification Modal --}}
     @if($showOtpModal)
         <div 
-            class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm"
+            wire:key="action-otp-modal-backdrop"
+            class="fixed inset-0 z-[999999] flex items-center justify-center bg-slate-900/70 p-4 backdrop-blur-sm"
+            style="position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; z-index: 999999 !important; display: flex !important; align-items: center !important; justify-content: center !important; background-color: rgba(15, 23, 42, 0.7) !important; backdrop-filter: blur(4px) !important;"
             wire:poll.1s="tickOtpCooldown"
         >
-            <div class="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-100 transform transition-all">
+            <div wire:key="action-otp-modal-dialog" class="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-100 transform transition-all" style="position: relative !important; z-index: 1000000 !important; background: #ffffff !important; opacity: 1 !important;">
                 <!-- Close Button -->
                 <button 
                     type="button" 
@@ -1639,7 +1642,7 @@
                     </h3>
                     <p class="mt-1 text-sm text-slate-600 leading-relaxed">
                         We sent a 6-digit verification code to<br />
-                        <strong class="font-bold text-slate-800">{{ $this->maskedEmail }}</strong>
+                        <strong class="font-bold text-slate-800">{{ $this->masked_email }}</strong>
                     </p>
                     <p class="text-xs text-slate-500 mt-1">
                         To authorize your {{ $otpAction === 'rebooking' ? 'rebooking' : 'cancellation & refund' }} request.
@@ -1658,7 +1661,7 @@
                             inputmode="numeric"
                             pattern="[0-9]*"
                             maxlength="6" 
-                            wire:model="otpCode" 
+                            wire:model.live="otpCode" 
                             placeholder="••••••"
                             class="w-full text-center text-3xl font-mono font-bold tracking-[0.4em] py-3 rounded-xl border border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition bg-slate-50 focus:bg-white text-slate-900 shadow-sm"
                             autofocus

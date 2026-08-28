@@ -528,6 +528,10 @@ class BookingLookup extends Component
             'refund_auth_letter' => 'nullable|file|mimes:jpeg,png,jpg,webp,pdf|max:10240',
         ]);
 
+        if ($this->booking) {
+            $this->booking = Booking::with(['passengers.discount', 'accommodations', 'transaction'])->find($this->booking->id);
+        }
+
         if (blank($this->refund_account_number) && blank($this->refund_account_name) && filled($this->refund_destination)) {
             // Fallback for tests that set refund_destination directly
             $this->validate([
@@ -1183,6 +1187,10 @@ class BookingLookup extends Component
             'rebooking_reference_number' => 'required|string|max:120',
             'rebookingProof' => 'required|image|max:10240',
         ]);
+
+        if ($this->booking) {
+            $this->booking = Booking::with(['passengers.discount', 'accommodations', 'transaction'])->find($this->booking->id);
+        }
 
         if ($this->rebooking_dep_schedule_id) {
             $depSch = Schedule::with('ferryRoute.operatorRecord')->find($this->rebooking_dep_schedule_id);
