@@ -894,7 +894,7 @@
 
                                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                     {{-- Valid ID Upload --}}
-                                                    <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-pink-300 transition">
+                                                    <div wire:key="upload-id-container" class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-pink-300 transition">
                                                         <div class="flex items-center justify-between mb-2">
                                                             <label class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1">
                                                                 <span>1. Valid ID (Photo/PDF)</span>
@@ -908,7 +908,7 @@
                                                             @php
                                                                 $isIdPdf = in_array(strtolower(pathinfo($refund_id_image->getClientOriginalName(), PATHINFO_EXTENSION)), ['pdf']);
                                                             @endphp
-                                                            <div class="relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-2 text-center">
+                                                            <div wire:key="upload-id-preview" class="relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-2 text-center">
                                                                 @if(!$isIdPdf && method_exists($refund_id_image, 'temporaryUrl'))
                                                                     <img src="{{ $refund_id_image->temporaryUrl() }}" class="mx-auto max-h-28 rounded-lg object-contain shadow-sm" alt="Valid ID Preview" />
                                                                 @else
@@ -923,7 +923,7 @@
                                                                 </p>
                                                             </div>
                                                         @else
-                                                            <label class="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-3.5 text-center cursor-pointer hover:bg-pink-50/30 hover:border-pink-300 transition">
+                                                            <label wire:key="upload-id-label" class="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-3.5 text-center cursor-pointer hover:bg-pink-50/30 hover:border-pink-300 transition">
                                                                 <svg class="w-7 h-7 text-slate-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                                                                 <span class="text-xs font-semibold text-slate-600">Upload Valid ID</span>
                                                                 <span class="text-[10px] text-slate-400 mt-0.5">JPG, PNG, PDF (Max 10MB)</span>
@@ -935,7 +935,7 @@
                                                     </div>
 
                                                     {{-- Original Ticket Upload --}}
-                                                    <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-pink-300 transition">
+                                                    <div wire:key="upload-ticket-container" class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-pink-300 transition">
                                                         <div class="flex items-center justify-between mb-2">
                                                             <label class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1">
                                                                 <span>2. Original Ticket</span>
@@ -949,7 +949,7 @@
                                                             @php
                                                                 $isTicketPdf = in_array(strtolower(pathinfo($refund_ticket_file->getClientOriginalName(), PATHINFO_EXTENSION)), ['pdf']);
                                                             @endphp
-                                                            <div class="relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-2 text-center">
+                                                            <div wire:key="upload-ticket-preview" class="relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-2 text-center">
                                                                 @if(!$isTicketPdf && method_exists($refund_ticket_file, 'temporaryUrl'))
                                                                     <img src="{{ $refund_ticket_file->temporaryUrl() }}" class="mx-auto max-h-28 rounded-lg object-contain shadow-sm" alt="Original Ticket Preview" />
                                                                 @else
@@ -964,7 +964,7 @@
                                                                 </p>
                                                             </div>
                                                         @else
-                                                            <label class="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-3.5 text-center cursor-pointer hover:bg-pink-50/30 hover:border-pink-300 transition">
+                                                            <label wire:key="upload-ticket-label" class="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-3.5 text-center cursor-pointer hover:bg-pink-50/30 hover:border-pink-300 transition">
                                                                 <svg class="w-7 h-7 text-slate-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"></path></svg>
                                                                 <span class="text-xs font-semibold text-slate-600">Upload Ticket/Receipt</span>
                                                                 <span class="text-[10px] text-slate-400 mt-0.5">PDF or Image (Max 10MB)</span>
@@ -976,7 +976,7 @@
                                                     </div>
 
                                                     {{-- Authorization Letter Upload --}}
-                                                    <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-pink-300 transition">
+                                                    <div wire:key="upload-auth-container" class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-pink-300 transition">
                                                         <div class="flex items-center justify-between mb-2">
                                                             <label class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1">
                                                                 <span>3. Authorization Letter</span>
@@ -990,7 +990,7 @@
                                                             @php
                                                                 $isAuthPdf = in_array(strtolower(pathinfo($refund_auth_letter->getClientOriginalName(), PATHINFO_EXTENSION)), ['pdf']);
                                                             @endphp
-                                                            <div class="relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-2 text-center">
+                                                            <div wire:key="upload-auth-preview" class="relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-2 text-center">
                                                                 @if(!$isAuthPdf && method_exists($refund_auth_letter, 'temporaryUrl'))
                                                                     <img src="{{ $refund_auth_letter->temporaryUrl() }}" class="mx-auto max-h-28 rounded-lg object-contain shadow-sm" alt="Authorization Letter Preview" />
                                                                 @else
@@ -1005,7 +1005,7 @@
                                                                 </p>
                                                             </div>
                                                         @else
-                                                            <label class="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-3.5 text-center cursor-pointer hover:bg-pink-50/30 hover:border-pink-300 transition">
+                                                            <label wire:key="upload-auth-label" class="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-3.5 text-center cursor-pointer hover:bg-pink-50/30 hover:border-pink-300 transition">
                                                                 <svg class="w-7 h-7 text-slate-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                                                                 <span class="text-xs font-semibold text-slate-600">Upload Auth Letter</span>
                                                                 <span class="text-[10px] text-slate-400 mt-0.5">Required for representative / permit refund</span>
@@ -1610,123 +1610,123 @@
     </div>
 
     {{-- Email OTP Verification Modal --}}
-    @if($showOtpModal)
-        <div 
-            wire:key="action-otp-modal-backdrop"
-            class="fixed inset-0 z-[999999] flex items-center justify-center bg-slate-900/70 p-4 backdrop-blur-sm"
-            style="position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; z-index: 999999 !important; display: flex !important; align-items: center !important; justify-content: center !important; background-color: rgba(15, 23, 42, 0.7) !important; backdrop-filter: blur(4px) !important;"
-            wire:poll.1s="tickOtpCooldown"
-        >
-            <div wire:key="action-otp-modal-dialog" class="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-100 transform transition-all" style="position: relative !important; z-index: 1000000 !important; background: #ffffff !important; opacity: 1 !important;">
-                <!-- Close Button -->
-                <button 
-                    type="button" 
-                    wire:click.prevent="cancelOtpModal" 
-                    class="absolute right-4 top-4 text-slate-400 hover:text-slate-600 transition"
-                    title="Close"
-                >
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
+    <div 
+        x-cloak
+        x-show="$wire.showOtpModal"
+        wire:key="action-otp-modal-backdrop"
+        class="fixed inset-0 z-[999999] flex items-center justify-center bg-slate-900/70 p-4 backdrop-blur-sm"
+        style="position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; z-index: 999999 !important; display: flex !important; align-items: center !important; justify-content: center !important; background-color: rgba(15, 23, 42, 0.7) !important; backdrop-filter: blur(4px) !important;"
+        wire:poll.1s="tickOtpCooldown"
+    >
+        <div wire:key="action-otp-modal-dialog" class="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-100 transform transition-all" style="position: relative !important; z-index: 1000000 !important; background: #ffffff !important; opacity: 1 !important;">
+            <!-- Close Button -->
+            <button 
+                type="button" 
+                wire:click.prevent="cancelOtpModal" 
+                class="absolute right-4 top-4 text-slate-400 hover:text-slate-600 transition"
+                title="Close"
+            >
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
 
-                <!-- Icon & Header -->
-                <div class="text-center">
-                    <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 mb-3 shadow-inner">
-                        <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                        </svg>
-                    </div>
-                    <h3 class="text-lg font-extrabold text-slate-900">
-                        Security Verification
-                    </h3>
-                    <p class="mt-1 text-sm text-slate-600 leading-relaxed">
-                        We sent a 6-digit verification code to<br />
-                        <strong class="font-bold text-slate-800">{{ $this->masked_email }}</strong>
-                    </p>
-                    <p class="text-xs text-slate-500 mt-1">
-                        To authorize your {{ $otpAction === 'rebooking' ? 'rebooking' : 'cancellation & refund' }} request.
-                    </p>
+            <!-- Icon & Header -->
+            <div class="text-center">
+                <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 mb-3 shadow-inner">
+                    <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                </div>
+                <h3 class="text-lg font-extrabold text-slate-900">
+                    Security Verification
+                </h3>
+                <p class="mt-1 text-sm text-slate-600 leading-relaxed">
+                    We sent a 6-digit verification code to<br />
+                    <strong class="font-bold text-slate-800">{{ $this->masked_email }}</strong>
+                </p>
+                <p class="text-xs text-slate-500 mt-1">
+                    To authorize your {{ $otpAction === 'rebooking' ? 'rebooking' : 'cancellation & refund' }} request.
+                </p>
+            </div>
+
+            <!-- OTP Input Form -->
+            <form wire:submit.prevent="verifyActionOtp" class="mt-5 space-y-4">
+                <div>
+                    <label for="otpInput" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1 text-center">
+                        Enter 6-Digit Code
+                    </label>
+                    <input 
+                        id="otpInput" 
+                        type="text" 
+                        inputmode="numeric"
+                        pattern="[0-9]*"
+                        maxlength="6" 
+                        wire:model.live="otpCode" 
+                        placeholder="••••••"
+                        class="w-full text-center text-3xl font-mono font-bold tracking-[0.4em] py-3 rounded-xl border border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition bg-slate-50 focus:bg-white text-slate-900 shadow-sm"
+                        autofocus
+                    />
+                    @error('otpCode')
+                        <p class="text-xs text-rose-600 font-semibold mt-1.5 text-center">{{ $message }}</p>
+                    @enderror
+                    @if($otpError)
+                        <div class="mt-2 p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-700 font-medium text-center flex items-center justify-center gap-1.5">
+                            <svg class="h-4 w-4 text-rose-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>{{ $otpError }}</span>
+                        </div>
+                    @endif
                 </div>
 
-                <!-- OTP Input Form -->
-                <form wire:submit.prevent="verifyActionOtp" class="mt-5 space-y-4">
-                    <div>
-                        <label for="otpInput" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1 text-center">
-                            Enter 6-Digit Code
-                        </label>
-                        <input 
-                            id="otpInput" 
-                            type="text" 
-                            inputmode="numeric"
-                            pattern="[0-9]*"
-                            maxlength="6" 
-                            wire:model.live="otpCode" 
-                            placeholder="••••••"
-                            class="w-full text-center text-3xl font-mono font-bold tracking-[0.4em] py-3 rounded-xl border border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition bg-slate-50 focus:bg-white text-slate-900 shadow-sm"
-                            autofocus
-                        />
-                        @error('otpCode')
-                            <p class="text-xs text-rose-600 font-semibold mt-1.5 text-center">{{ $message }}</p>
-                        @enderror
-                        @if($otpError)
-                            <div class="mt-2 p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-700 font-medium text-center flex items-center justify-center gap-1.5">
-                                <svg class="h-4 w-4 text-rose-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <span>{{ $otpError }}</span>
-                            </div>
-                        @endif
-                    </div>
+                <!-- Submit Button -->
+                <button 
+                    type="submit" 
+                    class="w-full inline-flex items-center justify-center rounded-xl bg-emerald-600 py-3 px-4 text-sm font-bold text-white shadow-md hover:bg-emerald-700 transition active:scale-[0.99] disabled:opacity-50"
+                    wire:loading.attr="disabled"
+                    @disabled(strlen(trim($otpCode)) !== 6)
+                >
+                    <span wire:loading.remove wire:target="verifyActionOtp">
+                        Verify & Confirm Request
+                    </span>
+                    <span wire:loading wire:target="verifyActionOtp" class="inline-flex items-center gap-2">
+                        <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Verifying...
+                    </span>
+                </button>
 
-                    <!-- Submit Button -->
+                <!-- Resend & Cancel Options -->
+                <div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
                     <button 
-                        type="submit" 
-                        class="w-full inline-flex items-center justify-center rounded-xl bg-emerald-600 py-3 px-4 text-sm font-bold text-white shadow-md hover:bg-emerald-700 transition active:scale-[0.99] disabled:opacity-50"
-                        wire:loading.attr="disabled"
-                        @disabled(strlen(trim($otpCode)) !== 6)
+                        type="button" 
+                        wire:click.prevent="cancelOtpModal" 
+                        class="text-slate-500 hover:text-slate-800 font-medium transition"
                     >
-                        <span wire:loading.remove wire:target="verifyActionOtp">
-                            Verify & Confirm Request
-                        </span>
-                        <span wire:loading wire:target="verifyActionOtp" class="inline-flex items-center gap-2">
-                            <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Verifying...
-                        </span>
+                        &larr; Back to form
                     </button>
 
-                    <!-- Resend & Cancel Options -->
-                    <div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
-                        <button 
-                            type="button" 
-                            wire:click.prevent="cancelOtpModal" 
-                            class="text-slate-500 hover:text-slate-800 font-medium transition"
-                        >
-                            &larr; Back to form
-                        </button>
-
-                        <div>
-                            @if($otpResendCooldown > 0)
-                                <span class="text-slate-400 font-medium">
-                                    Resend code in <strong class="text-slate-600 font-mono">{{ $otpResendCooldown }}s</strong>
-                                </span>
-                            @else
-                                <button 
-                                    type="button" 
-                                    wire:click.prevent="resendActionOtp" 
-                                    class="text-emerald-700 hover:text-emerald-800 font-bold underline transition"
-                                    wire:loading.attr="disabled"
-                                >
-                                    Resend Code
-                                </button>
-                            @endif
-                        </div>
+                    <div>
+                        @if($otpResendCooldown > 0)
+                            <span class="text-slate-400 font-medium">
+                                Resend code in <strong class="text-slate-600 font-mono">{{ $otpResendCooldown }}s</strong>
+                            </span>
+                        @else
+                            <button 
+                                type="button" 
+                                wire:click.prevent="resendActionOtp" 
+                                class="text-emerald-700 hover:text-emerald-800 font-bold underline transition"
+                                wire:loading.attr="disabled"
+                            >
+                                Resend Code
+                            </button>
+                        @endif
                     </div>
-                </form>
-            </div>
+                </div>
+            </form>
         </div>
-    @endif
+    </div>
 </div>
