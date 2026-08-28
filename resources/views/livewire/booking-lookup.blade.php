@@ -1607,4 +1607,123 @@
             </div>
         </div>
     </div>
+
+    {{-- Email OTP Verification Modal --}}
+    @if($showOtpModal)
+        <div 
+            class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm"
+            wire:poll.1s="tickOtpCooldown"
+        >
+            <div class="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-100 transform transition-all">
+                <!-- Close Button -->
+                <button 
+                    type="button" 
+                    wire:click.prevent="cancelOtpModal" 
+                    class="absolute right-4 top-4 text-slate-400 hover:text-slate-600 transition"
+                    title="Close"
+                >
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+
+                <!-- Icon & Header -->
+                <div class="text-center">
+                    <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 mb-3 shadow-inner">
+                        <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-extrabold text-slate-900">
+                        Security Verification
+                    </h3>
+                    <p class="mt-1 text-sm text-slate-600 leading-relaxed">
+                        We sent a 6-digit verification code to<br />
+                        <strong class="font-bold text-slate-800">{{ $this->maskedEmail }}</strong>
+                    </p>
+                    <p class="text-xs text-slate-500 mt-1">
+                        To authorize your {{ $otpAction === 'rebooking' ? 'rebooking' : 'cancellation & refund' }} request.
+                    </p>
+                </div>
+
+                <!-- OTP Input Form -->
+                <form wire:submit.prevent="verifyActionOtp" class="mt-5 space-y-4">
+                    <div>
+                        <label for="otpInput" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1 text-center">
+                            Enter 6-Digit Code
+                        </label>
+                        <input 
+                            id="otpInput" 
+                            type="text" 
+                            inputmode="numeric"
+                            pattern="[0-9]*"
+                            maxlength="6" 
+                            wire:model="otpCode" 
+                            placeholder="••••••"
+                            class="w-full text-center text-3xl font-mono font-bold tracking-[0.4em] py-3 rounded-xl border border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition bg-slate-50 focus:bg-white text-slate-900 shadow-sm"
+                            autofocus
+                        />
+                        @error('otpCode')
+                            <p class="text-xs text-rose-600 font-semibold mt-1.5 text-center">{{ $message }}</p>
+                        @enderror
+                        @if($otpError)
+                            <div class="mt-2 p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-700 font-medium text-center flex items-center justify-center gap-1.5">
+                                <svg class="h-4 w-4 text-rose-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span>{{ $otpError }}</span>
+                            </div>
+                        @endif
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button 
+                        type="submit" 
+                        class="w-full inline-flex items-center justify-center rounded-xl bg-emerald-600 py-3 px-4 text-sm font-bold text-white shadow-md hover:bg-emerald-700 transition active:scale-[0.99] disabled:opacity-50"
+                        wire:loading.attr="disabled"
+                        @disabled(strlen(trim($otpCode)) !== 6)
+                    >
+                        <span wire:loading.remove wire:target="verifyActionOtp">
+                            Verify & Confirm Request
+                        </span>
+                        <span wire:loading wire:target="verifyActionOtp" class="inline-flex items-center gap-2">
+                            <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Verifying...
+                        </span>
+                    </button>
+
+                    <!-- Resend & Cancel Options -->
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
+                        <button 
+                            type="button" 
+                            wire:click.prevent="cancelOtpModal" 
+                            class="text-slate-500 hover:text-slate-800 font-medium transition"
+                        >
+                            &larr; Back to form
+                        </button>
+
+                        <div>
+                            @if($otpResendCooldown > 0)
+                                <span class="text-slate-400 font-medium">
+                                    Resend code in <strong class="text-slate-600 font-mono">{{ $otpResendCooldown }}s</strong>
+                                </span>
+                            @else
+                                <button 
+                                    type="button" 
+                                    wire:click.prevent="resendActionOtp" 
+                                    class="text-emerald-700 hover:text-emerald-800 font-bold underline transition"
+                                    wire:loading.attr="disabled"
+                                >
+                                    Resend Code
+                                </button>
+                            @endif
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
 </div>

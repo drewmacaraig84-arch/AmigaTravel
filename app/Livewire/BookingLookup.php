@@ -2,11 +2,13 @@
 
 namespace App\Livewire;
 
+use App\Mail\BookingActionOtp;
 use App\Mail\BookingCancellation;
 use App\Mail\RebookingRequested;
 use App\Models\Booking;
 use App\Models\Transaction;
 use App\Models\Schedule;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -40,6 +42,7 @@ class BookingLookup extends Component
     public bool $rebooking_is_round_trip = false;
     public ?string $rebooking_reference_number = null;
     public $rebookingProof;
+    public ?string $tempRebookingProofPath = null;
     public ?string $rebooking_departure_date = null;
     public ?string $rebooking_return_date = null;
     public array $selectedPassengerItems = [];
@@ -73,6 +76,13 @@ class BookingLookup extends Component
     public bool $showCancellationReminder = false;
     public array $availableRebookingDates = [];
     public array $availableRebookingReturnDates = [];
+
+    // Action OTP State
+    public bool $showOtpModal = false;
+    public string $otpCode = '';
+    public string $otpAction = ''; // 'cancellation' or 'rebooking'
+    public ?string $otpError = null;
+    public int $otpResendCooldown = 0;
 
     protected $rules = [
         'rebooking_reference_number' => 'required|string|max:120',
@@ -377,6 +387,134 @@ class BookingLookup extends Component
         $this->requestCancellation();
     }
 
+    public function getMaskedEmailProperty(): string
+    {
+        $email = $this->booking?->client_email ?? '';
+        if (blank($email) || !str_contains($email, '@')) {
+            return 'your registered email';
+        }
+        [$name, $domain] = explode('@', $email, 2);
+        $maskedName = strlen($name) <= 2
+            ? $name[0] . '*'
+            : $name[0] . str_repeat('•', max(3, min(6, strlen($name) - 2))) . substr($name, -1);
+        return $maskedName . '@' . $domain;
+    }
+
+    public function tickOtpCooldown(): void
+    {
+        if ($this->otpResendCooldown > 0) {
+            $this->otpResendCooldown--;
+        }
+    }
+
+    private function generateAndSendOtp(string $action, string $actionTitle): void
+    {
+        if (! $this->booking || blank($this->booking->client_email)) {
+            $this->feedback = 'No valid email address found on this booking to send verification code.';
+            return;
+        }
+
+        $otp = (string) random_int(100000, 999999);
+        $cacheKey = "booking_action_otp_{$this->booking->id}";
+        $cooldownKey = "booking_action_otp_cooldown_{$this->booking->id}";
+
+        Cache::put($cacheKey, [
+            'code' => $otp,
+            'action' => $action,
+            'attempts' => 0,
+        ], now()->addMinutes(10));
+
+        Cache::put($cooldownKey, now()->addSeconds(60)->timestamp, now()->addSeconds(60));
+
+        try {
+            Mail::to($this->booking->client_email)->send(new BookingActionOtp($this->booking, $otp, $actionTitle));
+        } catch (Throwable $e) {
+            Log::error('Failed sending action OTP email', [
+                'booking_id' => $this->booking->id ?? null,
+                'email' => $this->booking->client_email ?? null,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        $this->otpCode = '';
+        $this->otpError = null;
+        $this->otpAction = $action;
+        $this->showOtpModal = true;
+        $this->otpResendCooldown = 60;
+    }
+
+    public function cancelOtpModal(): void
+    {
+        $this->showOtpModal = false;
+        $this->otpCode = '';
+        $this->otpError = null;
+    }
+
+    public function resendActionOtp(): void
+    {
+        if (! $this->booking) {
+            return;
+        }
+
+        $cooldownKey = "booking_action_otp_cooldown_{$this->booking->id}";
+        if (Cache::has($cooldownKey)) {
+            $this->otpError = 'Please wait before requesting another code.';
+            return;
+        }
+
+        $title = $this->otpAction === 'rebooking' ? 'Rebooking Request' : 'Cancellation & Refund Request';
+        $this->generateAndSendOtp($this->otpAction, $title);
+        $this->otpError = null;
+    }
+
+    public function verifyActionOtp(): void
+    {
+        if (! $this->booking) {
+            $this->otpError = 'Booking not found.';
+            return;
+        }
+
+        $this->validate([
+            'otpCode' => 'required|string|size:6',
+        ]);
+
+        $cacheKey = "booking_action_otp_{$this->booking->id}";
+        $cached = Cache::get($cacheKey);
+
+        if (! $cached || ! isset($cached['code'])) {
+            $this->otpError = 'Verification code has expired or is invalid. Please request a new code.';
+            return;
+        }
+
+        $attempts = (int) ($cached['attempts'] ?? 0);
+        if ($attempts >= 5) {
+            Cache::forget($cacheKey);
+            $this->otpError = 'Too many failed attempts. Please request a new verification code.';
+            return;
+        }
+
+        if (trim($this->otpCode) !== (string) $cached['code']) {
+            $attempts++;
+            $cached['attempts'] = $attempts;
+            Cache::put($cacheKey, $cached, now()->addMinutes(10));
+            $this->otpError = 'Invalid verification code. Please check your email and try again.';
+            return;
+        }
+
+        // Code matches successfully
+        Cache::forget($cacheKey);
+        $action = $this->otpAction;
+        $this->showOtpModal = false;
+        $this->otpCode = '';
+        $this->otpError = null;
+
+        if ($action === 'cancellation') {
+            $this->executeConfirmedCancellation();
+        } elseif ($action === 'rebooking') {
+            $this->executeConfirmedRebooking();
+        }
+    }
+
     public function cancelBooking(): void
     {
         $this->requestCancellation();
@@ -455,6 +593,48 @@ class BookingLookup extends Component
             return;
         }
 
+        $rawSelected = ! empty($this->selectedPassengerItems)
+            ? $this->selectedPassengerItems
+            : $eligiblePassengers->pluck('item_number')->toArray();
+
+        $selectedItems = array_values(array_intersect(
+            array_map('intval', $rawSelected),
+            $eligiblePassengers->pluck('item_number')->map(fn ($n) => (int) $n)->toArray()
+        ));
+
+        if (empty($selectedItems)) {
+            $this->feedback = 'Selected passenger item(s) cannot be cancelled because their refund or rebooking is already pending or completed.';
+            return;
+        }
+
+        $policy = $this->booking->validatePassengerPartyPolicy($selectedItems, 'cancel');
+        if (! $policy['valid']) {
+            $this->feedback = $policy['error'];
+            return;
+        }
+
+        // Trigger OTP Verification Modal
+        $this->generateAndSendOtp('cancellation', 'Cancellation & Refund Request');
+    }
+
+    public function executeConfirmedCancellation(): void
+    {
+        if (! $this->booking) {
+            $this->feedback = 'Booking not found.';
+            return;
+        }
+
+        $isWithinFiveMinutes = $this->booking->created_at->addMinutes(5)->isFuture();
+
+        $eligiblePassengers = $this->booking->passengers->filter(function ($p) {
+            return ! in_array($p->status, ['refund_pending', 'refunded', 'rebooking_pending', 'rebooked', 'cancelled', 'operator_cancelled'], true);
+        });
+
+        if ($eligiblePassengers->isEmpty()) {
+            $this->feedback = 'No eligible passenger items can be cancelled or refunded on this booking.';
+            return;
+        }
+
         $idImagePath = null;
         if ($this->refund_id_image) {
             $idImagePath = $this->refund_id_image->store('refund_docs/ids', 'public');
@@ -478,17 +658,6 @@ class BookingLookup extends Component
             array_map('intval', $rawSelected),
             $eligiblePassengers->pluck('item_number')->map(fn ($n) => (int) $n)->toArray()
         ));
-
-        if (empty($selectedItems)) {
-            $this->feedback = 'Selected passenger item(s) cannot be cancelled because their refund or rebooking is already pending or completed.';
-            return;
-        }
-
-        $policy = $this->booking->validatePassengerPartyPolicy($selectedItems, 'cancel');
-        if (! $policy['valid']) {
-            $this->feedback = $policy['error'];
-            return;
-        }
 
         $partialBreakdown = $this->booking->getPartialRefundBreakdown($selectedItems, $isWithinFiveMinutes);
         $totalRefundAmount = $partialBreakdown['refundable_amount'];
@@ -1030,12 +1199,35 @@ class BookingLookup extends Component
             }
         }
 
-        $this->isUploadingRebooking = true;
+        $selectedItems = !empty($this->selectedPassengerItems)
+            ? $this->selectedPassengerItems
+            : $this->booking->getActivePassengers()->pluck('item_number')->toArray();
 
+        $policy = $this->booking->validatePassengerPartyPolicy($selectedItems, 'rebook');
+        if (! $policy['valid']) {
+            $this->feedback = $policy['error'];
+            return;
+        }
+
+        // Store proof image and prepare for OTP verification
         $extension = $this->rebookingProof->extension();
         $safeReference = preg_replace('/[^A-Za-z0-9_-]/', '', $this->rebooking_reference_number ?? uniqid());
         $filename = 'rebook_proof_' . $this->booking->transaction_number . '_' . $safeReference . '.' . $extension;
-        $path = $this->rebookingProof->storeAs('rebooking_proofs', $filename, 'public');
+        $this->tempRebookingProofPath = $this->rebookingProof->storeAs('rebooking_proofs', $filename, 'public');
+
+        // Trigger OTP verification modal
+        $this->generateAndSendOtp('rebooking', 'Rebooking Request');
+    }
+
+    public function executeConfirmedRebooking(): void
+    {
+        if (! $this->booking || ! $this->booking->transaction) {
+            $this->feedback = 'Booking or transaction record not found.';
+            return;
+        }
+
+        $this->isUploadingRebooking = true;
+        $path = $this->tempRebookingProofPath;
 
         $this->booking->transaction->update([
             'rebooking_fee' => $this->rebooking_total_to_pay,
@@ -1046,13 +1238,6 @@ class BookingLookup extends Component
         $selectedItems = !empty($this->selectedPassengerItems)
             ? $this->selectedPassengerItems
             : $this->booking->getActivePassengers()->pluck('item_number')->toArray();
-
-        $policy = $this->booking->validatePassengerPartyPolicy($selectedItems, 'rebook');
-        if (! $policy['valid']) {
-            $this->isUploadingRebooking = false;
-            $this->feedback = $policy['error'];
-            return;
-        }
 
         $newlyCreatedItems = [];
         $currentPassengers = $this->booking->passengers->values();
@@ -1099,8 +1284,6 @@ class BookingLookup extends Component
             }
         }
 
-        $allRebooked = $this->booking->passengers()->whereNotIn('status', ['cancelled', 'refunded'])->get()->every(fn ($p) => in_array($p->status, ['rebooking_pending', 'rebooked'], true));
-
         $affectedDisplayItems = !empty($newlyCreatedItems) ? $newlyCreatedItems : $selectedItems;
 
         $this->booking->update([
@@ -1136,6 +1319,7 @@ class BookingLookup extends Component
 
         $this->isUploadingRebooking = false;
         $this->rebookingPaid = true;
+        $this->tempRebookingProofPath = null;
 
         $this->feedback = "Rebooking fee & payment received and is now pending verification. Total paid: ₱" . number_format($this->rebooking_total_to_pay, 2) . ".";
     }
