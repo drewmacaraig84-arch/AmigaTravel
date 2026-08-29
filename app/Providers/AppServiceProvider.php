@@ -97,7 +97,7 @@ class AppServiceProvider extends ServiceProvider
                 new Dsn(
                     'sendgrid+api',
                     'default',
-                    $config['api_key'] ?? env('SENDGRID_API_KEY')
+                    $config['api_key'] ?? config('mail.mailers.sendgrid.api_key') ?? env('SENDGRID_API_KEY')
                 )
             );
         });

@@ -170,13 +170,25 @@ class FirebasePushService
             }
         }
 
-        // Automatic fallback to repository file
-        $filePath = storage_path('app/firebase_credentials.json');
-        if (file_exists($filePath)) {
-            $content = file_get_contents($filePath);
-            $parsed = json_decode($content, true);
-            if (is_array($parsed) && ! empty($parsed['private_key'])) {
-                return self::sanitizeCredentials($parsed);
+        // Automatic fallback to repository files
+        $candidatePaths = [
+            storage_path('app/firebase_credentials.json'),
+            storage_path('firebase-auth.json'),
+            storage_path('app/firebase-auth.json'),
+            '/var/www/html/storage/firebase-auth.json',
+            base_path('firebase_credentials.json'),
+            base_path('firebase-auth.json'),
+        ];
+
+        foreach ($candidatePaths as $filePath) {
+            if (file_exists($filePath)) {
+                $content = @file_get_contents($filePath);
+                if ($content) {
+                    $parsed = json_decode($content, true);
+                    if (is_array($parsed) && ! empty($parsed['private_key'])) {
+                        return self::sanitizeCredentials($parsed);
+                    }
+                }
             }
         }
 
