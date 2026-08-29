@@ -199,6 +199,13 @@ class FerryRoute extends Model
                     $query->where('mode', $mode);
                 }
             })
+            ->orderByRaw("CASE 
+                WHEN LOWER(name) LIKE '%starlite%' THEN 1 
+                WHEN LOWER(name) LIKE '%2go%' THEN 2 
+                WHEN LOWER(name) LIKE '%cebu%' THEN 3 
+                WHEN LOWER(name) LIKE '%philippine%' OR LOWER(name) LIKE '%pal%' THEN 4 
+                WHEN LOWER(name) LIKE '%airasia%' THEN 5 
+                ELSE 6 END")
             ->orderBy('name')
             ->pluck('name')
             ->all();
@@ -310,6 +317,13 @@ class FerryRoute extends Model
                         $query->where('mode', $mode);
                     }
                 })
+                ->orderByRaw("CASE 
+                    WHEN LOWER(name) LIKE '%starlite%' THEN 1 
+                    WHEN LOWER(name) LIKE '%2go%' THEN 2 
+                    WHEN LOWER(name) LIKE '%cebu%' THEN 3 
+                    WHEN LOWER(name) LIKE '%philippine%' OR LOWER(name) LIKE '%pal%' THEN 4 
+                    WHEN LOWER(name) LIKE '%airasia%' THEN 5 
+                    ELSE 6 END")
                 ->orderBy('name')
                 ->pluck('name')
                 ->all();

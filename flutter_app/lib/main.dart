@@ -3604,7 +3604,23 @@ class _TravelScreenState extends State<TravelScreen>
       final data = jsonDecode(res.body);
       if (res.statusCode == 200 && data['status'] == 'success') {
         setState(() {
-          _operators = List<String>.from(data['operators']);
+          final rawOps = List<String>.from(data['operators']);
+          rawOps.sort((a, b) {
+            int rank(String s) {
+              final l = s.toLowerCase();
+              if (l.contains('starlite')) return 1;
+              if (l.contains('2go')) return 2;
+              if (l.contains('cebu')) return 3;
+              if (l.contains('philippine') || l.contains('pal')) return 4;
+              if (l.contains('airasia')) return 5;
+              return 6;
+            }
+            final rA = rank(a);
+            final rB = rank(b);
+            if (rA != rB) return rA.compareTo(rB);
+            return a.compareTo(b);
+          });
+          _operators = rawOps;
           if (!preserveSelections ||
               (_operator != null && !_operators.contains(_operator))) {
             _operator = null;
@@ -14409,19 +14425,19 @@ class AboutScreen extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                           fontSize: 15)),
                   const SizedBox(height: 14),
-                  // Row 1: Ferry — 2GO, Starlite
+                  // Row 1: Ferry — Starlite, 2GO
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       _OperatorLogoCard(
-                          name: '2GO',
-                          logoUrl:
-                              '${UserSession.getBaseUrl()}/images/2GO-Logo.png'),
-                      const SizedBox(width: 8),
-                      _OperatorLogoCard(
                           name: 'Starlite',
                           logoUrl:
                               '${UserSession.getBaseUrl()}/images/Starlite_Logo.png'),
+                      const SizedBox(width: 8),
+                      _OperatorLogoCard(
+                          name: '2GO',
+                          logoUrl:
+                              '${UserSession.getBaseUrl()}/images/2GO-Logo.png'),
                     ],
                   ),
                   const SizedBox(height: 8),

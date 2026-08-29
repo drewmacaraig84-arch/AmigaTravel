@@ -237,14 +237,24 @@
         };
     }
 @php
-    $operatorsList = \App\Models\Operator::where('is_active', true)->get()->map(function($op) {
-        return [
-            'name' => $op->name,
-            'value' => normalize_operator_name($op->name) ?: $op->name,
-            'logo' => $op->logo_path ? \Illuminate\Support\Facades\Storage::url($op->logo_path) : null,
-            'mode' => $op->mode
-        ];
-    })->toArray();
+    $operatorsList = \App\Models\Operator::where('is_active', true)
+        ->orderByRaw("CASE 
+            WHEN LOWER(name) LIKE '%starlite%' THEN 1 
+            WHEN LOWER(name) LIKE '%2go%' THEN 2 
+            WHEN LOWER(name) LIKE '%cebu%' THEN 3 
+            WHEN LOWER(name) LIKE '%philippine%' OR LOWER(name) LIKE '%pal%' THEN 4 
+            WHEN LOWER(name) LIKE '%airasia%' THEN 5 
+            ELSE 6 END")
+        ->orderBy('name')
+        ->get()
+        ->map(function($op) {
+            return [
+                'name' => $op->name,
+                'value' => normalize_operator_name($op->name) ?: $op->name,
+                'logo' => $op->logo_path ? \Illuminate\Support\Facades\Storage::url($op->logo_path) : null,
+                'mode' => $op->mode
+            ];
+        })->toArray();
 @endphp
     window.AMIGA_OPERATORS_LIST = @json($operatorsList);
 </script>
