@@ -475,6 +475,7 @@
                         <ul class="space-y-2 text-sm text-slate-300 font-medium">
                             <li><a href="{{ url('/contact-us') }}" class="hover:text-emerald-300 transition">Contact Us</a></li>
                             <li><a href="{{ url('/faqs') }}" class="hover:text-emerald-300 transition">Frequently Asked Questions</a></li>
+                            <li><a href="{{ url('/privacy-policy') }}" class="hover:text-emerald-300 transition">Privacy Policy</a></li>
                         </ul>
                     </div>
 
@@ -509,6 +510,7 @@
                     </div>
                     <div class="flex flex-wrap gap-6 items-center justify-center md:justify-end">
                         <a href="{{ url('/download') }}" class="hover:text-emerald-300 transition">Download App</a>
+                        <a href="{{ url('/privacy-policy') }}" class="hover:text-emerald-300 transition">Privacy Policy</a>
                         <a href="{{ url('/contact-us') }}" class="hover:text-emerald-300 transition">Support</a>
                         @if(!empty($footerData['app_version']))
                             <span class="text-slate-500">App version {{ $footerData['app_version'] }}</span>
