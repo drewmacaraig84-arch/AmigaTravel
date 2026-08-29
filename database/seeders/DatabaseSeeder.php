@@ -27,11 +27,22 @@ class DatabaseSeeder extends Seeder
         );
 
         User::updateOrCreate(
-            ['email' => 'test@example.com'],
+            ['email' => 'agnoarrizaann27@gmail.com'],
             [
-                'name' => 'Test User',
-                'password' => bcrypt('password'),
-                'is_staff' => true,
+                'name' => 'Admin Arriza',
+                'password' => bcrypt('Aili$h_04'),
+                'is_admin' => true,
+                'is_staff' => false,
+            ],
+        );
+
+        User::updateOrCreate(
+            ['email' => 'M.antaran23@yahoo'],
+            [
+                'name' => 'Admin Gracia',
+                'password' => bcrypt('Aili$h_04'),
+                'is_admin' => true,
+                'is_staff' => false,
             ],
         );
 
@@ -40,7 +51,17 @@ class DatabaseSeeder extends Seeder
             [
                 'name' => 'Aries King',
                 'password' => bcrypt('password'),
-                'is_admin' => false,
+                'is_admin' => true,
+                'is_staff' => false,
+            ],
+        );
+
+        User::updateOrCreate(
+            ['email' => 'macaraigdrew99@gmail.com'],
+            [
+                'name' => 'Drew',
+                'password' => bcrypt('1115'),
+                'is_admin' => true,
                 'is_staff' => false,
             ],
         );
