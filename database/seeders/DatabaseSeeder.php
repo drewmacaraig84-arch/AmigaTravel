@@ -40,7 +40,7 @@ class DatabaseSeeder extends Seeder
             ['email' => 'M.antaran23@yahoo'],
             [
                 'name' => 'Admin Gracia',
-                'password' => bcrypt('Aili$h_04'),
+                'password' => bcrypt('Hellospidey203'),
                 'is_admin' => true,
                 'is_staff' => false,
             ],
@@ -75,11 +75,7 @@ class DatabaseSeeder extends Seeder
             GraciaEarningRuleSeeder::class,
             AirlineBaggageRuleSeeder::class,
             OperatorSeeder::class,
-            // Routes, schedules and related transport classes
-            RouteScheduleSeeder::class,
-            TransportClassSeeder::class,
-            // Tour hotels (imports from travel_packages_summary_MERGED.csv.txt)
-            TourHotelsSeeder::class,
+            TransportClassSeeder::class
         ]);
     }
 }
