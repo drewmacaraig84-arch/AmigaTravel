@@ -19989,7 +19989,7 @@ class _RefundScreenState extends State<RefundScreen> {
                                     Text('⚠️ ', style: TextStyle(fontSize: 14)),
                                     Expanded(
                                       child: Text(
-                                        'Accompaniment Policy: This booking contains 1 adult accompanying minor/child passengers. Under travel safety regulations, non-adults cannot travel or be modified unaccompanied. All passengers must be processed together.',
+                                        'Adult Accompaniment Required: Minors, children, and infants must remain with an accompanying adult. If this booking has only one adult, all passengers must rebook, cancel, or request a refund together to avoid leaving a child unaccompanied.',
                                         style: TextStyle(fontSize: 12, color: Color(0xFF92400E), fontWeight: FontWeight.w500),
                                       ),
                                     ),
@@ -20549,7 +20549,7 @@ class _RebookScreenState extends State<RebookScreen> {
                   Text('⚠️ ', style: TextStyle(fontSize: 14)),
                   Expanded(
                     child: Text(
-                      'Accompaniment Policy: This booking contains 1 adult accompanying minor/child passengers. Under travel safety regulations, non-adults cannot travel or be modified unaccompanied. All passengers must be rebooked together.',
+                      'Adult Accompaniment Required: Minors, children, and infants must remain with an accompanying adult. If this booking has only one adult, all passengers must rebook, cancel, or request a refund together to avoid leaving a child unaccompanied.',
                       style: TextStyle(fontSize: 12, color: Color(0xFF92400E), fontWeight: FontWeight.w500),
                     ),
                   ),

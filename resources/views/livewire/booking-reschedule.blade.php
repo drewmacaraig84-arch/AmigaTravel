@@ -86,7 +86,7 @@
 
                 <div class="mt-3 flex items-start gap-2.5 rounded-2xl border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-900 font-medium">
                     <span class="text-sm">⚠️</span>
-                    <span><strong>Accompaniment Policy:</strong> Minors, children, and infants cannot rebook, cancel, or request a refund without an accompanying adult. If this booking has only one adult, all passengers must rebook, cancel, or refund together so minors are not left unaccompanied.</span>
+                    <span><strong>Adult Accompaniment Required:</strong> Minors, children, and infants must remain with an accompanying adult. If this booking has only one adult, all passengers must rebook, cancel, or request a refund together to avoid leaving a child unaccompanied.</span>
                 </div>
 
                 <div class="mt-4 grid gap-3 sm:grid-cols-2">
