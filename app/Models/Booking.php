@@ -488,6 +488,11 @@ class Booking extends Model
         return $this->belongsTo(User::class, 'verified_by_user_id');
     }
 
+    public function verifiedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'verified_by_user_id');
+    }
+
     public function refundProcessedByUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'refund_processed_by_user_id');

@@ -26,6 +26,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
@@ -396,60 +397,94 @@ class ManageRefunds extends Page implements HasTable, HasInfolists
                             ->placeholder('Optional notes for internal record-keeping...'),
                     ])
                     ->action(function (Booking $record, array $data): void {
+                        $alreadyProcessed = false;
+                        $shouldNotify = false;
+
                         try {
-                            $record->update([
-                                'refund_status' => 'completed',
-                                'refund_reference' => trim($data['refund_reference']),
-                                'refund_proof' => $data['refund_proof'],
-                                'refund_notes' => $data['refund_notes'] ?? null,
-                                'refund_processed_at' => now(),
-                                'refund_processed_by_user_id' => Auth::id(),
-                            ]);
+                            DB::transaction(function () use ($record, $data, &$alreadyProcessed, &$shouldNotify) {
+                                $lockedBooking = Booking::where('id', $record->id)
+                                    ->with(['passengers'])
+                                    ->lockForUpdate()
+                                    ->first();
 
-                            // Update individual passenger items
-                            foreach ($record->passengers as $passenger) {
-                                if ((float) $passenger->refund_amount > 0 || in_array($passenger->status, [\App\Models\Passenger::STATUS_REFUND_PENDING, \App\Models\Passenger::STATUS_CANCELLED], true)) {
-                                    $passenger->update([
-                                        'status' => \App\Models\Passenger::STATUS_REFUNDED,
-                                        'refund_status' => 'completed',
-                                        'refund_reference' => trim($data['refund_reference']),
-                                        'refund_proof' => $data['refund_proof'],
-                                        'refund_processed_at' => now(),
-                                        'refund_processed_by_user_id' => Auth::id(),
-                                    ]);
+                                if (! $lockedBooking || $lockedBooking->refund_status === 'completed') {
+                                    $alreadyProcessed = true;
+                                    return;
                                 }
-                            }
 
-                            // Send email confirmation with PDF and proof attached
-                            if (filled($record->client_email)) {
-                                try {
-                                    Mail::to($record->client_email)->send(new RefundCompletedMail($record));
-                                } catch (Throwable $e) {
-                                    Log::error("Failed to send refund email to {$record->client_email}: " . $e->getMessage());
+                                $staffUserId = Auth::id();
+                                $now = now();
+                                $ref = trim($data['refund_reference']);
+                                $proof = $data['refund_proof'];
+                                $notes = $data['refund_notes'] ?? null;
+
+                                $lockedBooking->update([
+                                    'refund_status' => 'completed',
+                                    'refund_reference' => $ref,
+                                    'refund_proof' => $proof,
+                                    'refund_notes' => $notes,
+                                    'refund_processed_at' => $now,
+                                    'refund_processed_by_user_id' => $staffUserId,
+                                ]);
+
+                                // Update individual passenger items
+                                foreach ($lockedBooking->passengers as $passenger) {
+                                    if ((float) $passenger->refund_amount > 0 || in_array($passenger->status, [\App\Models\Passenger::STATUS_REFUND_PENDING, \App\Models\Passenger::STATUS_CANCELLED], true)) {
+                                        $passenger->update([
+                                            'status' => \App\Models\Passenger::STATUS_REFUNDED,
+                                            'refund_status' => 'completed',
+                                            'refund_reference' => $ref,
+                                            'refund_proof' => $proof,
+                                            'refund_processed_at' => $now,
+                                            'refund_processed_by_user_id' => $staffUserId,
+                                        ]);
+                                    }
                                 }
+
+                                $shouldNotify = true;
+                            });
+
+                            if ($alreadyProcessed) {
+                                Notification::make()
+                                    ->title('Already Processed')
+                                    ->body('This refund has already been processed by another staff member.')
+                                    ->warning()
+                                    ->send();
+                                return;
                             }
 
-                            // Send In-App Notification
-                            if ($record->user_id) {
-                                UserNotification::notify(
-                                    $record->user_id,
-                                    '💰 Refund Processed & Disbursed',
-                                    "Your refund of ₱" . number_format((float) $record->refund_amount, 2) . " for booking #{$record->transaction_number} has been disbursed (Ref: {$record->refund_reference}).",
-                                    'booking',
-                                    $record->id,
-                                    ['transaction_number' => $record->transaction_number]
-                                );
-                            }
+                            if ($shouldNotify) {
+                                // Send email confirmation with PDF and proof attached
+                                if (filled($record->client_email)) {
+                                    try {
+                                        Mail::to($record->client_email)->send(new RefundCompletedMail($record->fresh()));
+                                    } catch (Throwable $e) {
+                                        Log::error("Failed to send refund email to {$record->client_email}: " . $e->getMessage());
+                                    }
+                                }
 
-                            Notification::make()
-                                ->title('Refund Disbursed Successfully')
-                                ->body("Booking #{$record->transaction_number} has been marked as disbursed. Refund Acknowledgement Receipt and proof sent to {$record->client_email}.")
-                                ->success()
-                                ->send();
+                                // Send In-App Notification
+                                if ($record->user_id) {
+                                    UserNotification::notify(
+                                        $record->user_id,
+                                        '💰 Refund Processed & Disbursed',
+                                        "Your refund of ₱" . number_format((float) $record->refund_amount, 2) . " for booking #{$record->transaction_number} has been disbursed (Ref: {$record->refund_reference}).",
+                                        'booking',
+                                        $record->id,
+                                        ['transaction_number' => $record->transaction_number]
+                                    );
+                                }
+
+                                Notification::make()
+                                    ->title('Refund Disbursed Successfully')
+                                    ->body("Refund for Booking #{$record->transaction_number} has been verified and processed.")
+                                    ->success()
+                                    ->send();
+                            }
                         } catch (Throwable $e) {
-                            Log::error("Refund verification error for booking {$record->id}: " . $e->getMessage());
+                            Log::error("Failed to disburse refund for #{$record->transaction_number}: " . $e->getMessage());
                             Notification::make()
-                                ->title('Refund Verification Failed')
+                                ->title('Disbursement Failed')
                                 ->body($e->getMessage())
                                 ->danger()
                                 ->send();

@@ -17,6 +17,8 @@ use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Form;
 use Filament\Resources\Pages\ViewRecord;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -810,86 +812,116 @@ class ViewBooking extends ViewRecord
                         throw new \Exception('Please provide either a confirmation URL or upload a PDF before confirming.');
                     }
 
+                    $alreadyVerifiedBy = null;
+                    $shouldSendEmail = false;
+                    $isRebooking = false;
                     $ticketUrl = !empty($data['confirmation_url']) ? trim($data['confirmation_url']) : null;
                     $confirmationPdfPath = Booking::resolveUploadedPdfPath($data['confirmation_pdf'] ?? null, $booking->transaction_number);
                     $receiptPath = $confirmationPdfPath;
                     $receiptDisk = $confirmationPdfPath ? 'public' : null;
 
-                    $staffUserId = auth()->id();
-                    $now = now();
+                    DB::transaction(function () use (
+                        $booking, $ticketUrl, $confirmationPdfPath, $receiptPath, $receiptDisk,
+                        &$alreadyVerifiedBy, &$shouldSendEmail, &$isRebooking
+                    ) {
+                        $lockedBooking = Booking::where('id', $booking->id)
+                            ->with(['transaction', 'verifiedBy'])
+                            ->lockForUpdate()
+                            ->first();
 
-                    $booking->update([
-                        'verified_by_user_id' => $staffUserId,
-                        'verified_at'         => $now,
-                    ]);
-
-                    $transaction = $booking->transaction ?? \App\Models\Transaction::where('booking_id', $booking->id)->first();
-                    if ($transaction) {
-                        $transaction->update([
-                            'payment_status'      => 'paid',
-                            'confirmation_url'    => $ticketUrl,
-                            'confirmation_pdf'    => $confirmationPdfPath,
-                            'verified_by_user_id' => $staffUserId,
-                            'verified_at'         => $now,
-                        ]);
-                    } else {
-                        $transaction = \App\Models\Transaction::create([
-                            'booking_id'          => $booking->id,
-                            'payment_status'      => 'paid',
-                            'confirmation_url'    => $ticketUrl,
-                            'confirmation_pdf'    => $confirmationPdfPath,
-                            'verified_by_user_id' => $staffUserId,
-                            'verified_at'         => $now,
-                        ]);
-                    }
-                    $booking->setRelation('transaction', $transaction);
-
-                    if ($booking->rebooking_status === 'pending') {
-                        // Rebooking path: delegate entirely to the service which handles
-                        // schedule assignment, DB updates, and sends BookingConfirmation email.
-                        try {
-                            app(\App\Services\ServiceCancellationManager::class)->processAutomaticRebookingApproval(
-                                $booking,
-                                auth()->user()
-                            );
-                            Notification::make()
-                                ->title('Booking & Rebooking Confirmed')
-                                ->body('Both original booking and rebooking have been verified and confirmed.')
-                                ->success()
-                                ->send();
-                        } catch (\Exception $e) {
-                            Log::error('Failed automatic rebooking during confirmation: ' . $e->getMessage());
-                            Notification::make()
-                                ->title('Booking Confirmed, but Rebooking Failed')
-                                ->body($e->getMessage())
-                                ->danger()
-                                ->send();
+                        if (! $lockedBooking || $lockedBooking->status === 'confirmed' || $lockedBooking->verified_by_user_id !== null) {
+                            $alreadyVerifiedBy = $lockedBooking?->verifiedBy?->name ?? 'another staff member';
+                            return;
                         }
+
+                        $staffUserId = Auth::id();
+                        $now = now();
+
+                        $transaction = $lockedBooking->transaction ?? \App\Models\Transaction::where('booking_id', $lockedBooking->id)->lockForUpdate()->first();
+                        if ($transaction) {
+                            $transaction->update([
+                                'payment_status'      => 'paid',
+                                'confirmation_url'    => $ticketUrl,
+                                'confirmation_pdf'    => $confirmationPdfPath,
+                                'verified_by_user_id' => $staffUserId,
+                                'verified_at'         => $now,
+                            ]);
+                        } else {
+                            $transaction = \App\Models\Transaction::create([
+                                'booking_id'          => $lockedBooking->id,
+                                'payment_status'      => 'paid',
+                                'confirmation_url'    => $ticketUrl,
+                                'confirmation_pdf'    => $confirmationPdfPath,
+                                'verified_by_user_id' => $staffUserId,
+                                'verified_at'         => $now,
+                            ]);
+                        }
+                        $lockedBooking->setRelation('transaction', $transaction);
+
+                        $lockedBooking->update([
+                            'verified_by_user_id' => $staffUserId,
+                            'verified_at'         => $now,
+                        ]);
+
+                        if ($lockedBooking->rebooking_status === 'pending') {
+                            $isRebooking = true;
+                            // Rebooking path: delegate entirely to the service which handles
+                            // schedule assignment, DB updates, and sends BookingConfirmation email.
+                            try {
+                                app(\App\Services\ServiceCancellationManager::class)->processAutomaticRebookingApproval(
+                                    $lockedBooking,
+                                    Auth::user()
+                                );
+                            } catch (\Exception $e) {
+                                Log::error('Failed automatic rebooking during confirmation: ' . $e->getMessage());
+                                throw $e;
+                            }
+                        } else {
+                            // Normal (non-rebooking) path: mark confirmed and send email.
+                            $lockedBooking->update(['status' => 'confirmed']);
+                            app(\App\Services\GraciaPointsService::class)->awardPointsForBooking($lockedBooking, Auth::user());
+                            $shouldSendEmail = true;
+                        }
+                    });
+
+                    if ($alreadyVerifiedBy !== null) {
+                        Notification::make()
+                            ->title('Already Verified')
+                            ->body("This booking was already verified by {$alreadyVerifiedBy}.")
+                            ->warning()
+                            ->send();
                         return;
                     }
 
-                    // Normal (non-rebooking) path: mark confirmed and send email.
-                    $booking->update(['status' => 'confirmed']);
-                    app(\App\Services\GraciaPointsService::class)->awardPointsForBooking($booking, auth()->user());
-
-                    try {
-                        Mail::to($booking->client_email)->send(new BookingConfirmation($booking, $ticketUrl, $receiptPath, $receiptDisk));
+                    if ($isRebooking) {
                         Notification::make()
-                            ->title('Booking confirmed')
-                            ->body('Booking confirmed and confirmation email sent.')
+                            ->title('Booking & Rebooking Confirmed')
+                            ->body('Both original booking and rebooking have been verified and confirmed.')
                             ->success()
                             ->send();
-                    } catch (Throwable $e) {
-                        Log::error('Failed sending booking confirmation email', [
-                            'booking_id' => $booking->id ?? null,
-                            'email'      => $booking->client_email ?? null,
-                            'error'      => $e->getMessage(),
-                        ]);
-                        Notification::make()
-                            ->title('Booking confirmed with warning')
-                            ->body('Booking was confirmed, but the confirmation email failed to send.')
-                            ->warning()
-                            ->send();
+                        return;
+                    }
+
+                    if ($shouldSendEmail) {
+                        try {
+                            Mail::to($booking->client_email)->send(new BookingConfirmation($booking->fresh(), $ticketUrl, $receiptPath, $receiptDisk));
+                            Notification::make()
+                                ->title('Booking confirmed')
+                                ->body('Booking confirmed and confirmation email sent.')
+                                ->success()
+                                ->send();
+                        } catch (Throwable $e) {
+                            Log::error('Failed sending booking confirmation email', [
+                                'booking_id' => $booking->id ?? null,
+                                'email'      => $booking->client_email ?? null,
+                                'error'      => $e->getMessage(),
+                            ]);
+                            Notification::make()
+                                ->title('Booking confirmed with warning')
+                                ->body('Booking was confirmed, but the confirmation email failed to send.')
+                                ->warning()
+                                ->send();
+                        }
                     }
                 })
                 ->requiresConfirmation()

@@ -55,6 +55,11 @@ class Transaction extends Model
         return $this->belongsTo(User::class, 'verified_by_user_id');
     }
 
+    public function verifiedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'verified_by_user_id');
+    }
+
     public function verificationUnlockAt(): ?Carbon
     {
         $base = $this->proof_submitted_at ?? $this->created_at;

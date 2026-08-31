@@ -17,6 +17,7 @@ use Filament\Tables\Table;
 use App\Mail\BookingConfirmation;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
@@ -246,50 +247,90 @@ class BookingResource extends Resource
                             throw new \Exception('Please provide either a confirmation URL or upload a PDF before verifying.');
                         }
 
+                        $alreadyVerifiedBy = null;
+                        $shouldSendEmail = false;
+                        $isRebooking = false;
                         $ticketUrl = !empty($data['confirmation_url']) ? trim($data['confirmation_url']) : null;
                         $confirmationPdfPath = Booking::resolveUploadedPdfPath($data['confirmation_pdf'] ?? null, $record->transaction_number);
                         $receiptPath = $confirmationPdfPath;
                         $receiptDisk = $confirmationPdfPath ? 'public' : null;
 
-                        $staffUserId = Auth::id();
-                        $now = now();
+                        DB::transaction(function () use (
+                            $record, $ticketUrl, $confirmationPdfPath, $receiptPath, $receiptDisk,
+                            &$alreadyVerifiedBy, &$shouldSendEmail, &$isRebooking
+                        ) {
+                            $lockedBooking = Booking::where('id', $record->id)
+                                ->with(['transaction', 'verifiedBy'])
+                                ->lockForUpdate()
+                                ->first();
 
-                        $transaction = $record->transaction ?? \App\Models\Transaction::where('booking_id', $record->id)->first();
-                        if ($transaction) {
-                            $transaction->update([
-                                'payment_status' => 'paid',
-                                'confirmation_url' => $ticketUrl,
-                                'confirmation_pdf' => $confirmationPdfPath,
+                            if (! $lockedBooking || $lockedBooking->status === 'confirmed' || $lockedBooking->verified_by_user_id !== null) {
+                                $alreadyVerifiedBy = $lockedBooking?->verifiedBy?->name ?? 'another staff member';
+                                return;
+                            }
+
+                            $staffUserId = Auth::id();
+                            $now = now();
+
+                            $transaction = $lockedBooking->transaction ?? \App\Models\Transaction::where('booking_id', $lockedBooking->id)->lockForUpdate()->first();
+                            if ($transaction) {
+                                $transaction->update([
+                                    'payment_status' => 'paid',
+                                    'confirmation_url' => $ticketUrl,
+                                    'confirmation_pdf' => $confirmationPdfPath,
+                                    'verified_by_user_id' => $staffUserId,
+                                    'verified_at' => $now,
+                                ]);
+                            } else {
+                                $transaction = \App\Models\Transaction::create([
+                                    'booking_id' => $lockedBooking->id,
+                                    'payment_status' => 'paid',
+                                    'confirmation_url' => $ticketUrl,
+                                    'confirmation_pdf' => $confirmationPdfPath,
+                                    'verified_by_user_id' => $staffUserId,
+                                    'verified_at' => $now,
+                                ]);
+                            }
+                            $lockedBooking->setRelation('transaction', $transaction);
+
+                            $lockedBooking->update([
                                 'verified_by_user_id' => $staffUserId,
                                 'verified_at' => $now,
                             ]);
-                        } else {
-                            $transaction = \App\Models\Transaction::create([
-                                'booking_id' => $record->id,
-                                'payment_status' => 'paid',
-                                'confirmation_url' => $ticketUrl,
-                                'confirmation_pdf' => $confirmationPdfPath,
-                                'verified_by_user_id' => $staffUserId,
-                                'verified_at' => $now,
-                            ]);
+
+                            if ($lockedBooking->rebooking_status === 'pending') {
+                                $isRebooking = true;
+                                $lockedBooking->verifyRebooking($ticketUrl, $receiptPath, $receiptDisk);
+                            } else {
+                                $lockedBooking->update(['status' => 'confirmed']);
+                                app(\App\Services\GraciaPointsService::class)->awardPointsForBooking($lockedBooking, auth()->user());
+                                $shouldSendEmail = true;
+                            }
+                        });
+
+                        if ($alreadyVerifiedBy !== null) {
+                            Notification::make()
+                                ->title('Already Verified')
+                                ->body("This booking was already verified by {$alreadyVerifiedBy}.")
+                                ->warning()
+                                ->send();
+                            return;
                         }
-                        $record->setRelation('transaction', $transaction);
 
-                        $record->update([
-                            'verified_by_user_id' => $staffUserId,
-                            'verified_at' => $now,
-                        ]);
+                        if ($isRebooking) {
+                            Notification::make()
+                                ->title('Rebooking verified')
+                                ->body('Rebooking verified and confirmation email sent.')
+                                ->success()
+                                ->send();
+                            return;
+                        }
 
-                        if ($record->rebooking_status === 'pending') {
-                            $record->verifyRebooking($ticketUrl, $receiptPath, $receiptDisk);
-                        } else {
-                            $record->update(['status' => 'confirmed']);
-                            app(\App\Services\GraciaPointsService::class)->awardPointsForBooking($record, auth()->user());
-
+                        if ($shouldSendEmail) {
                             // Send confirmation email — exactly 1 email with both attachments
                             try {
                                 Mail::to($record->client_email)->send(
-                                    new BookingConfirmation($record, $ticketUrl, $receiptPath, $receiptDisk)
+                                    new BookingConfirmation($record->fresh(), $ticketUrl, $receiptPath, $receiptDisk)
                                 );
                                 Notification::make()
                                     ->title('Booking verified')
@@ -309,8 +350,8 @@ class BookingResource extends Resource
                                     ->send();
                             }
                         }
-                     })
-                     ->color('success'),
+                    })
+                    ->color('success'),
 
 
             ])

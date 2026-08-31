@@ -16,6 +16,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -226,24 +227,48 @@ class ManageRebookings extends Page implements HasTable
                         ? 'Cannot verify: Rebooking payment status is unpaid or proof is missing.'
                         : null)
                     ->action(function (Booking $record, array $data): void {
+                        $alreadyVerifiedBy = null;
+                        $error = null;
+
                         try {
                             $ticketUrl = !empty($data['confirmation_url']) ? trim($data['confirmation_url']) : null;
                             $confirmationPdfPath = Booking::resolveUploadedPdfPath($data['confirmation_pdf'] ?? null, $record->transaction_number);
 
-                            if ($record->transaction) {
-                                if (!empty($ticketUrl)) {
-                                    $record->transaction->confirmation_url = $ticketUrl;
+                            DB::transaction(function () use ($record, $ticketUrl, $confirmationPdfPath, &$alreadyVerifiedBy) {
+                                $lockedBooking = Booking::where('id', $record->id)
+                                    ->with(['transaction', 'verifiedBy'])
+                                    ->lockForUpdate()
+                                    ->first();
+
+                                if (! $lockedBooking || $lockedBooking->rebooking_status === 'verified') {
+                                    $alreadyVerifiedBy = $lockedBooking?->verifiedBy?->name ?? 'another staff member';
+                                    return;
                                 }
-                                if (!empty($confirmationPdfPath)) {
-                                    $record->transaction->confirmation_pdf = $confirmationPdfPath;
+
+                                if ($lockedBooking->transaction) {
+                                    if (!empty($ticketUrl)) {
+                                        $lockedBooking->transaction->confirmation_url = $ticketUrl;
+                                    }
+                                    if (!empty($confirmationPdfPath)) {
+                                        $lockedBooking->transaction->confirmation_pdf = $confirmationPdfPath;
+                                    }
+                                    $lockedBooking->transaction->save();
                                 }
-                                $record->transaction->save();
+
+                                $receiptPath = $confirmationPdfPath ?: ($lockedBooking->transaction?->confirmation_pdf ?? null);
+                                $receiptDisk = $receiptPath ? 'public' : null;
+
+                                $lockedBooking->verifyRebooking($ticketUrl, $receiptPath, $receiptDisk);
+                            });
+
+                            if ($alreadyVerifiedBy !== null) {
+                                Notification::make()
+                                    ->title('Already Verified')
+                                    ->body("This rebooking was already verified by {$alreadyVerifiedBy}.")
+                                    ->warning()
+                                    ->send();
+                                return;
                             }
-
-                            $receiptPath  = $confirmationPdfPath ?: ($record->transaction?->confirmation_pdf ?? null);
-                            $receiptDisk  = $receiptPath ? 'public' : null;
-
-                            $record->verifyRebooking($ticketUrl, $receiptPath, $receiptDisk);
 
                             Notification::make()
                                 ->title('Rebooking Verified & Approved')
@@ -310,6 +335,7 @@ class ManageRebookings extends Page implements HasTable
                             ->columnSpanFull(),
                     ])
                     ->action(function (Booking $record, array $data): void {
+                        $alreadyVerifiedBy = null;
                         $ticketUrl = !empty($data['confirmation_url']) ? trim($data['confirmation_url']) : null;
                         $rawPdf = $data['confirmation_pdf'] ?? null;
                         if (is_array($rawPdf)) {
@@ -322,21 +348,42 @@ class ManageRebookings extends Page implements HasTable
                             $confirmationPdfPath = $rawPdf;
                         }
 
-                        if ($record->transaction) {
-                            if (!empty($ticketUrl)) {
-                                $record->transaction->confirmation_url = $ticketUrl;
-                            }
-                            if (!empty($confirmationPdfPath)) {
-                                $record->transaction->confirmation_pdf = $confirmationPdfPath;
-                            }
-                            $record->transaction->save();
-                        }
-
-                        $receiptPath  = $confirmationPdfPath ?: ($record->transaction?->confirmation_pdf ?? null);
-                        $receiptDisk  = $receiptPath ? 'public' : null;
-
                         try {
-                            $record->verifyRebooking($ticketUrl, $receiptPath, $receiptDisk);
+                            DB::transaction(function () use ($record, $ticketUrl, $confirmationPdfPath, &$alreadyVerifiedBy) {
+                                $lockedBooking = Booking::where('id', $record->id)
+                                    ->with(['transaction', 'verifiedBy'])
+                                    ->lockForUpdate()
+                                    ->first();
+
+                                if (! $lockedBooking || $lockedBooking->rebooking_status === 'verified') {
+                                    $alreadyVerifiedBy = $lockedBooking?->verifiedBy?->name ?? 'another staff member';
+                                    return;
+                                }
+
+                                if ($lockedBooking->transaction) {
+                                    if (!empty($ticketUrl)) {
+                                        $lockedBooking->transaction->confirmation_url = $ticketUrl;
+                                    }
+                                    if (!empty($confirmationPdfPath)) {
+                                        $lockedBooking->transaction->confirmation_pdf = $confirmationPdfPath;
+                                    }
+                                    $lockedBooking->transaction->save();
+                                }
+
+                                $receiptPath  = $confirmationPdfPath ?: ($lockedBooking->transaction?->confirmation_pdf ?? null);
+                                $receiptDisk  = $receiptPath ? 'public' : null;
+
+                                $lockedBooking->verifyRebooking($ticketUrl, $receiptPath, $receiptDisk);
+                            });
+
+                            if ($alreadyVerifiedBy !== null) {
+                                Notification::make()
+                                    ->title('Already Verified')
+                                    ->body("This rebooking was already verified by {$alreadyVerifiedBy}.")
+                                    ->warning()
+                                    ->send();
+                                return;
+                            }
 
                             Notification::make()
                                 ->title('Rebooking Verified')
