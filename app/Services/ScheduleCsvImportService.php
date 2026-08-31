@@ -15,6 +15,10 @@ use ZipArchive;
 
 class ScheduleCsvImportService
 {
+    public function __construct(
+        protected LocationCodeResolver $locationResolver = new LocationCodeResolver(),
+    ) {}
+
     /**
      * Import schedules from a CSV or XLSX file.
      *
@@ -256,8 +260,14 @@ class ScheduleCsvImportService
             throw new \InvalidArgumentException('Missing required fields (Origin, Destination, Departure Date, or Departure Time).');
         }
 
-        // Determine Mode & Normalize Operator
+        // Determine Mode first (needed for code resolution)
         $mode = str_contains(strtolower((string) $modeRaw), 'air') ? 'airline' : 'ferry';
+
+        // Resolve location codes (e.g. MNL => Manila, BTG => Batangas)
+        $origin      = $this->locationResolver->resolve($origin, $mode);
+        $destination = $this->locationResolver->resolve($destination, $mode);
+
+        // Normalize Operator
         $operator = $this->normalizeOperatorName($operator, $mode);
         $vehicleTailNo = filled($vehicleTailNo) ? trim($vehicleTailNo) : ($mode === 'airline' ? "{$operator} Aircraft" : "{$operator} Vessel");
         $transportClassStr = filled($transportClassStr) ? trim($transportClassStr) : ($mode === 'airline' ? 'Economy' : 'Standard');
