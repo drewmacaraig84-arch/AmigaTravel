@@ -1810,6 +1810,72 @@
                             @endif
                         </div>
 
+                        {{-- Voucher / Promo Code Box --}}
+                        <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h2 class="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+                                        <svg class="w-5 h-5 text-[#db2777]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                                        </svg>
+                                        Voucher or Promo Code
+                                    </h2>
+                                    <p class="text-xs text-slate-500 mt-0.5">Enter a voucher code to claim discounts on eligible trips</p>
+                                </div>
+                            </div>
+
+                            @if($appliedVoucher)
+                                <div class="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl bg-emerald-50 border border-emerald-200 p-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                        </div>
+                                        <div>
+                                            <div class="flex items-center gap-2">
+                                                <span class="font-extrabold text-emerald-900 tracking-wider uppercase">{{ $appliedVoucher['voucher_code'] }}</span>
+                                                <span class="text-xs px-2 py-0.5 bg-emerald-200 text-emerald-800 rounded-full font-bold">Applied</span>
+                                            </div>
+                                            <p class="text-xs text-emerald-700 mt-0.5">
+                                                {{ $appliedVoucher['voucher_name'] }} &bull; You save <strong class="text-emerald-900">&#8369;{{ number_format($appliedVoucher['discount_amount'], 2) }}</strong>
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button type="button" wire:click="removeVoucher" class="text-xs font-bold text-rose-600 hover:text-rose-800 hover:underline px-2 py-1 transition">
+                                        Remove Voucher
+                                    </button>
+                                </div>
+                            @else
+                                <div class="mt-4 flex flex-col sm:flex-row gap-2.5">
+                                    <div class="relative flex-1">
+                                        <input 
+                                            type="text" 
+                                            wire:model="voucher_code" 
+                                            wire:keydown.enter.prevent="applyVoucher"
+                                            placeholder="Enter voucher code (e.g. AMIGA2026)" 
+                                            class="block w-full uppercase tracking-wider font-semibold rounded-xl border border-slate-300 px-4 py-3 text-sm shadow-sm focus:border-[#db2777] focus:outline-none focus:ring-2 focus:ring-[#db2777]/20 transition-all placeholder:normal-case placeholder:font-normal placeholder:tracking-normal" 
+                                        />
+                                    </div>
+                                    <button 
+                                        type="button" 
+                                        wire:click.prevent="applyVoucher" 
+                                        wire:loading.attr="disabled"
+                                        wire:target="applyVoucher"
+                                        class="inline-flex items-center justify-center rounded-xl bg-slate-900 hover:bg-slate-800 px-6 py-3 text-sm font-bold text-white shadow-sm transition disabled:opacity-50"
+                                    >
+                                        <span wire:loading.remove wire:target="applyVoucher">Apply</span>
+                                        <span wire:loading wire:target="applyVoucher">Applying...</span>
+                                    </button>
+                                </div>
+
+                                @if($voucherError)
+                                    <div class="mt-3 flex items-center gap-2 text-xs font-semibold text-rose-600">
+                                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                        <span>{{ $voucherError }}</span>
+                                    </div>
+                                @endif
+                            @endif
+                        </div>
+
                         {{-- Price Breakdown --}}
                         @php
                             $breakdown = $this->getPriceBreakdown();
@@ -1873,15 +1939,15 @@
                                         </div>
                                         <div class="text-xs text-slate-500 divide-y divide-slate-100">
                                             @foreach($passengers as $idx => $pax)
-                                                @if(!empty($pax['extra_baggage_weight']) && (float)($pax['extra_baggage_price'] ?? 0) > 0)
-                                                    @php
-                                                        $paxName = !empty($pax['name']) ? $pax['name'] : (!empty($pax['first_name']) ? trim($pax['first_name'] . ' ' . ($pax['last_name'] ?? '')) : "Traveler #" . ($idx + 1));
-                                                    @endphp
-                                                    <div class="flex justify-between items-center py-1">
-                                                        <span>{{ $paxName }}: <span class="font-semibold text-slate-700">{{ $pax['extra_baggage_weight'] }}</span></span>
-                                                        <span class="font-semibold text-emerald-700">+&#8369;{{ number_format($pax['extra_baggage_price'], 2) }}</span>
-                                                    </div>
-                                                @endif
+                                                 @if(!empty($pax['extra_baggage_weight']) && (float)($pax['extra_baggage_price'] ?? 0) > 0)
+                                                     @php
+                                                         $paxName = !empty($pax['name']) ? $pax['name'] : (!empty($pax['first_name']) ? trim($pax['first_name'] . ' ' . ($pax['last_name'] ?? '')) : "Traveler #" . ($idx + 1));
+                                                     @endphp
+                                                     <div class="flex justify-between items-center py-1">
+                                                         <span>{{ $paxName }}: <span class="font-semibold text-slate-700">{{ $pax['extra_baggage_weight'] }}</span></span>
+                                                         <span class="font-semibold text-emerald-700">+&#8369;{{ number_format($pax['extra_baggage_price'], 2) }}</span>
+                                                     </div>
+                                                 @endif
                                             @endforeach
                                         </div>
                                     </div>
@@ -1906,6 +1972,17 @@
                                     <div class="flex justify-between items-center rounded-lg bg-white p-4 border border-slate-200">
                                         <span class="text-slate-700 font-medium">Transaction Fee</span>
                                         <span class="text-slate-900 font-bold">&#8369;{{ number_format($breakdown['transaction_fee'], 2) }}</span>
+                                    </div>
+                                @endif
+
+                                {{-- Voucher Discount --}}
+                                @if (isset($breakdown['voucher_discount']) && $breakdown['voucher_discount'] > 0)
+                                    <div class="flex justify-between items-center rounded-lg bg-emerald-50 p-4 border border-emerald-200">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-emerald-900 font-bold text-sm">Voucher Discount</span>
+                                            <span class="text-xs px-2 py-0.5 bg-emerald-200 text-emerald-900 rounded font-bold uppercase">{{ $breakdown['voucher_code'] }}</span>
+                                        </div>
+                                        <span class="text-emerald-700 font-extrabold text-base">-&#8369;{{ number_format($breakdown['voucher_discount'], 2) }}</span>
                                     </div>
                                 @endif
 

@@ -209,19 +209,21 @@ class BookingController extends Controller
             ] : null;
 
             // Add schedule times for full datetime display in the app
-            if ($booking->schedule) {
-                $depTime = \Carbon\Carbon::parse($booking->schedule->departure_time)->timezone('Asia/Manila');
+            $depSched = $booking->getScheduleModel();
+            if ($depSched) {
+                $depTime = \Carbon\Carbon::parse($depSched->departure_time)->timezone('Asia/Manila');
                 $data['departure_time'] = $depTime->format('h:i A');
-                $arrTime = $booking->schedule->arrival_time
-                    ? \Carbon\Carbon::parse($booking->schedule->arrival_time)->timezone('Asia/Manila')->format('h:i A')
+                $arrTime = $depSched->arrival_time
+                    ? \Carbon\Carbon::parse($depSched->arrival_time)->timezone('Asia/Manila')->format('h:i A')
                     : null;
                 $data['schedule_arrival_formatted'] = $arrTime;
             }
-            if ($booking->returnSchedule) {
-                $retTime = \Carbon\Carbon::parse($booking->returnSchedule->departure_time)->timezone('Asia/Manila');
+            $retSched = $booking->getReturnScheduleModel();
+            if ($retSched) {
+                $retTime = \Carbon\Carbon::parse($retSched->departure_time)->timezone('Asia/Manila');
                 $data['return_time'] = $retTime->format('h:i A');
-                $retArrTime = $booking->returnSchedule->arrival_time
-                    ? \Carbon\Carbon::parse($booking->returnSchedule->arrival_time)->timezone('Asia/Manila')->format('h:i A')
+                $retArrTime = $retSched->arrival_time
+                    ? \Carbon\Carbon::parse($retSched->arrival_time)->timezone('Asia/Manila')->format('h:i A')
                     : null;
                 $data['return_schedule_arrival_formatted'] = $retArrTime;
             }
@@ -349,18 +351,20 @@ class BookingController extends Controller
             'resumed_at' => $booking->serviceCancellation->resumed_at?->toDateTimeString(),
         ] : null;
 
-        if ($booking->schedule) {
-            $depTime = \Carbon\Carbon::parse($booking->schedule->departure_time)->timezone('Asia/Manila');
+        $depSched = $booking->getScheduleModel();
+        if ($depSched) {
+            $depTime = \Carbon\Carbon::parse($depSched->departure_time)->timezone('Asia/Manila');
             $data['departure_time'] = $depTime->format('h:i A');
-            $data['schedule_arrival_formatted'] = $booking->schedule->arrival_time
-                ? \Carbon\Carbon::parse($booking->schedule->arrival_time)->timezone('Asia/Manila')->format('h:i A')
+            $data['schedule_arrival_formatted'] = $depSched->arrival_time
+                ? \Carbon\Carbon::parse($depSched->arrival_time)->timezone('Asia/Manila')->format('h:i A')
                 : null;
         }
-        if ($booking->returnSchedule) {
-            $retTime = \Carbon\Carbon::parse($booking->returnSchedule->departure_time)->timezone('Asia/Manila');
+        $retSched = $booking->getReturnScheduleModel();
+        if ($retSched) {
+            $retTime = \Carbon\Carbon::parse($retSched->departure_time)->timezone('Asia/Manila');
             $data['return_time'] = $retTime->format('h:i A');
-            $data['return_schedule_arrival_formatted'] = $booking->returnSchedule->arrival_time
-                ? \Carbon\Carbon::parse($booking->returnSchedule->arrival_time)->timezone('Asia/Manila')->format('h:i A')
+            $data['return_schedule_arrival_formatted'] = $retSched->arrival_time
+                ? \Carbon\Carbon::parse($retSched->arrival_time)->timezone('Asia/Manila')->format('h:i A')
                 : null;
         }
 
@@ -986,7 +990,7 @@ class BookingController extends Controller
 
         $origin = $booking->origin;
         $destination = $booking->destination;
-        $mode = $booking->schedule?->ferryRoute?->mode ?? 'ferry';
+        $mode = $booking->schedule ? $booking->schedule->getFerryRouteModel()?->mode ?? 'ferry' : 'ferry';
         $operator = $booking->getOperatorName();
 
         $query = \App\Models\Schedule::with(['ferryRoute.operatorRecord', 'scheduleAccommodations.accommodation'])
@@ -1023,7 +1027,7 @@ class BookingController extends Controller
 
             $results[] = [
                 'id' => $schedule->id,
-                'vessel_name' => $schedule->ferryRoute?->operatorRecord?->name ?? $schedule->ferryRoute?->operator ?? 'Vessel',
+                'vessel_name' => $schedule->getFerryRouteModel()?->operatorRecord?->name ?? $schedule->getFerryRouteModel()?->operator ?? 'Vessel',
                 'departure_time' => $schedule->departure_time->format('H:i'),
                 'arrival_time' => $schedule->arrival_time ? $schedule->arrival_time->format('H:i') : null,
                 'formatted_departure' => $schedule->formatted_departure,

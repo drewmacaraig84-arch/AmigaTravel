@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Voucher;
+use App\Models\Operator;
 use App\Models\Schedule;
 use App\Models\ScheduleAccommodation;
 use App\Models\TransportClass;
@@ -107,6 +108,40 @@ class VoucherService
                 if ($query->exists()) {
                     return $this->error('You have already used this voucher');
                 }
+            }
+        }
+
+        // Check eligible operator
+        if ($voucher->eligible_operator_id) {
+            $matched = false;
+            $voucher->loadMissing('eligibleOperator');
+            $expectedOperatorName = $voucher->eligibleOperator?->name ?? 'the specified operator';
+
+            // 1. Check from schedule if schedule_id is provided
+            if (!empty($bookingData['schedule_id'])) {
+                $sched = Schedule::find($bookingData['schedule_id']);
+                if ($sched) {
+                    $route = $sched->getFerryRouteModel();
+                    if ($route) {
+                        if ($route->operator_id == $voucher->eligible_operator_id) {
+                            $matched = true;
+                        } elseif (!empty($route->operator) && strcasecmp(trim($route->operator), trim($expectedOperatorName)) === 0) {
+                            $matched = true;
+                        }
+                    }
+                }
+            }
+
+            // 2. Check from bookingData['operator'] or bookingData['operator_id']
+            if (!$matched && !empty($bookingData['operator_id'])) {
+                $matched = ($bookingData['operator_id'] == $voucher->eligible_operator_id);
+            }
+            if (!$matched && !empty($bookingData['operator'])) {
+                $matched = (strcasecmp(trim($bookingData['operator']), trim($expectedOperatorName)) === 0);
+            }
+
+            if (!$matched) {
+                return $this->error("This voucher is only valid for bookings with {$expectedOperatorName}.");
             }
         }
         

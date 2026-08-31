@@ -27,6 +27,8 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
+use App\Models\Voucher;
+use App\Services\VoucherService;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -41,11 +43,79 @@ use Dompdf\Options;
 class BookingForm extends Component
 {
     use WithFileUploads;
+
+    public string $voucher_code = '';
+    public ?array $appliedVoucher = null;
+    public ?string $voucherError = null;
+    public ?string $voucherSuccess = null;
     
     protected function failedValidation(\Illuminate\Contracts\Validation\Validator $validator)
     {
         $this->dispatch('validation-error');
         parent::failedValidation($validator);
+    }
+    
+    public function applyVoucher(VoucherService $voucherService): void
+    {
+        $this->voucherError = null;
+        $this->voucherSuccess = null;
+
+        $code = strtoupper(trim($this->voucher_code));
+        if (empty($code)) {
+            $this->voucherError = 'Please enter a voucher code.';
+            return;
+        }
+
+        $bookingData = [
+            'trip_type' => $this->trip_type,
+            'mode' => $this->mode,
+            'operator' => $this->operator,
+            'origin' => $this->origin,
+            'destination' => $this->destination,
+            'departure_date' => $this->departure_date,
+            'return_date' => $this->return_date,
+            'schedule_id' => $this->selected_schedule_id,
+            'return_schedule_id' => $this->selected_return_schedule_id,
+            'selected_transport_class_id' => $this->selected_transport_class_id,
+            'selected_return_transport_class_id' => $this->selected_return_transport_class_id,
+            'selected_schedule_accommodation_id' => $this->selected_schedule_accommodation_id,
+            'selected_return_schedule_accommodation_id' => $this->selected_return_schedule_accommodation_id,
+            'passengers' => $this->passengers,
+            'has_vehicle' => $this->has_vehicle,
+            'vehicle_price' => $this->vehicle_price,
+            'accommodation_ids' => $this->selected_hotel_id ? [$this->selected_hotel_id] : [],
+            'client_email' => $this->client_email,
+            'user_id' => auth()->id(),
+            'promotional_ticket_id' => ($this->mode === 'airline') ? $this->getActivePromoTicket()?->id : null,
+        ];
+
+        $result = $voucherService->validateAndCalculate($code, $bookingData);
+
+        if (!$result['valid']) {
+            $this->appliedVoucher = null;
+            $this->voucherError = $result['message'];
+            return;
+        }
+
+        $this->appliedVoucher = $result;
+        $this->voucherSuccess = "Voucher '{$result['voucher_code']}' applied! You save ₱" . number_format($result['discount_amount'], 2) . ".";
+        $this->saveDraft();
+    }
+
+    public function removeVoucher(): void
+    {
+        $this->appliedVoucher = null;
+        $this->voucher_code = '';
+        $this->voucherError = null;
+        $this->voucherSuccess = null;
+        $this->saveDraft();
+    }
+
+    public function getVoucherDiscountAmount(): float
+    {
+        return ($this->appliedVoucher && !empty($this->appliedVoucher['discount_amount']))
+            ? floatval($this->appliedVoucher['discount_amount'])
+            : 0.0;
     }
     
     public function confirmOperatorSelection(): void
@@ -868,9 +938,10 @@ class BookingForm extends Component
             return 'international';
         }
         if ($this->selected_schedule_id) {
-            $sched = Schedule::with('ferryRoute')->find($this->selected_schedule_id);
-            if ($sched?->ferryRoute?->trip_type) {
-                return $sched->ferryRoute->trip_type;
+            $sched = Schedule::find($this->selected_schedule_id);
+            $route = $sched?->getFerryRouteModel();
+            if ($route?->trip_type) {
+                return $route->trip_type;
             }
         }
         if ($this->origin && $this->destination) {
@@ -927,8 +998,9 @@ class BookingForm extends Component
     {
         $op = strtolower($this->operator ?: '');
         if (! $op && $this->selected_schedule_id) {
-            $sched = Schedule::with(['ferryRoute.operatorRecord'])->find($this->selected_schedule_id);
-            $op = strtolower($sched?->ferryRoute?->operatorRecord?->name ?: ($sched?->ferryRoute?->operator ?: ($sched?->service_name ?: '')));
+            $sched = Schedule::find($this->selected_schedule_id);
+            $route = $sched?->getFerryRouteModel();
+            $op = strtolower($route?->operatorRecord?->name ?: ($route?->operator ?: ($sched?->service_name ?: '')));
         }
 
         if (stripos($op, 'pal') !== false || stripos($op, 'philippine') !== false) {
@@ -1967,6 +2039,7 @@ class BookingForm extends Component
         } else {
             try {
                 $schedule = Schedule::query()
+                    ->with(['ferryRoute.operatorRecord'])
                     ->forRouteAndDate($this->origin, $this->destination, $this->departure_date, $this->mode)
                     ->findOrFail($this->selected_schedule_id);
             } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
@@ -1981,7 +2054,7 @@ class BookingForm extends Component
                 : null;
 
             $returnSchedule = $this->selected_return_schedule_id
-                ? Schedule::find($this->selected_return_schedule_id)
+                ? Schedule::with(['ferryRoute.operatorRecord'])->find($this->selected_return_schedule_id)
                 : null;
 
             $returnScheduleAccommodation = $this->selected_return_schedule_accommodation_id
@@ -2095,6 +2168,18 @@ class BookingForm extends Component
                 $termsAcceptedIp = request()->ip();
                 $termsAcceptedUserAgent = request()->userAgent();
 
+                $voucherModel = null;
+                $voucherDiscountAmount = 0.0;
+                $subtotalBeforeVoucher = null;
+
+                if ($this->appliedVoucher && !empty($this->appliedVoucher['voucher_code'])) {
+                    $voucherModel = Voucher::where('code', strtoupper($this->appliedVoucher['voucher_code']))->first();
+                    if ($voucherModel) {
+                        $voucherDiscountAmount = floatval($this->appliedVoucher['discount_amount'] ?? 0);
+                        $subtotalBeforeVoucher = floatval($this->appliedVoucher['original_subtotal'] ?? 0);
+                    }
+                }
+
                 $booking = Booking::create([
                     'user_id' => auth()->check() ? auth()->id() : null,
                     'transaction_number' => $this->generateTransactionNumber(),
@@ -2139,6 +2224,10 @@ class BookingForm extends Component
                     'driver_birthday' => $this->driver_birthday,
                     'promotional_ticket_id' => $usedPromoTicket?->id,
                     'promo_ticket_count' => $promoTicketCount,
+                    'voucher_id' => $voucherModel?->id,
+                    'voucher_code' => $voucherModel?->code,
+                    'voucher_discount_amount' => $voucherDiscountAmount,
+                    'subtotal_before_voucher' => $subtotalBeforeVoucher,
                     'terms_accepted_at' => $termsAcceptedAt,
                     'terms_version' => $termsVersion,
                     'terms_accepted_ip' => $termsAcceptedIp,
@@ -2272,6 +2361,15 @@ class BookingForm extends Component
                     }
                 }
 
+                // If a voucher was applied, record redemption
+                if ($voucherModel) {
+                    $voucherService = app(VoucherService::class);
+                    $voucherService->redeemVoucher($voucherModel, $booking, [
+                        'discount_amount' => $voucherDiscountAmount,
+                        'base_amount' => $subtotalBeforeVoucher ?: $booking->total_price,
+                    ]);
+                }
+
                 $transaction = Transaction::create([
                     'booking_id' => $booking->id,
                     'payment_status' => 'unpaid',
@@ -2323,12 +2421,12 @@ class BookingForm extends Component
             ]);
         }
 
-        $booking->load('passengers.discount', 'scheduleAccommodation', 'transportClasses', 'transaction', 'schedule');
+        $booking->load('passengers.discount', 'scheduleAccommodation', 'transportClasses', 'transaction', 'schedule', 'returnSchedule');
 
         // Bust the schedule search cache so the public Schedules page shows updated ticket counts immediately
         \App\Actions\Bookings\CreateBookingAction::bustScheduleCache(
-            $booking->schedule,
-            $booking->returnSchedule ?? null
+            $booking->getScheduleModel(),
+            $booking->getReturnScheduleModel()
         );
 
         \App\Jobs\SendBookingConfirmationJob::dispatch($booking);
@@ -2537,6 +2635,8 @@ class BookingForm extends Component
             'client_name' => $this->client_name,
             'client_email' => $this->client_email,
             'client_phone' => $this->client_phone,
+            'voucher_code' => $this->voucher_code,
+            'appliedVoucher' => $this->appliedVoucher,
             'hasAcceptedTerms' => $this->hasAcceptedTerms,
             'hasAcceptedPrivacy' => $this->hasAcceptedPrivacy,
             'selected_hotel_id' => $this->selected_hotel_id,
@@ -2854,7 +2954,8 @@ class BookingForm extends Component
             $accommodationFee = $hotelTotal > 0 ? floatval($settings->fee_per_accommodation) : 0;
             $transactionFee = $settings->getTransactionFee($isShortHaul) * $multiplier;
 
-            return $transportTotal + $vehicleTotal + $hotelTotal + $serviceFee + $accommodationFee + $transactionFee;
+            $subtotal = $transportTotal + $vehicleTotal + $hotelTotal + $serviceFee + $accommodationFee + $transactionFee;
+            return max(0, $subtotal - $this->getVoucherDiscountAmount());
         }
         
         // If booking an Eloquent tour with tour pricing (future use when price_from is added)
@@ -2882,7 +2983,8 @@ class BookingForm extends Component
             $accommodationFee = $hotelTotal > 0 ? floatval($settings->fee_per_accommodation) : 0;
             $transactionFee = $settings->getTransactionFee($isShortHaul) * $multiplier;
 
-            return $transportTotal + $vehicleTotal + $hotelTotal + $serviceFee + $accommodationFee + $transactionFee;
+            $subtotal = $transportTotal + $vehicleTotal + $hotelTotal + $serviceFee + $accommodationFee + $transactionFee;
+            return max(0, $subtotal - $this->getVoucherDiscountAmount());
         }
 
         $baseSchedulePrice = $this->getSelectedSchedulePrice();
@@ -2963,7 +3065,7 @@ class BookingForm extends Component
 
             $isMinorPax = in_array($type, ['child', 'minor'], true) || (! $isFerry && $type === 'infant');
             $hasDiscount = ! empty($passenger['discount_id'])
-                && ! $isSuperPromoPax
+                && ! $this->isSuperPromo
                 && ! (! $isSuperPromoPax && ! $isPromoPax && $isMinorPax);
 
             if ($hasDiscount) {
@@ -2997,7 +3099,9 @@ class BookingForm extends Component
         
         $transactionFee = $settings->getTransactionFee($isShortHaul) * $multiplier;
 
-        return $transportTotal + $transportClassTotal + $vehicleTotal + $hotelTotal + $serviceFee + $accommodationFee + $transactionFee + $this->getExtraBaggageTotalPrice();
+        $gross = $transportTotal + $transportClassTotal + $vehicleTotal + $hotelTotal + $serviceFee + $accommodationFee + $transactionFee + $this->getExtraBaggageTotalPrice();
+
+        return max(0, $gross - $this->getVoucherDiscountAmount());
     }
 
     /**
@@ -3016,6 +3120,10 @@ class BookingForm extends Component
             'fee_per_traveler' => 0,
             'fee_per_accommodation' => 0,
             'transaction_fee' => 0,
+            'subtotal' => 0,
+            'voucher_discount' => $this->getVoucherDiscountAmount(),
+            'voucher_code' => $this->appliedVoucher['voucher_code'] ?? null,
+            'voucher_name' => $this->appliedVoucher['voucher_name'] ?? null,
             'total' => 0,
         ];
 
@@ -3132,8 +3240,8 @@ class BookingForm extends Component
 
         $breakdown['transaction_fee'] = $settings->getTransactionFee($isShortHaul) * $multiplier;
 
-        // Calculate total (sum of all items)
-        $breakdown['total'] = 
+        // Calculate subtotal (sum of all items before voucher)
+        $subtotal = 
             $breakdown['departure_ticket'] +
             $breakdown['return_ticket'] +
             $breakdown['accommodation'] +
@@ -3144,6 +3252,9 @@ class BookingForm extends Component
             $breakdown['fee_per_traveler'] +
             $breakdown['fee_per_accommodation'] +
             $breakdown['transaction_fee'];
+
+        $breakdown['subtotal'] = $subtotal;
+        $breakdown['total'] = max(0, $subtotal - $breakdown['voucher_discount']);
 
         return $breakdown;
     }

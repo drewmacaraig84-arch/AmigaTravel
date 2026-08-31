@@ -48,8 +48,10 @@ class SendBookingConfirmationJob implements ShouldQueue
             'accommodations',
             'transaction',
             'schedule',
+            'returnSchedule',
             'transportClasses',
             'scheduleAccommodation',
+            'returnScheduleAccommodation',
             'voucher',
         );
 

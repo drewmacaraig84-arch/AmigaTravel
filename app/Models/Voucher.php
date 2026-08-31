@@ -24,6 +24,7 @@ class Voucher extends Model
         'eligible_scope',
         'eligible_origin',
         'eligible_destination',
+        'eligible_operator_id',
         'eligible_schedule_id',
         'is_hidden',
     ];
@@ -62,6 +63,11 @@ class Voucher extends Model
     public function redemptions(): HasMany
     {
         return $this->hasMany(VoucherRedemption::class);
+    }
+
+    public function eligibleOperator(): BelongsTo
+    {
+        return $this->belongsTo(Operator::class, 'eligible_operator_id');
     }
 
     public function eligibleSchedule(): BelongsTo

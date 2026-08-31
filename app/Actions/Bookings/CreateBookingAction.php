@@ -285,7 +285,7 @@ class CreateBookingAction
 
             // --- Persist Passengers with per-item financial breakdown ---
             $settings    = PaymentSetting::current();
-            $isAirline   = strtolower($schedule->ferryRoute?->mode ?? '') === 'airline';
+            $isAirline   = strtolower($schedule->getFerryRouteModel()?->mode ?? '') === 'airline';
             $depDuration = $schedule->duration_minutes;
             $retDuration = $returnSchedule?->duration_minutes ?? 0;
             $isShortHaul = ! $isAirline && ($returnSchedule
@@ -523,11 +523,11 @@ class CreateBookingAction
         // As a safe fallback we clear the entire 'livewire:schedules:*' group via known cache store.
         try {
             // 1. Bust the ScheduleController API cache (used by the public Schedules page)
-            $cacheKey = 'api:schedules:' . optional($schedule->ferryRoute)->id . ':' . $schedule->departure_time?->format('Y-m-d');
+            $cacheKey = 'api:schedules:' . optional($schedule->getFerryRouteModel())->id . ':' . $schedule->departure_time?->format('Y-m-d');
             Cache::forget($cacheKey);
 
             if ($returnSchedule) {
-                $returnKey = 'api:schedules:' . optional($returnSchedule->ferryRoute)->id . ':' . $returnSchedule->departure_time?->format('Y-m-d');
+                $returnKey = 'api:schedules:' . optional($returnSchedule->getFerryRouteModel())->id . ':' . $returnSchedule->departure_time?->format('Y-m-d');
                 Cache::forget($returnKey);
             }
 
@@ -597,7 +597,7 @@ class CreateBookingAction
             || ($depStc && ($depStc->rate_type === 'promotional' || $depStc->is_promo))
             || ($retStc && ($retStc->rate_type === 'promotional' || $retStc->is_promo));
 
-        $isFerry = strtolower($schedule->ferryRoute?->mode ?? '') !== 'airline';
+        $isFerry = strtolower($schedule->getFerryRouteModel()?->mode ?? '') !== 'airline';
 
         $ferryTotal = collect($passengers)->sum(function (array $passenger) use (
             $schedulePrice,
@@ -680,7 +680,7 @@ class CreateBookingAction
 
         $settings       = PaymentSetting::current();
         $multiplier     = max(1, count($passengers));
-        $isAirline      = strtolower($schedule->ferryRoute?->mode ?? '') === 'airline';
+        $isAirline      = strtolower($schedule->getFerryRouteModel()?->mode ?? '') === 'airline';
         $depDuration    = $schedule->duration_minutes;
         $retDuration    = $returnSchedule?->duration_minutes ?? 0;
         $isShortHaul    = ! $isAirline && ($returnSchedule ? max($depDuration, $retDuration) < 300 : $depDuration < 300);

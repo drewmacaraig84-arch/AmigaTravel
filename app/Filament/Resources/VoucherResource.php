@@ -74,7 +74,8 @@ class VoucherResource extends Resource
                     ->required()
                     ->unique(ignoreRecord: true)
                     ->maxLength(50)
-                    ->regex('/^[A-Z0-9_-]+$/')
+                    ->regex('/^[A-Za-z0-9_-]+$/')
+                    ->dehydrateStateUsing(fn ($state) => strtoupper(trim((string) $state)))
                     ->helperText('Only letters, numbers, underscores, and hyphens are allowed (case-insensitive)'),
                 Textarea::make('description')
                     ->label('Internal Notes')
@@ -108,6 +109,17 @@ class VoucherResource extends Resource
                     ->minValue(0.01)
                     ->step(0.01)
                     ->helperText('Optional'),
+                Select::make('eligible_scope')
+                    ->label('Discount Scope')
+                    ->options([
+                        'booking_total' => 'Entire Booking Total (Tickets + Stay + Vehicle)',
+                        'ticket_fare' => 'Ticket Fare Only',
+                        'vehicle' => 'Vehicle Only',
+                        'accommodation' => 'Accommodation Only',
+                    ])
+                    ->default('booking_total')
+                    ->required()
+                    ->helperText('Controls which part of the booking total is eligible for discount'),
                 DateTimePicker::make('start_at')
                     ->label('Start Date & Time')
                     ->helperText('Optional: Leave empty to start immediately'),
@@ -131,6 +143,12 @@ class VoucherResource extends Resource
                     ->label('One Use Per Customer')
                     ->hintIcon('heroicon-m-question-mark-circle', tooltip: 'If checked, each user account or email can only use this voucher once.')
                     ->default(true),
+                Select::make('eligible_operator_id')
+                    ->label('Eligible Operator')
+                    ->relationship(name: 'eligibleOperator', titleAttribute: 'name')
+                    ->searchable()
+                    ->preload()
+                    ->helperText('Optional: Leave empty for all operators'),
                 TextInput::make('eligible_origin')
                     ->label('Eligible Origin')
                     ->maxLength(255)
@@ -183,6 +201,15 @@ class VoucherResource extends Resource
                 Infolists\Components\TextEntry::make('min_booking_amount')
                     ->label('Min Booking Amount')
                     ->money('PHP'),
+                Infolists\Components\TextEntry::make('eligible_scope')
+                    ->label('Discount Scope')
+                    ->formatStateUsing(fn (?string $state) => match ($state) {
+                        'booking_total' => 'Entire Booking Total',
+                        'ticket_fare' => 'Ticket Fare Only',
+                        'vehicle' => 'Vehicle Only',
+                        'accommodation' => 'Accommodation Only',
+                        default => ucfirst($state ?? 'Entire Booking Total'),
+                    }),
                 Infolists\Components\TextEntry::make('start_at')
                     ->label('Starts')
                     ->dateTime(),
@@ -199,6 +226,9 @@ class VoucherResource extends Resource
                     ->label('One Use Per Customer')
                     ->boolean(),
 
+                Infolists\Components\TextEntry::make('eligibleOperator.name')
+                    ->label('Eligible Operator')
+                    ->default('All Operators'),
                 Infolists\Components\TextEntry::make('eligible_origin')
                     ->label('Eligible Origin'),
                 Infolists\Components\TextEntry::make('eligible_destination')
@@ -250,6 +280,13 @@ class VoucherResource extends Resource
                     ->formatStateUsing(fn (Voucher $record) => $record->discount_type === 'percentage' 
                         ? "{$record->discount_value}%" 
                         : "₱" . number_format($record->discount_value, 2)),
+
+                TextColumn::make('eligibleOperator.name')
+                    ->label('Operator')
+                    ->default('All')
+                    ->badge()
+                    ->color(fn ($state) => $state === 'All' ? 'gray' : 'primary')
+                    ->sortable(),
 
                 ToggleColumn::make('is_active')
                     ->label('Active'),

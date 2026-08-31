@@ -28,6 +28,13 @@ class Schedule extends Model
         'is_active',
     ];
 
+    /**
+     * Always eager-load ferryRoute (with operatorRecord) so that any property
+     * access like $schedule->ferryRoute->origin never triggers a lazy-load
+     * violation regardless of where in the app the schedule is retrieved.
+     */
+    protected $with = ['ferryRoute.operatorRecord'];
+
     protected $casts = [
         'departure_time' => 'datetime',
         'arrival_time' => 'datetime',
@@ -242,10 +249,15 @@ class Schedule extends Model
     public function getFerryRouteModel(): ?FerryRoute
     {
         if ($this->relationLoaded('ferryRoute')) {
-            return $this->getRelation('ferryRoute');
+            $route = $this->getRelation('ferryRoute');
+            // Ensure operatorRecord is also loaded on the cached route
+            if ($route && ! $route->relationLoaded('operatorRecord')) {
+                $route->load('operatorRecord');
+            }
+            return $route;
         }
         if ($this->ferry_route_id) {
-            $route = FerryRoute::find($this->ferry_route_id);
+            $route = FerryRoute::with('operatorRecord')->find($this->ferry_route_id);
             if ($route) {
                 $this->setRelation('ferryRoute', $route);
             }
@@ -433,7 +445,8 @@ class Schedule extends Model
 
     protected function buildCabinLayouts(array $aircraftConfig): array
     {
-        $resolvedOperator = $this->resolveOperatorConfigKey($this->ferryRoute?->operator_name);
+        $route = $this->getFerryRouteModel();
+        $resolvedOperator = $this->resolveOperatorConfigKey($route?->operator_name ?? $route?->operator);
         $operatorConfig = config('airline_seating.operators.' . $resolvedOperator . '.classes', []);
         $currentRow = 1;
         $layouts = [];
@@ -511,7 +524,8 @@ class Schedule extends Model
 
     public function toBookingArray(?string $departureDate = null, ?array $occupiedSeats = null): array
     {
-        $mode = $this->ferryRoute?->mode ?? 'ferry';
+        $route = $this->getFerryRouteModel();
+        $mode = $route?->mode ?? 'ferry';
 
         // Explicitly fetch accommodations and transport classes using eager loaded relations if available
         $activeAccommodations = ($this->relationLoaded('scheduleAccommodations')
@@ -543,9 +557,9 @@ class Schedule extends Model
             'availability' => $this->availability_label ?? 'Available',
             'tickets_available' => (int) ($this->tickets_available ?? 0),
             'mode' => $mode,
-            'trip_type' => $this->ferryRoute?->trip_type ?: 'local',
-            'operator' => $this->ferryRoute?->operatorRecord?->name ?? $this->ferryRoute?->operator,
-            'operator_logo' => $this->ferryRoute?->operatorRecord?->logo_url,
+            'trip_type' => $route?->trip_type ?: 'local',
+            'operator' => $route?->operatorRecord?->name ?? $route?->operator,
+            'operator_logo' => $route?->operatorRecord?->logo_url,
             // ISO 8601 timestamp for real-time client-side filtering (JS Date comparison)
             'departure_time_iso' => $this->departure_time->toIso8601String(),
             // True when the departure has already passed (race-condition guard for UI)
