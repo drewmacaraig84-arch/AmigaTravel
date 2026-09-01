@@ -6,6 +6,7 @@ use App\Models\FerryRoute;
 use App\Models\Operator;
 use App\Models\Schedule;
 use App\Models\ScheduleAccommodation;
+use App\Models\TransportClass;
 use App\Models\Vehicle;
 use App\Models\VehicleRate;
 use Carbon\Carbon;
@@ -357,20 +358,23 @@ class StarliteScheduleIngestionService
         // 2. Sync Starlite Vessels (Only for Starlite)
         $syncedVessels = $this->syncVessels($operator);
 
-        // 3. Sync Rolling Cargo / Vehicle Rates
+        // 3. Sync Starlite Transport Classes (Passenger Accommodation Tiers)
+        $syncedTransportClasses = $this->syncTransportClasses($operator);
+
+        // 4. Sync Rolling Cargo / Vehicle Rates
         $this->syncVehicleRates();
 
-        // 4. Parse Timetable Rows from Excel
+        // 5. Parse Timetable Rows from Excel
         $rows = $this->parseXlsxRows($excelFilePath);
         $timetableRules = $this->extractTimetableRules($rows);
 
-        // 5. Expand Timetable Rules into Route & Schedule Records (Strictly for Starlite)
+        // 6. Expand Timetable Rules into Route & Schedule Records (Strictly for Starlite)
         $routesCreated = 0;
         $schedulesCreated = 0;
         $accommodationsAttached = 0;
 
         DB::transaction(function () use (
-            $operator, $timetableRules, $startDate, $endDate, $syncedVessels,
+            $operator, $timetableRules, $startDate, $endDate, $syncedVessels, $syncedTransportClasses,
             &$routesCreated, &$schedulesCreated, &$accommodationsAttached
         ) {
             foreach ($timetableRules as $rule) {
@@ -416,7 +420,7 @@ class StarliteScheduleIngestionService
                     $routesCreated++;
                 }
 
-                // Lookup Rate Matrix for this Route Pair
+                // Lookup Rate Matrix for this Route Pair from the June 2026 Tariff
                 $rateConfig = $this->lookupFareMatrix($origin, $destination);
                 $basePrice = $rateConfig['base_price'] ?? 680.0;
                 $accommodations = $rateConfig['accommodations'] ?? [
@@ -461,7 +465,7 @@ class StarliteScheduleIngestionService
                             $isNewSchedule = true;
                         }
 
-                        // Attach/Sync Accommodations
+                        // Attach/Sync Accommodations & Transport Classes
                         foreach ($accommodations as $index => $acc) {
                             $existingAcc = $schedule->scheduleAccommodations()
                                 ->where('name', $acc['name'])
@@ -481,6 +485,36 @@ class StarliteScheduleIngestionService
                             } elseif ($existingAcc->price != $acc['price']) {
                                 $existingAcc->update(['price' => $acc['price']]);
                             }
+
+                            // Also attach to TransportClass & schedule_transport_class pivot
+                            $tc = $syncedTransportClasses[$acc['name']] ?? null;
+                            if (! $tc) {
+                                $tc = TransportClass::firstOrCreate(
+                                    [
+                                        'operator' => 'Starlite',
+                                        'name' => $acc['name'],
+                                    ],
+                                    [
+                                        'operator_id' => $operator->id,
+                                        'code' => str($acc['name'])->slug()->value(),
+                                        'mode' => 'ferry',
+                                        'price' => $acc['price'],
+                                        'sort_order' => $index + 1,
+                                        'is_active' => true,
+                                    ]
+                                );
+                                $syncedTransportClasses[$acc['name']] = $tc;
+                            }
+
+                            $schedule->transportClasses()->syncWithoutDetaching([
+                                $tc->id => [
+                                    'additional_price' => $acc['price'],
+                                    'tickets_available' => $acc['tickets'] ?? 50,
+                                    'has_bed' => $acc['has_bed'] ?? false,
+                                    'rate_type' => 'regular',
+                                    'is_active' => true,
+                                ],
+                            ]);
                         }
                     }
                 }
@@ -536,6 +570,46 @@ class StarliteScheduleIngestionService
         }
 
         return $vessels;
+    }
+
+    /**
+     * Sync Starlite Transport Classes (Accommodation Tiers) into database.
+     *
+     * @return array<string, TransportClass>
+     */
+    public function syncTransportClasses(Operator $operator): array
+    {
+        $classes = [
+            ['name' => 'Reclining Seat', 'code' => 'reclining-seat', 'sort_order' => 1, 'description' => 'Comfortable reclining passenger seats with air-conditioning.'],
+            ['name' => 'Economy Bed Bunk', 'code' => 'economy-bed-bunk', 'sort_order' => 2, 'description' => 'Open-air bunk bed accommodation.'],
+            ['name' => 'Tourist Bed Bunk', 'code' => 'tourist-bed-bunk', 'sort_order' => 3, 'description' => 'Air-conditioned bunk bed accommodation.'],
+            ['name' => 'Cabin', 'code' => 'cabin', 'sort_order' => 4, 'description' => 'Private air-conditioned cabin for 4-8 persons.'],
+            ['name' => 'VIP Room (2-3 pax)', 'code' => 'vip-room-2-3-pax', 'sort_order' => 5, 'description' => 'Premium private VIP stateroom with private toilet & bath.'],
+            ['name' => 'VIP Room (5 pax)', 'code' => 'vip-room-5-pax', 'sort_order' => 6, 'description' => 'Spacious VIP stateroom for up to 5 persons.'],
+            ['name' => 'VIP Room', 'code' => 'vip-room', 'sort_order' => 7, 'description' => 'Executive VIP stateroom.'],
+        ];
+
+        $synced = [];
+        foreach ($classes as $item) {
+            $tc = TransportClass::updateOrCreate(
+                [
+                    'operator' => 'Starlite',
+                    'name' => $item['name'],
+                ],
+                [
+                    'operator_id' => $operator->id,
+                    'code' => $item['code'],
+                    'mode' => 'ferry',
+                    'description' => $item['description'],
+                    'price' => 0.00,
+                    'sort_order' => $item['sort_order'],
+                    'is_active' => true,
+                ]
+            );
+            $synced[$item['name']] = $tc;
+        }
+
+        return $synced;
     }
 
     /**

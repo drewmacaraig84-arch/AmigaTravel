@@ -18,7 +18,14 @@ export default defineConfig({
     ],
     server: {
         watch: {
-            ignored: ['**/storage/framework/views/**', '**/flutter_app/**'],
+            ignored: [
+                '**/storage/framework/views/**',
+                '**/flutter_app/**',
+                '**/starlite_*/**',
+                '**/*.pdf',
+                '**/*.xlsx',
+                '**/*.csv',
+            ],
         },
     },
 });

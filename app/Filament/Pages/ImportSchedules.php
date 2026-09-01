@@ -128,9 +128,13 @@ class ImportSchedules extends Page
         try {
             // Case 1: Starlite Timetable & Rate Matrix
             if ($operatorName === 'Starlite' && ($this->importPreset === 'starlite_timetable' || ! $this->uploadedFile)) {
+                $defaultPath = file_exists(base_path('starlite_example_schedule/VESSEL ROUTE.xlsx'))
+                    ? base_path('starlite_example_schedule/VESSEL ROUTE.xlsx')
+                    : base_path('starlite_schedules/VESSEL ROUTE.xlsx');
+
                 $filePath = $this->uploadedFile
                     ? $this->uploadedFile->getRealPath()
-                    : base_path('starlite_schedules/VESSEL ROUTE.xlsx');
+                    : $defaultPath;
 
                 $result = $starliteService->ingest($filePath, $start, $end);
 
