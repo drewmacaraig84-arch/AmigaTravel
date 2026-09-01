@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\FerryRoute;
+use App\Models\Operator;
 use App\Models\Schedule;
 use App\Models\ScheduleAccommodation;
 use App\Models\TransportClass;
@@ -17,16 +18,26 @@ class ScheduleCsvImportService
 {
     public function __construct(
         protected LocationCodeResolver $locationResolver = new LocationCodeResolver(),
-    ) {}
+        protected ?StarliteScheduleIngestionService $starliteService = null,
+    ) {
+        $this->starliteService = $starliteService ?? new StarliteScheduleIngestionService($this->locationResolver);
+    }
 
     /**
      * Import schedules from a CSV or XLSX file.
      *
      * @param string $filePath
-     * @return array Summary of import results: ['imported' => int, 'skipped' => int, 'errors' => array]
+     * @param string|null $forcedOperator Optional operator constraint
+     * @param Carbon|null $startDate
+     * @param Carbon|null $endDate
+     * @return array Summary of import results
      */
-    public function import(string $filePath): array
-    {
+    public function import(
+        string $filePath,
+        ?string $forcedOperator = null,
+        ?Carbon $startDate = null,
+        ?Carbon $endDate = null
+    ): array {
         $importedCount = 0;
         $skippedCount = 0;
         $errors = [];
@@ -40,6 +51,33 @@ class ScheduleCsvImportService
         }
 
         $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+
+        // Detect Starlite Timetable format
+        if ($extension === 'xlsx') {
+            try {
+                $rawRows = $this->parseXlsxRows($filePath);
+                $isStarliteTimetable = false;
+                foreach (array_slice($rawRows, 0, 5) as $r) {
+                    $rowStr = strtoupper(implode(' ', (array) $r));
+                    if (str_contains($rowStr, 'STARLITE FERRIES') || (str_contains($rowStr, 'ROUTE') && str_contains($rowStr, 'DAYS') && str_contains($rowStr, 'DEPARTURE TIME'))) {
+                        $isStarliteTimetable = true;
+                        break;
+                    }
+                }
+
+                if ($isStarliteTimetable || strtolower($forcedOperator ?? '') === 'starlite') {
+                    $result = $this->starliteService->ingest($filePath, $startDate, $endDate);
+                    return [
+                        'imported' => $result['schedules_count'] ?? 0,
+                        'skipped' => 0,
+                        'errors' => $result['success'] ? [] : [$result['message']],
+                        'starlite_result' => $result,
+                    ];
+                }
+            } catch (Throwable $e) {
+                // Fall back to standard parser if error
+            }
+        }
 
         try {
             if ($extension === 'xlsx') {
@@ -89,8 +127,8 @@ class ScheduleCsvImportService
             $rowData = array_combine(array_slice($headers, 0, count($row)), array_slice($row, 0, count($headers)));
 
             try {
-                $result = DB::transaction(function () use ($rowData) {
-                    return $this->processRow($rowData);
+                $result = DB::transaction(function () use ($rowData, $forcedOperator) {
+                    return $this->processRow($rowData, $forcedOperator);
                 });
 
                 if ($result === 'imported') {
@@ -233,28 +271,58 @@ class ScheduleCsvImportService
      * Process a single CSV/XLSX row.
      *
      * @param array $row
+     * @param string|null $forcedOperator
      * @return string 'imported' or 'skipped'
      */
-    protected function processRow(array $row): string
+    protected function processRow(array $row, ?string $forcedOperator = null): string
     {
-        // Header mappings
-        $modeRaw = $this->getValue($row, ['mode']);
-        $operator = $this->getValue($row, ['operator']);
-        $vehicleTailNo = $this->getValue($row, ['vehicletailno', 'vehicle', 'tailno', 'vehicleno']);
-        $plateNo = $this->getValue($row, ['plateno', 'plate']);
-        $origin = $this->getValue($row, ['origin']);
-        $destination = $this->getValue($row, ['destination']);
-        $depDateStr = $this->getValue($row, ['departuredate', 'depdate', 'date']);
-        $depTimeStr = $this->getValue($row, ['departuretime', 'deptime', 'time']);
-        $arrTimeStr = $this->getValue($row, ['arrivaltime', 'arrtime']);
-        $returnDateStr = $this->getValue($row, ['returndate', 'retdate']);
-        $transportClassStr = $this->getValue($row, ['transportclass', 'class', 'accommodation']);
-        $rateRaw = $this->getValue($row, ['rate', 'price', 'fare', 'basefare', 'base_fare']);
-        $additionalPriceRaw = $this->getValue($row, ['additionalprice', 'additional_price', 'classprice', 'class_price', 'extraprice', 'addonprice']);
-        $rateTierRaw = $this->getValue($row, ['ratetier', 'rate_tier', 'ratetype', 'rate_type', 'tier', 'farepolicy', 'fare_policy', 'policy']);
-        $ticketsAvailableRaw = $this->getValue($row, ['ticketsavailable', 'tickets_available', 'tickets', 'seats', 'capacity', 'inventory', 'qty']);
-        $hasBedRaw = $this->getValue($row, ['hasbed', 'has_bed', 'bed', 'includesbed', 'includes_bed', 'berth']);
-        $rateCodeStr = $this->getValue($row, ['ratecode', 'rate_code', 'code']);
+        // Header mappings with extensive multi-operator alias matching
+        $modeRaw = $this->getValue($row, ['mode', 'transport_mode', 'transportmode', 'type']);
+        $operatorRaw = $this->getValue($row, ['operator', 'operator_name', 'airline', 'carrier', 'shipping_line', 'company']);
+        $vehicleTailNo = $this->getValue($row, [
+            'vehicletailno', 'vehicle', 'tailno', 'vehicleno', 'vehicle_name', 'vessel', 'vessel_name', 'vesselname',
+            'flight', 'flightno', 'flight_no', 'flight_number', 'flightnumber', 'ship', 'craft', 'plane', 'aircraft'
+        ]);
+        $plateNo = $this->getValue($row, ['plateno', 'plate', 'plate_no', 'registration']);
+        $origin = $this->getValue($row, [
+            'origin', 'from', 'departure_port', 'departureport', 'departure_airport', 'departureairport',
+            'dep_port', 'dep_airport', 'source', 'orig'
+        ]);
+        $destination = $this->getValue($row, [
+            'destination', 'dest', 'to', 'arrival_port', 'arrivalport', 'arrival_airport', 'arrivalairport',
+            'arr_port', 'arr_airport'
+        ]);
+        $depDateStr = $this->getValue($row, [
+            'departuredate', 'depdate', 'departure_date', 'date', 'flight_date', 'flightdate',
+            'sail_date', 'saildate', 'voyage_date', 'travel_date', 'traveldate'
+        ]);
+        $depTimeStr = $this->getValue($row, [
+            'departuretime', 'deptime', 'departure_time', 'time', 'etd', 'departure', 'dep_time', 'flight_time'
+        ]);
+        $arrTimeStr = $this->getValue($row, [
+            'arrivaltime', 'arrtime', 'arrival_time', 'eta', 'arrival', 'arr_time'
+        ]);
+        $returnDateStr = $this->getValue($row, ['returndate', 'retdate', 'return_date']);
+        $transportClassStr = $this->getValue($row, [
+            'transportclass', 'transport_class', 'class', 'accommodation', 'accommodation_class',
+            'seat_class', 'seatclass', 'cabin', 'cabin_type', 'cabinclass', 'tier', 'service_class'
+        ]);
+        $rateRaw = $this->getValue($row, [
+            'rate', 'price', 'fare', 'basefare', 'base_fare', 'ticket_price', 'ticketprice', 'cost', 'amount'
+        ]);
+        $additionalPriceRaw = $this->getValue($row, [
+            'additionalprice', 'additional_price', 'classprice', 'class_price', 'extraprice', 'addonprice'
+        ]);
+        $rateTierRaw = $this->getValue($row, [
+            'ratetier', 'rate_tier', 'ratetype', 'rate_type', 'tier', 'farepolicy', 'fare_policy', 'policy'
+        ]);
+        $ticketsAvailableRaw = $this->getValue($row, [
+            'ticketsavailable', 'tickets_available', 'tickets', 'seats', 'capacity', 'inventory', 'qty', 'allotment'
+        ]);
+        $hasBedRaw = $this->getValue($row, [
+            'hasbed', 'has_bed', 'bed', 'includesbed', 'includes_bed', 'berth', 'bunk'
+        ]);
+        $rateCodeStr = $this->getValue($row, ['ratecode', 'rate_code', 'code', 'fare_code']);
 
         if (blank($origin) || blank($destination) || blank($depDateStr) || blank($depTimeStr)) {
             throw new \InvalidArgumentException('Missing required fields (Origin, Destination, Departure Date, or Departure Time).');
@@ -268,7 +336,17 @@ class ScheduleCsvImportService
         $destination = $this->locationResolver->resolve($destination, $mode);
 
         // Normalize Operator
-        $operator = $this->normalizeOperatorName($operator, $mode);
+        $operator = filled($forcedOperator) ? trim($forcedOperator) : $this->normalizeOperatorName($operatorRaw, $mode);
+        
+        // Auto-create or resolve Operator
+        $operatorModel = Operator::firstOrCreate(
+            ['name' => $operator],
+            [
+                'mode' => $mode,
+                'is_active' => true,
+            ]
+        );
+
         $vehicleTailNo = filled($vehicleTailNo) ? trim($vehicleTailNo) : ($mode === 'airline' ? "{$operator} Aircraft" : "{$operator} Vessel");
         $transportClassStr = filled($transportClassStr) ? trim($transportClassStr) : ($mode === 'airline' ? 'Economy' : 'Standard');
         
@@ -307,8 +385,9 @@ class ScheduleCsvImportService
 
         $rateCode = filled($rateCodeStr) ? trim($rateCodeStr) : null;
 
-        // 1. Resolve or Create Vehicle
+        // 1. Resolve or Create Vehicle (Operator-isolated)
         $vehicle = Vehicle::where('type', $mode)
+            ->where('operator', $operator)
             ->where(function ($q) use ($vehicleTailNo) {
                 $q->where('vehicle_id', $vehicleTailNo)
                   ->orWhere('name', $vehicleTailNo);
@@ -321,18 +400,16 @@ class ScheduleCsvImportService
                 'name' => $vehicleTailNo,
                 'vehicle_id' => $vehicleTailNo,
                 'operator' => $operator,
+                'operator_id' => $operatorModel->id,
                 'is_active' => true,
             ]);
         }
 
-        // 2. Resolve or Create FerryRoute
+        // 2. Resolve or Create FerryRoute (Operator-isolated)
         $route = FerryRoute::where('origin', trim($origin))
             ->where('destination', trim($destination))
             ->where('mode', $mode)
-            ->where(function ($q) use ($operator, $vehicle) {
-                $q->where('operator', $operator)
-                  ->orWhere('vehicle_id', $vehicle->id);
-            })
+            ->where('operator', $operator)
             ->first();
 
         if (! $route) {
@@ -341,6 +418,7 @@ class ScheduleCsvImportService
                 'destination' => trim($destination),
                 'mode' => $mode,
                 'operator' => $operator,
+                'operator_id' => $operatorModel->id,
                 'vehicle_id' => $vehicle->id,
                 'is_active' => true,
             ]);

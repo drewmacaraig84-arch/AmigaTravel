@@ -88,6 +88,7 @@ class LocationCodeResolver
      * Names match exactly what the RouteScheduleSeeder uses (2GO, Starlite routes).
      */
     private const FERRY_CODES = [
+        // --- Short codes ---
         'MNL' => 'Manila',
         'MAN' => 'Manila',
         'CEB' => 'Cebu',
@@ -98,8 +99,19 @@ class LocationCodeResolver
         'CLP' => 'Calapan',
         'CTL' => 'Caticlan',
         'CAT' => 'Caticlan',
+        'MPH' => 'Caticlan',
         'ROX' => 'Roxas',
         'RXS' => 'Roxas',
+        'RXM' => 'Roxas Mindoro',
+        'RXC' => 'Roxas Capiz',
+        'ROM' => 'Romblon',
+        'SIB' => 'Sibuyan (Magdiwang)',
+        'MAG' => 'Sibuyan (Magdiwang)',
+        'CAJ' => 'Cajidiocan',
+        'ODI' => 'Odiongan',
+        'BUR' => 'Buruanga',
+        'DAN' => 'Danao',
+        'DAP' => 'Dapitan',
         'ILO' => 'Iloilo',
         'CDO' => 'Cagayan de Oro',
         'CGY' => 'Cagayan de Oro',
@@ -113,10 +125,36 @@ class LocationCodeResolver
         'NAG' => 'Nasipit',
         'BUT' => 'Butuan',
         'SRG' => 'Surigao',
+        'SUR' => 'Surigao',
         'DVO' => 'Davao',
         'ELP' => 'El Nido',
         'CON' => 'Coron',
         'PPS' => 'Puerto Princesa',
+
+        // --- Full-name uppercase keys (for raw XLSX city names from Starlite timetable) ---
+        'MANILA' => 'Manila',
+        'CEBU' => 'Cebu',
+        'BATANGAS' => 'Batangas',
+        'CALAPAN' => 'Calapan',
+        'CATICLAN' => 'Caticlan',
+        'ROXAS MINDORO' => 'Roxas Mindoro',
+        'ROXAS CAPIZ' => 'Roxas Capiz',
+        'ROXAS, CAPIZ' => 'Roxas Capiz',
+        'ROXAS CITY' => 'Roxas Capiz',
+        'ROMBLON' => 'Romblon',
+        'ROMBLOM' => 'Romblon', // Typo in Starlite XLSX
+        'MAGDIWANG' => 'Sibuyan (Magdiwang)',
+        'SIBUYAN (MAG)' => 'Sibuyan (Magdiwang)',
+        'CAJIDIOCAN' => 'Cajidiocan',
+        'ODIONGAN' => 'Odiongan',
+        'BURUANGA' => 'Buruanga',
+        'BURUANGGA' => 'Buruanga', // Typo in Starlite XLSX
+        'DAPITAN' => 'Dapitan',
+        'SURIGAO' => 'Surigao',
+        'NASIPIT' => 'Nasipit',
+        'DAVAO' => 'Davao',
+        'ILOILO' => 'Iloilo',
+        'ZAMBOANGA' => 'Zamboanga',
     ];
 
     /**
@@ -132,9 +170,20 @@ class LocationCodeResolver
             return '';
         }
 
-        $key = strtoupper(trim($value));
+        $trimmed = trim($value);
+        $key = strtoupper($trimmed);
         $map = $mode === 'ferry' ? self::FERRY_CODES : self::AIRLINE_CODES;
 
-        return $map[$key] ?? trim($value);
+        if (isset($map[$key])) {
+            return $map[$key];
+        }
+
+        // Passthrough: normalize ALL-CAPS full names to Title Case
+        // so that "BATANGAS" from XLSX becomes "Batangas"
+        if ($trimmed === strtoupper($trimmed) && strlen($trimmed) > 3) {
+            return ucwords(strtolower($trimmed));
+        }
+
+        return $trimmed;
     }
 }

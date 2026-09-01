@@ -84,6 +84,21 @@ class LocationCodeResolverTest extends TestCase
         $this->assertEquals('Roxas', $this->resolver->resolve('ROX', 'ferry'));
     }
 
+    public function test_resolves_starlite_specific_ferry_codes(): void
+    {
+        $this->assertEquals('Romblon', $this->resolver->resolve('ROM', 'ferry'));
+        $this->assertEquals('Sibuyan (Magdiwang)', $this->resolver->resolve('SIB', 'ferry'));
+        $this->assertEquals('Sibuyan (Magdiwang)', $this->resolver->resolve('MAG', 'ferry'));
+        $this->assertEquals('Cajidiocan', $this->resolver->resolve('CAJ', 'ferry'));
+        $this->assertEquals('Odiongan', $this->resolver->resolve('ODI', 'ferry'));
+        $this->assertEquals('Roxas Mindoro', $this->resolver->resolve('RXM', 'ferry'));
+        $this->assertEquals('Roxas Capiz', $this->resolver->resolve('RXC', 'ferry'));
+        $this->assertEquals('Buruanga', $this->resolver->resolve('BUR', 'ferry'));
+        $this->assertEquals('Dapitan', $this->resolver->resolve('DAP', 'ferry'));
+        $this->assertEquals('Surigao', $this->resolver->resolve('SUR', 'ferry'));
+        $this->assertEquals('Nasipit', $this->resolver->resolve('NAG', 'ferry'));
+    }
+
     // --- Case insensitivity ---
 
     public function test_codes_are_case_insensitive(): void
