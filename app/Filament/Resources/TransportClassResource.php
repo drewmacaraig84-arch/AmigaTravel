@@ -11,8 +11,10 @@ use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\ToggleButtons;
 use Filament\Forms\Form;
 use Filament\Forms\Components\Select;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
@@ -180,10 +182,62 @@ class TransportClassResource extends Resource
             ->actions([
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make()
+                    ->disabled(fn (TransportClass $record): bool => ($record->schedules_count ?? 0) > 0)
+                    ->tooltip(fn (TransportClass $record): string => ($record->schedules_count ?? 0) > 0
+                        ? "Cannot delete — used in {$record->schedules_count} schedule(s). Remove all schedules first."
+                        : 'Delete this transport class'
+                    )
+                    ->requiresConfirmation()
+                    ->modalHeading('Delete Transport Class')
+                    ->modalDescription('This will permanently delete the transport class. This action cannot be undone.'),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\BulkAction::make('safe_delete')
+                        ->label('Delete Selected')
+                        ->icon('heroicon-o-trash')
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->modalHeading('Delete Transport Classes')
+                        ->modalDescription('Transport classes that are used in existing schedules will be skipped and cannot be deleted. Only unused classes will be permanently removed.')
+                        ->modalSubmitActionLabel('Yes, delete unused')
+                        ->action(function (Collection $records): void {
+                            $withSchedules = $records->filter(
+                                fn (TransportClass $r) => ($r->schedules_count ?? $r->schedules()->count()) > 0
+                            );
+                            $deletable = $records->reject(
+                                fn (TransportClass $r) => ($r->schedules_count ?? $r->schedules()->count()) > 0
+                            );
+
+                            $deletable->each->delete();
+
+                            if ($withSchedules->isNotEmpty() && $deletable->isNotEmpty()) {
+                                Notification::make()
+                                    ->title('Partial deletion')
+                                    ->body(
+                                        "Deleted {$deletable->count()} class(es). " .
+                                        "Skipped {$withSchedules->count()} class(es) that are still used in schedules."
+                                    )
+                                    ->warning()
+                                    ->send();
+                            } elseif ($withSchedules->isNotEmpty()) {
+                                Notification::make()
+                                    ->title('Nothing deleted')
+                                    ->body(
+                                        "All {$withSchedules->count()} selected class(es) are used in schedules " .
+                                        'and cannot be deleted. Remove them from all schedules first.'
+                                    )
+                                    ->danger()
+                                    ->send();
+                            } else {
+                                Notification::make()
+                                    ->title("Deleted {$deletable->count()} transport class(es) successfully.")
+                                    ->success()
+                                    ->send();
+                            }
+                        })
+                        ->deselectRecordsAfterCompletion(),
                 ]),
             ]);
     }
