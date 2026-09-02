@@ -99,9 +99,12 @@ class StarliteScheduleIngestionTest extends TestCase
 
     public function test_ingest_strictly_creates_starlite_data_only(): void
     {
-        $filePath = base_path('starlite_schedules/VESSEL ROUTE.xlsx');
+        $filePath = file_exists(base_path('starlite_example_schedule/VESSEL ROUTE.xlsx'))
+            ? base_path('starlite_example_schedule/VESSEL ROUTE.xlsx')
+            : base_path('starlite_schedules/VESSEL ROUTE.xlsx');
+
         if (! file_exists($filePath)) {
-            $this->markTestSkipped('starlite_schedules/VESSEL ROUTE.xlsx not present.');
+            $this->markTestSkipped('Starlite VESSEL ROUTE.xlsx not present.');
         }
 
         $startDate = Carbon::today();
@@ -121,5 +124,17 @@ class StarliteScheduleIngestionTest extends TestCase
         // Assert vehicle rates are synced
         $this->assertDatabaseHas('vehicle_rates', ['name' => 'Motorcycle', 'price' => 1440.00]);
         $this->assertDatabaseHas('vehicle_rates', ['name' => 'Below 3 meters', 'price' => 2160.00]);
+
+        // Assert Transport Classes are provisioned for Starlite
+        $this->assertDatabaseHas('transport_classes', ['name' => 'Reclining Seat', 'operator' => 'Starlite']);
+        $this->assertDatabaseHas('transport_classes', ['name' => 'Economy Bed Bunk', 'operator' => 'Starlite']);
+        $this->assertDatabaseHas('transport_classes', ['name' => 'Tourist Bed Bunk', 'operator' => 'Starlite']);
+        $this->assertDatabaseHas('transport_classes', ['name' => 'Cabin', 'operator' => 'Starlite']);
+
+        // Assert Schedules have TransportClasses attached with prices
+        $sampleSchedule = \App\Models\Schedule::first();
+        $this->assertNotNull($sampleSchedule);
+        $this->assertTrue($sampleSchedule->transportClasses()->exists());
+        $this->assertGreaterThan(0, $sampleSchedule->transportClasses()->count());
     }
 }

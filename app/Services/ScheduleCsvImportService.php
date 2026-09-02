@@ -467,63 +467,64 @@ class ScheduleCsvImportService
         $accommodationPrice = $additionalPrice > 0 ? $additionalPrice : $rate;
         $transportClassPrice = $additionalPrice;
 
-        if ($mode === 'airline') {
-            $transportClass = TransportClass::where('name', $transportClassStr)
-                ->where(function ($q) use ($operator) {
-                    $q->where('operator', $operator)->orWhereNull('operator');
-                })
-                ->first();
+        // Ensure TransportClass exists in catalog
+        $transportClass = TransportClass::where('name', $transportClassStr)
+            ->where(function ($q) use ($operator) {
+                $q->where('operator', $operator)->orWhereNull('operator');
+            })
+            ->first();
 
-            if (! $transportClass) {
-                $transportClass = TransportClass::create([
-                    'name' => $transportClassStr,
-                    'code' => str($transportClassStr)->slug()->value(),
-                    'operator' => $operator,
-                    'price' => $transportClassPrice,
-                    'is_active' => true,
-                ]);
-            }
+        if (! $transportClass) {
+            $transportClass = TransportClass::create([
+                'name' => $transportClassStr,
+                'code' => str($transportClassStr)->slug()->value(),
+                'operator' => $operator,
+                'operator_id' => $operatorModel?->id,
+                'mode' => $mode,
+                'price' => $transportClassPrice,
+                'is_active' => true,
+            ]);
+        }
 
-            $alreadyAttached = $schedule->transportClasses()
-                ->where('transport_classes.id', $transportClass->id)
-                ->exists();
+        // Attach to schedule_transport_class pivot
+        $alreadyAttachedTc = $schedule->transportClasses()
+            ->where('transport_classes.id', $transportClass->id)
+            ->exists();
 
-            if ($alreadyAttached && ! $scheduleCreated) {
-                $status = 'skipped';
-            } else {
-                if (! $alreadyAttached) {
-                    $schedule->transportClasses()->attach($transportClass->id, [
-                        'additional_price' => $transportClassPrice,
-                        'tickets_available' => $ticketsAvailable,
-                        'rate_type' => $rateType,
-                        'is_promo' => $isPromo,
-                        'rate_code' => $rateCode,
-                        'has_bed' => $hasBed,
-                        'is_active' => true,
-                    ]);
-                }
-            }
-        } else {
+        if (! $alreadyAttachedTc) {
+            $schedule->transportClasses()->attach($transportClass->id, [
+                'additional_price' => $transportClassPrice,
+                'tickets_available' => $ticketsAvailable,
+                'rate_type' => $rateType,
+                'is_promo' => $isPromo,
+                'rate_code' => $rateCode,
+                'has_bed' => $hasBed,
+                'is_active' => true,
+            ]);
+        }
+
+        // For Ferry mode, also maintain schedule_accommodations compatibility
+        if ($mode === 'ferry') {
             $accommodationExists = $schedule->scheduleAccommodations()
                 ->where('name', $transportClassStr)
                 ->where('rate_code', $rateCode)
                 ->exists();
 
-            if ($accommodationExists && ! $scheduleCreated) {
-                $status = 'skipped';
-            } else {
-                if (! $accommodationExists) {
-                    ScheduleAccommodation::create([
-                        'schedule_id' => $schedule->id,
-                        'name' => $transportClassStr,
-                        'rate_code' => $rateCode,
-                        'price' => $accommodationPrice,
-                        'tickets_available' => $ticketsAvailable,
-                        'has_bed' => $hasBed,
-                        'is_active' => true,
-                    ]);
-                }
+            if (! $accommodationExists) {
+                ScheduleAccommodation::create([
+                    'schedule_id' => $schedule->id,
+                    'name' => $transportClassStr,
+                    'rate_code' => $rateCode,
+                    'price' => $accommodationPrice,
+                    'tickets_available' => $ticketsAvailable,
+                    'has_bed' => $hasBed,
+                    'is_active' => true,
+                ]);
             }
+        }
+
+        if ($alreadyAttachedTc && ! $scheduleCreated) {
+            $status = 'skipped';
         }
 
         // 6. Handle optional Return Date if present
@@ -622,25 +623,36 @@ class ScheduleCsvImportService
             ]);
         }
 
-        if ($mode === 'airline') {
-            $transportClass = TransportClass::where('name', $transportClassStr)
-                ->where(function ($q) use ($operator) {
-                    $q->where('operator', $operator)->orWhereNull('operator');
-                })
-                ->first();
+        $transportClass = TransportClass::where('name', $transportClassStr)
+            ->where(function ($q) use ($operator) {
+                $q->where('operator', $operator)->orWhereNull('operator');
+            })
+            ->first();
 
-            if ($transportClass && ! $schedule->transportClasses()->where('transport_classes.id', $transportClass->id)->exists()) {
-                $schedule->transportClasses()->attach($transportClass->id, [
-                    'additional_price' => $transportClassPrice,
-                    'tickets_available' => $ticketsAvailable,
-                    'rate_type' => $rateType,
-                    'is_promo' => $isPromo,
-                    'rate_code' => $rateCode,
-                    'has_bed' => $hasBed,
-                    'is_active' => true,
-                ]);
-            }
-        } else {
+        if (! $transportClass) {
+            $transportClass = TransportClass::create([
+                'name' => $transportClassStr,
+                'code' => str($transportClassStr)->slug()->value(),
+                'operator' => $operator,
+                'mode' => $mode,
+                'price' => $transportClassPrice,
+                'is_active' => true,
+            ]);
+        }
+
+        if (! $schedule->transportClasses()->where('transport_classes.id', $transportClass->id)->exists()) {
+            $schedule->transportClasses()->attach($transportClass->id, [
+                'additional_price' => $transportClassPrice,
+                'tickets_available' => $ticketsAvailable,
+                'rate_type' => $rateType,
+                'is_promo' => $isPromo,
+                'rate_code' => $rateCode,
+                'has_bed' => $hasBed,
+                'is_active' => true,
+            ]);
+        }
+
+        if ($mode === 'ferry') {
             if (! $schedule->scheduleAccommodations()->where('name', $transportClassStr)->where('rate_code', $rateCode)->exists()) {
                 ScheduleAccommodation::create([
                     'schedule_id' => $schedule->id,
