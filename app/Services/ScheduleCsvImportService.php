@@ -467,24 +467,14 @@ class ScheduleCsvImportService
         $accommodationPrice = $additionalPrice > 0 ? $additionalPrice : $rate;
         $transportClassPrice = $additionalPrice;
 
-        // Ensure TransportClass exists in catalog
-        $transportClass = TransportClass::where('name', $transportClassStr)
-            ->where(function ($q) use ($operator) {
-                $q->where('operator', $operator)->orWhereNull('operator');
-            })
-            ->first();
-
-        if (! $transportClass) {
-            $transportClass = TransportClass::create([
-                'name' => $transportClassStr,
-                'code' => str($transportClassStr)->slug()->value(),
-                'operator' => $operator,
-                'operator_id' => $operatorModel?->id,
-                'mode' => $mode,
-                'price' => $transportClassPrice,
-                'is_active' => true,
-            ]);
-        }
+        // Ensure TransportClass exists in catalog with smart canonical resolution
+        $transportClass = $this->resolveTransportClass(
+            $transportClassStr,
+            $operator,
+            $operatorModel,
+            $mode,
+            $transportClassPrice
+        );
 
         // Attach to schedule_transport_class pivot
         $alreadyAttachedTc = $schedule->transportClasses()
@@ -506,14 +496,14 @@ class ScheduleCsvImportService
         // For Ferry mode, also maintain schedule_accommodations compatibility
         if ($mode === 'ferry') {
             $accommodationExists = $schedule->scheduleAccommodations()
-                ->where('name', $transportClassStr)
+                ->where('name', $transportClass->name)
                 ->where('rate_code', $rateCode)
                 ->exists();
 
             if (! $accommodationExists) {
                 ScheduleAccommodation::create([
                     'schedule_id' => $schedule->id,
-                    'name' => $transportClassStr,
+                    'name' => $transportClass->name,
                     'rate_code' => $rateCode,
                     'price' => $accommodationPrice,
                     'tickets_available' => $ticketsAvailable,
@@ -623,22 +613,13 @@ class ScheduleCsvImportService
             ]);
         }
 
-        $transportClass = TransportClass::where('name', $transportClassStr)
-            ->where(function ($q) use ($operator) {
-                $q->where('operator', $operator)->orWhereNull('operator');
-            })
-            ->first();
-
-        if (! $transportClass) {
-            $transportClass = TransportClass::create([
-                'name' => $transportClassStr,
-                'code' => str($transportClassStr)->slug()->value(),
-                'operator' => $operator,
-                'mode' => $mode,
-                'price' => $transportClassPrice,
-                'is_active' => true,
-            ]);
-        }
+        $transportClass = $this->resolveTransportClass(
+            $transportClassStr,
+            $operator,
+            $forwardRoute->operatorRecord,
+            $mode,
+            $transportClassPrice
+        );
 
         if (! $schedule->transportClasses()->where('transport_classes.id', $transportClass->id)->exists()) {
             $schedule->transportClasses()->attach($transportClass->id, [
@@ -653,10 +634,10 @@ class ScheduleCsvImportService
         }
 
         if ($mode === 'ferry') {
-            if (! $schedule->scheduleAccommodations()->where('name', $transportClassStr)->where('rate_code', $rateCode)->exists()) {
+            if (! $schedule->scheduleAccommodations()->where('name', $transportClass->name)->where('rate_code', $rateCode)->exists()) {
                 ScheduleAccommodation::create([
                     'schedule_id' => $schedule->id,
-                    'name' => $transportClassStr,
+                    'name' => $transportClass->name,
                     'rate_code' => $rateCode,
                     'price' => $accommodationPrice,
                     'tickets_available' => $ticketsAvailable,
@@ -735,5 +716,152 @@ class ScheduleCsvImportService
         }
 
         return null;
+    }
+
+    /**
+     * Resolve or find the canonical TransportClass for an operator, avoiding duplicate creation.
+     */
+    public function resolveTransportClass(
+        string $rawClassName,
+        string $operator,
+        ?Operator $operatorModel,
+        string $mode,
+        float $defaultPrice = 0.0
+    ): TransportClass {
+        $clean = trim($rawClassName);
+
+        // 1. Strip parenthetical fare or route notes like (Romblon Fare), (Culasi Fare), (Fare), etc.
+        // Keep capacity notes like (2-3 pax) or (5 pax)
+        $normalized = preg_replace('/\s*\((?![0-9]+(?:\s*-\s*[0-9]+)?\s*pax)[^)]*(?:fare|rate|route|vv|via)[^)]*\)/i', '', $clean);
+        $normalized = trim($normalized);
+
+        // 2. Canonical mapping for common variations
+        $canonicalName = $this->canonicalizeClassName($normalized, $operator, $mode);
+
+        // 3. Try to find existing TransportClass for this operator
+        $transportClass = TransportClass::query()
+            ->where(function ($q) use ($operator, $operatorModel) {
+                if ($operatorModel) {
+                    $q->where('operator_id', $operatorModel->id)
+                      ->orWhere('operator', $operator);
+                } else {
+                    $q->where('operator', $operator)
+                      ->orWhereNull('operator');
+                }
+            })
+            ->where(function ($q) use ($canonicalName, $clean) {
+                $q->where('name', $canonicalName)
+                  ->orWhere('name', $clean)
+                  ->orWhere('code', str($canonicalName)->slug()->value())
+                  ->orWhere('code', str($clean)->slug()->value());
+            })
+            ->first();
+
+        // 4. Special handling for Starlite Ferries: strictly map to official tariff accommodation classes
+        if (! $transportClass && strtolower($operator) === 'starlite') {
+            $starliteCanonicalMap = [
+                'reclining' => 'Reclining Seat',
+                'economy'   => 'Economy Bed Bunk',
+                'tourist'   => 'Tourist Bed Bunk',
+                'cabin'     => 'Cabin',
+                'vip'       => str_contains(strtolower($canonicalName), '5') ? 'VIP Room 5pax' : 'VIP Room 2-3pax',
+            ];
+
+            foreach ($starliteCanonicalMap as $keyword => $targetName) {
+                if (str_contains(strtolower($canonicalName), $keyword) || str_contains(strtolower($clean), $keyword)) {
+                    $transportClass = TransportClass::where('operator', 'Starlite')
+                        ->where(function ($q) use ($targetName) {
+                            $q->where('name', $targetName)
+                              ->orWhere('name', 'like', '%' . $targetName . '%');
+                        })
+                        ->first();
+                    if ($transportClass) {
+                        break;
+                    }
+                }
+            }
+        }
+
+        // 5. Fallback: match by partial name across operator's existing classes before creating
+        if (! $transportClass) {
+            $transportClass = TransportClass::query()
+                ->where(function ($q) use ($operator, $operatorModel) {
+                    if ($operatorModel) {
+                        $q->where('operator_id', $operatorModel->id)->orWhere('operator', $operator);
+                    } else {
+                        $q->where('operator', $operator)->orWhereNull('operator');
+                    }
+                })
+                ->where('mode', $mode)
+                ->where('name', 'like', '%' . $canonicalName . '%')
+                ->first();
+        }
+
+        // 6. Only create if truly a brand new, unrecognized class
+        if (! $transportClass) {
+            $transportClass = TransportClass::create([
+                'name' => $canonicalName,
+                'code' => str($canonicalName)->slug()->value(),
+                'operator' => $operator,
+                'operator_id' => $operatorModel?->id,
+                'mode' => $mode,
+                'price' => $defaultPrice,
+                'is_active' => true,
+            ]);
+        }
+
+        return $transportClass;
+    }
+
+    /**
+     * Canonicalize accommodation/seat class names into standard master data names.
+     */
+    protected function canonicalizeClassName(string $name, string $operator, string $mode): string
+    {
+        $lower = strtolower(trim($name));
+
+        if (strtolower($operator) === 'starlite' || $mode === 'ferry') {
+            if (str_starts_with($lower, 'reclining') || str_contains($lower, 'recliner')) {
+                return 'Reclining Seat';
+            }
+            if (str_contains($lower, 'tourist')) {
+                return 'Tourist Bed Bunk';
+            }
+            if (str_contains($lower, 'economy')) {
+                return 'Economy Bed Bunk';
+            }
+            if (str_starts_with($lower, 'cabin')) {
+                return 'Cabin';
+            }
+            if (str_contains($lower, 'vip')) {
+                if (str_contains($lower, '5')) {
+                    return 'VIP Room 5pax';
+                }
+                return 'VIP Room 2-3pax';
+            }
+        }
+
+        if ($mode === 'airline') {
+            if (str_contains($lower, 'business')) {
+                return 'Business Class';
+            }
+            if (str_contains($lower, 'premium eco')) {
+                return 'Premium Economy';
+            }
+            if (str_contains($lower, 'economy')) {
+                return 'Economy Class';
+            }
+            if ($lower === 'standard plus') {
+                return 'Standard Plus';
+            }
+            if ($lower === 'standard' || $lower === 'standard seat') {
+                return 'Standard';
+            }
+            if (str_contains($lower, 'hot seat')) {
+                return 'Hot Seat';
+            }
+        }
+
+        return trim($name);
     }
 }
