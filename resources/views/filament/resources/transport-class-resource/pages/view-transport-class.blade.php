@@ -49,43 +49,44 @@
 
     {{-- ── Price Edit Modal ── --}}
     @if ($this->showPriceModal)
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,0.5);">
-            <div class="w-full max-w-sm rounded-2xl bg-white dark:bg-gray-900 shadow-2xl ring-1 ring-black/10 dark:ring-white/10 overflow-hidden"
-                x-trap.noscroll="true">
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4" style="background:rgba(0,0,0,0.65); backdrop-filter: blur(4px);"
+            x-trap.noscroll="true">
+            <div class="w-full max-w-sm rounded-2xl bg-white dark:bg-gray-900 shadow-2xl border border-gray-200 dark:border-gray-800"
+                style="max-height: min(90vh, 500px); display: flex; flex-direction: column; overflow: hidden;">
 
                 {{-- Modal Header --}}
-                <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700">
+                <div style="flex-shrink: 0;" class="flex items-center justify-between px-5 py-3.5 border-b border-gray-200 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-800/80">
                     <div>
-                        <h3 class="text-base font-semibold text-gray-900 dark:text-white">Edit Class Add-on Price</h3>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        <h3 class="text-sm font-bold text-gray-900 dark:text-white">Edit Class Add-on Price</h3>
+                        <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
                             Updating {{ count($this->selectedSchedules) }} schedule(s)
                         </p>
                     </div>
                     <button wire:click="cancelPriceModal"
-                        class="rounded-lg p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                        class="rounded-lg p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                         <x-heroicon-m-x-mark class="h-5 w-5" />
                     </button>
                 </div>
 
                 {{-- Modal Body --}}
-                <div class="px-5 py-4 space-y-4">
-                    <div class="rounded-lg bg-gray-50 dark:bg-gray-800 px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
-                        <span class="font-medium">Base price:</span> ₱{{ number_format($basePrice, 2) }}<br>
-                        <span class="text-xs text-gray-400 dark:text-gray-500">The add-on price is added on top of the base schedule price during booking.</span>
+                <div style="flex: 1 1 auto; overflow-y: auto;" class="px-5 py-4 space-y-3.5">
+                    <div class="rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700/60 px-3.5 py-2.5 text-xs text-gray-600 dark:text-gray-300">
+                        <span class="font-semibold text-gray-900 dark:text-white">Base price:</span> ₱{{ number_format($basePrice, 2) }}<br>
+                        <span class="text-[11px] text-gray-400 dark:text-gray-500">The add-on price is added on top of the base schedule price during booking.</span>
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                            New Add-on Price <span class="text-gray-400">(₱)</span>
+                        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                            New Add-on Price <span class="text-gray-400 font-normal">(₱)</span>
                         </label>
                         <div class="relative">
-                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium text-sm">₱</span>
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm">₱</span>
                             <input type="number"
                                 step="0.01"
                                 min="0"
                                 wire:model="newAdditionalPrice"
                                 placeholder="0.00"
-                                class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white pl-8 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition"
+                                class="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white pl-8 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition shadow-sm font-semibold"
                                 autofocus
                             />
                         </div>
@@ -93,14 +94,14 @@
                 </div>
 
                 {{-- Modal Footer --}}
-                <div class="flex items-center justify-end gap-2 px-5 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                <div style="flex-shrink: 0;" class="flex items-center justify-end gap-2 px-5 py-3 border-t border-gray-200 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-800/80">
                     <button wire:click="cancelPriceModal"
-                        class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-medium px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs font-medium px-3.5 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                         Cancel
                     </button>
                     <button wire:click="applyPriceChange"
-                        class="inline-flex items-center gap-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium px-4 py-2 transition-colors shadow-sm">
-                        <x-heroicon-m-check class="h-4 w-4" />
+                        class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-xs font-semibold px-4 py-1.5 transition-colors shadow-sm">
+                        <x-heroicon-m-check class="h-3.5 w-3.5" />
                         Apply to {{ count($this->selectedSchedules) }} Schedule(s)
                     </button>
                 </div>
@@ -111,164 +112,186 @@
 
     {{-- ── Promo / Super Promo Modal ── --}}
     @if ($this->showPromoModal)
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,0.55);"
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4" style="background:rgba(0,0,0,0.65); backdrop-filter: blur(4px);"
             x-trap.noscroll="true">
-            <div class="w-full max-w-lg rounded-2xl bg-white dark:bg-gray-900 shadow-2xl ring-1 ring-black/10 dark:ring-white/10 overflow-hidden">
+            <div class="w-full max-w-lg rounded-2xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-2xl border border-gray-200 dark:border-gray-800"
+                style="max-height: min(90vh, 720px); display: flex; flex-direction: column; overflow: hidden;">
 
-                {{-- Modal Header --}}
-                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-indigo-50/50 to-purple-50/50 dark:from-indigo-950/30 dark:to-purple-950/30">
-                    <div class="flex items-center gap-3">
-                        <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-indigo-600 text-white shadow-md">
-                            <x-heroicon-m-sparkles class="w-5 h-5" />
+                {{-- Modal Header (Pinned at top) --}}
+                <div style="flex-shrink: 0;" class="flex items-center justify-between px-5 py-3.5 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-indigo-50/70 to-purple-50/70 dark:from-indigo-950/40 dark:to-purple-950/40">
+                    <div class="flex items-center gap-2.5">
+                        <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-600 text-white shadow-sm flex-shrink-0">
+                            <x-heroicon-m-sparkles class="w-4 h-4" />
                         </div>
-                        <div>
-                            <h3 class="text-base font-bold text-gray-900 dark:text-white">Batch Promo & Fare Tier Setup</h3>
-                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                Configuring <span class="font-semibold text-indigo-600 dark:text-indigo-400">{{ count($this->selectedSchedules) }}</span> schedule(s) for <span class="font-medium text-gray-700 dark:text-gray-300">{{ $transportClass->name }}</span>
+                        <div class="min-w-0">
+                            <h3 class="text-sm font-bold text-gray-900 dark:text-white truncate">Batch Promo & Fare Tier Setup</h3>
+                            <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                                Updating <span class="font-bold text-indigo-600 dark:text-indigo-400">{{ count($this->selectedSchedules) }}</span> schedule(s) for <span class="font-medium text-gray-700 dark:text-gray-300">{{ $transportClass->name }}</span>
                             </p>
                         </div>
                     </div>
                     <button wire:click="cancelPromoModal"
-                        class="rounded-lg p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                        class="rounded-lg p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex-shrink-0">
                         <x-heroicon-m-x-mark class="h-5 w-5" />
                     </button>
                 </div>
 
-                {{-- Modal Body --}}
-                <div class="px-6 py-5 space-y-5 max-h-[75vh] overflow-y-auto">
+                {{-- Modal Body (Scrollable inside) --}}
+                <div style="flex: 1 1 auto; overflow-y: auto; scrollbar-width: thin;" class="px-5 py-4 space-y-4">
 
-                    {{-- 1. Rate Tier Selector --}}
+                    {{-- 1. Rate Tier Selector (Horizontal 3-Column Layout) --}}
                     <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400 mb-2">
-                            Select Fare Tier
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400 mb-1.5">
+                            Fare Tier
                         </label>
-                        <div class="grid grid-cols-3 gap-2.5">
+                        <div style="display: flex; gap: 8px; width: 100%;">
                             {{-- Regular --}}
-                            <label class="relative flex flex-col items-center p-3 rounded-xl border-2 cursor-pointer transition-all {{ $this->modalRateType === 'regular' ? 'border-blue-500 bg-blue-50/60 dark:bg-blue-950/40 shadow-sm' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600' }}">
+                            <label style="flex: 1 1 0; min-width: 0;" class="cursor-pointer">
                                 <input type="radio" value="regular" wire:model.live="modalRateType" class="sr-only" />
-                                <span class="text-lg">🔵</span>
-                                <span class="text-xs font-bold text-gray-900 dark:text-white mt-1">Regular</span>
-                                <span class="text-[10px] text-gray-500 text-center mt-0.5 leading-tight">Standard policy</span>
+                                <div class="rounded-xl border-2 p-2 text-center transition-all h-full flex flex-col items-center justify-center
+                                    {{ $this->modalRateType === 'regular'
+                                        ? 'border-blue-500 bg-blue-50/80 dark:bg-blue-950/50 shadow-sm ring-1 ring-blue-400'
+                                        : 'border-gray-200 dark:border-gray-700/80 bg-gray-50/50 dark:bg-gray-800/40 hover:border-gray-300 dark:hover:border-gray-600' }}">
+                                    <span class="text-base leading-none">🔵</span>
+                                    <span class="text-xs font-bold text-gray-900 dark:text-white mt-1 truncate w-full">Regular</span>
+                                    <span class="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 truncate w-full">Standard</span>
+                                </div>
                             </label>
 
                             {{-- Promotional --}}
-                            <label class="relative flex flex-col items-center p-3 rounded-xl border-2 cursor-pointer transition-all {{ $this->modalRateType === 'promotional' ? 'border-orange-500 bg-orange-50/60 dark:bg-orange-950/40 shadow-sm' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600' }}">
+                            <label style="flex: 1 1 0; min-width: 0;" class="cursor-pointer">
                                 <input type="radio" value="promotional" wire:model.live="modalRateType" class="sr-only" />
-                                <span class="text-lg">🟠</span>
-                                <span class="text-xs font-bold text-gray-900 dark:text-white mt-1">Promotional</span>
-                                <span class="text-[10px] text-orange-600 dark:text-orange-400 text-center mt-0.5 leading-tight">Voucher enabled</span>
+                                <div class="rounded-xl border-2 p-2 text-center transition-all h-full flex flex-col items-center justify-center
+                                    {{ $this->modalRateType === 'promotional'
+                                        ? 'border-orange-500 bg-orange-50/80 dark:bg-orange-950/50 shadow-sm ring-1 ring-orange-400'
+                                        : 'border-gray-200 dark:border-gray-700/80 bg-gray-50/50 dark:bg-gray-800/40 hover:border-gray-300 dark:hover:border-gray-600' }}">
+                                    <span class="text-base leading-none">🟠</span>
+                                    <span class="text-xs font-bold text-orange-600 dark:text-orange-400 mt-1 truncate w-full">Promo</span>
+                                    <span class="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 truncate w-full">Vouchers OK</span>
+                                </div>
                             </label>
 
                             {{-- Super Promo --}}
-                            <label class="relative flex flex-col items-center p-3 rounded-xl border-2 cursor-pointer transition-all {{ $this->modalRateType === 'super_promotional' ? 'border-purple-500 bg-purple-50/60 dark:bg-purple-950/40 shadow-sm' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600' }}">
+                            <label style="flex: 1 1 0; min-width: 0;" class="cursor-pointer">
                                 <input type="radio" value="super_promotional" wire:model.live="modalRateType" class="sr-only" />
-                                <span class="text-lg">🟣</span>
-                                <span class="text-xs font-bold text-gray-900 dark:text-white mt-1">Super Promo</span>
-                                <span class="text-[10px] text-purple-600 dark:text-purple-400 text-center mt-0.5 leading-tight">Strict promo</span>
+                                <div class="rounded-xl border-2 p-2 text-center transition-all h-full flex flex-col items-center justify-center
+                                    {{ $this->modalRateType === 'super_promotional'
+                                        ? 'border-purple-500 bg-purple-50/80 dark:bg-purple-950/50 shadow-sm ring-1 ring-purple-400'
+                                        : 'border-gray-200 dark:border-gray-700/80 bg-gray-50/50 dark:bg-gray-800/40 hover:border-gray-300 dark:hover:border-gray-600' }}">
+                                    <span class="text-base leading-none">🟣</span>
+                                    <span class="text-xs font-bold text-purple-600 dark:text-purple-400 mt-1 truncate w-full">Super Promo</span>
+                                    <span class="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 truncate w-full">Strict</span>
+                                </div>
                             </label>
                         </div>
                     </div>
 
                     {{-- 2. Editable Price / Add-on Amount --}}
                     <div>
-                        <div class="flex items-center justify-between mb-1.5">
-                            <label class="text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="text-[11px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">
                                 Class Add-on Price <span class="text-gray-400 font-normal">(₱)</span>
                             </label>
-                            <span class="text-xs text-gray-400">Base Class Price: ₱{{ number_format($basePrice, 2) }}</span>
+                            <span class="text-[11px] text-gray-400">Base Class Price: ₱{{ number_format($basePrice, 2) }}</span>
                         </div>
                         <div class="relative">
-                            <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm">₱</span>
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm">₱</span>
                             <input type="number"
                                 step="0.01"
                                 min="0"
                                 wire:model="modalPrice"
                                 placeholder="0.00"
-                                class="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white pl-9 pr-4 py-2.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition shadow-sm"
+                                class="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white pl-8 pr-4 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition shadow-sm"
                             />
                         </div>
-                        <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
+                        <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
                             Leave as is to keep the current price, or enter a custom promo amount for the selected schedule(s).
                         </p>
                     </div>
 
                     {{-- 3. Dynamic Fields: Promo Expiry Mode & Duration (Shown when Promotional or Super Promo) --}}
                     @if ($this->modalRateType !== 'regular')
-                        <div class="rounded-xl border border-indigo-200 dark:border-indigo-800/60 bg-indigo-50/40 dark:bg-indigo-950/20 p-4 space-y-4">
+                        <div class="rounded-xl border border-indigo-200 dark:border-indigo-800/70 bg-indigo-50/40 dark:bg-indigo-950/20 p-3.5 space-y-3.5">
                             
-                            {{-- Expiry Behavior Option --}}
+                            {{-- Expiry Behavior Option (Horizontal 2-Column Layout) --}}
                             <div>
-                                <label class="block text-xs font-bold uppercase tracking-wider text-indigo-950 dark:text-indigo-200 mb-2">
+                                <label class="block text-[11px] font-bold uppercase tracking-wider text-indigo-950 dark:text-indigo-200 mb-1.5">
                                     Promo Expiry Behavior
                                 </label>
-                                <div class="grid grid-cols-2 gap-3">
+                                <div style="display: flex; gap: 8px; width: 100%;">
                                     {{-- Temporary --}}
-                                    <label class="flex items-start gap-2.5 p-3 rounded-xl border-2 cursor-pointer transition-all {{ $this->modalPromoType === 'temporary' ? 'border-indigo-500 bg-white dark:bg-gray-900 shadow-sm' : 'border-indigo-200/80 dark:border-indigo-900 bg-white/60 dark:bg-gray-900/60 hover:border-indigo-300' }}">
-                                        <input type="radio" value="temporary" wire:model.live="modalPromoType" class="mt-0.5 text-indigo-600 focus:ring-indigo-500" />
-                                        <div>
-                                            <div class="flex items-center gap-1">
+                                    <label style="flex: 1 1 0; min-width: 0;" class="cursor-pointer">
+                                        <div class="rounded-xl border-2 p-2.5 transition-all h-full
+                                            {{ $this->modalPromoType === 'temporary'
+                                                ? 'border-indigo-500 bg-white dark:bg-gray-900 shadow-sm ring-1 ring-indigo-400'
+                                                : 'border-indigo-200/80 dark:border-indigo-900/80 bg-white/60 dark:bg-gray-900/50 hover:border-indigo-300' }}">
+                                            <div class="flex items-center gap-1.5">
+                                                <input type="radio" value="temporary" wire:model.live="modalPromoType" class="text-indigo-600 focus:ring-indigo-500" />
                                                 <span class="text-xs font-bold text-gray-900 dark:text-white">⏳ Temporary</span>
                                             </div>
-                                            <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1 leading-snug">
-                                                After the promo end date, the schedule <strong>reverts back to Regular fare</strong> &amp; restores base price.
+                                            <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-1 leading-snug">
+                                                Reverts to <strong>Regular fare</strong> &amp; restores base price after expiry.
                                             </p>
                                         </div>
                                     </label>
 
                                     {{-- Permanent --}}
-                                    <label class="flex items-start gap-2.5 p-3 rounded-xl border-2 cursor-pointer transition-all {{ $this->modalPromoType === 'permanent' ? 'border-red-500 bg-white dark:bg-gray-900 shadow-sm' : 'border-indigo-200/80 dark:border-indigo-900 bg-white/60 dark:bg-gray-900/60 hover:border-red-300' }}">
-                                        <input type="radio" value="permanent" wire:model.live="modalPromoType" class="mt-0.5 text-red-600 focus:ring-red-500" />
-                                        <div>
-                                            <div class="flex items-center gap-1">
+                                    <label style="flex: 1 1 0; min-width: 0;" class="cursor-pointer">
+                                        <div class="rounded-xl border-2 p-2.5 transition-all h-full
+                                            {{ $this->modalPromoType === 'permanent'
+                                                ? 'border-red-500 bg-white dark:bg-gray-900 shadow-sm ring-1 ring-red-400'
+                                                : 'border-indigo-200/80 dark:border-indigo-900/80 bg-white/60 dark:bg-gray-900/50 hover:border-red-300' }}">
+                                            <div class="flex items-center gap-1.5">
+                                                <input type="radio" value="permanent" wire:model.live="modalPromoType" class="text-red-600 focus:ring-red-500" />
                                                 <span class="text-xs font-bold text-gray-900 dark:text-white">🔒 Permanent</span>
                                             </div>
-                                            <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1 leading-snug">
-                                                After the promo end date, the schedule <strong>will not display on the user/website booking page</strong>.
+                                            <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-1 leading-snug">
+                                                <strong>Hides from booking page</strong> after promo end date.
                                             </p>
                                         </div>
                                     </label>
                                 </div>
                             </div>
 
-                            {{-- Duration Date/Time Pickers --}}
-                            <div class="grid grid-cols-2 gap-3 pt-1">
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                            {{-- Duration Date/Time Pickers (Horizontal 2-Column Layout) --}}
+                            <div style="display: flex; gap: 8px; width: 100%;">
+                                <div style="flex: 1 1 0; min-width: 0;">
+                                    <label class="block text-[11px] font-semibold text-gray-700 dark:text-gray-300 mb-1 truncate">
                                         Promo Start Date &amp; Time
                                     </label>
                                     <input type="datetime-local"
                                         wire:model="modalDurationStart"
-                                        class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                                        class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
                                     />
                                 </div>
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                                <div style="flex: 1 1 0; min-width: 0;">
+                                    <label class="block text-[11px] font-semibold text-gray-700 dark:text-gray-300 mb-1 truncate">
                                         Promo End Date &amp; Time
                                     </label>
                                     <input type="datetime-local"
                                         wire:model="modalDurationEnd"
-                                        class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                                        class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
                                     />
                                 </div>
                             </div>
 
                             {{-- Notice / Policy Disclaimer --}}
-                            <div class="rounded-lg p-3 text-xs leading-relaxed {{ $this->modalRateType === 'super_promotional' ? 'bg-purple-100/70 text-purple-900 dark:bg-purple-950/60 dark:text-purple-200' : 'bg-orange-100/70 text-orange-900 dark:bg-orange-950/60 dark:text-orange-200' }}">
+                            <div class="rounded-lg p-2.5 text-xs leading-relaxed {{ $this->modalRateType === 'super_promotional' ? 'bg-purple-100/80 text-purple-900 dark:bg-purple-950/60 dark:text-purple-200' : 'bg-orange-100/80 text-orange-900 dark:bg-orange-950/60 dark:text-orange-200' }}">
                                 @if ($this->modalRateType === 'super_promotional')
-                                    <p class="font-semibold flex items-center gap-1.5">
+                                    <p class="font-bold flex items-center gap-1 text-[11px]">
                                         <span>🟣 Super Promo Policy:</span>
                                     </p>
-                                    <ul class="list-disc pl-4 mt-1 space-y-0.5 text-[11px]">
-                                        <li>Government mandate discounts (Senior, PWD, Student) are <strong>disabled</strong> (₱0.00).</li>
+                                    <ul class="list-disc pl-4 mt-0.5 space-y-0.5 text-[10px]">
+                                        <li>Gov discounts (Senior, PWD, Student) are <strong>disabled</strong> (₱0.00).</li>
                                         <li>Website vouchers &amp; promo codes are <strong>blocked</strong>.</li>
                                         <li>Non-refundable &amp; non-transferable.</li>
                                     </ul>
                                 @else
-                                    <p class="font-semibold flex items-center gap-1.5">
+                                    <p class="font-bold flex items-center gap-1 text-[11px]">
                                         <span>🟠 Promotional Policy:</span>
                                     </p>
-                                    <ul class="list-disc pl-4 mt-1 space-y-0.5 text-[11px]">
-                                        <li>Government mandate discounts (Senior, PWD, Student) are <strong>disabled</strong> (₱0.00).</li>
+                                    <ul class="list-disc pl-4 mt-0.5 space-y-0.5 text-[10px]">
+                                        <li>Gov discounts (Senior, PWD, Student) are <strong>disabled</strong> (₱0.00).</li>
                                         <li>Website vouchers &amp; promo codes <strong>can still be added and applied</strong>.</li>
                                         <li>Non-refundable ticket fare.</li>
                                     </ul>
@@ -278,11 +301,11 @@
                         </div>
                     @else
                         {{-- Regular Fare Policy Notice --}}
-                        <div class="rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50/60 dark:bg-blue-950/30 p-3.5 text-xs text-blue-900 dark:text-blue-200 leading-relaxed">
-                            <p class="font-semibold flex items-center gap-1.5 mb-1">
+                        <div class="rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50/70 dark:bg-blue-950/40 p-3 text-xs text-blue-900 dark:text-blue-200 leading-relaxed">
+                            <p class="font-bold flex items-center gap-1 text-[11px] mb-0.5">
                                 <span>🔵 Regular Fare Policy:</span>
                             </p>
-                            <p class="text-[11px] text-blue-700 dark:text-blue-300">
+                            <p class="text-[10px] text-blue-700 dark:text-blue-300">
                                 This will remove promo flags and restore standard fare rules. Government mandate discounts (Senior, PWD, Student) and website vouchers will both be permitted.
                             </p>
                         </div>
@@ -290,15 +313,15 @@
 
                 </div>
 
-                {{-- Modal Footer --}}
-                <div class="flex items-center justify-end gap-2 px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                {{-- Modal Footer (Pinned at bottom) --}}
+                <div style="flex-shrink: 0;" class="flex items-center justify-end gap-2 px-5 py-3 border-t border-gray-200 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-800/80">
                     <button wire:click="cancelPromoModal"
-                        class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-medium px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs font-medium px-3.5 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                         Cancel
                     </button>
                     <button wire:click="applyPromoModal"
-                        class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-5 py-2 transition-colors shadow-sm">
-                        <x-heroicon-m-check class="h-4 w-4" />
+                        class="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-4 py-1.5 transition-colors shadow-sm">
+                        <x-heroicon-m-check class="h-3.5 w-3.5" />
                         Save for {{ count($this->selectedSchedules) }} Schedule(s)
                     </button>
                 </div>
