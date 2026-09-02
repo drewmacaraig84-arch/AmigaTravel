@@ -41,7 +41,7 @@ class TransportClass extends Model
     public function schedules(): BelongsToMany
     {
         return $this->belongsToMany(Schedule::class, 'schedule_transport_class')
-            ->withPivot('additional_price', 'tickets_available', 'description', 'has_bed', 'is_active', 'is_promo', 'rate_type', 'rate_code', 'promo_duration_start', 'promo_duration_end')
+            ->withPivot('additional_price', 'tickets_available', 'description', 'has_bed', 'is_active', 'is_promo', 'rate_type', 'rate_code', 'promo_duration_start', 'promo_duration_end', 'promo_type')
             ->withTimestamps();
     }
 

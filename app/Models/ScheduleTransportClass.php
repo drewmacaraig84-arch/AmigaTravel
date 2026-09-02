@@ -24,6 +24,7 @@ class ScheduleTransportClass extends Pivot
         'rate_code',
         'promo_duration_start',
         'promo_duration_end',
+        'promo_type',
     ];
 
     protected $casts = [
@@ -32,23 +33,90 @@ class ScheduleTransportClass extends Pivot
         'is_active' => 'boolean',
         'is_promo' => 'boolean',
         'rate_type' => 'string',
+        'promo_type' => 'string',
         'promo_duration_start' => 'datetime',
         'promo_duration_end' => 'datetime',
     ];
 
     public function isRegular(): bool
     {
-        return ($this->rate_type ?? 'regular') === 'regular';
+        return $this->getEffectiveRateType() === 'regular';
     }
 
     public function isPromo(): bool
     {
-        return ($this->rate_type ?? 'regular') === 'promotional' || (bool) $this->is_promo;
+        $rate = $this->getEffectiveRateType();
+        return $rate === 'promotional' || (bool) $this->is_promo;
     }
 
     public function isSuperPromo(): bool
     {
-        return ($this->rate_type ?? 'regular') === 'super_promotional';
+        return $this->getEffectiveRateType() === 'super_promotional';
+    }
+
+    public function isPermanentPromo(): bool
+    {
+        return ($this->promo_type ?? 'temporary') === 'permanent';
+    }
+
+    public function isTemporaryPromo(): bool
+    {
+        return ($this->promo_type ?? 'temporary') === 'temporary';
+    }
+
+    public function isPromoActive(): bool
+    {
+        $rate = $this->rate_type ?? 'regular';
+        if (! in_array($rate, ['promotional', 'super_promotional'], true)) {
+            return false;
+        }
+
+        $now = now();
+        if ($this->promo_duration_start && $now->isBefore($this->promo_duration_start)) {
+            return false;
+        }
+        if ($this->promo_duration_end && $now->isAfter($this->promo_duration_end)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    public function isPromoExpired(): bool
+    {
+        $rate = $this->rate_type ?? 'regular';
+        if (! in_array($rate, ['promotional', 'super_promotional'], true)) {
+            return false;
+        }
+
+        return $this->promo_duration_end ? now()->isAfter($this->promo_duration_end) : false;
+    }
+
+    /**
+     * Get the dynamically evaluated rate_type.
+     * If a temporary promo has expired, it automatically reverts to 'regular'.
+     */
+    public function getEffectiveRateType(): string
+    {
+        $rate = $this->rate_type ?? 'regular';
+        if (! in_array($rate, ['promotional', 'super_promotional'], true)) {
+            return 'regular';
+        }
+
+        $now = now();
+        // If before start date: not yet active
+        if ($this->promo_duration_start && $now->isBefore($this->promo_duration_start)) {
+            return 'regular';
+        }
+
+        // If after end date:
+        if ($this->promo_duration_end && $now->isAfter($this->promo_duration_end)) {
+            if ($this->isTemporaryPromo()) {
+                return 'regular';
+            }
+        }
+
+        return $rate;
     }
 
     public function schedule(): BelongsTo

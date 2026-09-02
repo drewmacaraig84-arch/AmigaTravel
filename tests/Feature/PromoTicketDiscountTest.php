@@ -182,8 +182,9 @@ class PromoTicketDiscountTest extends TestCase
 
         $this->assertNotNull($booking);
         $passenger = $booking->passengers->first();
-        $this->assertEquals($discount->id, $passenger->discount_id);
-        $this->assertGreaterThan(0, (float)$passenger->discount_amount);
+        // Promotional tickets disable government mandate discounts (Senior, Student, PWD)
+        $this->assertNull($passenger->discount_id);
+        $this->assertEquals(0.00, (float)$passenger->discount_amount);
     }
 
     public function test_super_promotional_ticket_rejects_vouchers(): void
@@ -436,11 +437,8 @@ class PromoTicketDiscountTest extends TestCase
         $this->assertEquals(1250.00, (float)$passenger->fare_amount);
     }
 
-    public function test_promotional_ticket_rejects_vouchers(): void
+    public function test_promotional_ticket_allows_website_vouchers(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Vouchers cannot be used with Promotional tickets.');
-
         $schedule = $this->createAirlineSchedule();
         $promoTicket = PromotionalTicket::create([
             'schedule_id' => $schedule->id,
@@ -450,6 +448,16 @@ class PromoTicketDiscountTest extends TestCase
             'starts_at' => now()->subDay(),
             'ends_at' => now()->addDays(30),
             'is_active' => true,
+        ]);
+
+        \App\Models\Voucher::create([
+            'name' => 'Promo Voucher',
+            'code' => 'PROMOVOUCHER',
+            'discount_type' => 'fixed',
+            'discount_value' => 100.00,
+            'is_active' => true,
+            'start_at' => now()->subDay(),
+            'end_at' => now()->addDays(30),
         ]);
 
         $data = [
@@ -475,7 +483,12 @@ class PromoTicketDiscountTest extends TestCase
         ];
 
         $action = app(CreateBookingAction::class);
-        $action->execute($data);
+        $booking = $action->execute($data);
+
+        $this->assertNotNull($booking);
+        $this->assertEquals('PROMOVOUCHER', $booking->voucher_code);
+        $passenger = $booking->passengers->first();
+        $this->assertEquals(100.00, (float)$passenger->voucher_discount_share);
     }
 
     public function test_promotional_ticket_rejects_gracia_points(): void
@@ -560,7 +573,7 @@ class PromoTicketDiscountTest extends TestCase
         $this->assertNull($passenger->discount_id);
     }
 
-    public function test_promotional_ticket_minor_can_use_government_mandate_discount_without_50_percent_discount(): void
+    public function test_promotional_ticket_minor_disables_government_mandate_discount(): void
     {
         $schedule = $this->createAirlineSchedule();
         $promoTicket = PromotionalTicket::create([
@@ -604,10 +617,66 @@ class PromoTicketDiscountTest extends TestCase
 
         $this->assertNotNull($booking);
         $passenger = $booking->passengers->first();
-        // Promo child pays full promo rate (1000) minus 20% Student discount (200) = net 800
+        // Promo child pays full promo rate (1000) with government mandate discount disabled (0.00)
         $this->assertEquals(1000.00, (float)$passenger->fare_amount);
-        $this->assertEquals(200.00, (float)$passenger->discount_amount);
-        $this->assertEquals($discount->id, $passenger->discount_id);
+        $this->assertEquals(0.00, (float)$passenger->discount_amount);
+        $this->assertNull($passenger->discount_id);
+    }
+
+    public function test_temporary_promo_expiry_reverts_to_regular_in_booking_array(): void
+    {
+        $schedule = $this->createAirlineSchedule();
+        $tc = TransportClass::first();
+
+        // Expired temporary promo
+        \Illuminate\Support\Facades\DB::table('schedule_transport_class')
+            ->where('schedule_id', $schedule->id)
+            ->where('transport_class_id', $tc->id)
+            ->update([
+                'rate_type' => 'promotional',
+                'is_promo' => true,
+                'additional_price' => 299.00,
+                'promo_type' => 'temporary',
+                'promo_duration_start' => now()->subDays(10),
+                'promo_duration_end' => now()->subDay(),
+            ]);
+
+        $schedule->load('transportClasses');
+        $bookingArray = $schedule->toBookingArray();
+
+        $this->assertNotEmpty($bookingArray['transport_classes']);
+        $tcData = collect($bookingArray['transport_classes'])->firstWhere('id', $tc->id);
+        $this->assertNotNull($tcData);
+        // Should have reverted to regular fare and restored base price
+        $this->assertEquals('regular', $tcData['rate_type']);
+        $this->assertFalse($tcData['is_promo']);
+        $this->assertEquals((float)$tc->price, (float)$tcData['price']);
+    }
+
+    public function test_permanent_promo_expiry_hides_from_booking_array(): void
+    {
+        $schedule = $this->createAirlineSchedule();
+        $tc = TransportClass::first();
+
+        // Expired permanent promo
+        \Illuminate\Support\Facades\DB::table('schedule_transport_class')
+            ->where('schedule_id', $schedule->id)
+            ->where('transport_class_id', $tc->id)
+            ->update([
+                'rate_type' => 'super_promotional',
+                'is_promo' => true,
+                'additional_price' => 199.00,
+                'promo_type' => 'permanent',
+                'promo_duration_start' => now()->subDays(10),
+                'promo_duration_end' => now()->subDay(),
+            ]);
+
+        $schedule->load('transportClasses');
+        $bookingArray = $schedule->toBookingArray();
+
+        // Should NOT display in transport_classes
+        $tcData = collect($bookingArray['transport_classes'])->firstWhere('id', $tc->id);
+        $this->assertNull($tcData);
     }
 }
 

@@ -75,7 +75,7 @@ class CreateBookingAction
             }
         }
 
-        // Promotional and Super Promotional tickets strictly block vouchers and points
+        // Super Promotional tickets strictly block vouchers and points. Promotional tickets allow website vouchers.
         if ($isSuperPromoBooking) {
             if (! empty($data['voucher_code'])) {
                 throw new \InvalidArgumentException('Vouchers cannot be used with Super Promotional tickets.');
@@ -84,9 +84,6 @@ class CreateBookingAction
                 throw new \InvalidArgumentException('Gracia points cannot be used with Super Promotional tickets.');
             }
         } elseif ($isPromoBooking) {
-            if (! empty($data['voucher_code'])) {
-                throw new \InvalidArgumentException('Vouchers cannot be used with Promotional tickets.');
-            }
             if (! empty($data['use_points'])) {
                 throw new \InvalidArgumentException('Gracia points cannot be used with Promotional tickets.');
             }
@@ -381,12 +378,12 @@ class CreateBookingAction
 
                 $isMinorPax = in_array($pType, ['minor', 'child'], true) || ($isAirline && $pType === 'infant');
 
+                // Both Promo and Super Promo tickets block government mandated discounts (Senior, Student, PWD).
                 // Minors traveling on regular fares get 50% auto discount and cannot stack mandated discounts.
-                // Super Promo tickets block all mandated discounts.
-                // Promotional tickets ALLOW mandated discounts (Senior, Student, PWD).
                 $hasDiscount = ! empty($passengerData['discount_id'])
                     && ! $isSuperPromoPax
-                    && ! (! $isSuperPromoPax && ! $isPromoPax && $isMinorPax);
+                    && ! $isPromoPax
+                    && ! $isMinorPax;
 
                 // Gross fare per passenger (departure + return) - 50% on base fare + transport class for eligible types
                 $grossFare = ($paxDepBasePrice + $depTcPrice + $retBasePrice + $retTcPrice) * $paxMultiplier;

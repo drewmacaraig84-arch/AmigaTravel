@@ -55,13 +55,10 @@ class VoucherService
     protected function validateVoucher(Voucher $voucher, array $bookingData): array
     {
         // Vouchers cannot be combined with promotional tickets
-        if (!empty($bookingData['promotional_ticket_id'])) {
-            return $this->error('Vouchers cannot be used with promotional tickets.');
-        }
         if (!empty($bookingData['passengers']) && is_array($bookingData['passengers'])) {
             foreach ($bookingData['passengers'] as $p) {
-                if (!empty($p['use_promo']) || !empty($p['is_promo']) || !empty($p['promotional_ticket_id'])) {
-                    return $this->error('Vouchers cannot be used with promotional tickets.');
+                if (($p['rate_type'] ?? '') === 'super_promotional') {
+                    return $this->error('Vouchers cannot be used with Super Promotional tickets.');
                 }
             }
         }

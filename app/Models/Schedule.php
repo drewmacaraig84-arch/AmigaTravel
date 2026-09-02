@@ -62,7 +62,7 @@ class Schedule extends Model
     {
         return $this->belongsToMany(TransportClass::class, 'schedule_transport_class')
             ->using(ScheduleTransportClass::class)
-            ->withPivot('id', 'additional_price', 'tickets_available', 'description', 'has_bed', 'is_active', 'is_promo', 'rate_type', 'rate_code', 'promo_duration_start', 'promo_duration_end')
+            ->withPivot('id', 'additional_price', 'tickets_available', 'description', 'has_bed', 'is_active', 'is_promo', 'rate_type', 'rate_code', 'promo_duration_start', 'promo_duration_end', 'promo_type')
             ->withTimestamps();
     }
 
@@ -585,28 +585,60 @@ class Schedule extends Model
                 ->all(),
             'transport_classes' => $activeTransportClasses
                 ->map(function (TransportClass $class) {
+                    $pivot = $class->pivot;
+                    $promoType = $pivot?->promo_type ?? 'temporary';
+                    $promoStart = $pivot?->promo_duration_start ? Carbon::parse($pivot->promo_duration_start) : null;
+                    $promoEnd = $pivot?->promo_duration_end ? Carbon::parse($pivot->promo_duration_end) : null;
+                    $storedRateType = $pivot?->rate_type ?? ($pivot?->is_promo ? 'promotional' : 'regular');
+                    $isPromoConfig = in_array($storedRateType, ['promotional', 'super_promotional'], true) || (bool) ($pivot?->is_promo ?? false);
+
+                    $now = now();
+
+                    // Check permanent promo expiry: after end date -> do not display on website booking page!
+                    if ($isPromoConfig && $promoEnd && $now->isAfter($promoEnd) && $promoType === 'permanent') {
+                        return null;
+                    }
+
+                    // Check temporary promo expiry or before promo start
+                    $effectiveRateType = $storedRateType;
+                    $effectiveIsPromo = $isPromoConfig;
+                    $price = $pivot?->additional_price !== null ? $pivot->additional_price : ($class->is_on_sale && $class->sale_price ? $class->sale_price : $class->price);
+
+                    if ($isPromoConfig && $promoEnd && $now->isAfter($promoEnd) && $promoType === 'temporary') {
+                        // Temporary promo has expired -> revert to regular fare and restore base price
+                        $effectiveRateType = 'regular';
+                        $effectiveIsPromo = false;
+                        $price = floatval($class->price ?? 0);
+                    } elseif ($isPromoConfig && $promoStart && $now->isBefore($promoStart)) {
+                        // Not yet active -> behave as regular
+                        $effectiveRateType = 'regular';
+                        $effectiveIsPromo = false;
+                        $price = floatval($class->price ?? 0);
+                    }
+
                     $classCode = $this->inferTransportClassCode($class);
-                    $price = $class->pivot?->additional_price !== null ? $class->pivot->additional_price : ($class->is_on_sale && $class->sale_price ? $class->sale_price : $class->price);
 
                     return [
                         'id' => $class->id,
-                        'pivot_id' => $class->pivot?->id,
-                        'is_promo' => (bool) ($class->pivot?->is_promo ?? false || ($class->pivot?->rate_type ?? 'regular') !== 'regular'),
-                        'rate_type' => $class->pivot?->rate_type ?? ($class->pivot?->is_promo ? 'promotional' : 'regular'),
-                        'rate_code' => $class->pivot?->rate_code,
-                        'promo_duration_start' => $class->pivot?->promo_duration_start?->toISOString(),
-                        'promo_duration_end' => $class->pivot?->promo_duration_end?->toISOString(),
+                        'pivot_id' => $pivot?->id,
+                        'is_promo' => (bool) $effectiveIsPromo,
+                        'rate_type' => $effectiveRateType,
+                        'rate_code' => $pivot?->rate_code,
+                        'promo_type' => $promoType,
+                        'promo_duration_start' => $pivot?->promo_duration_start?->toISOString(),
+                        'promo_duration_end' => $pivot?->promo_duration_end?->toISOString(),
                         'code' => $classCode,
                         'name' => $class->name,
-                        'description' => $class->pivot?->description ?? $class->description,
+                        'description' => $pivot?->description ?? $class->description,
                         'price' => floatval($price),
-                        'has_bed' => (bool) ($class->pivot?->has_bed ?? false),
+                        'has_bed' => (bool) ($pivot?->has_bed ?? false),
                         'is_on_sale' => (bool) $class->is_on_sale,
                         'sale_price' => $class->sale_price ? floatval($class->sale_price) : null,
                         'cover_image' => $class->cover_image,
-                        'tickets_available' => (int) ($class->pivot?->tickets_available ?? 50),
+                        'tickets_available' => (int) ($pivot?->tickets_available ?? 50),
                     ];
                 })
+                ->filter()
                 ->values()
                 ->all(),
         ];

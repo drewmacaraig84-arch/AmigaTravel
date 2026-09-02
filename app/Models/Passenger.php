@@ -403,11 +403,11 @@ class Passenger extends Model
             return (float) $this->attributes['item_total'];
         }
 
-        $gross   = $this->getEffectiveFareAndClass();
         $isSuperPromo = ($this->rate_type ?? 'regular') === 'super_promotional';
+        $isPromo = in_array($this->rate_type ?? 'regular', ['promotional', 'super_promotional'], true) || (bool) ($this->is_promo ?? false);
 
-        $disc    = $isSuperPromo ? 0.0 : (float) ($this->discount_amount ?? 0);
-        if (!$isSuperPromo && $disc <= 0 && $this->discount) {
+        $disc    = ($isSuperPromo || $isPromo) ? 0.0 : (float) ($this->discount_amount ?? 0);
+        if (! ($isSuperPromo || $isPromo) && $disc <= 0 && $this->discount) {
             $disc = $this->discount->computeDiscountAmount($gross);
         }
         $voucher = $isSuperPromo ? 0.0 : (float) ($this->voucher_discount_share ?? 0);
