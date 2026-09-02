@@ -113,17 +113,18 @@
     {{-- ── Promo / Super Promo Modal ── --}}
     @if ($this->showPromoModal)
         <style>
+            html.dark .promo-theme-input,
             .dark .promo-theme-input {
                 background-color: #1f2937 !important;
                 color: #f9fafb !important;
-                border-color: #374151 !important;
+                border: 1px solid #374151 !important;
                 color-scheme: dark !important;
             }
             .promo-theme-input {
-                background-color: #ffffff;
-                color: #111827;
-                border-color: #d1d5db;
-                color-scheme: light;
+                background-color: #ffffff !important;
+                color: #111827 !important;
+                border: 1px solid #d1d5db !important;
+                color-scheme: light !important;
             }
             .promo-theme-input:focus {
                 border-color: #6366f1 !important;
