@@ -125,6 +125,12 @@ class TransportClassResource extends Resource
                     ->label('Operator')
                     ->searchable()
                     ->sortable(),
+                TextColumn::make('schedules_count')
+                    ->counts('schedules')
+                    ->label('Schedules')
+                    ->badge()
+                    ->color(fn (int $state): string => $state > 0 ? 'success' : 'gray')
+                    ->sortable(),
                 ToggleColumn::make('is_active')
                     ->label('Active'),
                 TextColumn::make('created_at')
