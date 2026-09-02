@@ -172,6 +172,7 @@ class TransportClassResource extends Resource
             ])
             ->filtersFormColumns(2)
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([
@@ -193,6 +194,7 @@ class TransportClassResource extends Resource
         return [
             'index' => Pages\ListTransportClasses::route('/'),
             'create' => Pages\CreateTransportClass::route('/create'),
+            'view' => Pages\ViewTransportClass::route('/{record}'),
             'edit' => Pages\EditTransportClass::route('/{record}/edit'),
         ];
     }

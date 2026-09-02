@@ -235,11 +235,11 @@ class FerryRouteResource extends Resource
                                 $parts[] = $state['vehicle_name'] ?? 'New schedule';
 
                                 if (!empty($state['departure_time']) && !empty($state['arrival_time'])) {
-                                    $dep = \Carbon\Carbon::parse($state['departure_time'])->format('h:i A');
-                                    $arr = \Carbon\Carbon::parse($state['arrival_time'])->format('h:i A');
-                                    $parts[] = "{$dep} - {$arr}";
+                                    $dep = \Carbon\Carbon::parse($state['departure_time'])->format('M j, Y g:i A');
+                                    $arr = \Carbon\Carbon::parse($state['arrival_time'])->format('M j, Y g:i A');
+                                    $parts[] = "{$dep} – {$arr}";
                                 } elseif (!empty($state['departure_time'])) {
-                                    $dep = \Carbon\Carbon::parse($state['departure_time'])->format('h:i A');
+                                    $dep = \Carbon\Carbon::parse($state['departure_time'])->format('M j, Y g:i A');
                                     $parts[] = "Dep: {$dep}";
                                 }
 
