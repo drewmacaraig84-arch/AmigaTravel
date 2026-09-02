@@ -3072,7 +3072,7 @@ class BookingForm extends Component
                 $discount = $discountsById->get($passenger['discount_id']);
 
                 if ($discount) {
-                    $fare -= $fare * (floatval($discount->percentage) / 100);
+                    $fare = max(0.0, $fare - $discount->computeDiscountAmount($fare));
                 }
             }
 
@@ -3202,9 +3202,8 @@ class BookingForm extends Component
             if ($hasDiscount) {
                 $discount = $discountsById->get($passenger['discount_id']);
                 if ($discount) {
-                    $percentage = floatval($discount->percentage) / 100;
-                    $depTicket -= $depTicket * $percentage;
-                    $retTicket -= $retTicket * $percentage;
+                    $depTicket = max(0.0, $depTicket - $discount->computeDiscountAmount($depTicket));
+                    $retTicket = max(0.0, $retTicket - $discount->computeDiscountAmount($retTicket));
                 }
             }
 

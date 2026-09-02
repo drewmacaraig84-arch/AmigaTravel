@@ -101,6 +101,16 @@ class BookingResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('client_name')
                     ->searchable(),
+                Tables\Columns\TextColumn::make('client_phone')
+                    ->label('Contact No.')
+                    ->searchable()
+                    ->placeholder('—')
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('client_email')
+                    ->label('Email')
+                    ->searchable()
+                    ->placeholder('—')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('origin')
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('destination')

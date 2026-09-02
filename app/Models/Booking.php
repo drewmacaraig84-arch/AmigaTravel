@@ -1992,7 +1992,7 @@ class Booking extends Model
         foreach ($payingPassengers as $p) {
             $discAmt = (float) ($p->discount_amount ?? 0);
             if ($discAmt <= 0 && $p->discount) {
-                $discAmt = $p->getEffectiveFareAndClass() * ((float) $p->discount->percentage / 100);
+                $discAmt = $p->discount->computeDiscountAmount($p->getEffectiveFareAndClass());
             }
             if ($discAmt > 0) {
                 $discName = $p->discount?->name ?? 'Discount';

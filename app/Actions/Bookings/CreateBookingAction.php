@@ -398,11 +398,11 @@ class CreateBookingAction
                 if ($hasDiscount) {
                     $disc = $discounts->get($passengerData['discount_id']);
                     if ($disc) {
-                        $discountAmount_item = $gross * ((float) $disc->percentage / 100);
+                        $discountAmount_item = $disc->computeDiscountAmount($gross);
                     }
                 }
 
-                $netFare = $gross - $discountAmount_item;
+                $netFare = max(0.0, $gross - $discountAmount_item);
 
                 // Allocate voucher to this passenger (greedy: fill Item 1 first - not allowed on Super Promo)
                 $voucherShare = 0.0;

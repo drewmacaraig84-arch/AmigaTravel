@@ -236,7 +236,7 @@ class VoucherService
             if (!empty($passenger['discount_id'])) {
                 $discount = $discounts->get($passenger['discount_id']);
                 if ($discount) {
-                    $fare -= $fare * (floatval($discount->percentage) / 100);
+                    $fare = max(0.0, $fare - $discount->computeDiscountAmount($fare));
                 }
             }
             

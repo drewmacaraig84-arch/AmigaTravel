@@ -96,34 +96,63 @@
             <div id="domestic-packages" x-show="activeTab === 'domestic'" x-transition class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full">
             {{-- Server-side fallback packages (will be replaced by client-side JS when available) --}}
             @foreach(data_get($tourPackages, 'domestic', []) as $package)
-                <div class="bg-white/85 backdrop-blur-md rounded-[2rem] overflow-hidden shadow-md ring-1 ring-slate-100 flex flex-col hover:shadow-lg transition">
-                    <div class="aspect-video relative overflow-hidden bg-slate-200">
-                        <img src="{{ data_get($package, 'image') }}" alt="{{ data_get($package, 'alt') }}" class="w-full h-full object-cover">
+                <a href="{{ data_get($package, 'id') ? route('tours.show', data_get($package, 'id')) : data_get($package, 'button_link', '#') }}" 
+                   class="group relative rounded-[2rem] overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 ring-1 ring-slate-900/10 aspect-[4/5] min-h-[460px] bg-slate-900 flex flex-col justify-end block cursor-pointer">
+                    
+                    <!-- Full Image Background -->
+                    <img src="{{ data_get($package, 'image') }}" alt="{{ data_get($package, 'alt') }}" class="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-700 ease-out">
+                    
+                    <!-- Top Badges -->
+                    <div class="absolute top-4 left-4 z-10 flex flex-wrap gap-2">
                         @if(data_get($package, 'label'))
-                            <span class="absolute top-4 left-4 text-[10px] font-bold text-emerald-700 uppercase tracking-widest bg-emerald-50 px-2.5 py-1 rounded-full shadow-sm">{{ data_get($package, 'label') }}</span>
+                            <span class="text-[11px] font-extrabold text-white uppercase tracking-wider bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20 shadow-md">
+                                {{ data_get($package, 'label') }}
+                            </span>
+                        @endif
+                        @if(data_get($package, 'subtitle'))
+                            <span class="text-[11px] font-bold text-white bg-emerald-700/80 backdrop-blur-md px-3 py-1.5 rounded-full shadow-md border border-white/10">
+                                {{ data_get($package, 'subtitle') }}
+                            </span>
                         @endif
                     </div>
-                    <div class="p-6 flex-grow flex flex-col justify-between">
+
+                    <!-- Default resting bottom bar (Fades out when hovered) -->
+                    <div class="absolute inset-x-0 bottom-0 p-5 bg-gradient-to-t from-slate-950/85 via-slate-950/40 to-transparent flex items-end justify-between transition-opacity duration-300 group-hover:opacity-0 pointer-events-none">
                         <div>
-                            <h3 class="font-bold text-slate-900 text-lg">{{ data_get($package, 'title') }}</h3>
-                            <p class="text-xs text-slate-400 mt-1">{{ data_get($package, 'subtitle') }}</p>
-                            <p class="mt-4 text-slate-500 text-sm leading-relaxed">
+                            <h3 class="font-black text-white text-lg drop-shadow-md leading-snug">{{ data_get($package, 'title') }}</h3>
+                            <span class="text-xs font-bold text-emerald-400 drop-shadow">Starting from {{ data_get($package, 'price') }}</span>
+                        </div>
+                        <span class="p-2.5 rounded-full bg-white/20 backdrop-blur-md text-white border border-white/30">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                        </span>
+                    </div>
+
+                    <!-- Hover Glassmorphic Overlay with Details, Price & Action Button -->
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-900/85 to-slate-900/40 backdrop-blur-md p-6 sm:p-7 flex flex-col justify-end text-white opacity-0 group-hover:opacity-100 transition-all duration-400 ease-out translate-y-3 group-hover:translate-y-0">
+                        <div>
+                            <span class="text-xs font-bold text-emerald-400 uppercase tracking-widest block mb-1">
+                                {{ data_get($package, 'subtitle') }}
+                            </span>
+                            <h3 class="font-black text-xl sm:text-2xl text-white tracking-tight leading-tight mb-2.5 drop-shadow">
+                                {{ data_get($package, 'title') }}
+                            </h3>
+                            <p class="text-xs sm:text-sm text-slate-200 line-clamp-4 leading-relaxed font-light mb-4">
                                 {{ data_get($package, 'description') }}
                             </p>
                         </div>
-                        <div class="mt-6 pt-6 border-t border-slate-100 flex items-center justify-between">
+
+                        <div class="pt-4 border-t border-white/15 flex items-center justify-between">
                             <div>
-                                <span class="text-xs text-slate-400 block">Starting from</span>
-                                <span class="font-black text-[#216417] text-lg">{{ data_get($package, 'price') }}<span class="text-xs font-normal text-slate-400">/pax</span></span>
+                                <span class="text-[10px] text-slate-300 font-medium uppercase tracking-wider block">Starting from</span>
+                                <span class="font-black text-emerald-400 text-xl tracking-tight">{{ data_get($package, 'price') }}<span class="text-xs font-normal text-slate-300">/pax</span></span>
                             </div>
-                            @if(data_get($package, 'id'))
-                                <a href="{{ route('tours.show', data_get($package, 'id')) }}" class="px-4 py-2 bg-[#ee018d] text-white text-xs font-bold rounded-full hover:bg-pink-700 transition">View Details</a>
-                            @else
-                                <a href="{{ data_get($package, 'button_link') }}" class="px-4 py-2 bg-[#ee018d] text-white text-xs font-bold rounded-full hover:bg-pink-700 transition">{{ data_get($package, 'button_text') }}</a>
-                            @endif
+                            <span class="px-5 py-2.5 bg-[#ee018d] text-white text-xs font-black rounded-full hover:bg-pink-600 shadow-lg shadow-pink-600/30 transition-all flex items-center gap-1.5 group-hover:shadow-pink-500/50">
+                                View Details
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                            </span>
                         </div>
                     </div>
-                </div>
+                </a>
             @endforeach
         </div>
 
@@ -131,34 +160,63 @@
         <div id="international-packages" x-show="activeTab === 'international'" x-transition class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" style="display:none;">
             {{-- Server-side fallback packages (will be replaced by client-side JS when available) --}}
             @foreach(data_get($tourPackages, 'international', []) as $package)
-                <div class="bg-white/85 backdrop-blur-md rounded-[2rem] overflow-hidden shadow-md ring-1 ring-slate-100 flex flex-col hover:shadow-lg transition">
-                    <div class="aspect-video relative overflow-hidden bg-slate-200">
-                        <img src="{{ data_get($package, 'image') }}" alt="{{ data_get($package, 'alt') }}" class="w-full h-full object-cover">
+                <a href="{{ data_get($package, 'id') ? route('tours.show', data_get($package, 'id')) : data_get($package, 'button_link', '#') }}" 
+                   class="group relative rounded-[2rem] overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 ring-1 ring-slate-900/10 aspect-[4/5] min-h-[460px] bg-slate-900 flex flex-col justify-end block cursor-pointer">
+                    
+                    <!-- Full Image Background -->
+                    <img src="{{ data_get($package, 'image') }}" alt="{{ data_get($package, 'alt') }}" class="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-700 ease-out">
+                    
+                    <!-- Top Badges -->
+                    <div class="absolute top-4 left-4 z-10 flex flex-wrap gap-2">
                         @if(data_get($package, 'label'))
-                            <span class="absolute top-4 left-4 text-[10px] font-bold text-pink-600 uppercase tracking-widest bg-pink-50 px-2.5 py-1 rounded-full shadow-sm">{{ data_get($package, 'label') }}</span>
+                            <span class="text-[11px] font-extrabold text-white uppercase tracking-wider bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20 shadow-md">
+                                {{ data_get($package, 'label') }}
+                            </span>
+                        @endif
+                        @if(data_get($package, 'subtitle'))
+                            <span class="text-[11px] font-bold text-white bg-pink-700/80 backdrop-blur-md px-3 py-1.5 rounded-full shadow-md border border-white/10">
+                                {{ data_get($package, 'subtitle') }}
+                            </span>
                         @endif
                     </div>
-                    <div class="p-6 flex-grow flex flex-col justify-between">
+
+                    <!-- Default resting bottom bar (Fades out when hovered) -->
+                    <div class="absolute inset-x-0 bottom-0 p-5 bg-gradient-to-t from-slate-950/85 via-slate-950/40 to-transparent flex items-end justify-between transition-opacity duration-300 group-hover:opacity-0 pointer-events-none">
                         <div>
-                            <h3 class="font-bold text-slate-900 text-lg">{{ data_get($package, 'title') }}</h3>
-                            <p class="text-xs text-slate-400 mt-1">{{ data_get($package, 'subtitle') }}</p>
-                            <p class="mt-4 text-slate-500 text-sm leading-relaxed">
+                            <h3 class="font-black text-white text-lg drop-shadow-md leading-snug">{{ data_get($package, 'title') }}</h3>
+                            <span class="text-xs font-bold text-emerald-400 drop-shadow">Starting from {{ data_get($package, 'price') }}</span>
+                        </div>
+                        <span class="p-2.5 rounded-full bg-white/20 backdrop-blur-md text-white border border-white/30">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                        </span>
+                    </div>
+
+                    <!-- Hover Glassmorphic Overlay with Details, Price & Action Button -->
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-900/85 to-slate-900/40 backdrop-blur-md p-6 sm:p-7 flex flex-col justify-end text-white opacity-0 group-hover:opacity-100 transition-all duration-400 ease-out translate-y-3 group-hover:translate-y-0">
+                        <div>
+                            <span class="text-xs font-bold text-pink-400 uppercase tracking-widest block mb-1">
+                                {{ data_get($package, 'subtitle') }}
+                            </span>
+                            <h3 class="font-black text-xl sm:text-2xl text-white tracking-tight leading-tight mb-2.5 drop-shadow">
+                                {{ data_get($package, 'title') }}
+                            </h3>
+                            <p class="text-xs sm:text-sm text-slate-200 line-clamp-4 leading-relaxed font-light mb-4">
                                 {{ data_get($package, 'description') }}
                             </p>
                         </div>
-                        <div class="mt-6 pt-6 border-t border-slate-100 flex items-center justify-between">
+
+                        <div class="pt-4 border-t border-white/15 flex items-center justify-between">
                             <div>
-                                <span class="text-xs text-slate-400 block">Starting from</span>
-                                <span class="font-black text-[#216417] text-lg">{{ data_get($package, 'price') }}<span class="text-xs font-normal text-slate-400">/pax</span></span>
+                                <span class="text-[10px] text-slate-300 font-medium uppercase tracking-wider block">Starting from</span>
+                                <span class="font-black text-emerald-400 text-xl tracking-tight">{{ data_get($package, 'price') }}<span class="text-xs font-normal text-slate-300">/pax</span></span>
                             </div>
-                            @if(data_get($package, 'id'))
-                                <a href="{{ route('tours.show', data_get($package, 'id')) }}" class="px-4 py-2 bg-[#ee018d] text-white text-xs font-bold rounded-full hover:bg-pink-700 transition">View Details</a>
-                            @else
-                                <a href="{{ data_get($package, 'button_link') }}" class="px-4 py-2 bg-[#ee018d] text-white text-xs font-bold rounded-full hover:bg-pink-700 transition">{{ data_get($package, 'button_text') }}</a>
-                            @endif
+                            <span class="px-5 py-2.5 bg-[#ee018d] text-white text-xs font-black rounded-full hover:bg-pink-600 shadow-lg shadow-pink-600/30 transition-all flex items-center gap-1.5 group-hover:shadow-pink-500/50">
+                                View Details
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                            </span>
                         </div>
                     </div>
-                </div>
+                </a>
             @endforeach
         </div>
         </div>
@@ -317,28 +375,54 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             const link = pkg.id ? `/tours/${pkg.id}` : '/book/new';
+            const formattedPrice = price ? (price.toString().startsWith('₱') ? price : '₱' + (isNaN(Number(price)) ? price : Number(price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))) : '—';
 
         return `
-            <div class="bg-white rounded-[2rem] overflow-hidden shadow-md ring-1 ring-slate-100 flex flex-col hover:shadow-lg transition">
-                <div class="aspect-video relative overflow-hidden bg-slate-200">
-                    <img src="${image}" alt="${title}" class="w-full h-full object-cover">
-                    ${label ? `<span class="absolute top-4 left-4 text-[10px] font-bold text-emerald-700 uppercase tracking-widest bg-emerald-50 px-2.5 py-1 rounded-full shadow-sm">${label}</span>` : ''}
+            <a href="${link}" class="group relative rounded-[2rem] overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 ring-1 ring-slate-900/10 aspect-[4/5] min-h-[460px] bg-slate-900 flex flex-col justify-end block cursor-pointer">
+                <!-- Full Image Background -->
+                <img src="${image}" alt="${title}" class="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-700 ease-out">
+                
+                <!-- Top Badges -->
+                <div class="absolute top-4 left-4 z-10 flex flex-wrap gap-2">
+                    ${label ? `<span class="text-[11px] font-extrabold text-white uppercase tracking-wider bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20 shadow-md">${label}</span>` : ''}
+                    ${subtitle ? `<span class="text-[11px] font-bold text-white bg-emerald-700/80 backdrop-blur-md px-3 py-1.5 rounded-full shadow-md border border-white/10">${subtitle}</span>` : ''}
                 </div>
-                <div class="p-6 flex-grow flex flex-col justify-between">
+
+                <!-- Default resting bottom bar (Fades out when hovered) -->
+                <div class="absolute inset-x-0 bottom-0 p-5 bg-gradient-to-t from-slate-950/85 via-slate-950/40 to-transparent flex items-end justify-between transition-opacity duration-300 group-hover:opacity-0 pointer-events-none">
                     <div>
-                        <h3 class="font-bold text-slate-900 text-lg">${title}</h3>
-                        <p class="text-xs text-slate-400 mt-1">${subtitle}</p>
-                        <p class="mt-4 text-slate-500 text-sm leading-relaxed">${desc}</p>
+                        <h3 class="font-black text-white text-lg drop-shadow-md leading-snug">${title}</h3>
+                        <span class="text-xs font-bold text-emerald-400 drop-shadow">Starting from ${formattedPrice}</span>
                     </div>
-                    <div class="mt-6 pt-6 border-t border-slate-100 flex items-center justify-between">
+                    <span class="p-2.5 rounded-full bg-white/20 backdrop-blur-md text-white border border-white/30">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                    </span>
+                </div>
+
+                <!-- Hover Glassmorphic Overlay with Details, Price & Action Button -->
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-900/85 to-slate-900/40 backdrop-blur-md p-6 sm:p-7 flex flex-col justify-end text-white opacity-0 group-hover:opacity-100 transition-all duration-400 ease-out translate-y-3 group-hover:translate-y-0">
+                    <div>
+                        ${subtitle ? `<span class="text-xs font-bold text-emerald-400 uppercase tracking-widest block mb-1">${subtitle}</span>` : ''}
+                        <h3 class="font-black text-xl sm:text-2xl text-white tracking-tight leading-tight mb-2.5 drop-shadow">
+                            ${title}
+                        </h3>
+                        <p class="text-xs sm:text-sm text-slate-200 line-clamp-4 leading-relaxed font-light mb-4">
+                            ${desc}
+                        </p>
+                    </div>
+
+                    <div class="pt-4 border-t border-white/15 flex items-center justify-between">
                         <div>
-                            <span class="text-xs text-slate-400 block">Starting from</span>
-                            <span class="font-black text-[#216417] text-lg">₱${price}<span class="text-xs font-normal text-slate-400">/pax</span></span>
+                            <span class="text-[10px] text-slate-300 font-medium uppercase tracking-wider block">Starting from</span>
+                            <span class="font-black text-emerald-400 text-xl tracking-tight">${formattedPrice}<span class="text-xs font-normal text-slate-300">/pax</span></span>
                         </div>
-                        <a href="${link}" class="px-4 py-2 bg-[#ee018d] text-white text-xs font-bold rounded-full hover:bg-pink-700 transition">View Details</a>
+                        <span class="px-5 py-2.5 bg-[#ee018d] text-white text-xs font-black rounded-full hover:bg-pink-600 shadow-lg shadow-pink-600/30 transition-all flex items-center gap-1.5 group-hover:shadow-pink-500/50">
+                            View Details
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                        </span>
                     </div>
                 </div>
-            </div>
+            </a>
         `;
     }
 

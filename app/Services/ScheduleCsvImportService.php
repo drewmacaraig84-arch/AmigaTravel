@@ -462,7 +462,10 @@ class ScheduleCsvImportService
 
         // 5. Resolve or Attach Transport Class / Accommodation
         $status = 'imported';
-        $itemPrice = $additionalPrice > 0 ? $additionalPrice : $rate;
+        // For ferry accommodations, itemPrice defaults to rate if no explicit additionalPrice is specified.
+        // For airline transport classes, additional_price is strictly the class add-on (0 if blank/zero).
+        $accommodationPrice = $additionalPrice > 0 ? $additionalPrice : $rate;
+        $transportClassPrice = $additionalPrice;
 
         if ($mode === 'airline') {
             $transportClass = TransportClass::where('name', $transportClassStr)
@@ -476,7 +479,7 @@ class ScheduleCsvImportService
                     'name' => $transportClassStr,
                     'code' => str($transportClassStr)->slug()->value(),
                     'operator' => $operator,
-                    'price' => $itemPrice,
+                    'price' => $transportClassPrice,
                     'is_active' => true,
                 ]);
             }
@@ -490,7 +493,7 @@ class ScheduleCsvImportService
             } else {
                 if (! $alreadyAttached) {
                     $schedule->transportClasses()->attach($transportClass->id, [
-                        'additional_price' => $itemPrice,
+                        'additional_price' => $transportClassPrice,
                         'tickets_available' => $ticketsAvailable,
                         'rate_type' => $rateType,
                         'is_promo' => $isPromo,
@@ -514,7 +517,7 @@ class ScheduleCsvImportService
                         'schedule_id' => $schedule->id,
                         'name' => $transportClassStr,
                         'rate_code' => $rateCode,
-                        'price' => $itemPrice,
+                        'price' => $accommodationPrice,
                         'tickets_available' => $ticketsAvailable,
                         'has_bed' => $hasBed,
                         'is_active' => true,
@@ -536,7 +539,8 @@ class ScheduleCsvImportService
                 $arrTimeStr,
                 $transportClassStr,
                 $rate,
-                $itemPrice,
+                $accommodationPrice,
+                $transportClassPrice,
                 $rateType,
                 $isPromo,
                 $ticketsAvailable,
@@ -562,7 +566,8 @@ class ScheduleCsvImportService
         ?string $arrTimeStr,
         string $transportClassStr,
         float $rate,
-        float $itemPrice,
+        float $accommodationPrice,
+        float $transportClassPrice,
         string $rateType,
         bool $isPromo,
         int $ticketsAvailable,
@@ -572,6 +577,7 @@ class ScheduleCsvImportService
         $returnRoute = FerryRoute::where('origin', $forwardRoute->destination)
             ->where('destination', $forwardRoute->origin)
             ->where('mode', $mode)
+            ->where('operator', $operator)
             ->first();
 
         if (! $returnRoute) {
@@ -580,6 +586,7 @@ class ScheduleCsvImportService
                 'destination' => $forwardRoute->origin,
                 'mode' => $mode,
                 'operator' => $operator,
+                'operator_id' => $forwardRoute->operator_id,
                 'vehicle_id' => $forwardRoute->vehicle_id,
                 'is_active' => true,
             ]);
@@ -616,10 +623,15 @@ class ScheduleCsvImportService
         }
 
         if ($mode === 'airline') {
-            $transportClass = TransportClass::where('name', $transportClassStr)->first();
+            $transportClass = TransportClass::where('name', $transportClassStr)
+                ->where(function ($q) use ($operator) {
+                    $q->where('operator', $operator)->orWhereNull('operator');
+                })
+                ->first();
+
             if ($transportClass && ! $schedule->transportClasses()->where('transport_classes.id', $transportClass->id)->exists()) {
                 $schedule->transportClasses()->attach($transportClass->id, [
-                    'additional_price' => $itemPrice,
+                    'additional_price' => $transportClassPrice,
                     'tickets_available' => $ticketsAvailable,
                     'rate_type' => $rateType,
                     'is_promo' => $isPromo,
@@ -634,7 +646,7 @@ class ScheduleCsvImportService
                     'schedule_id' => $schedule->id,
                     'name' => $transportClassStr,
                     'rate_code' => $rateCode,
-                    'price' => $itemPrice,
+                    'price' => $accommodationPrice,
                     'tickets_available' => $ticketsAvailable,
                     'has_bed' => $hasBed,
                     'is_active' => true,

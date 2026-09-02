@@ -4940,7 +4940,7 @@ void showTermsModal(BuildContext context) {
                   ),
                   SizedBox(height: 4),
                   Text(
-                    '• Senior Citizens: Applicable to passengers aged 60 or above with a valid OSCA or Philippine government-issued ID. A 20% discount applies to the base rate for Filipino nationals.\n'
+                    '• Senior Citizens: Applicable to passengers aged 60 or above with a valid OSCA or Philippine government-issued ID. Entitled to a 20% discount on the fare and exemption from 12% Value-Added Tax (VAT).\n'
                     '  - Companion: Senior citizens are encouraged to travel with a legal-aged companion.\n'
                     '  - Medical Certificate: Recommended to bring a medical certificate confirming fitness to travel (subject to assessment by vessel medical staff on departure date).\n'
                     '• Infants: Infants below 2 years old and below 1 meter in height may be allowed to board. A fixed rate of ₱500.00 applies per infant regardless of destination or accommodation.',
@@ -11336,6 +11336,31 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
   double _availablePoints = 0.0;
   bool _fetchingPoints = false;
 
+  // Discounts
+  List<Map<String, dynamic>> _discountsList = [];
+
+  double _computePassengerDiscount(double grossFare, dynamic discountId) {
+    if (grossFare <= 0 || discountId == null) return 0.0;
+    final disc = _discountsList.firstWhere(
+      (d) => d['id'] == discountId,
+      orElse: () => {},
+    );
+    final discName = (disc['name'] ?? '').toString().toLowerCase();
+    final discPct = (disc['percentage'] is num)
+        ? (disc['percentage'] as num).toDouble()
+        : (double.tryParse(disc['percentage']?.toString() ?? '20') ?? 20.0);
+
+    if (discName.contains('senior')) {
+      // Step 1: 20% discount first
+      final discountedRate = grossFare * 0.80;
+      // Step 2: Remove 12% VAT
+      final netSeniorFare = discountedRate / 1.12;
+      return (grossFare - netSeniorFare).clamp(0.0, grossFare);
+    }
+
+    return (grossFare * (discPct / 100.0)).clamp(0.0, grossFare);
+  }
+
   static const _steps = ['Route', 'Schedule', 'Details', 'Hotels', 'Submit'];
 
   @override
@@ -11361,7 +11386,27 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
     }
     _fetchPaymentSettings();
     _fetchPoints();
+    _fetchDiscounts();
     _autoApplySavedVoucher();
+  }
+
+  void _fetchDiscounts() async {
+    try {
+      final baseUrl = UserSession.getBaseUrl();
+      final res = await http.get(Uri.parse('$baseUrl/api/discounts'),
+          headers: {'Accept': 'application/json'});
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data['status'] == 'success') {
+          if (mounted) {
+            setState(() {
+              _discountsList =
+                  List<Map<String, dynamic>>.from(data['discounts'] ?? []);
+            });
+          }
+        }
+      }
+    } catch (_) {}
   }
 
   Future<void> _autoApplySavedVoucher() async {
@@ -12167,7 +12212,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                                 ? (widget.booking.selectedSchedule!['promotional_ticket']['promo_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0)
                                 : (widget.booking.selectedSchedule!['adult_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0);
                             final ap = (rawAp is num ? rawAp.toDouble() : (double.tryParse(rawAp.toString()) ?? 0.0)) + depTc;
-                            passengerDiscount += (ap * 0.20);
+                            passengerDiscount += _computePassengerDiscount(ap, p['discount_id']);
                             if (widget.booking.tripType == 'round_trip' &&
                                 widget.booking.selectedReturnSchedule != null) {
                               final rp = widget.booking
@@ -12176,7 +12221,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                                       .selectedReturnSchedule!['price'] ??
                                   0;
                               final retAp = (rp is num ? rp.toDouble() : (double.tryParse(rp.toString()) ?? 0.0)) + retTc;
-                              passengerDiscount += (retAp * 0.20);
+                              passengerDiscount += _computePassengerDiscount(retAp, p['discount_id']);
                             }
                           }
                         }

@@ -235,23 +235,9 @@ class Passenger extends Model
 
     public function isRebookingHistoryItem(): bool
     {
-        if (in_array($this->status, [
-            self::STATUS_REBOOKED,
-            self::STATUS_REBOOKING_PENDING,
-            self::STATUS_OPERATOR_REBOOKING,
-        ], true)) {
+        // Replaced/historical items explicitly have STATUS_REBOOKED or rebooking_status 'rescheduled'
+        if ($this->status === self::STATUS_REBOOKED || $this->rebooking_status === 'rescheduled') {
             return true;
-        }
-
-        if (filled($this->rebooking_status) || (bool) $this->is_rebooked) {
-            return true;
-        }
-
-        if ($this->relationLoaded('booking')) {
-            $booking = $this->getRelation('booking');
-            if ($booking && ((bool) $booking->is_rebooked || filled($booking->rebooking_status) || in_array($booking->status, ['rebooked', 'operator_rebooking'], true))) {
-                return true;
-            }
         }
 
         return false;
@@ -422,7 +408,7 @@ class Passenger extends Model
 
         $disc    = $isSuperPromo ? 0.0 : (float) ($this->discount_amount ?? 0);
         if (!$isSuperPromo && $disc <= 0 && $this->discount) {
-            $disc = $gross * ((float) $this->discount->percentage / 100);
+            $disc = $this->discount->computeDiscountAmount($gross);
         }
         $voucher = $isSuperPromo ? 0.0 : (float) ($this->voucher_discount_share ?? 0);
         $points  = $isSuperPromo ? 0.0 : (float) ($this->points_discount_share ?? 0);
@@ -484,11 +470,14 @@ class Passenger extends Model
 
     public function getStatusLabel(): string
     {
-        if ($this->is_rebooked || $this->rebooking_status === 'verified' || $this->status === self::STATUS_REBOOKED) {
-            return 'Rebooked';
+        if ($this->status === self::STATUS_REBOOKED || $this->rebooking_status === 'rescheduled') {
+            return 'Rescheduled';
         }
         if ($this->rebooking_status === 'pending' || $this->status === self::STATUS_REBOOKING_PENDING) {
             return 'Rebooking Pending';
+        }
+        if ($this->status === self::STATUS_CONFIRMED && ($this->is_rebooked || $this->rebooking_status === 'verified')) {
+            return 'Rebooked (Confirmed)';
         }
         return match ($this->status) {
             self::STATUS_PENDING            => 'Pending',
@@ -499,7 +488,7 @@ class Passenger extends Model
             self::STATUS_REFUND_PENDING     => 'Refund Pending',
             self::STATUS_REFUNDED           => 'Refunded',
             self::STATUS_REBOOKING_PENDING  => 'Rebooking Pending',
-            self::STATUS_REBOOKED           => 'Rebooked',
+            self::STATUS_REBOOKED           => 'Rescheduled',
             default                         => ucfirst($this->status ?? 'Unknown'),
         };
     }

@@ -297,6 +297,9 @@ class ViewBooking extends ViewRecord
                             ->label('Client name'),
                         TextInput::make('client_email')
                             ->label('Client email'),
+                        TextInput::make('client_phone')
+                            ->label('Contact number')
+                            ->placeholder('—'),
                         TextInput::make('origin')
                             ->label('Origin'),
                         TextInput::make('destination')
