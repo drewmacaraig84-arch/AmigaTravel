@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\TransportClassResource\Pages;
 
 use App\Filament\Resources\TransportClassResource;
-use App\Models\Schedule;
 use Carbon\Carbon;
 use Filament\Actions;
 use Filament\Resources\Pages\ViewRecord;
@@ -16,7 +15,6 @@ use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
-use Illuminate\Database\Eloquent\Builder;
 
 class ViewTransportClass extends ViewRecord implements HasTable
 {
@@ -87,16 +85,13 @@ class ViewTransportClass extends ViewRecord implements HasTable
 
     public function table(Table $table): Table
     {
-        $classId = $this->getRecord()->id;
+        /** @var \App\Models\TransportClass $transportClass */
+        $transportClass = $this->getRecord();
 
         return $table
             ->query(
-                Schedule::query()
-                    ->whereHas('transportClasses', fn (Builder $q) => $q->where('transport_classes.id', $classId))
-                    ->with([
-                        'ferryRoute',
-                        'transportClasses' => fn ($q) => $q->where('transport_classes.id', $classId),
-                    ])
+                $transportClass->schedules()->getQuery()
+                    ->with('ferryRoute')
                     ->orderBy('departure_time')
             )
             ->heading('Routes & Schedules Using This Class')
@@ -146,33 +141,23 @@ class ViewTransportClass extends ViewRecord implements HasTable
                     ->money('PHP')
                     ->sortable(),
 
-                TextColumn::make('class_addon_price')
+                TextColumn::make('pivot.additional_price')
                     ->label('Class Add-on')
-                    ->getStateUsing(function (Schedule $record) use ($classId): string {
-                        $tc = $record->transportClasses->first();
-                        return $tc ? '₱' . number_format((float) $tc->pivot->additional_price, 2) : '—';
-                    }),
+                    ->formatStateUsing(fn ($state) => $state !== null ? '₱' . number_format((float) $state, 2) : '—'),
 
-                TextColumn::make('class_tickets')
+                TextColumn::make('pivot.tickets_available')
                     ->label('Tickets Avail.')
-                    ->getStateUsing(function (Schedule $record) use ($classId): string {
-                        $tc = $record->transportClasses->first();
-                        return $tc ? number_format((int) $tc->pivot->tickets_available) : '—';
-                    }),
+                    ->formatStateUsing(fn ($state) => $state !== null ? number_format((int) $state) : '—'),
 
-                TextColumn::make('class_rate_type')
+                TextColumn::make('pivot.rate_type')
                     ->label('Rate Tier')
                     ->badge()
-                    ->getStateUsing(function (Schedule $record) use ($classId): string {
-                        $tc = $record->transportClasses->first();
-                        return $tc ? ($tc->pivot->rate_type ?? 'regular') : 'regular';
-                    })
-                    ->color(fn (string $state): string => match ($state) {
+                    ->color(fn (?string $state): string => match ($state) {
                         'promotional'       => 'warning',
                         'super_promotional' => 'danger',
                         default             => 'success',
                     })
-                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                    ->formatStateUsing(fn (?string $state): string => match ($state) {
                         'promotional'       => '🟠 Promotional',
                         'super_promotional' => '🟣 Super Promo',
                         default             => '🔵 Regular',
