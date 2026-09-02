@@ -7,7 +7,7 @@
 
         // Normalize FileUpload state: it can be an array when a file is selected/uploaded.
         if (is_array($currentQrPath)) {
-            $currentQrPath = $currentQrPath[0] ?? ($currentQrPath['path'] ?? null);
+            $currentQrPath = array_values(array_filter($currentQrPath))[0] ?? ($currentQrPath['path'] ?? null);
         }
     @endphp
 

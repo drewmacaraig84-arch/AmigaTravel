@@ -205,9 +205,14 @@ class ManagePaymentSettings extends Page implements HasForms
                             ->disk('public')
                             ->directory('payment-qr')
                             ->visibility('public')
-                            ->maxFiles(1)
                             ->acceptedFileTypes(['image/png', 'image/jpeg', 'image/jpg', 'image/webp'])
-                            ->dehydrateStateUsing(fn ($state) => is_array($state) ? ($state[0] ?? null) : $state),
+                            ->dehydrateStateUsing(function ($state) {
+                                if (is_array($state)) {
+                                    $filtered = array_values(array_filter($state));
+                                    return $filtered[0] ?? null;
+                                }
+                                return $state ?: null;
+                            }),
                     ]),
             ])
             ->statePath('data');
@@ -217,6 +222,11 @@ class ManagePaymentSettings extends Page implements HasForms
     {
         $state = $this->form->getState();
 
+        $qrCodePath = $state['qr_code_path'] ?? null;
+        if (is_array($qrCodePath)) {
+            $qrCodePath = array_values(array_filter($qrCodePath))[0] ?? null;
+        }
+
         PaymentSetting::current()->update([
             'web_admin_fee'                         => $state['web_admin_fee'],
             'short_haul_web_admin_fee'              => $state['short_haul_web_admin_fee'],
@@ -224,7 +234,7 @@ class ManagePaymentSettings extends Page implements HasForms
             'transaction_fee'                       => $state['transaction_fee'],
             'short_haul_transaction_fee'            => $state['short_haul_transaction_fee'],
             'revalidation_fee'                      => $state['revalidation_fee'],
-            'qr_code_path'                          => $state['qr_code_path'],
+            'qr_code_path'                          => $qrCodePath,
             'ferry_before_departure_surcharge_pct'  => $state['ferry_before_departure_surcharge_pct'],
             'ferry_after_departure_surcharge_pct'   => $state['ferry_after_departure_surcharge_pct'],
             'airline_before_departure_surcharge_pct' => $state['airline_before_departure_surcharge_pct'],

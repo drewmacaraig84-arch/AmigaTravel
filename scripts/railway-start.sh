@@ -142,6 +142,7 @@ mkdir -p /var/www/html/storage/app/public/tickets
 mkdir -p /var/www/html/storage/app/public/proofs
 mkdir -p /var/www/html/storage/app/public/receipts
 mkdir -p /var/www/html/storage/app/public/rebooking_proofs
+mkdir -p /var/www/html/storage/app/public/payment-qr
 mkdir -p /var/www/html/storage/app/public/livewire-tmp
 mkdir -p /var/www/html/storage/app/private/livewire-tmp
 mkdir -p /var/www/html/storage/app/livewire-tmp

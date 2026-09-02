@@ -972,7 +972,7 @@ class BookingController extends Controller
                 'affected_items'        => $calc['affected_items'],
                 'passengers_breakdown'  => $calc['passengers_breakdown'] ?? [],
             ],
-            'qr_code_url' => $settings->qr_code_path ? asset('storage/' . $settings->qr_code_path) : null,
+            'qr_code_url' => storage_asset_path($settings->qr_code_path),
         ]);
     }
     public function eligibleReplacements(Request $request, $id)
