@@ -21,8 +21,9 @@ class DatabaseSeeder extends Seeder
             [
                 'name' => 'Admin User',
                 'password' => bcrypt('admin'),
+                'role' => 'Admin',
                 'is_admin' => true,
-                'is_staff' => false,
+                'is_staff' => true,
             ],
         );
 
@@ -31,8 +32,9 @@ class DatabaseSeeder extends Seeder
             [
                 'name' => 'Admin Arriza',
                 'password' => bcrypt('Aili$h_04'),
+                'role' => 'Admin',
                 'is_admin' => true,
-                'is_staff' => false,
+                'is_staff' => true,
             ],
         );
 
@@ -41,8 +43,9 @@ class DatabaseSeeder extends Seeder
             [
                 'name' => 'Admin Gracia',
                 'password' => bcrypt('Hellospidey203'),
+                'role' => 'Admin',
                 'is_admin' => true,
-                'is_staff' => false,
+                'is_staff' => true,
             ],
         );
 
@@ -51,8 +54,9 @@ class DatabaseSeeder extends Seeder
             [
                 'name' => 'Aries King',
                 'password' => bcrypt('password'),
+                'role' => 'Super Admin',
                 'is_admin' => true,
-                'is_staff' => false,
+                'is_staff' => true,
             ],
         );
 
@@ -61,8 +65,9 @@ class DatabaseSeeder extends Seeder
             [
                 'name' => 'Drew',
                 'password' => bcrypt('1115'),
+                'role' => 'Super Admin',
                 'is_admin' => true,
-                'is_staff' => false,
+                'is_staff' => true,
             ],
         );
 

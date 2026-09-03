@@ -43,6 +43,24 @@ class AppServiceProvider extends ServiceProvider
         // Register model observers
         Booking::observe(BookingObserver::class);
         \App\Models\UserNotification::observe(\App\Observers\UserNotificationObserver::class);
+
+        // Record User Login Security Audit Trail
+        \Illuminate\Support\Facades\Event::listen(
+            \Illuminate\Auth\Events\Login::class,
+            function ($event) {
+                if ($event->user) {
+                    \App\Models\UserLoginHistory::create([
+                        'user_id' => $event->user->id,
+                        'email' => $event->user->email,
+                        'login_type' => 'web',
+                        'ip_address' => request()->ip() ?? '127.0.0.1',
+                        'user_agent' => request()->userAgent() ?? 'Mozilla/5.0 Browser',
+                        'success' => true,
+                        'description' => 'Authenticated Session Started',
+                    ]);
+                }
+            }
+        );
         
         if (config('app.env') === 'production' || request()->server('HTTP_X_FORWARDED_PROTO') === 'https') {
             \Illuminate\Support\Facades\URL::forceScheme('https');

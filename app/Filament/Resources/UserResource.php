@@ -88,11 +88,11 @@ class UserResource extends Resource
                 TextInput::make('role')
                     ->label('Role')
                     ->required()
-                    ->placeholder('e.g. Admin, Staff, Finance, User')
+                    ->placeholder('e.g. Super Admin, Admin, Staff, Finance, User')
                     ->reactive()
                     ->afterStateUpdated(function (\Filament\Forms\Set $set, $state) {
                         $normalized = strtolower(trim($state));
-                        if (in_array($normalized, ['admin', 'administrator'])) {
+                        if (in_array($normalized, ['super admin', 'superadmin', 'super_admin', 'admin', 'administrator'])) {
                             $set('is_admin', true);
                             $set('is_staff', true);
                         } elseif ($normalized === 'user') {
@@ -109,7 +109,7 @@ class UserResource extends Resource
                 Hidden::make('is_admin')
                     ->default(false),
                 Placeholder::make('admin_permission_note')
-                    ->content('Administrators have access to every feature.')
+                    ->content('Super Administrators and Administrators have access to every feature.')
                     ->visible(fn (Get $get): bool => (bool) $get('is_admin')), 
                 Section::make('Staff features')
                     ->schema([
@@ -159,7 +159,7 @@ class UserResource extends Resource
                 TextColumn::make('role')
                     ->label('Role')
                     ->getStateUsing(function ($record) {
-                        if ($record->role) return ucfirst($record->role);
+                        if ($record->role) return ucwords($record->role);
                         if ($record->is_admin) return 'Admin';
                         if ($record->is_staff) return 'Staff';
                         return 'User';
@@ -168,7 +168,8 @@ class UserResource extends Resource
                     ->color(function (string $state): string {
                         $colors = ['primary', 'warning', 'info', 'purple', 'indigo', 'fuchsia', 'teal', 'cyan', 'lime'];
                         $stateLower = strtolower($state);
-                        if ($stateLower === 'admin') return 'danger';
+                        if (in_array($stateLower, ['super admin', 'superadmin', 'super_admin'])) return 'danger';
+                        if ($stateLower === 'admin') return 'warning';
                         if ($stateLower === 'staff') return 'success';
                         if ($stateLower === 'user') return 'gray';
                         

@@ -123,12 +123,19 @@ class User extends Authenticatable implements FilamentUser
 
     public function isSuperAdmin(): bool
     {
-        return (bool) $this->is_admin;
+        $normalizedRole = strtolower(trim((string) $this->role));
+
+        return in_array($normalizedRole, ['super admin', 'superadmin', 'super_admin'], true);
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->isSuperAdmin() || (bool) $this->is_admin;
     }
 
     public function isStaff(): bool
     {
-        return (bool) $this->is_staff || (bool) $this->is_admin;
+        return (bool) $this->is_staff || (bool) $this->is_admin || $this->isSuperAdmin();
     }
 
     public static function getPermissionGroups(): array
@@ -160,7 +167,7 @@ class User extends Authenticatable implements FilamentUser
 
     public function hasAdminPermission(string $permission): bool
     {
-        if ($this->isSuperAdmin()) {
+        if ($this->isAdmin()) {
             return true;
         }
 
@@ -169,16 +176,20 @@ class User extends Authenticatable implements FilamentUser
 
     public function canAccessFeature(string $permission): bool
     {
+        if ($permission === 'system_dashboard') {
+            return $this->isSuperAdmin();
+        }
+
         if ($permission === 'dashboard') {
             return $this->isStaff();
         }
 
-        return $this->isSuperAdmin() || $this->hasAdminPermission($permission);
+        return $this->isAdmin() || $this->hasAdminPermission($permission);
     }
 
     public function hasAnyAdminPermission(): bool
     {
-        return $this->isSuperAdmin() || ! empty($this->getAdminPermissionKeys());
+        return $this->isAdmin() || ! empty($this->getAdminPermissionKeys());
     }
 
     public function canAccessPanel(Panel $panel): bool
