@@ -102,7 +102,12 @@ class Booking extends Model
         'refund_processed_at',
         'refund_processed_by_user_id',
         'refund_notes',
+        'review_claimed_by_user_id',
+        'review_claimed_at',
+        'review_type',
     ];
+
+    public const REVIEW_CLAIM_TTL_MINUTES = 10;
 
     protected static function booted(): void
     {
@@ -393,6 +398,7 @@ class Booking extends Model
         'extra_baggage_price' => 'decimal:2',
         'sla_voucher_issued_at' => 'datetime',
         'refund_processed_at' => 'datetime',
+        'review_claimed_at' => 'datetime',
     ];
 
     /**
@@ -506,6 +512,132 @@ class Booking extends Model
     public function refundProcessedByUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'refund_processed_by_user_id');
+    }
+
+    public function reviewClaimedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'review_claimed_by_user_id');
+    }
+
+    public function isReviewClaimed(int $ttlMinutes = self::REVIEW_CLAIM_TTL_MINUTES): bool
+    {
+        if (! $this->review_claimed_by_user_id || ! $this->review_claimed_at) {
+            return false;
+        }
+
+        return $this->review_claimed_at->copy()->addMinutes($ttlMinutes)->isFuture();
+    }
+
+    public function isReviewClaimedBy(?User $user, int $ttlMinutes = self::REVIEW_CLAIM_TTL_MINUTES): bool
+    {
+        if (! $user || ! $this->isReviewClaimed($ttlMinutes)) {
+            return false;
+        }
+
+        return (int) $this->review_claimed_by_user_id === (int) $user->id;
+    }
+
+    public function isReviewClaimedByOther(?User $user, int $ttlMinutes = self::REVIEW_CLAIM_TTL_MINUTES): bool
+    {
+        if (! $this->isReviewClaimed($ttlMinutes)) {
+            return false;
+        }
+
+        if (! $user) {
+            return true;
+        }
+
+        return (int) $this->review_claimed_by_user_id !== (int) $user->id;
+    }
+
+    public function claimReview(User $user, string $type = 'booking', int $ttlMinutes = self::REVIEW_CLAIM_TTL_MINUTES): bool
+    {
+        if ($this->isReviewClaimedByOther($user, $ttlMinutes)) {
+            return false;
+        }
+
+        $this->update([
+            'review_claimed_by_user_id' => $user->id,
+            'review_claimed_at' => now(),
+            'review_type' => $type,
+        ]);
+
+        return true;
+    }
+
+    public function releaseReview(?User $user = null, bool $force = false): bool
+    {
+        if (! $this->review_claimed_by_user_id && ! $this->review_claimed_at) {
+            return true;
+        }
+
+        if (! $force && $user && (int) $this->review_claimed_by_user_id !== (int) $user->id) {
+            return false;
+        }
+
+        $this->update([
+            'review_claimed_by_user_id' => null,
+            'review_claimed_at' => null,
+            'review_type' => null,
+        ]);
+
+        return true;
+    }
+
+    public function getReviewClaimRemainingMinutes(int $ttlMinutes = self::REVIEW_CLAIM_TTL_MINUTES): int
+    {
+        if (! $this->isReviewClaimed($ttlMinutes)) {
+            return 0;
+        }
+
+        $expiresAt = $this->review_claimed_at->copy()->addMinutes($ttlMinutes);
+        $diff = (int) now()->diffInMinutes($expiresAt, false);
+
+        return max(0, $diff);
+    }
+
+    public function getReviewClaimTimerRemainingLabel(int $ttlMinutes = self::REVIEW_CLAIM_TTL_MINUTES): ?string
+    {
+        if (! $this->isReviewClaimed($ttlMinutes)) {
+            return null;
+        }
+
+        $expiresAt = $this->review_claimed_at->copy()->addMinutes($ttlMinutes);
+        $diff = now()->diff($expiresAt);
+
+        return sprintf('%dm %ds remaining', $diff->i, $diff->s);
+    }
+
+    public function getReviewClaimStatusLabel(?User $currentUser = null): string
+    {
+        if (! $this->isReviewClaimed()) {
+            return 'Available';
+        }
+
+        if ($currentUser && (int) $this->review_claimed_by_user_id === (int) $currentUser->id) {
+            return 'Claimed by you';
+        }
+
+        $name = $this->reviewClaimedBy?->name ?? 'Staff';
+
+        return "In Review by {$name}";
+    }
+
+    public function getReviewClaimTooltip(?User $currentUser = null): ?string
+    {
+        if (! $this->isReviewClaimed()) {
+            return null;
+        }
+
+        if ($currentUser && (int) $this->review_claimed_by_user_id === (int) $currentUser->id) {
+            $mins = $this->getReviewClaimRemainingMinutes();
+            return "Claimed by you. Lock expires in approx {$mins} min(s).";
+        }
+
+        $name = $this->reviewClaimedBy?->name ?? 'another staff member';
+        $mins = $this->getReviewClaimRemainingMinutes();
+
+        return "Being reviewed by {$name}. Locked for verification ({$mins}m remaining).";
     }
 
     public function transactions(): HasMany

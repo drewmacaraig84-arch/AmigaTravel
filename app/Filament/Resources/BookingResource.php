@@ -193,6 +193,18 @@ class BookingResource extends Resource
                     })
                     ->state(fn (Booking $record): string => $record->verificationTimerLabel())
                     ->tooltip(fn (Booking $record): ?string => $record->verificationTimerTooltip()),
+                Tables\Columns\TextColumn::make('review_status')
+                    ->label('Review Lock')
+                    ->badge()
+                    ->state(fn (Booking $record): string => $record->getReviewClaimStatusLabel(Auth::user()))
+                    ->icon(fn (Booking $record): ?string => $record->isReviewClaimed() ? 'heroicon-m-lock-closed' : null)
+                    ->color(fn (Booking $record): string => match (true) {
+                        ! $record->isReviewClaimed() => 'gray',
+                        $record->isReviewClaimedBy(Auth::user()) => 'warning',
+                        default => 'danger',
+                    })
+                    ->tooltip(fn (Booking $record): ?string => $record->getReviewClaimTooltip(Auth::user()))
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('updated_at')
                     ->dateTime()
                     ->sortable()
@@ -218,152 +230,58 @@ class BookingResource extends Resource
                     ])
                     ->query(function (Builder $query, array $data) {
                         if (blank($data['value'] ?? null)) {
-                            return $query;
+                            return;
                         }
-
-                        return $query->whereHas('transaction', function (Builder $q) use ($data) {
+                        $query->whereHas('transaction', function ($q) use ($data) {
                             $q->where('payment_status', $data['value']);
                         });
                     }),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
-                Tables\Actions\Action::make('verifyBooking')
-                    ->label('Verify booking')
-                    ->icon('heroicon-m-check')
+                Tables\Actions\Action::make('reviewBooking')
+                    ->label(fn (Booking $record): string => $record->isReviewClaimedBy(Auth::user())
+                        ? 'Resume Review'
+                        : ($record->isReviewClaimedByOther(Auth::user())
+                            ? 'In Review'
+                            : 'Review'))
+                    ->icon(fn (Booking $record): string => $record->isReviewClaimedByOther(Auth::user())
+                        ? 'heroicon-m-lock-closed'
+                        : 'heroicon-m-clipboard-document-check')
+                    ->color(fn (Booking $record): string => $record->isReviewClaimedBy(Auth::user())
+                        ? 'warning'
+                        : ($record->isReviewClaimedByOther(Auth::user())
+                            ? 'gray'
+                            : 'amber'))
                     ->button()
-                    ->form([
-                        Forms\Components\TextInput::make('confirmation_url')
-                            ->label('Confirmation URL')
-                            ->url()
-                            ->placeholder('https://example.com/ticket/ABC123'),
-                        Forms\Components\FileUpload::make('confirmation_pdf')
-                            ->label('Confirmation PDF')
-                            ->directory('tickets')
-                            ->disk('public')
-                            ->acceptedFileTypes(['application/pdf'])
-                            ->maxSize(10240),
-                    ])
                     ->visible(fn (Booking $record): bool => $record->status === 'pending')
-                    ->disabled(fn (Booking $record): bool => ! $record->transaction || $record->transaction->payment_status === 'unpaid' || $record->isVerificationLocked())
-                    ->tooltip(fn (Booking $record): ?string => ! $record->transaction
-                        ? 'No payment transaction found for this booking.'
-                        : ($record->transaction->payment_status === 'unpaid'
-                            ? 'Cannot verify: Payment status is Unpaid.'
-                            : $record->verificationTimerTooltip()))
-                    ->requiresConfirmation()
-                    ->action(function (Booking $record, array $data): void {
-                        if (empty($data['confirmation_url']) && empty($data['confirmation_pdf'])) {
-                            throw new \Exception('Please provide either a confirmation URL or upload a PDF before verifying.');
+                    ->disabled(fn (Booking $record): bool => $record->isReviewClaimedByOther(Auth::user()))
+                    ->tooltip(fn (Booking $record): ?string => $record->getReviewClaimTooltip(Auth::user()))
+                    ->action(function (Booking $record): void {
+                        $user = Auth::user();
+                        if (! $user instanceof \App\Models\User) {
+                            return;
                         }
 
-                        $alreadyVerifiedBy = null;
-                        $shouldSendEmail = false;
-                        $isRebooking = false;
-                        $ticketUrl = !empty($data['confirmation_url']) ? trim($data['confirmation_url']) : null;
-                        $confirmationPdfPath = Booking::resolveUploadedPdfPath($data['confirmation_pdf'] ?? null, $record->transaction_number);
-                        $receiptPath = $confirmationPdfPath;
-                        $receiptDisk = $confirmationPdfPath ? 'public' : null;
-
-                        DB::transaction(function () use (
-                            $record, $ticketUrl, $confirmationPdfPath, $receiptPath, $receiptDisk,
-                            &$alreadyVerifiedBy, &$shouldSendEmail, &$isRebooking
-                        ) {
-                            $lockedBooking = Booking::where('id', $record->id)
-                                ->with(['transaction', 'verifiedBy'])
-                                ->lockForUpdate()
-                                ->first();
-
-                            if (! $lockedBooking || $lockedBooking->status === 'confirmed' || $lockedBooking->verified_by_user_id !== null) {
-                                $alreadyVerifiedBy = $lockedBooking?->verifiedBy?->name ?? 'another staff member';
-                                return;
-                            }
-
-                            $staffUserId = Auth::id();
-                            $now = now();
-
-                            $transaction = $lockedBooking->transaction ?? \App\Models\Transaction::where('booking_id', $lockedBooking->id)->lockForUpdate()->first();
-                            if ($transaction) {
-                                $transaction->update([
-                                    'payment_status' => 'paid',
-                                    'confirmation_url' => $ticketUrl,
-                                    'confirmation_pdf' => $confirmationPdfPath,
-                                    'verified_by_user_id' => $staffUserId,
-                                    'verified_at' => $now,
-                                ]);
-                            } else {
-                                $transaction = \App\Models\Transaction::create([
-                                    'booking_id' => $lockedBooking->id,
-                                    'payment_status' => 'paid',
-                                    'confirmation_url' => $ticketUrl,
-                                    'confirmation_pdf' => $confirmationPdfPath,
-                                    'verified_by_user_id' => $staffUserId,
-                                    'verified_at' => $now,
-                                ]);
-                            }
-                            $lockedBooking->setRelation('transaction', $transaction);
-
-                            $lockedBooking->update([
-                                'verified_by_user_id' => $staffUserId,
-                                'verified_at' => $now,
-                            ]);
-
-                            if ($lockedBooking->rebooking_status === 'pending') {
-                                $isRebooking = true;
-                                $lockedBooking->verifyRebooking($ticketUrl, $receiptPath, $receiptDisk);
-                            } else {
-                                $lockedBooking->update(['status' => 'confirmed']);
-                                app(\App\Services\GraciaPointsService::class)->awardPointsForBooking($lockedBooking, auth()->user());
-                                $shouldSendEmail = true;
-                            }
-                        });
-
-                        if ($alreadyVerifiedBy !== null) {
-                            Notification::make()
-                                ->title('Already Verified')
-                                ->body("This booking was already verified by {$alreadyVerifiedBy}.")
+                        if ($record->isReviewClaimedByOther($user)) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('Booking In Review')
+                                ->body($record->getReviewClaimTooltip($user))
                                 ->warning()
                                 ->send();
                             return;
                         }
 
-                        if ($isRebooking) {
-                            Notification::make()
-                                ->title('Rebooking verified')
-                                ->body('Rebooking verified and confirmation email sent.')
-                                ->success()
-                                ->send();
-                            return;
-                        }
+                        $record->claimReview($user, 'booking');
 
-                        if ($shouldSendEmail) {
-                            // Send confirmation email — exactly 1 email with both attachments
-                            try {
-                                Mail::to($record->client_email)->send(
-                                    new BookingConfirmation($record->fresh(), $ticketUrl, $receiptPath, $receiptDisk)
-                                );
-                                Notification::make()
-                                    ->title('Booking verified')
-                                    ->body('Booking verified and confirmation email sent.')
-                                    ->success()
-                                    ->send();
-                            } catch (Throwable $e) {
-                                Log::error('Failed sending booking confirmation email (booking list verify)', [
-                                    'booking_id' => $record->id ?? null,
-                                    'email'      => $record->client_email ?? null,
-                                    'error'      => $e->getMessage(),
-                                ]);
-                                Notification::make()
-                                    ->title('Booking verified with warning')
-                                    ->body('Booking was verified, but the confirmation email failed to send.')
-                                    ->warning()
-                                    ->send();
-                            }
-                        }
-                    })
-                    ->color('success'),
+                        \Filament\Notifications\Notification::make()
+                            ->title('Review Claimed')
+                            ->body("You have claimed booking #{$record->transaction_number} for review. Exclusive lock active for 10 minutes.")
+                            ->info()
+                            ->send();
 
-
+                        redirect(BookingResource::getUrl('view', ['record' => $record]));
+                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

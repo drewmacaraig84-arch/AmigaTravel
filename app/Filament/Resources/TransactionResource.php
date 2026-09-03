@@ -474,10 +474,12 @@ class TransactionResource extends Resource
                             ->acceptedFileTypes(['application/pdf'])
                             ->maxSize(10240),
                     ])
-                    ->disabled(fn (Transaction $record): bool => $record->payment_status === 'unpaid' || $record->isVerificationLocked())
-                    ->tooltip(fn (Transaction $record): ?string => $record->payment_status === 'unpaid'
-                        ? 'Cannot verify: Payment status is Unpaid.'
-                        : $record->verificationTimerTooltip())
+                    ->disabled(fn (Transaction $record): bool => $record->payment_status === 'unpaid' || $record->isVerificationLocked() || ($record->booking && $record->booking->isReviewClaimedByOther(Auth::user())))
+                    ->tooltip(fn (Transaction $record): ?string => match (true) {
+                        $record->booking && $record->booking->isReviewClaimedByOther(Auth::user()) => $record->booking->getReviewClaimTooltip(Auth::user()),
+                        $record->payment_status === 'unpaid' => 'Cannot verify: Payment status is Unpaid.',
+                        default => $record->verificationTimerTooltip(),
+                    })
                     ->action(function (Transaction $record, array $data): void {
                         if (empty($data['confirmation_url']) && empty($data['confirmation_pdf'])) {
                             throw new \Exception('Please provide either a confirmation URL or upload a PDF before verifying.');

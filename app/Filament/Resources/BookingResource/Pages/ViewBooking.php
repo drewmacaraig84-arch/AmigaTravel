@@ -36,6 +36,10 @@ class ViewBooking extends ViewRecord
         $user = Auth::user();
         if ($user instanceof \App\Models\User && $user->isStaff()) {
             app(\App\Support\AdminNotificationFeed::class)->markBookingNotificationsAsRead($user, (int) $record);
+
+            if ($this->record->status === 'pending' && ! $this->record->isReviewClaimedByOther($user)) {
+                $this->record->claimReview($user, 'booking');
+            }
         }
     }
 
@@ -285,6 +289,49 @@ class ViewBooking extends ViewRecord
     {
         return $form
             ->schema([
+                Section::make('Review & Verification Lock')
+                    ->visible(fn (): bool => $this->record->isReviewClaimed())
+                    ->schema([
+                        Placeholder::make('review_claim_banner')
+                            ->label('')
+                            ->content(function (): HtmlString {
+                                $user = Auth::user();
+                                $isMe = $user && $this->record->isReviewClaimedBy($user);
+                                $staffName = e($this->record->reviewClaimedBy?->name ?? 'Staff');
+                                $remaining = e($this->record->getReviewClaimTimerRemainingLabel() ?? '10m');
+
+                                if ($isMe) {
+                                    return new HtmlString('
+                                        <div class="flex items-center justify-between p-4 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200">
+                                            <div class="flex items-center gap-3">
+                                                <div class="p-2 rounded-lg bg-amber-200 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300">
+                                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                                </div>
+                                                <div>
+                                                    <p class="text-sm font-bold">You have claimed this booking for review</p>
+                                                    <p class="text-xs text-amber-700 dark:text-amber-400">Exclusive lock active (' . $remaining . '). Other staff cannot verify while you review.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ');
+                                }
+
+                                return new HtmlString('
+                                    <div class="flex items-center justify-between p-4 rounded-xl border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 text-rose-900 dark:text-rose-200">
+                                        <div class="flex items-center gap-3">
+                                            <div class="p-2 rounded-lg bg-rose-200 dark:bg-rose-900/60 text-rose-800 dark:text-rose-300">
+                                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                                            </div>
+                                            <div>
+                                                <p class="text-sm font-bold">Locked: Currently being reviewed by ' . $staffName . '</p>
+                                                <p class="text-xs text-rose-700 dark:text-rose-400">Verification is disabled to prevent double-processing. Lock expires in ' . $remaining . '.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ');
+                            })
+                            ->columnSpanFull(),
+                    ]),
                 Section::make('Passenger Items & Financial Breakdown')
                     ->schema([
                         Placeholder::make('passenger_items_breakdown')
@@ -812,12 +859,16 @@ class ViewBooking extends ViewRecord
                         ->acceptedFileTypes(['application/pdf'])
                         ->maxSize(10240),
                 ])
-                ->disabled(fn (): bool => ! $this->record->transaction || $this->record->transaction->payment_status === 'unpaid' || $this->record->isVerificationLocked())
-                ->tooltip(fn (): ?string => ! $this->record->transaction
-                    ? 'No payment transaction found for this booking.'
-                    : ($this->record->transaction->payment_status === 'unpaid'
-                        ? 'Cannot verify: Payment status is Unpaid.'
-                        : $this->record->verificationTimerTooltip()))
+                ->disabled(fn (): bool => ! $this->record->transaction
+                    || $this->record->transaction->payment_status === 'unpaid'
+                    || $this->record->isVerificationLocked()
+                    || $this->record->isReviewClaimedByOther(Auth::user()))
+                ->tooltip(fn (): ?string => match (true) {
+                    $this->record->isReviewClaimedByOther(Auth::user()) => $this->record->getReviewClaimTooltip(Auth::user()),
+                    ! $this->record->transaction => 'No payment transaction found for this booking.',
+                    $this->record->transaction->payment_status === 'unpaid' => 'Cannot verify: Payment status is Unpaid.',
+                    default => $this->record->verificationTimerTooltip(),
+                })
                 ->action(function (array $data) {
                     $booking = $this->record;
 
@@ -874,6 +925,9 @@ class ViewBooking extends ViewRecord
                         $lockedBooking->update([
                             'verified_by_user_id' => $staffUserId,
                             'verified_at'         => $now,
+                            'review_claimed_by_user_id' => null,
+                            'review_claimed_at' => null,
+                            'review_type' => null,
                         ]);
 
                         if ($lockedBooking->rebooking_status === 'pending') {
@@ -941,7 +995,40 @@ class ViewBooking extends ViewRecord
                 ->color('success')
                 ->visible(fn (): bool => $this->record->status === 'pending'),
 
+            Actions\Action::make('releaseReview')
+                ->label('Release Claim')
+                ->icon('heroicon-m-lock-open')
+                ->color('gray')
+                ->visible(fn (): bool => $this->record->status === 'pending' && $this->record->isReviewClaimedBy(Auth::user()))
+                ->requiresConfirmation()
+                ->modalHeading('Release Review Claim')
+                ->modalDescription('Are you sure you want to release this booking? Other staff members will then be able to claim and verify it.')
+                ->action(function () {
+                    $this->record->releaseReview(Auth::user());
+                    Notification::make()
+                        ->title('Review Claim Released')
+                        ->body('This booking is now available for other staff members.')
+                        ->info()
+                        ->send();
+                    $this->redirect(BookingResource::getUrl('index'));
+                }),
 
+            Actions\Action::make('forceReleaseReview')
+                ->label('Force Unlock')
+                ->icon('heroicon-m-key')
+                ->color('danger')
+                ->visible(fn (): bool => $this->record->status === 'pending' && (Auth::user()?->role === 'admin') && $this->record->isReviewClaimedByOther(Auth::user()))
+                ->requiresConfirmation()
+                ->modalHeading('Force Unlock Booking')
+                ->modalDescription(fn (): string => "This booking is currently claimed by {$this->record->reviewClaimedBy?->name}. Are you sure you want to force-release the lock?")
+                ->action(function () {
+                    $this->record->releaseReview(null, true);
+                    Notification::make()
+                        ->title('Lock Force-Released')
+                        ->body('The booking review lock has been cleared.')
+                        ->success()
+                        ->send();
+                }),
         ];
     }
 

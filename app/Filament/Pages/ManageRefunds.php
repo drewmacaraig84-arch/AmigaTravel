@@ -198,6 +198,18 @@ class ManageRefunds extends Page implements HasTable, HasInfolists
                     ->label('Transfer Ref No.')
                     ->searchable()
                     ->placeholder('—'),
+                Tables\Columns\TextColumn::make('review_status')
+                    ->label('Review Lock')
+                    ->badge()
+                    ->state(fn (Booking $record): string => $record->getReviewClaimStatusLabel(Auth::user()))
+                    ->icon(fn (Booking $record): ?string => $record->isReviewClaimed() ? 'heroicon-m-lock-closed' : null)
+                    ->color(fn (Booking $record): string => match (true) {
+                        ! $record->isReviewClaimed() => 'gray',
+                        $record->isReviewClaimedBy(Auth::user()) => 'warning',
+                        default => 'danger',
+                    })
+                    ->tooltip(fn (Booking $record): ?string => $record->getReviewClaimTooltip(Auth::user()))
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('refund_processed_at')
                     ->label('Disbursed At')
                     ->dateTime()
@@ -258,64 +270,23 @@ class ManageRefunds extends Page implements HasTable, HasInfolists
                                 TextEntry::make('total_price')
                                     ->label('Original Total Fare')
                                     ->money('PHP'),
-                                TextEntry::make('retained_amount')
-                                    ->label('Retained by Amiga (System Revenue)')
-                                    ->state(fn (Booking $record): float => max(0, (float) $record->total_price - (float) $record->refund_amount))
-                                    ->money('PHP')
-                                    ->color('success')
-                                    ->weight('bold')
-                                    ->size('lg'),
+                                TextEntry::make('cancellation_fee')
+                                    ->label('Fee / Surcharge Deduction')
+                                    ->money('PHP'),
                                 TextEntry::make('refund_amount')
-                                    ->label('Customer Refund Payout')
+                                    ->label('Net Refund Payable')
                                     ->money('PHP')
-                                    ->color('danger')
-                                    ->weight('semibold')
-                                    ->size('lg'),
+                                    ->weight('bold'),
                             ])
                             ->columns(3),
 
-                        Infolists\Components\Section::make('Recipient & Transfer Info')
+                        Infolists\Components\Section::make('Customer Payout Details')
                             ->schema([
-                                TextEntry::make('refund_method')
-                                    ->label('Payout Method')
-                                    ->badge()
-                                    ->state(fn (Booking $record): string => $record->getParsedRefundDestination()['method'] ?? '—')
-                                    ->color(fn (Booking $record): string => match (strtolower($record->getParsedRefundDestination()['method'] ?? '')) {
-                                        'gcash' => 'info',
-                                        'maya', 'paymaya', 'online wallet' => 'success',
-                                        'bank account', 'bank' => 'warning',
-                                        default => 'gray',
-                                    }),
-                                TextEntry::make('refund_institution')
-                                    ->label('Bank / Institution')
-                                    ->state(fn (Booking $record): string => $record->getParsedRefundDestination()['institution'] ?? '—')
-                                    ->placeholder('—'),
-                                TextEntry::make('refund_account_number')
-                                    ->label('Account / Mobile No.')
-                                    ->state(fn (Booking $record): string => $record->getParsedRefundDestination()['account_number'] ?? ($record->refund_destination ?? '—'))
-                                    ->copyable()
-                                    ->weight('bold')
-                                    ->fontFamily('mono'),
-                                TextEntry::make('refund_account_name')
-                                    ->label('Account Holder Name')
-                                    ->state(fn (Booking $record): string => $record->getParsedRefundDestination()['account_name'] ?? '—')
-                                    ->weight('bold')
-                                    ->placeholder('—'),
-                                TextEntry::make('refund_reference')
-                                    ->label('Disbursement Transfer Ref No.')
-                                    ->placeholder('Not yet disbursed')
-                                    ->copyable()
-                                    ->weight('bold')
-                                    ->color('primary'),
-                                TextEntry::make('refund_processed_at')
-                                    ->label('Disbursed Date & Time')
-                                    ->dateTime()
-                                    ->placeholder('—'),
-                                TextEntry::make('refundProcessedByUser.name')
-                                    ->label('Processed By Staff')
-                                    ->placeholder('—'),
-                            ])
-                            ->columns(3),
+                                TextEntry::make('refund_destination')
+                                    ->label('Payout Account / Destination')
+                                    ->columnSpanFull()
+                                    ->copyable(),
+                            ]),
 
                         Infolists\Components\Section::make('Disbursement Proof Receipt')
                             ->schema([
@@ -373,17 +344,80 @@ class ManageRefunds extends Page implements HasTable, HasInfolists
                             ->visible(fn (Booking $record) => $record->refund_status === 'completed'),
                     ]),
 
-                Action::make('verifyRefund')
-                    ->label('Verify & Disburse')
-                    ->icon('heroicon-m-check-badge')
+                Action::make('reviewRefund')
+                    ->label(fn (Booking $record): string => $record->isReviewClaimedBy(Auth::user())
+                        ? 'Resume Review'
+                        : ($record->isReviewClaimedByOther(Auth::user())
+                            ? 'In Review'
+                            : 'Review Refund'))
+                    ->icon(fn (Booking $record): string => $record->isReviewClaimedByOther(Auth::user())
+                        ? 'heroicon-m-lock-closed'
+                        : 'heroicon-m-clipboard-document-check')
+                    ->color(fn (Booking $record): string => $record->isReviewClaimedBy(Auth::user())
+                        ? 'warning'
+                        : ($record->isReviewClaimedByOther(Auth::user())
+                            ? 'gray'
+                            : 'amber'))
                     ->button()
-                    ->color('success')
+                    ->modalWidth('3xl')
+                    ->modalHeading('Review Refund Request & Disburse')
+                    ->modalDescription(fn (Booking $record): string => "Review customer payout details and passenger items for booking #{$record->transaction_number} before verifying.")
+                    ->modalSubmitActionLabel('Verify & Disburse')
                     ->visible(fn (Booking $record): bool => $record->refund_status !== 'completed')
+                    ->mountUsing(function (Booking $record) {
+                        $user = Auth::user();
+                        if ($user instanceof \App\Models\User && ! $record->isReviewClaimedByOther($user)) {
+                            $record->claimReview($user, 'refund');
+                        }
+                    })
+                    ->disabled(fn (Booking $record): bool => $record->isReviewClaimedByOther(Auth::user()))
+                    ->tooltip(fn (Booking $record): ?string => $record->getReviewClaimTooltip(Auth::user()))
                     ->form([
+                        Forms\Components\Placeholder::make('review_claim_notice')
+                            ->label('')
+                            ->content(function (Booking $record): \Illuminate\Support\HtmlString {
+                                $user = Auth::user();
+                                $remaining = e($record->getReviewClaimTimerRemainingLabel() ?? '10m');
+                                return new \Illuminate\Support\HtmlString('
+                                    <div class="p-3 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 text-xs flex items-center justify-between">
+                                        <div class="flex items-center gap-2">
+                                            <span class="font-bold">🔒 Exclusive Review Lock Active</span>
+                                            <span>— Other staff members cannot disburse this refund while you are reviewing (' . $remaining . ').</span>
+                                        </div>
+                                    </div>
+                                ');
+                            })
+                            ->columnSpanFull(),
+
+                        Forms\Components\Placeholder::make('payout_details_summary')
+                            ->label('Customer Payout Destination & Financials')
+                            ->content(function (Booking $record): \Illuminate\Support\HtmlString {
+                                $netRefund = '₱' . number_format((float) $record->refund_amount, 2);
+                                $totalFare = '₱' . number_format((float) $record->total_price, 2);
+                                $deduction = '₱' . number_format((float) $record->cancellation_fee, 2);
+                                $destination = e($record->refund_destination ?? 'No payout details specified');
+
+                                return new \Illuminate\Support\HtmlString('
+                                    <div class="p-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 space-y-2.5 text-xs">
+                                        <div class="grid grid-cols-3 gap-2">
+                                            <div><span class="text-gray-500">Original Total Fare:</span> <span class="font-medium">' . $totalFare . '</span></div>
+                                            <div><span class="text-gray-500">Fee Deductions:</span> <span class="text-rose-500 font-medium">-' . $deduction . '</span></div>
+                                            <div><span class="text-gray-500">Net Refund Payable:</span> <span class="font-bold text-emerald-600 dark:text-emerald-400 text-sm">' . $netRefund . '</span></div>
+                                        </div>
+                                        <div class="pt-2 border-t border-gray-200 dark:border-gray-700">
+                                            <span class="text-gray-500">Recipient Payout Details:</span>
+                                            <div class="mt-1 font-mono font-bold text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-900 p-2 rounded border border-gray-200 dark:border-gray-800">' . $destination . '</div>
+                                        </div>
+                                    </div>
+                                ');
+                            })
+                            ->columnSpanFull(),
+
                         TextInput::make('refund_reference')
                             ->label('Disbursement Reference No. (GCash / Maya / Bank Ref)')
                             ->required()
                             ->placeholder('e.g. 100234981293'),
+
                         FileUpload::make('refund_proof')
                             ->label('Disbursement Proof Receipt')
                             ->helperText('Upload a screenshot of the GCash receipt or bank transfer confirmation.')
@@ -392,9 +426,23 @@ class ManageRefunds extends Page implements HasTable, HasInfolists
                             ->required()
                             ->acceptedFileTypes(['image/*', 'application/pdf'])
                             ->maxSize(10240),
+
                         Textarea::make('refund_notes')
                             ->label('Internal Notes')
                             ->placeholder('Optional notes for internal record-keeping...'),
+                    ])
+                    ->extraModalFooterActions([
+                        Action::make('releaseClaim')
+                            ->label('Release Review')
+                            ->color('gray')
+                            ->action(function (Booking $record) {
+                                $record->releaseReview(Auth::user());
+                                Notification::make()
+                                    ->title('Review Claim Released')
+                                    ->body('This refund request is now available for other staff.')
+                                    ->info()
+                                    ->send();
+                            }),
                     ])
                     ->action(function (Booking $record, array $data): void {
                         $alreadyProcessed = false;
@@ -425,6 +473,9 @@ class ManageRefunds extends Page implements HasTable, HasInfolists
                                     'refund_notes' => $notes,
                                     'refund_processed_at' => $now,
                                     'refund_processed_by_user_id' => $staffUserId,
+                                    'review_claimed_by_user_id' => null,
+                                    'review_claimed_at' => null,
+                                    'review_type' => null,
                                 ]);
 
                                 // Update individual passenger items

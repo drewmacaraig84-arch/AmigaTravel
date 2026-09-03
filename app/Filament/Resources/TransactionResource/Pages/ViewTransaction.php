@@ -37,10 +37,12 @@ class ViewTransaction extends ViewRecord
                         ->acceptedFileTypes(['application/pdf'])
                         ->maxSize(10240),
                 ])
-                ->disabled(fn (): bool => $this->record->payment_status === 'unpaid' || $this->record->isVerificationLocked())
-                ->tooltip(fn (): ?string => $this->record->payment_status === 'unpaid'
-                    ? 'Cannot verify: Payment status is Unpaid.'
-                    : $this->record->verificationTimerTooltip())
+                ->disabled(fn (): bool => $this->record->payment_status === 'unpaid' || $this->record->isVerificationLocked() || ($this->record->booking && $this->record->booking->isReviewClaimedByOther(Auth::user())))
+                ->tooltip(fn (): ?string => match (true) {
+                    $this->record->booking && $this->record->booking->isReviewClaimedByOther(Auth::user()) => $this->record->booking->getReviewClaimTooltip(Auth::user()),
+                    $this->record->payment_status === 'unpaid' => 'Cannot verify: Payment status is Unpaid.',
+                    default => $this->record->verificationTimerTooltip(),
+                })
                 ->action(function (array $data): void {
                     $record = $this->record;
 

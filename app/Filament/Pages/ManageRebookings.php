@@ -160,6 +160,18 @@ class ManageRebookings extends Page implements HasTable
                         in_array($state, ['cancelled', 'operator_cancelled']) => 'danger',
                         default => 'secondary',
                     }),
+                Tables\Columns\TextColumn::make('review_status')
+                    ->label('Review Lock')
+                    ->badge()
+                    ->state(fn (Booking $record): string => $record->getReviewClaimStatusLabel(Auth::user()))
+                    ->icon(fn (Booking $record): ?string => $record->isReviewClaimed() ? 'heroicon-m-lock-closed' : null)
+                    ->color(fn (Booking $record): string => match (true) {
+                        ! $record->isReviewClaimed() => 'gray',
+                        $record->isReviewClaimedBy(Auth::user()) => 'warning',
+                        default => 'danger',
+                    })
+                    ->tooltip(fn (Booking $record): ?string => $record->getReviewClaimTooltip(Auth::user()))
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('updated_at')
                     ->label('Last Updated')
                     ->dateTime()
@@ -199,36 +211,126 @@ class ManageRebookings extends Page implements HasTable
                     ->icon('heroicon-m-eye')
                     ->url(fn (Booking $record): string => BookingResource::getUrl('view', ['record' => $record])),
 
-                Tables\Actions\Action::make('verifyRebookingPayment')
-                    ->label('Verify & Approve')
-                    ->icon('heroicon-m-check-badge')
-                    ->color('success')
+                Tables\Actions\Action::make('reviewRebookingPayment')
+                    ->label(fn (Booking $record): string => $record->isReviewClaimedBy(Auth::user())
+                        ? 'Resume Review'
+                        : ($record->isReviewClaimedByOther(Auth::user())
+                            ? 'In Review'
+                            : 'Review & Approve'))
+                    ->icon(fn (Booking $record): string => $record->isReviewClaimedByOther(Auth::user())
+                        ? 'heroicon-m-lock-closed'
+                        : 'heroicon-m-clipboard-document-check')
+                    ->color(fn (Booking $record): string => $record->isReviewClaimedBy(Auth::user())
+                        ? 'warning'
+                        : ($record->isReviewClaimedByOther(Auth::user())
+                            ? 'gray'
+                            : 'amber'))
                     ->button()
-                    ->requiresConfirmation()
-                    ->modalHeading('Verify Rebooking Payment & Approve')
-                    ->modalDescription(fn (Booking $record): string => "This will verify the rebooking payment for booking #{$record->transaction_number} and automatically assign a replacement schedule.")
+                    ->modalWidth('3xl')
+                    ->modalHeading('Review Rebooking Request & Verify')
+                    ->modalDescription(fn (Booking $record): string => "Review passenger and payment details for booking #{$record->transaction_number} before verifying and issuing replacement tickets.")
+                    ->modalSubmitActionLabel('Verify & Approve')
+                    ->mountUsing(function (Booking $record) {
+                        $user = Auth::user();
+                        if ($user instanceof \App\Models\User && ! $record->isReviewClaimedByOther($user)) {
+                            $record->claimReview($user, 'rebooking');
+                        }
+                    })
                     ->form([
+                        Forms\Components\Placeholder::make('review_claim_notice')
+                            ->label('')
+                            ->content(function (Booking $record): \Illuminate\Support\HtmlString {
+                                $user = Auth::user();
+                                $remaining = e($record->getReviewClaimTimerRemainingLabel() ?? '10m');
+                                return new \Illuminate\Support\HtmlString('
+                                    <div class="p-3 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 text-xs flex items-center justify-between">
+                                        <div class="flex items-center gap-2">
+                                            <span class="font-bold">🔒 Exclusive Review Lock Active</span>
+                                            <span>— Other staff members cannot verify while you are reviewing (' . $remaining . ').</span>
+                                        </div>
+                                    </div>
+                                ');
+                            })
+                            ->columnSpanFull(),
+
+                        Forms\Components\Placeholder::make('rebooking_summary')
+                            ->label('Rebooking Information')
+                            ->content(function (Booking $record): \Illuminate\Support\HtmlString {
+                                $prefSchedule = $record->preferredReplacementSchedule;
+                                $prefDate = $record->preferred_replacement_date ? $record->preferred_replacement_date->format('M d, Y') : ($record->rebooking_departure_date ? $record->rebooking_departure_date->format('M d, Y') : 'Customer requested next available');
+                                $fee = $record->transaction?->rebooking_fee ? '₱' . number_format((float) $record->transaction->rebooking_fee, 2) : 'None / Waived';
+                                $origSchedule = $record->schedule ? ($record->schedule->service_name . ' (' . $record->schedule->formatted_departure . ' → ' . $record->schedule->formatted_arrival . ')') : '—';
+                                $newSchedule = $prefSchedule ? ($prefSchedule->service_name . ' (' . $prefSchedule->formatted_departure . ' → ' . $prefSchedule->formatted_arrival . ')') : 'Auto-assign matching schedule';
+
+                                return new \Illuminate\Support\HtmlString('
+                                    <div class="grid grid-cols-2 gap-3 p-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 text-xs">
+                                        <div><span class="text-gray-500">Client:</span> <span class="font-medium">' . e($record->client_name) . ' (' . e($record->client_phone ?? 'No phone') . ')</span></div>
+                                        <div><span class="text-gray-500">Rebooking Fee:</span> <span class="font-bold text-amber-600">' . $fee . '</span></div>
+                                        <div><span class="text-gray-500">Original Departure:</span> <span class="font-medium">' . e($record->departure_date ? $record->departure_date->format('M d, Y') : '—') . ' ' . e($origSchedule) . '</span></div>
+                                        <div><span class="text-gray-500">Target Rebook Date:</span> <span class="font-bold text-blue-600 dark:text-blue-400">' . e($prefDate) . '</span></div>
+                                        <div class="col-span-2"><span class="text-gray-500">Target Schedule:</span> <span class="font-medium">' . e($newSchedule) . '</span></div>
+                                    </div>
+                                ');
+                            })
+                            ->columnSpanFull(),
+
+                        Forms\Components\Placeholder::make('proof_preview')
+                            ->label('Rebooking Proof of Payment')
+                            ->content(function (Booking $record): \Illuminate\Support\HtmlString {
+                                $proof = $record->transaction?->rebooking_proof_of_payment;
+                                if (! $proof) {
+                                    return new \Illuminate\Support\HtmlString('<span class="text-xs text-rose-500 italic">No proof of payment uploaded.</span>');
+                                }
+                                $url = storage_asset_path($proof);
+                                return new \Illuminate\Support\HtmlString('
+                                    <div class="p-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+                                        <a href="' . e($url) . '" target="_blank" class="block group text-center">
+                                            <img src="' . e($url) . '" class="max-h-56 mx-auto rounded-lg object-contain shadow-sm border border-gray-200 dark:border-gray-800 group-hover:opacity-90 transition" alt="Rebooking Proof" />
+                                            <span class="text-[11px] text-blue-600 dark:text-blue-400 font-medium underline mt-1.5 inline-block">Click to open full size</span>
+                                        </a>
+                                    </div>
+                                ');
+                            })
+                            ->columnSpanFull(),
+
                         Forms\Components\TextInput::make('confirmation_url')
-                            ->label('Confirmation/Ticket URL')
+                            ->label('Confirmation / Ticket URL')
                             ->placeholder('https://...')
                             ->url()
                             ->maxLength(255)
                             ->columnSpanFull(),
+
                         Forms\Components\FileUpload::make('confirmation_pdf')
-                            ->label('Upload Itinerary/Ticket PDF')
+                            ->label('Upload Replacement Itinerary / Ticket PDF')
                             ->disk('public')
                             ->directory('tickets')
                             ->acceptedFileTypes(['application/pdf'])
                             ->maxSize(5120)
                             ->columnSpanFull(),
                     ])
-                    ->disabled(fn (Booking $record): bool => ! $record->transaction || $record->transaction->payment_status === 'unpaid' || blank($record->transaction->rebooking_proof_of_payment))
-                    ->tooltip(fn (Booking $record): ?string => (! $record->transaction || $record->transaction->payment_status === 'unpaid' || blank($record->transaction->rebooking_proof_of_payment))
-                        ? 'Cannot verify: Rebooking payment status is unpaid or proof is missing.'
-                        : null)
+                    ->extraModalFooterActions([
+                        Tables\Actions\Action::make('releaseClaim')
+                            ->label('Release Review')
+                            ->color('gray')
+                            ->action(function (Booking $record) {
+                                $record->releaseReview(Auth::user());
+                                Notification::make()
+                                    ->title('Review Claim Released')
+                                    ->body('This rebooking request is now available for other staff.')
+                                    ->info()
+                                    ->send();
+                            }),
+                    ])
+                    ->disabled(fn (Booking $record): bool => $record->isReviewClaimedByOther(Auth::user()) || ! $record->transaction || $record->transaction->payment_status === 'unpaid' || blank($record->transaction->rebooking_proof_of_payment))
+                    ->tooltip(fn (Booking $record): ?string => match (true) {
+                        $record->isReviewClaimedByOther(Auth::user()) => $record->getReviewClaimTooltip(Auth::user()),
+                        ! $record->transaction => 'No payment transaction found.',
+                        $record->transaction->payment_status === 'unpaid' => 'Cannot verify: Rebooking payment status is unpaid.',
+                        blank($record->transaction->rebooking_proof_of_payment) => 'Cannot verify: Rebooking proof of payment is missing.',
+                        default => null,
+                    })
                     ->action(function (Booking $record, array $data): void {
                         $alreadyVerifiedBy = null;
-                        $error = null;
 
                         try {
                             $ticketUrl = !empty($data['confirmation_url']) ? trim($data['confirmation_url']) : null;
@@ -259,6 +361,7 @@ class ManageRebookings extends Page implements HasTable
                                 $receiptDisk = $receiptPath ? 'public' : null;
 
                                 $lockedBooking->verifyRebooking($ticketUrl, $receiptPath, $receiptDisk);
+                                $lockedBooking->releaseReview(null, true);
                             });
 
                             if ($alreadyVerifiedBy !== null) {
