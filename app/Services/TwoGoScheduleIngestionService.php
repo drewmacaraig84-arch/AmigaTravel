@@ -562,27 +562,29 @@ class TwoGoScheduleIngestionService
             'MON' => 1, 'TUE' => 2, 'WED' => 3, 'THU' => 4, 'FRI' => 5, 'SAT' => 6, 'SUN' => 7
         ];
 
-        $depDayNum = null;
-        foreach ($dayMap as $k => $num) {
-            if (stripos($depDayTimeStr, $k) !== false) {
-                $depDayNum = $num;
-                break;
-            }
-        }
-        if ($depDayNum === null) {
-            $depDayNum = (int) $depCarbon->dayOfWeekIso;
-        }
+        $depDayNum = (int) $depCarbon->dayOfWeekIso;
 
-        $arrDayNum = null;
+        $matchedArrDays = [];
         foreach ($dayMap as $k => $num) {
             if (stripos($arrDayTimeStr, $k) !== false) {
-                $arrDayNum = $num;
-                break;
+                $matchedArrDays[] = $num;
             }
         }
 
         $daysOffset = 0;
-        if ($arrDayNum !== null) {
+        if (count($matchedArrDays) > 1) {
+            // When arrival string specifies multiple alternate days (e.g. "WED, FRI, SUN 11:00 AM")
+            // Trips are overnight (+1 day) or same day (if arrival clock > departure clock)
+            $parsedDepTime = $depCarbon->format('H:i');
+            if ($arrTimeStr > $parsedDepTime) {
+                // If the same day of week is explicitly in the arrival list, it's a same-day trip
+                $daysOffset = in_array($depDayNum, $matchedArrDays, true) ? 0 : 1;
+            } else {
+                // Overnight trip (e.g. departs 9:00 PM, arrives 8:00 AM or 11:00 AM)
+                $daysOffset = 1;
+            }
+        } elseif (count($matchedArrDays) === 1) {
+            $arrDayNum = $matchedArrDays[0];
             $daysOffset = ($arrDayNum - $depDayNum + 7) % 7;
         }
 
