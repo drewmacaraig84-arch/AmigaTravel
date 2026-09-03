@@ -160,11 +160,36 @@ class VoucherResource extends Resource
                     ->helperText('Optional: Leave empty for all destinations'),
                 Select::make('eligible_schedule_id')
                     ->label('Eligible Schedule')
-                    ->relationship(name: 'eligibleSchedule', titleAttribute: 'service_name')
-                    ->getOptionLabelFromRecordUsing(fn (\App\Models\Schedule $record) => ($record->service_name ?? 'Schedule #' . $record->id) . ' (' . ($record->ferryRoute?->origin ?? '') . ' - ' . ($record->ferryRoute?->destination ?? '') . ')')
-                    ->searchable(['service_name', 'origin', 'destination'])
-                    ->preload()
-                    ->helperText('Optional: Leave empty for all schedules'),
+                    ->searchable()
+                    ->getSearchResultsUsing(function (string $search): array {
+                        return \App\Models\Schedule::query()
+                            ->where(function ($q) use ($search) {
+                                $q->where('service_name', 'like', "%{$search}%")
+                                  ->orWhere('vehicle_name', 'like', "%{$search}%")
+                                  ->orWhereHas('ferryRoute', function ($rq) use ($search) {
+                                      $rq->where('origin', 'like', "%{$search}%")
+                                         ->orWhere('destination', 'like', "%{$search}%");
+                                  });
+                            })
+                            ->with('ferryRoute')
+                            ->limit(30)
+                            ->get()
+                            ->mapWithKeys(fn ($s) => [
+                                $s->id => ($s->service_name ?? $s->vehicle_name ?? 'Schedule #' . $s->id) . 
+                                    ' (' . ($s->ferryRoute?->origin ?? '') . ' → ' . ($s->ferryRoute?->destination ?? '') . 
+                                    ($s->departure_time ? ' | ' . $s->departure_time->format('M d, Y h:i A') : '') . ')'
+                            ])
+                            ->all();
+                    })
+                    ->getOptionLabelUsing(function ($value): ?string {
+                        if (! $value) return null;
+                        $s = \App\Models\Schedule::with('ferryRoute')->find($value);
+                        if (! $s) return null;
+                        return ($s->service_name ?? $s->vehicle_name ?? 'Schedule #' . $s->id) . 
+                            ' (' . ($s->ferryRoute?->origin ?? '') . ' → ' . ($s->ferryRoute?->destination ?? '') . 
+                            ($s->departure_time ? ' | ' . $s->departure_time->format('M d, Y h:i A') : '') . ')';
+                    })
+                    ->helperText('Optional: Search by origin, destination, vessel, or date (leave empty for all schedules)'),
             ]);
     }
 
@@ -234,8 +259,17 @@ class VoucherResource extends Resource
                     ->label('Eligible Origin'),
                 Infolists\Components\TextEntry::make('eligible_destination')
                     ->label('Eligible Destination'),
-                Infolists\Components\TextEntry::make('eligibleSchedule.service_name')
-                    ->label('Eligible Schedule'),
+                Infolists\Components\TextEntry::make('eligibleSchedule')
+                    ->label('Eligible Schedule')
+                    ->formatStateUsing(function (?Voucher $record): string {
+                        if (! $record || ! $record->eligibleSchedule) {
+                            return 'All Schedules';
+                        }
+                        $s = $record->eligibleSchedule;
+                        return ($s->service_name ?? $s->vehicle_name ?? 'Schedule #' . $s->id) . 
+                            ' (' . ($s->ferryRoute?->origin ?? '') . ' → ' . ($s->ferryRoute?->destination ?? '') . 
+                            ($s->departure_time ? ' | ' . $s->departure_time->format('M d, Y h:i A') : '') . ')';
+                    }),
                 Infolists\Components\Section::make('Statistics')
                     ->schema([
                         Infolists\Components\TextEntry::make('total_used')
@@ -295,11 +329,12 @@ class VoucherResource extends Resource
                     ->label('Hidden'),
                 TextColumn::make('total_used')
                     ->label('Used')
-                    ->sortable()
-                    ->getStateUsing(fn (Voucher $record) => $record->total_used),
+                    ->getStateUsing(fn (Voucher $record) => $record->total_used)
+                    ->sortable(query: function (Builder $query, string $direction): Builder {
+                        return $query->withCount('redemptions')->orderBy('redemptions_count', $direction);
+                    }),
                 TextColumn::make('remaining_uses')
                     ->label('Remaining')
-                    ->sortable()
                     ->getStateUsing(fn (Voucher $record) => $record->remaining_uses ?? 'Unlimited'),
                 TextColumn::make('total_discount_granted')
                     ->label('Total Discount')
