@@ -447,25 +447,27 @@ class ScheduleCsvImportService
             ])
             ->first();
 
+        // 5. Resolve or Attach Transport Class / Accommodation
+        $status = 'imported';
+        // For ferry accommodations, itemPrice defaults to rate if no explicit additionalPrice is specified.
+        // When additionalPrice is not provided for ferries, each class carries its full rate, and schedule base price is 0.
+        // For airline transport classes, additional_price is strictly the class add-on (0 if blank/zero).
+        $accommodationPrice = $additionalPrice > 0 ? $additionalPrice : $rate;
+        $transportClassPrice = $additionalPrice > 0 ? $additionalPrice : ($mode === 'ferry' ? $rate : 0.0);
+
         if (! $schedule) {
+            $scheduleBasePrice = ($mode === 'ferry' && $additionalPrice <= 0) ? 0.0 : $rate;
             $schedule = Schedule::create([
                 'ferry_route_id' => $route->id,
                 'vehicle_name' => $vehicleTailNo,
                 'plate_no' => $plateNo,
                 'departure_time' => $departureDateTime,
                 'arrival_time' => $arrivalDateTime,
-                'price' => $rate,
+                'price' => $scheduleBasePrice,
                 'is_active' => true,
             ]);
             $scheduleCreated = true;
         }
-
-        // 5. Resolve or Attach Transport Class / Accommodation
-        $status = 'imported';
-        // For ferry accommodations, itemPrice defaults to rate if no explicit additionalPrice is specified.
-        // For airline transport classes, additional_price is strictly the class add-on (0 if blank/zero).
-        $accommodationPrice = $additionalPrice > 0 ? $additionalPrice : $rate;
-        $transportClassPrice = $additionalPrice;
 
         // Ensure TransportClass exists in catalog with smart canonical resolution
         $transportClass = $this->resolveTransportClass(
@@ -493,6 +495,7 @@ class ScheduleCsvImportService
             ]);
         }
 
+        $accommodationCreated = false;
         // For Ferry mode, also maintain schedule_accommodations compatibility
         if ($mode === 'ferry') {
             $accommodationExists = $schedule->scheduleAccommodations()
@@ -510,10 +513,11 @@ class ScheduleCsvImportService
                     'has_bed' => $hasBed,
                     'is_active' => true,
                 ]);
+                $accommodationCreated = true;
             }
         }
 
-        if ($alreadyAttachedTc && ! $scheduleCreated) {
+        if ($alreadyAttachedTc && ! $scheduleCreated && ! $accommodationCreated) {
             $status = 'skipped';
         }
 
@@ -602,13 +606,14 @@ class ScheduleCsvImportService
             ->first();
 
         if (! $schedule) {
+            $returnScheduleBasePrice = ($mode === 'ferry' && $additionalPrice <= 0) ? 0.0 : $rate;
             $schedule = Schedule::create([
                 'ferry_route_id' => $returnRoute->id,
                 'vehicle_name' => $vehicleTailNo,
                 'plate_no' => $plateNo,
                 'departure_time' => $departureDateTime,
                 'arrival_time' => $arrivalDateTime,
-                'price' => $rate,
+                'price' => $returnScheduleBasePrice,
                 'is_active' => true,
             ]);
         }

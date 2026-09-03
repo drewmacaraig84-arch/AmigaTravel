@@ -51,8 +51,8 @@ class AccommodationRateCodeTest extends TestCase
 
         $this->assertEquals(500.00, (float) $promoAcc->price);
         $this->assertEquals(800.00, (float) $regularAcc->price);
-        $this->assertEquals('Tourist Class', $promoAcc->name);
-        $this->assertEquals('Tourist Class', $regularAcc->name);
+        $this->assertEquals('Tourist Bed Bunk', $promoAcc->name);
+        $this->assertEquals('Tourist Bed Bunk', $regularAcc->name);
     }
 
     public function test_booking_saves_rate_codes(): void
