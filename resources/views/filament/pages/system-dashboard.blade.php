@@ -735,9 +735,11 @@
 
     {{-- ═══ Full Screen Stack Trace / Log Details Modal (Root Level) ═══ --}}
     @if($selectedLog)
-        <div class="fixed inset-0 flex items-center justify-center p-4 sm:p-6" style="position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 999999 !important; background-color: rgba(2, 6, 23, 0.88) !important; backdrop-filter: blur(8px) !important;">
-            <div class="rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden" style="background-color: #0f172a !important; border: 1px solid #334155 !important; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.95) !important;">
-                <div class="p-5 flex items-center justify-between" style="background-color: #020617 !important; border-bottom: 1px solid #1e293b !important;">
+        <div class="fixed inset-0 flex items-center justify-center p-4 sm:p-6" style="position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 999999 !important; background-color: rgba(2, 6, 23, 0.90) !important; backdrop-filter: blur(8px) !important;">
+            <div class="rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden" style="background-color: #0f172a !important; border: 1px solid #334155 !important; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.95) !important;">
+                
+                {{-- Modal Header --}}
+                <div class="px-7 py-5 flex items-center justify-between" style="background-color: #020617 !important; border-bottom: 1px solid #1e293b !important;">
                     <div class="flex items-center gap-3">
                         <span class="inline-flex items-center px-3 py-1 rounded text-xs font-extrabold uppercase {{ $selectedLog['level'] === 'INFO' ? 'bg-blue-600' : ($selectedLog['level'] === 'WARNING' ? 'bg-amber-600' : 'bg-rose-600') }} text-white shadow-sm">
                             {{ $selectedLog['level'] }}
@@ -752,24 +754,30 @@
                     </button>
                 </div>
 
-                <div class="p-6 overflow-y-auto space-y-4 text-xs">
+                {{-- Modal Body --}}
+                <div class="px-7 py-6 overflow-y-auto overflow-x-hidden space-y-5 text-xs">
                     <div>
-                        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Incident Message & Log Output</span>
-                        <div class="p-4 rounded-xl font-mono text-xs break-all leading-relaxed" style="background-color: #020617 !important; border: 1px solid #1e293b !important; color: #38bdf8 !important;">
+                        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
+                            Incident Message & Log Output
+                        </span>
+                        <div class="p-4 rounded-xl font-mono text-xs leading-relaxed" style="background-color: #020617 !important; border: 1px solid #1e293b !important; color: #38bdf8 !important; word-break: break-word !important; overflow-wrap: anywhere !important; white-space: pre-wrap !important;">
                             {{ $selectedLog['message'] }}
                         </div>
                     </div>
 
                     @if(!empty($selectedLog['trace']))
                         <div>
-                            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Stack Trace & Call Stack</span>
-                            <pre class="p-4 rounded-xl font-mono text-slate-300 overflow-x-auto text-[11px] leading-relaxed whitespace-pre-wrap" style="background-color: #000000 !important; border: 1px solid #1e293b !important;">{{ $selectedLog['trace'] }}</pre>
+                            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
+                                Stack Trace & Call Stack
+                            </span>
+                            <pre class="p-4 rounded-xl font-mono text-slate-300 text-[11px] leading-relaxed max-h-60 overflow-y-auto" style="background-color: #000000 !important; border: 1px solid #1e293b !important; word-break: break-word !important; overflow-wrap: anywhere !important; white-space: pre-wrap !important;">{{ $selectedLog['trace'] }}</pre>
                         </div>
                     @endif
                 </div>
 
-                <div class="p-4 flex justify-end" style="background-color: #020617 !important; border-top: 1px solid #1e293b !important;">
-                    <button wire:click="closeLogDetails" type="button" class="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-colors border border-slate-700 shadow-sm">
+                {{-- Modal Footer --}}
+                <div class="px-7 py-4 flex justify-end" style="background-color: #020617 !important; border-top: 1px solid #1e293b !important;">
+                    <button wire:click="closeLogDetails" type="button" class="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-colors border border-slate-700 shadow-sm active:scale-95">
                         Close Inspector
                     </button>
                 </div>
