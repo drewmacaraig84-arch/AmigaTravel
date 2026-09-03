@@ -653,9 +653,15 @@ class Schedule extends Model
         try {
             $driver = config('cache.default');
 
-            // 1. Redis Store: active when cache store is redis or running with Redis on Railway
-            $isRedisDriver = $driver === 'redis' || (! app()->runningUnitTests() && in_array(env('CACHE_STORE'), ['redis', 'octane'], true));
-            if ($isRedisDriver) {
+            // 1. Redis Store: active if redis is the cache store or if Redis is provisioned on Railway
+            $isRedisActive = ! app()->runningUnitTests() && (
+                $driver === 'redis'
+                || in_array(env('CACHE_STORE'), ['redis', 'octane'], true)
+                || filled(env('REDIS_URL'))
+                || filled(env('REDIS_HOST'))
+            );
+
+            if ($isRedisActive) {
                 $connections = array_unique([
                     config('cache.stores.redis.connection', 'cache'),
                     'default',
@@ -709,26 +715,28 @@ class Schedule extends Model
                 }
             }
 
-            // 2. Database Store: delete from cache table
-            if ($driver === 'database') {
+            // 2. Database Store: delete from cache table (primary cache store on Railway with CACHE_STORE=database)
+            if ($driver === 'database' || ! app()->runningUnitTests()) {
                 try {
                     $table = config('cache.stores.database.table', 'cache');
-                    \Illuminate\Support\Facades\DB::table($table)
-                        ->where(function ($q) {
-                            $q->where('key', 'like', '%api:schedule:%')
-                              ->orWhere('key', 'like', '%api:origins:%')
-                              ->orWhere('key', 'like', '%api:destinations:%')
-                              ->orWhere('key', 'like', '%api:operators:%')
-                              ->orWhere('key', 'like', '%api:available_dates:%')
-                              ->orWhere('key', 'like', '%api:all_schedules:%')
-                              ->orWhere('key', 'like', '%ferry_route:%')
-                              ->orWhere('key', 'like', '%schedule_origins%')
-                              ->orWhere('key', 'like', '%schedule_destinations%')
-                              ->orWhere('key', 'like', '%schedule_operators%')
-                              ->orWhere('key', 'like', '%web:activeRoutes%')
-                              ->orWhere('key', 'like', '%web:schedules%');
-                        })
-                        ->delete();
+                    if (\Illuminate\Support\Facades\Schema::hasTable($table)) {
+                        \Illuminate\Support\Facades\DB::table($table)
+                            ->where(function ($q) {
+                                $q->where('key', 'like', '%api:schedule:%')
+                                  ->orWhere('key', 'like', '%api:origins:%')
+                                  ->orWhere('key', 'like', '%api:destinations:%')
+                                  ->orWhere('key', 'like', '%api:operators:%')
+                                  ->orWhere('key', 'like', '%api:available_dates:%')
+                                  ->orWhere('key', 'like', '%api:all_schedules:%')
+                                  ->orWhere('key', 'like', '%ferry_route:%')
+                                  ->orWhere('key', 'like', '%schedule_origins%')
+                                  ->orWhere('key', 'like', '%schedule_destinations%')
+                                  ->orWhere('key', 'like', '%schedule_operators%')
+                                  ->orWhere('key', 'like', '%web:activeRoutes%')
+                                  ->orWhere('key', 'like', '%web:schedules%');
+                            })
+                            ->delete();
+                    }
                 } catch (\Throwable) {
                 }
             }
