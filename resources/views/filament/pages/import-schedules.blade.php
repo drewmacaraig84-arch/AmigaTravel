@@ -276,6 +276,43 @@
                     </div>
                 @endif
 
+                {{-- 2GO Timetable Intelligence Preset Banner (Shown when 2GO is active) --}}
+                @if($selectedOperator === '2GO')
+                    <div class="ais-starlite-banner" style="border-color: rgba(245, 158, 11, 0.4); background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(15, 23, 42, 0.6) 100%);">
+                        <div class="ais-banner-flex">
+                            <div class="ais-banner-icon" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #020617;">
+                                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                            </div>
+
+                            <div class="ais-banner-body">
+                                <h3 class="ais-banner-title" style="color: #fbbf24;">
+                                    2GO Travel Intelligence Engine Armed & Ready
+                                </h3>
+                                <p class="ais-banner-desc">
+                                    Auto-synchronizes 2GO flagship fleet (Maligaya, Masagana, St. Michael, St. Francis Xavier, Masigla), all 44 multi-sheet routes, and passenger cabin tariffs (Stateroom, Suite, Business Class 2/4/6/8, Megavalue, Tourist, Supervalue).
+                                </p>
+
+                                <div class="ais-banner-chips">
+                                    <span class="ais-banner-chip">
+                                        🚢 11 Fleet Vessels (MLG, MAS, SMA, SFX, MSN...)
+                                    </span>
+                                    <span class="ais-banner-chip">
+                                        🗺️ 44 Nationwide Routes
+                                    </span>
+                                    <span class="ais-banner-chip">
+                                        💰 Official 2GO Cabin Tariff Matrix
+                                    </span>
+                                    <span class="ais-banner-chip" style="color: #f59e0b;">
+                                        📁 Default: 2go_schedules/2GO_TIMETABLE.xlsx
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
                 {{-- File Upload Dropzone --}}
                 <div class="ais-card">
                     <div class="ais-card-header">
@@ -284,14 +321,14 @@
                             <div>
                                 <h2 class="ais-card-title">
                                     Spreadsheet Upload
-                                    @if($selectedOperator === 'Starlite')
+                                    @if($selectedOperator === 'Starlite' || $selectedOperator === '2GO')
                                         <span class="text-xs font-normal text-amber-500">(Optional — Master file pre-loaded)</span>
                                     @else
                                         <span class="text-xs font-normal text-emerald-500">(Required for {{ $selectedOperator === 'custom' ? 'Custom' : $selectedOperator }})</span>
                                     @endif
                                 </h2>
                                 <p class="ais-card-subtitle">
-                                    Drag and drop an Excel (.xlsx) or CSV file. If no file is uploaded for Starlite, the system automatically uses the repository's master timetable.
+                                    Drag and drop an Excel (.xlsx) or CSV file. If no file is uploaded for {{ $selectedOperator }}, the system automatically uses the master timetable repository.
                                 </p>
                             </div>
                         </div>

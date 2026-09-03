@@ -19,8 +19,10 @@ class ScheduleCsvImportService
     public function __construct(
         protected LocationCodeResolver $locationResolver = new LocationCodeResolver(),
         protected ?StarliteScheduleIngestionService $starliteService = null,
+        protected ?TwoGoScheduleIngestionService $twoGoService = null,
     ) {
         $this->starliteService = $starliteService ?? new StarliteScheduleIngestionService($this->locationResolver);
+        $this->twoGoService = $twoGoService ?? new TwoGoScheduleIngestionService($this->locationResolver);
     }
 
     /**
@@ -51,6 +53,33 @@ class ScheduleCsvImportService
         }
 
         $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+
+        // Detect 2GO Timetable format
+        if ($extension === 'xlsx') {
+            try {
+                $rawRows = $this->parseXlsxRows($filePath);
+                $isTwoGoTimetable = false;
+                foreach (array_slice($rawRows, 0, 8) as $r) {
+                    $rowStr = strtoupper(implode(' ', (array) $r));
+                    if (str_contains($rowStr, '2GO') || (str_contains($rowStr, 'ORIGIN') && str_contains($rowStr, 'DESTINATION') && str_contains($rowStr, 'VESSEL') && str_contains($rowStr, 'DAY & TIME'))) {
+                        $isTwoGoTimetable = true;
+                        break;
+                    }
+                }
+
+                if ($isTwoGoTimetable || strtolower($forcedOperator ?? '') === '2go') {
+                    $result = $this->twoGoService->ingest($filePath, $startDate, $endDate);
+                    return [
+                        'imported' => $result['schedules_count'] ?? 0,
+                        'skipped' => 0,
+                        'errors' => $result['success'] ? [] : [$result['message']],
+                        'twogo_result' => $result,
+                    ];
+                }
+            } catch (Throwable $e) {
+                // Fall back to standard parser if error
+            }
+        }
 
         // Detect Starlite Timetable format
         if ($extension === 'xlsx') {
