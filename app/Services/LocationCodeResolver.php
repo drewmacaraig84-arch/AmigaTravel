@@ -159,11 +159,14 @@ class LocationCodeResolver
         // --- 2GO Excel typos ---
         'MANLA' => 'Manila',           // Typo in 2GO XLSX
         'MNAILA' => 'Manila',          // Alternate typo guard
+        'ILO-ILO' => 'Iloilo',         // 2GO XLSX hyphenated spelling
+        'ILO ILO' => 'Iloilo',
+        'CAGAYAN' => 'Cagayan de Oro', // 2GO XLSX shorthand
+        'CAGAYAN DE ORO' => 'Cagayan de Oro',
+        'CAGAYAN DE ORO CITY' => 'Cagayan de Oro',
         'GENSAN' => 'General Santos',
         'GEN. SANTOS' => 'General Santos',
         'GENERAL SANTOS' => 'General Santos',
-        'CAGAYAN DE ORO' => 'Cagayan de Oro',
-        'CAGAYAN DE ORO CITY' => 'Cagayan de Oro',
         'OZAMIS' => 'Ozamiz',          // Common alternate spelling
         'OZAMIZ' => 'Ozamiz',
         'DUMAGUETE' => 'Dumaguete',

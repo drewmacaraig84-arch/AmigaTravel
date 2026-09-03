@@ -114,8 +114,8 @@ class TwoGoScheduleIngestionService
         // Parse rate matrices from route sheets
         $rateMatrix = $this->extractRateMatrix($zip, $sheetNames, $sharedStrings);
 
-        // Parse recurring timetable legs from Schedule sheet
-        $timetableLegs = $this->extractTimetableLegs($zip, $sharedStrings);
+        // Parse recurring timetable legs from all route sheets + Schedule sheet
+        $timetableLegs = $this->extractTimetableLegs($zip, $sharedStrings, $sheetNames);
 
         $zip->close();
 
@@ -204,16 +204,7 @@ class TwoGoScheduleIngestionService
                 foreach ($datesInRange as $d) {
                     if (in_array($d['day'], $recurringDays, true) || in_array('DAILY', $recurringDays, true)) {
                         $depDtStr = "{$d['ymd']} {$depTimeStr}:00";
-
-                        if (!empty($arrTimeStr)) {
-                            $arrDtStr = "{$d['ymd']} {$arrTimeStr}:00";
-                            if (strcmp($arrDtStr, $depDtStr) < 0) {
-                                $arrDtObj = Carbon::parse($arrDtStr)->addDay();
-                                $arrDtStr = $arrDtObj->toDateTimeString();
-                            }
-                        } else {
-                            $arrDtStr = Carbon::parse($depDtStr)->addHours(4)->toDateTimeString();
-                        }
+                        $arrDtStr = $this->calculateArrivalDateTime($depDtStr, $leg['dep_day_time'], $leg['arr_day_time']);
 
                         $allSchedules[] = [
                             'ferry_route_id' => $route->id,
@@ -430,64 +421,179 @@ class TwoGoScheduleIngestionService
     }
 
     /**
-     * Parse recurring timetable rows from Schedule sheet.
+     * Parse recurring timetable rows from both route sheets and the Schedule sheet.
      */
-    protected function extractTimetableLegs(ZipArchive $zip, array $sharedStrings): array
+    protected function extractTimetableLegs(ZipArchive $zip, array $sharedStrings, array $sheetNames = []): array
     {
-        $sheetXml = $zip->getFromName('xl/worksheets/sheet1.xml');
-        if (! $sheetXml) return [];
-
-        $xml = simplexml_load_string($sheetXml);
         $legs = [];
-        $leftOrigin = ''; $leftDest = '';
-        $rightOrigin = ''; $rightDest = '';
 
-        foreach ($xml->sheetData->row as $row) {
-            $cells = [];
-            foreach ($row->c as $c) {
-                $r = (string) $c['r'];
-                $col = preg_replace('/[0-9]/', '', $r);
-                $t = (string) $c['t'];
-                $v = isset($c->v) ? (string) $c->v : '';
+        // 1. Extract from all route-specific sheets first (contains full route timetable with stops like Davao -> Iloilo)
+        foreach ($sheetNames as $sheetIndex => $name) {
+            if (in_array($name, ['Schedule', 'Frequency', 'Sheet6'], true)) {
+                continue;
+            }
 
-                if ($t === 's' && isset($sharedStrings[(int) $v])) {
-                    $cellVal = $sharedStrings[(int) $v];
-                } elseif ($t === 'inlineStr' && isset($c->is->t)) {
-                    $cellVal = (string) $c->is->t;
-                } else {
-                    $cellVal = $v;
+            $xmlContent = $zip->getFromName("xl/worksheets/sheet" . ($sheetIndex + 1) . ".xml");
+            if (! $xmlContent) continue;
+
+            $shXml = simplexml_load_string($xmlContent);
+            foreach ($shXml->sheetData->row as $row) {
+                $cells = [];
+                foreach ($row->c as $c) {
+                    $r = (string) $c['r'];
+                    $col = preg_replace('/[0-9]/', '', $r);
+                    $t = (string) $c['t'];
+                    $v = isset($c->v) ? (string) $c->v : '';
+
+                    if ($t === 's' && isset($sharedStrings[(int) $v])) {
+                        $cellVal = $sharedStrings[(int) $v];
+                    } elseif ($t === 'inlineStr' && isset($c->is->t)) {
+                        $cellVal = (string) $c->is->t;
+                    } else {
+                        $cellVal = $v;
+                    }
+                    $cells[$col] = trim(str_replace("\xc2\xa0", ' ', $cellVal));
                 }
-                $cells[$col] = trim(str_replace("\xc2\xa0", ' ', $cellVal));
-            }
 
-            // Left block (Columns B, C, D, E, F)
-            if (!empty($cells['B']) && !in_array($cells['B'], ['ORIGIN', ''])) $leftOrigin = $cells['B'];
-            if (!empty($cells['C']) && !in_array($cells['C'], ['DESTINATION', ''])) $leftDest = $cells['C'];
-            if (!empty($cells['D']) && !in_array($cells['D'], ['DEPARTURE', 'DAY & TIME', '']) && !empty($leftOrigin) && !empty($leftDest)) {
-                $legs[] = [
-                    'origin' => $leftOrigin,
-                    'destination' => $leftDest,
-                    'dep_day_time' => $cells['D'],
-                    'arr_day_time' => $cells['E'] ?? '',
-                    'vessel' => $cells['F'] ?? '',
-                ];
-            }
+                $orig = $cells['B'] ?? '';
+                $dest = $cells['C'] ?? '';
+                $dep = $cells['D'] ?? '';
+                $arr = $cells['E'] ?? '';
+                $ves = $cells['F'] ?? '';
 
-            // Right block (Columns H, I, J, K, L)
-            if (!empty($cells['H']) && !in_array($cells['H'], ['ORIGIN', ''])) $rightOrigin = $cells['H'];
-            if (!empty($cells['I']) && !in_array($cells['I'], ['DESTINATION', ''])) $rightDest = $cells['I'];
-            if (!empty($cells['J']) && !in_array($cells['J'], ['DEPARTURE', 'DAY & TIME', '']) && !empty($rightOrigin) && !empty($rightDest)) {
-                $legs[] = [
-                    'origin' => $rightOrigin,
-                    'destination' => $rightDest,
-                    'dep_day_time' => $cells['J'],
-                    'arr_day_time' => $cells['K'] ?? '',
-                    'vessel' => $cells['L'] ?? '',
-                ];
+                if (!empty($orig) && !empty($dest) && !empty($dep) 
+                    && !in_array($orig, ['ORIGIN', 'RATES (PFA & PFE)']) 
+                    && !in_array($dep, ['DEPARTURE', 'DAY & TIME'])) {
+                    $normO = $this->locationResolver->resolve($orig, 'ferry');
+                    $normD = $this->locationResolver->resolve($dest, 'ferry');
+                    $key = "{$normO}|{$normD}|" . preg_replace('/\s+/', ' ', trim($dep));
+                    $legs[$key] = [
+                        'origin' => $normO,
+                        'destination' => $normD,
+                        'dep_day_time' => $dep,
+                        'arr_day_time' => $arr,
+                        'vessel' => $ves,
+                    ];
+                }
             }
         }
 
-        return $legs;
+        // 2. Also extract from Schedule sheet (Sheet 1) to ensure no legs are missed
+        $sheetXml = $zip->getFromName('xl/worksheets/sheet1.xml');
+        if ($sheetXml) {
+            $xml = simplexml_load_string($sheetXml);
+            $leftOrigin = ''; $leftDest = '';
+            $rightOrigin = ''; $rightDest = '';
+
+            foreach ($xml->sheetData->row as $row) {
+                $cells = [];
+                foreach ($row->c as $c) {
+                    $r = (string) $c['r'];
+                    $col = preg_replace('/[0-9]/', '', $r);
+                    $t = (string) $c['t'];
+                    $v = isset($c->v) ? (string) $c->v : '';
+
+                    if ($t === 's' && isset($sharedStrings[(int) $v])) {
+                        $cellVal = $sharedStrings[(int) $v];
+                    } elseif ($t === 'inlineStr' && isset($c->is->t)) {
+                        $cellVal = (string) $c->is->t;
+                    } else {
+                        $cellVal = $v;
+                    }
+                    $cells[$col] = trim(str_replace("\xc2\xa0", ' ', $cellVal));
+                }
+
+                // Left block (Columns B, C, D, E, F)
+                if (!empty($cells['B']) && !in_array($cells['B'], ['ORIGIN', ''])) $leftOrigin = $cells['B'];
+                if (!empty($cells['C']) && !in_array($cells['C'], ['DESTINATION', ''])) $leftDest = $cells['C'];
+                if (!empty($cells['D']) && !in_array($cells['D'], ['DEPARTURE', 'DAY & TIME', '']) && !empty($leftOrigin) && !empty($leftDest)) {
+                    $normO = $this->locationResolver->resolve($leftOrigin, 'ferry');
+                    $normD = $this->locationResolver->resolve($leftDest, 'ferry');
+                    $key = "{$normO}|{$normD}|" . preg_replace('/\s+/', ' ', trim($cells['D']));
+                    if (!isset($legs[$key])) {
+                        $legs[$key] = [
+                            'origin' => $normO,
+                            'destination' => $normD,
+                            'dep_day_time' => $cells['D'],
+                            'arr_day_time' => $cells['E'] ?? '',
+                            'vessel' => $cells['F'] ?? '',
+                        ];
+                    }
+                }
+
+                // Right block (Columns H, I, J, K, L)
+                if (!empty($cells['H']) && !in_array($cells['H'], ['ORIGIN', ''])) $rightOrigin = $cells['H'];
+                if (!empty($cells['I']) && !in_array($cells['I'], ['DESTINATION', ''])) $rightDest = $cells['I'];
+                if (!empty($cells['J']) && !in_array($cells['J'], ['DEPARTURE', 'DAY & TIME', '']) && !empty($rightOrigin) && !empty($rightDest)) {
+                    $normO = $this->locationResolver->resolve($rightOrigin, 'ferry');
+                    $normD = $this->locationResolver->resolve($rightDest, 'ferry');
+                    $key = "{$normO}|{$normD}|" . preg_replace('/\s+/', ' ', trim($cells['J']));
+                    if (!isset($legs[$key])) {
+                        $legs[$key] = [
+                            'origin' => $normO,
+                            'destination' => $normD,
+                            'dep_day_time' => $cells['J'],
+                            'arr_day_time' => $cells['K'] ?? '',
+                            'vessel' => $cells['L'] ?? '',
+                        ];
+                    }
+                }
+            }
+        }
+
+        return array_values($legs);
+    }
+
+    /**
+     * Calculate arrival datetime considering the arrival day of week from Excel.
+     * E.g. Dep: WED - 11:00 AM, Arr: FRI - 6:00 PM -> +2 days offset.
+     * E.g. Dep: SAT - 04:00 AM, Arr: TUE - 9:00 AM -> +3 days offset.
+     * E.g. Dep: SAT - 04:00 AM, Arr: MON - 4:00 AM -> +2 days offset.
+     */
+    protected function calculateArrivalDateTime(string $depDtStr, string $depDayTimeStr, string $arrDayTimeStr): string
+    {
+        $arrTimeStr = $this->parseTimeComponent($arrDayTimeStr);
+        if (empty($arrTimeStr)) {
+            return Carbon::parse($depDtStr)->addHours(4)->toDateTimeString();
+        }
+
+        $depCarbon = Carbon::parse($depDtStr);
+        $dayMap = [
+            'MON' => 1, 'TUE' => 2, 'WED' => 3, 'THU' => 4, 'FRI' => 5, 'SAT' => 6, 'SUN' => 7
+        ];
+
+        $depDayNum = null;
+        foreach ($dayMap as $k => $num) {
+            if (stripos($depDayTimeStr, $k) !== false) {
+                $depDayNum = $num;
+                break;
+            }
+        }
+        if ($depDayNum === null) {
+            $depDayNum = (int) $depCarbon->dayOfWeekIso;
+        }
+
+        $arrDayNum = null;
+        foreach ($dayMap as $k => $num) {
+            if (stripos($arrDayTimeStr, $k) !== false) {
+                $arrDayNum = $num;
+                break;
+            }
+        }
+
+        $daysOffset = 0;
+        if ($arrDayNum !== null) {
+            $daysOffset = ($arrDayNum - $depDayNum + 7) % 7;
+        }
+
+        $arrCarbon = Carbon::parse($depCarbon->format('Y-m-d') . " {$arrTimeStr}:00")->addDays($daysOffset);
+
+        // If same day offset (0) but arrival time is earlier than departure time (e.g. 11:00 PM to 5:00 AM), add 1 day
+        if ($daysOffset === 0 && $arrCarbon->lte($depCarbon)) {
+            $arrCarbon->addDay();
+        }
+
+        return $arrCarbon->toDateTimeString();
     }
 
     /**
