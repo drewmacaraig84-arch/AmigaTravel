@@ -155,6 +155,26 @@ class LocationCodeResolver
         'DAVAO' => 'Davao',
         'ILOILO' => 'Iloilo',
         'ZAMBOANGA' => 'Zamboanga',
+
+        // --- 2GO Excel typos ---
+        'MANLA' => 'Manila',           // Typo in 2GO XLSX
+        'MNAILA' => 'Manila',          // Alternate typo guard
+        'GENSAN' => 'General Santos',
+        'GEN. SANTOS' => 'General Santos',
+        'GENERAL SANTOS' => 'General Santos',
+        'CAGAYAN DE ORO' => 'Cagayan de Oro',
+        'CAGAYAN DE ORO CITY' => 'Cagayan de Oro',
+        'OZAMIS' => 'Ozamiz',          // Common alternate spelling
+        'OZAMIZ' => 'Ozamiz',
+        'DUMAGUETE' => 'Dumaguete',
+        'TAGBILARAN' => 'Tagbilaran',
+        'BUTUAN' => 'Butuan',
+        'SIARGAO' => 'Siargao',
+        'CORON' => 'Coron',
+        'PUERTO PRINCESA' => 'Puerto Princesa',
+        'DIPOLOG' => 'Dipolog',
+        'BACOLOD' => 'Bacolod',
+        'BATANGAS' => 'Batangas',
     ];
 
     /**
