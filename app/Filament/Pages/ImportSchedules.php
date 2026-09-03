@@ -82,7 +82,9 @@ class ImportSchedules extends Page
             $this->importPreset = 'starlite_timetable';
         } elseif ($operator === '2GO') {
             $this->mode = 'ferry';
-            $this->importPreset = 'standard_file';
+            $this->importPreset = 'twogo_timetable';
+            $this->startDate = '2026-09-03';
+            $this->endDate = '2026-12-31';
         } elseif (in_array($operator, ['Philippine Airlines', 'Cebu Pacific', 'AirAsia'], true)) {
             $this->mode = 'airline';
             $this->importPreset = 'standard_file';
@@ -98,6 +100,7 @@ class ImportSchedules extends Page
      */
     public function runImport(
         StarliteScheduleIngestionService $starliteService,
+        TwoGoScheduleIngestionService $twoGoService,
         ScheduleCsvImportService $csvImportService
     ): void {
         $operatorName = $this->selectedOperator === 'custom'
@@ -168,7 +171,47 @@ class ImportSchedules extends Page
                 return;
             }
 
-            // Case 2: File Upload (Standard CSV or Excel for any operator)
+            // Case 2: 2GO Travel Timetable & Rate Matrix
+            if ($operatorName === '2GO' && ($this->importPreset === 'twogo_timetable' || ! $this->uploadedFile)) {
+                $defaultPath = base_path('2go_schedules/2GO_TIMETABLE.xlsx');
+
+                $filePath = $this->uploadedFile
+                    ? $this->uploadedFile->getRealPath()
+                    : $defaultPath;
+
+                $result = $twoGoService->ingest($filePath, $start, $end);
+
+                if ($result['success']) {
+                    $this->importSummary = [
+                        'operator' => '2GO',
+                        'mode' => 'ferry',
+                        'routes_count' => $result['routes_count'],
+                        'schedules_count' => $result['schedules_count'],
+                        'accommodations_count' => $result['schedules_count'] * 6,
+                        'vessels_count' => $result['vessels_count'] ?? 11,
+                        'start_date' => $start->format('M d, Y'),
+                        'end_date' => $end->format('M d, Y'),
+                        'timestamp' => now()->format('M d, Y h:i A'),
+                    ];
+
+                    Notification::make()
+                        ->title('2GO Timetable Ingested Successfully!')
+                        ->body("Successfully generated {$result['schedules_count']} schedules across {$result['routes_count']} routes from {$start->format('M d, Y')} to {$end->format('M d, Y')}.")
+                        ->success()
+                        ->send();
+                } else {
+                    Notification::make()
+                        ->title('Import Notice')
+                        ->body($result['message'])
+                        ->warning()
+                        ->send();
+                }
+
+                $this->reset('uploadedFile');
+                return;
+            }
+
+            // Case 3: File Upload (Standard CSV or Excel for any operator)
             if (! $this->uploadedFile) {
                 Notification::make()
                     ->title('File Required')
@@ -190,6 +233,19 @@ class ImportSchedules extends Page
                     'schedules_count' => $starliteRes['schedules_count'] ?? 0,
                     'accommodations_count' => $starliteRes['accommodations_count'] ?? 0,
                     'vessels_count' => $starliteRes['vessels_count'] ?? 0,
+                    'start_date' => $start->toDateString(),
+                    'end_date' => $end->toDateString(),
+                    'timestamp' => now()->format('M d, Y h:i A'),
+                ];
+            } elseif (! empty($result['twogo_result'])) {
+                $twogoRes = $result['twogo_result'];
+                $this->importSummary = [
+                    'operator' => '2GO',
+                    'mode' => 'ferry',
+                    'routes_count' => $twogoRes['routes_count'] ?? 0,
+                    'schedules_count' => $twogoRes['schedules_count'] ?? 0,
+                    'accommodations_count' => ($twogoRes['schedules_count'] ?? 0) * 6,
+                    'vessels_count' => $twogoRes['vessels_count'] ?? 11,
                     'start_date' => $start->toDateString(),
                     'end_date' => $end->toDateString(),
                     'timestamp' => now()->format('M d, Y h:i A'),
