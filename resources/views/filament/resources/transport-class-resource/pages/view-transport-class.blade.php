@@ -16,14 +16,15 @@
 
     {{-- ── Bulk Action Bar (sticky, appears when something is selected) ── --}}
     @if ($selectedCount > 0)
-        <div class="sticky top-0 z-40 flex items-center justify-between gap-4 rounded-xl border border-primary-300 dark:border-primary-700 bg-primary-50 dark:bg-primary-900/30 px-5 py-3 shadow-lg ring-1 ring-primary-200 dark:ring-primary-800">
+        <div class="flex items-center justify-between gap-4 rounded-xl border border-primary-300 dark:border-primary-700 bg-white/95 dark:bg-gray-900/95 px-5 py-3 shadow-xl ring-1 ring-primary-500/20 transition-all duration-200 mb-4"
+            style="position: sticky; top: 4.5rem; z-index: 15; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);">
             <div class="flex items-center gap-3">
                 <span class="inline-flex items-center justify-center rounded-full bg-primary-600 text-white text-xs font-bold w-6 h-6">{{ $selectedCount }}</span>
-                <span class="text-sm font-medium text-primary-900 dark:text-primary-100">
+                <span class="text-sm font-medium text-gray-900 dark:text-gray-100">
                     {{ $selectedCount }} schedule(s) selected
                 </span>
                 <button wire:click="clearSelection"
-                    class="text-xs text-primary-600 dark:text-primary-400 hover:underline ml-1">
+                    class="text-xs text-primary-600 dark:text-primary-400 hover:underline ml-1 font-semibold">
                     Clear
                 </button>
             </div>
@@ -131,9 +132,90 @@
                 box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25) !important;
                 outline: none !important;
             }
+
+            /* Rate Tier Cards - High Contrast Selection & Instant Response */
+            .rate-tier-card {
+                cursor: pointer;
+                user-select: none;
+                transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+            }
+            .rate-tier-unselected > div {
+                border: 1.5px solid #334155 !important;
+                background-color: rgba(15, 23, 42, 0.5) !important;
+                opacity: 0.72;
+            }
+            html:not(.dark) .rate-tier-unselected > div {
+                border: 1.5px solid #cbd5e1 !important;
+                background-color: rgba(248, 250, 252, 0.8) !important;
+                opacity: 0.75;
+            }
+            .rate-tier-unselected:hover > div {
+                border-color: #64748b !important;
+                opacity: 1 !important;
+                transform: translateY(-1px);
+            }
+
+            /* Regular Tier Selected (Vibrant Blue Border & Glow) */
+            .rate-tier-selected-regular > div {
+                border: 2.5px solid #3b82f6 !important;
+                background-color: rgba(59, 130, 246, 0.16) !important;
+                box-shadow: 0 0 0 1px #3b82f6, 0 8px 24px -4px rgba(59, 130, 246, 0.45) !important;
+                opacity: 1 !important;
+                transform: translateY(-2px);
+            }
+
+            /* Promotional Tier Selected (Radiant Orange Border & Glow) */
+            .rate-tier-selected-promo > div {
+                border: 2.5px solid #f97316 !important;
+                background-color: rgba(249, 115, 22, 0.16) !important;
+                box-shadow: 0 0 0 1px #f97316, 0 8px 24px -4px rgba(249, 115, 22, 0.45) !important;
+                opacity: 1 !important;
+                transform: translateY(-2px);
+            }
+
+            /* Super Promo Tier Selected (Vivid Purple Border & Glow) */
+            .rate-tier-selected-super > div {
+                border: 2.5px solid #a855f7 !important;
+                background-color: rgba(168, 85, 247, 0.16) !important;
+                box-shadow: 0 0 0 1px #a855f7, 0 8px 24px -4px rgba(168, 85, 247, 0.45) !important;
+                opacity: 1 !important;
+                transform: translateY(-2px);
+            }
+
+            /* Expiry Behavior Options */
+            .promo-expiry-unselected {
+                border: 1.5px solid #334155 !important;
+                background-color: rgba(15, 23, 42, 0.5) !important;
+                opacity: 0.72;
+                transition: all 0.15s ease-in-out;
+            }
+            html:not(.dark) .promo-expiry-unselected {
+                border: 1.5px solid #cbd5e1 !important;
+                background-color: #ffffff !important;
+            }
+            .promo-expiry-unselected:hover {
+                border-color: #64748b !important;
+                opacity: 1 !important;
+            }
+            .promo-expiry-selected-temp {
+                border: 2.5px solid #6366f1 !important;
+                background-color: rgba(99, 102, 241, 0.14) !important;
+                box-shadow: 0 0 0 1px #6366f1, 0 6px 18px -2px rgba(99, 102, 241, 0.35) !important;
+                opacity: 1 !important;
+            }
+            .promo-expiry-selected-perm {
+                border: 2.5px solid #ef4444 !important;
+                background-color: rgba(239, 68, 68, 0.14) !important;
+                box-shadow: 0 0 0 1px #ef4444, 0 6px 18px -2px rgba(239, 68, 68, 0.35) !important;
+                opacity: 1 !important;
+            }
         </style>
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6" style="background:rgba(0,0,0,0.75); backdrop-filter: blur(6px);"
-            x-trap.noscroll="true">
+            x-trap.noscroll="true"
+            x-data="{
+                rateType: @entangle('modalRateType'),
+                promoType: @entangle('modalPromoType')
+            }">
             <div class="w-full max-w-xl rounded-2xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-2xl border border-gray-200 dark:border-gray-800 flex flex-col"
                 style="max-height: calc(100vh - 3rem); overflow: hidden;">
 
@@ -161,50 +243,71 @@
                 <div class="flex-1 overflow-y-auto px-6 py-5" style="scrollbar-width: thin;">
                     <div style="display: flex; flex-direction: column; gap: 24px;">
 
-                        {{-- 1. Rate Tier Selector --}}
+                        {{-- 1. Rate Tier Selector (Instant Alpine Switching with Distinct Glowing Colored Borders) --}}
                         <div>
                             <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2.5">
                                 Select Fare Tier
                             </label>
                             <div style="display: flex; gap: 12px; width: 100%;">
                                 {{-- Regular --}}
-                                <label style="display: flex; flex: 1; flex-direction: column; cursor: pointer; margin: 0; min-width: 0;">
-                                    <input type="radio" value="regular" wire:model.live="modalRateType" class="sr-only" />
-                                    <div class="p-3.5 rounded-xl border-2 transition-all text-center flex flex-col items-center justify-center gap-1
-                                        {{ $this->modalRateType === 'regular'
-                                            ? 'border-blue-500 bg-blue-500/15 shadow-md shadow-blue-500/10'
-                                            : 'border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/40 hover:border-gray-300 dark:hover:border-gray-700' }}">
-                                        <span class="text-lg">🔵</span>
-                                        <span class="text-xs font-bold text-gray-900 dark:text-white truncate w-full">Regular</span>
-                                        <span class="text-[11px] text-gray-500 dark:text-gray-400 truncate w-full">Standard</span>
+                                <div 
+                                    @click="rateType = 'regular'; $wire.set('modalRateType', 'regular', false)"
+                                    class="rate-tier-card"
+                                    :class="rateType === 'regular' ? 'rate-tier-selected-regular' : 'rate-tier-unselected'"
+                                    style="display: flex; flex: 1; flex-direction: column; margin: 0; min-width: 0;">
+                                    <input type="radio" value="regular" x-model="rateType" wire:model="modalRateType" class="sr-only" />
+                                    <div class="p-3.5 rounded-xl text-center flex flex-col items-center justify-center gap-1.5 transition-all">
+                                        <span class="text-xl">🔵</span>
+                                        <span class="text-xs font-bold truncate w-full" :class="rateType === 'regular' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-900 dark:text-white'">Regular</span>
+                                        <span class="text-[11px] truncate w-full" :class="rateType === 'regular' ? 'text-blue-600/80 dark:text-blue-300/80 font-medium' : 'text-gray-500 dark:text-gray-400'">Standard</span>
+                                        <div class="h-5 flex items-center justify-center">
+                                            <span x-show="rateType === 'regular'" x-cloak class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-blue-600 text-white shadow-sm">
+                                                <svg class="w-3 h-3 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                                                Selected
+                                            </span>
+                                        </div>
                                     </div>
-                                </label>
+                                </div>
 
                                 {{-- Promotional --}}
-                                <label style="display: flex; flex: 1; flex-direction: column; cursor: pointer; margin: 0; min-width: 0;">
-                                    <input type="radio" value="promotional" wire:model.live="modalRateType" class="sr-only" />
-                                    <div class="p-3.5 rounded-xl border-2 transition-all text-center flex flex-col items-center justify-center gap-1
-                                        {{ $this->modalRateType === 'promotional'
-                                            ? 'border-orange-500 bg-orange-500/15 shadow-md shadow-orange-500/10'
-                                            : 'border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/40 hover:border-gray-300 dark:hover:border-gray-700' }}">
-                                        <span class="text-lg">🟠</span>
-                                        <span class="text-xs font-bold text-orange-600 dark:text-orange-400 truncate w-full">Promotional</span>
-                                        <span class="text-[11px] text-gray-500 dark:text-gray-400 truncate w-full">Vouchers OK</span>
+                                <div 
+                                    @click="rateType = 'promotional'; $wire.set('modalRateType', 'promotional', false)"
+                                    class="rate-tier-card"
+                                    :class="rateType === 'promotional' ? 'rate-tier-selected-promo' : 'rate-tier-unselected'"
+                                    style="display: flex; flex: 1; flex-direction: column; margin: 0; min-width: 0;">
+                                    <input type="radio" value="promotional" x-model="rateType" wire:model="modalRateType" class="sr-only" />
+                                    <div class="p-3.5 rounded-xl text-center flex flex-col items-center justify-center gap-1.5 transition-all">
+                                        <span class="text-xl">🟠</span>
+                                        <span class="text-xs font-bold truncate w-full" :class="rateType === 'promotional' ? 'text-orange-600 dark:text-orange-400' : 'text-gray-900 dark:text-white'">Promotional</span>
+                                        <span class="text-[11px] truncate w-full" :class="rateType === 'promotional' ? 'text-orange-600/80 dark:text-orange-300/80 font-medium' : 'text-gray-500 dark:text-gray-400'">Vouchers OK</span>
+                                        <div class="h-5 flex items-center justify-center">
+                                            <span x-show="rateType === 'promotional'" x-cloak class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-orange-600 text-white shadow-sm">
+                                                <svg class="w-3 h-3 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                                                Selected
+                                            </span>
+                                        </div>
                                     </div>
-                                </label>
+                                </div>
 
                                 {{-- Super Promo --}}
-                                <label style="display: flex; flex: 1; flex-direction: column; cursor: pointer; margin: 0; min-width: 0;">
-                                    <input type="radio" value="super_promotional" wire:model.live="modalRateType" class="sr-only" />
-                                    <div class="p-3.5 rounded-xl border-2 transition-all text-center flex flex-col items-center justify-center gap-1
-                                        {{ $this->modalRateType === 'super_promotional'
-                                            ? 'border-purple-500 bg-purple-500/15 shadow-md shadow-purple-500/10'
-                                            : 'border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/40 hover:border-gray-300 dark:hover:border-gray-700' }}">
-                                        <span class="text-lg">🟣</span>
-                                        <span class="text-xs font-bold text-purple-600 dark:text-purple-400 truncate w-full">Super Promo</span>
-                                        <span class="text-[11px] text-gray-500 dark:text-gray-400 truncate w-full">Strict Promo</span>
+                                <div 
+                                    @click="rateType = 'super_promotional'; $wire.set('modalRateType', 'super_promotional', false)"
+                                    class="rate-tier-card"
+                                    :class="rateType === 'super_promotional' ? 'rate-tier-selected-super' : 'rate-tier-unselected'"
+                                    style="display: flex; flex: 1; flex-direction: column; margin: 0; min-width: 0;">
+                                    <input type="radio" value="super_promotional" x-model="rateType" wire:model="modalRateType" class="sr-only" />
+                                    <div class="p-3.5 rounded-xl text-center flex flex-col items-center justify-center gap-1.5 transition-all">
+                                        <span class="text-xl">🟣</span>
+                                        <span class="text-xs font-bold truncate w-full" :class="rateType === 'super_promotional' ? 'text-purple-600 dark:text-purple-400' : 'text-gray-900 dark:text-white'">Super Promo</span>
+                                        <span class="text-[11px] truncate w-full" :class="rateType === 'super_promotional' ? 'text-purple-600/80 dark:text-purple-300/80 font-medium' : 'text-gray-500 dark:text-gray-400'">Strict Promo</span>
+                                        <div class="h-5 flex items-center justify-center">
+                                            <span x-show="rateType === 'super_promotional'" x-cloak class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-purple-600 text-white shadow-sm">
+                                                <svg class="w-3 h-3 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                                                Selected
+                                            </span>
+                                        </div>
                                     </div>
-                                </label>
+                                </div>
                             </div>
                         </div>
 
@@ -233,109 +336,113 @@
                             </p>
                         </div>
 
-                        {{-- 3. Dynamic Fields: Promo Expiry Mode & Duration (Shown when Promotional or Super Promo) --}}
-                        @if ($this->modalRateType !== 'regular')
-                            <div class="rounded-2xl border border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/40 dark:bg-indigo-950/20 p-6 space-y-6">
-                                
-                                {{-- Expiry Behavior Option (Spacious & Non-touching) --}}
-                                <div>
-                                    <label class="block text-xs font-bold uppercase tracking-wider text-indigo-950 dark:text-indigo-300 mb-3">
-                                        Promo Expiry Behavior
-                                    </label>
-                                    <div style="display: flex; gap: 14px; width: 100%;">
-                                        {{-- Temporary --}}
-                                        <label style="display: flex; flex: 1; flex-direction: column; cursor: pointer; margin: 0; min-width: 0;">
-                                            <div class="p-4 rounded-xl border-2 transition-all flex flex-col gap-2 min-h-[110px] justify-center
-                                                {{ $this->modalPromoType === 'temporary'
-                                                    ? 'border-indigo-500 bg-white dark:bg-gray-900 shadow-md ring-1 ring-indigo-500'
-                                                    : 'border-gray-200 dark:border-gray-800 bg-white/70 dark:bg-gray-900/60 hover:border-gray-300 dark:hover:border-gray-700' }}">
-                                                <div class="flex items-center gap-2">
-                                                    <input type="radio" value="temporary" wire:model.live="modalPromoType" class="text-indigo-600 focus:ring-indigo-500 h-4 w-4 shrink-0" />
-                                                    <span class="text-xs font-bold text-gray-900 dark:text-white">⏳ Temporary</span>
-                                                </div>
-                                                <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed pl-6">
-                                                    After promo end date, the schedule <strong>reverts back to Regular fare</strong> &amp; restores base price.
-                                                </p>
+                        {{-- 3. Dynamic Fields: Promo Expiry Mode & Duration (Instantly Toggled via Alpine) --}}
+                        <div x-show="rateType !== 'regular'" x-cloak class="rounded-2xl border border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/40 dark:bg-indigo-950/20 p-6 space-y-6">
+                            
+                            {{-- Expiry Behavior Option (Spacious & Non-touching) --}}
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-indigo-950 dark:text-indigo-300 mb-3">
+                                    Promo Expiry Behavior
+                                </label>
+                                <div style="display: flex; gap: 14px; width: 100%;">
+                                    {{-- Temporary --}}
+                                    <div 
+                                        @click="promoType = 'temporary'; $wire.set('modalPromoType', 'temporary', false)"
+                                        class="p-4 rounded-xl flex flex-col gap-2 min-h-[110px] justify-center cursor-pointer select-none"
+                                        :class="promoType === 'temporary' ? 'promo-expiry-selected-temp' : 'promo-expiry-unselected'"
+                                        style="display: flex; flex: 1; flex-direction: column; margin: 0; min-width: 0;">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center gap-2">
+                                                <input type="radio" value="temporary" x-model="promoType" wire:model="modalPromoType" class="sr-only" />
+                                                <span class="text-xs font-bold" :class="promoType === 'temporary' ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-900 dark:text-white'">⏳ Temporary</span>
                                             </div>
-                                        </label>
+                                            <span x-show="promoType === 'temporary'" x-cloak class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-indigo-600 text-white shadow-sm">Selected</span>
+                                        </div>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                                            After promo end date, the schedule <strong>reverts back to Regular fare</strong> &amp; restores base price.
+                                        </p>
+                                    </div>
 
-                                        {{-- Permanent --}}
-                                        <label style="display: flex; flex: 1; flex-direction: column; cursor: pointer; margin: 0; min-width: 0;">
-                                            <div class="p-4 rounded-xl border-2 transition-all flex flex-col gap-2 min-h-[110px] justify-center
-                                                {{ $this->modalPromoType === 'permanent'
-                                                    ? 'border-red-500 bg-white dark:bg-gray-900 shadow-md ring-1 ring-red-500'
-                                                    : 'border-gray-200 dark:border-gray-800 bg-white/70 dark:bg-gray-900/60 hover:border-gray-300 dark:hover:border-gray-700' }}">
-                                                <div class="flex items-center gap-2">
-                                                    <input type="radio" value="permanent" wire:model.live="modalPromoType" class="text-red-600 focus:ring-red-500 h-4 w-4 shrink-0" />
-                                                    <span class="text-xs font-bold text-gray-900 dark:text-white">🔒 Permanent</span>
-                                                </div>
-                                                <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed pl-6">
-                                                    After promo end date, the schedule <strong>will not display on the user booking page</strong>.
-                                                </p>
+                                    {{-- Permanent --}}
+                                    <div 
+                                        @click="promoType = 'permanent'; $wire.set('modalPromoType', 'permanent', false)"
+                                        class="p-4 rounded-xl flex flex-col gap-2 min-h-[110px] justify-center cursor-pointer select-none"
+                                        :class="promoType === 'permanent' ? 'promo-expiry-selected-perm' : 'promo-expiry-unselected'"
+                                        style="display: flex; flex: 1; flex-direction: column; margin: 0; min-width: 0;">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center gap-2">
+                                                <input type="radio" value="permanent" x-model="promoType" wire:model="modalPromoType" class="sr-only" />
+                                                <span class="text-xs font-bold" :class="promoType === 'permanent' ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'">🔒 Permanent</span>
                                             </div>
-                                        </label>
+                                            <span x-show="promoType === 'permanent'" x-cloak class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-red-600 text-white shadow-sm">Selected</span>
+                                        </div>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                                            After promo end date, the schedule <strong>will not display on the user booking page</strong>.
+                                        </p>
                                     </div>
                                 </div>
+                            </div>
 
-                                {{-- Duration Date/Time Pickers (Spacious & Theme-Responsive) --}}
-                                <div class="pt-1">
-                                    <div style="display: flex; gap: 14px; width: 100%;">
-                                        <div style="display: flex; flex: 1; flex-direction: column; min-width: 0;">
-                                            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 truncate">
-                                                Promo Start Date &amp; Time
-                                            </label>
-                                            <input type="datetime-local"
-                                                wire:model="modalDurationStart"
-                                                class="promo-theme-input w-full rounded-xl px-3.5 py-2.5 text-xs font-medium border transition shadow-sm"
-                                            />
-                                        </div>
-                                        <div style="display: flex; flex: 1; flex-direction: column; min-width: 0;">
-                                            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 truncate">
-                                                Promo End Date &amp; Time
-                                            </label>
-                                            <input type="datetime-local"
-                                                wire:model="modalDurationEnd"
-                                                class="promo-theme-input w-full rounded-xl px-3.5 py-2.5 text-xs font-medium border transition shadow-sm"
-                                            />
-                                        </div>
+                            {{-- Duration Date/Time Pickers (Spacious & Theme-Responsive) --}}
+                            <div class="pt-1">
+                                <div style="display: flex; gap: 14px; width: 100%;">
+                                    <div style="display: flex; flex: 1; flex-direction: column; min-width: 0;">
+                                        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 truncate">
+                                            Promo Start Date &amp; Time
+                                        </label>
+                                        <input type="datetime-local"
+                                            wire:model="modalDurationStart"
+                                            class="promo-theme-input w-full rounded-xl px-3.5 py-2.5 text-xs font-medium border transition shadow-sm"
+                                        />
+                                    </div>
+                                    <div style="display: flex; flex: 1; flex-direction: column; min-width: 0;">
+                                        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 truncate">
+                                            Promo End Date &amp; Time
+                                        </label>
+                                        <input type="datetime-local"
+                                            wire:model="modalDurationEnd"
+                                            class="promo-theme-input w-full rounded-xl px-3.5 py-2.5 text-xs font-medium border transition shadow-sm"
+                                        />
                                     </div>
                                 </div>
-
-                                {{-- Notice / Policy Disclaimer --}}
-                                <div class="rounded-xl p-4 text-xs leading-relaxed border mt-2 {{ $this->modalRateType === 'super_promotional' ? 'bg-purple-50/80 dark:bg-purple-950/40 border-purple-200 dark:border-purple-800/60 text-purple-950 dark:text-purple-200' : 'bg-orange-50/80 dark:bg-orange-950/40 border-orange-200 dark:border-orange-800/60 text-orange-950 dark:text-orange-200' }}">
-                                    @if ($this->modalRateType === 'super_promotional')
-                                        <p class="font-bold flex items-center gap-1.5 text-xs text-purple-700 dark:text-purple-300 mb-1.5">
-                                            <span>🟣 Super Promo Policy:</span>
-                                        </p>
-                                        <ul class="list-disc pl-5 space-y-1 text-xs text-purple-900 dark:text-purple-200/90">
-                                            <li>Government mandate discounts (Senior, PWD, Student) are <strong>disabled</strong> (₱0.00).</li>
-                                            <li>Website vouchers &amp; promo codes are <strong>blocked</strong>.</li>
-                                            <li>Strictly non-refundable and non-transferable.</li>
-                                        </ul>
-                                    @else
-                                        <p class="font-bold flex items-center gap-1.5 text-xs text-orange-700 dark:text-orange-300 mb-1.5">
-                                            <span>🟠 Promotional Policy:</span>
-                                        </p>
-                                        <ul class="list-disc pl-5 space-y-1 text-xs text-orange-900 dark:text-orange-200/90">
-                                            <li>Government mandate discounts (Senior, PWD, Student) are <strong>disabled</strong> (₱0.00).</li>
-                                            <li>Website vouchers &amp; promo codes <strong>can still be added and applied</strong>.</li>
-                                            <li>Non-refundable ticket fare.</li>
-                                        </ul>
-                                    @endif
-                                </div>
-
                             </div>
-                        @else
-                            {{-- Regular Fare Policy Notice --}}
-                            <div class="rounded-2xl border border-blue-200 dark:border-blue-900/60 bg-blue-50/70 dark:bg-blue-950/30 p-4 text-xs text-blue-900 dark:text-blue-200 leading-relaxed">
-                                <p class="font-bold flex items-center gap-1.5 text-blue-700 dark:text-blue-300 mb-1">
-                                    <span>🔵 Regular Fare Policy:</span>
+
+                            {{-- Notice / Policy Disclaimer for Promo Tiers --}}
+                            {{-- Super Promo Policy --}}
+                            <div x-show="rateType === 'super_promotional'" x-cloak class="rounded-xl p-4 text-xs leading-relaxed border mt-2 bg-purple-50/80 dark:bg-purple-950/40 border-purple-300 dark:border-purple-800 text-purple-950 dark:text-purple-200" style="border-color: #a855f7 !important;">
+                                <p class="font-bold flex items-center gap-1.5 text-xs text-purple-700 dark:text-purple-300 mb-1.5">
+                                    <span>🟣 Super Promo Policy:</span>
                                 </p>
-                                <p class="text-blue-900/80 dark:text-blue-200/80 leading-relaxed">
-                                    This will remove promo flags and restore standard fare rules. Government mandate discounts (Senior, PWD, Student) and website vouchers will both be permitted.
-                                </p>
+                                <ul class="list-disc pl-5 space-y-1 text-xs text-purple-900 dark:text-purple-200/90">
+                                    <li>Government mandate discounts (Senior, PWD, Student) are <strong>disabled</strong> (₱0.00).</li>
+                                    <li>Website vouchers &amp; promo codes are <strong>blocked</strong>.</li>
+                                    <li>Strictly non-refundable and non-transferable.</li>
+                                </ul>
                             </div>
-                        @endif
+
+                            {{-- Promotional Policy --}}
+                            <div x-show="rateType === 'promotional'" x-cloak class="rounded-xl p-4 text-xs leading-relaxed border mt-2 bg-orange-50/80 dark:bg-orange-950/40 border-orange-300 dark:border-orange-800 text-orange-950 dark:text-orange-200" style="border-color: #f97316 !important;">
+                                <p class="font-bold flex items-center gap-1.5 text-xs text-orange-700 dark:text-orange-300 mb-1.5">
+                                    <span>🟠 Promotional Policy:</span>
+                                </p>
+                                <ul class="list-disc pl-5 space-y-1 text-xs text-orange-900 dark:text-orange-200/90">
+                                    <li>Government mandate discounts (Senior, PWD, Student) are <strong>disabled</strong> (₱0.00).</li>
+                                    <li>Website vouchers &amp; promo codes <strong>can still be added and applied</strong>.</li>
+                                    <li>Non-refundable ticket fare.</li>
+                                </ul>
+                            </div>
+
+                        </div>
+
+                        {{-- Regular Fare Policy Notice --}}
+                        <div x-show="rateType === 'regular'" x-cloak class="rounded-2xl border border-blue-300 dark:border-blue-800 bg-blue-50/70 dark:bg-blue-950/30 p-4 text-xs text-blue-900 dark:text-blue-200 leading-relaxed" style="border-color: #3b82f6 !important;">
+                            <p class="font-bold flex items-center gap-1.5 text-blue-700 dark:text-blue-300 mb-1">
+                                <span>🔵 Regular Fare Policy:</span>
+                            </p>
+                            <p class="text-blue-900/80 dark:text-blue-200/80 leading-relaxed">
+                                This will remove promo flags and restore standard fare rules. Government mandate discounts (Senior, PWD, Student) and website vouchers will both be permitted.
+                            </p>
+                        </div>
 
                     </div>
                 </div>
