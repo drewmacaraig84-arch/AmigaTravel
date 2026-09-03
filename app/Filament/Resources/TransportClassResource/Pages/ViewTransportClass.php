@@ -39,6 +39,8 @@ class ViewTransportClass extends ViewRecord
     public ?string $modalDurationStart = null;
 
     public ?string $modalDurationEnd = null;
+    
+    public ?int $modalPromoTickets = null;
 
     protected function getHeaderActions(): array
     {
@@ -235,6 +237,7 @@ class ViewTransportClass extends ViewRecord
                 'promo_type'           => null,
                 'promo_duration_start' => null,
                 'promo_duration_end'   => null,
+                'promo_tickets_available' => null,
             ]);
         }
 
@@ -284,12 +287,14 @@ class ViewTransportClass extends ViewRecord
             $this->modalDurationEnd = $existing->promo_duration_end
                 ? Carbon::parse($existing->promo_duration_end)->format('Y-m-d\TH:i')
                 : now()->addDays(14)->setTime(23, 59)->format('Y-m-d\TH:i');
+            $this->modalPromoTickets = $existing->promo_tickets_available;
         } else {
             $this->modalRateType = 'promotional';
             $this->modalPrice = (string) ($this->getRecord()->price ?? '0');
             $this->modalPromoType = 'temporary';
             $this->modalDurationStart = now()->format('Y-m-d\TH:i');
             $this->modalDurationEnd = now()->addDays(14)->setTime(23, 59)->format('Y-m-d\TH:i');
+            $this->modalPromoTickets = null;
         }
 
         $this->showPromoModal = true;
@@ -320,6 +325,7 @@ class ViewTransportClass extends ViewRecord
                     'promo_type'           => null,
                     'promo_duration_start' => null,
                     'promo_duration_end'   => null,
+                    'promo_tickets_available' => null,
                 ]);
             }
             $tierLabel = 'Regular Fare';
@@ -352,6 +358,7 @@ class ViewTransportClass extends ViewRecord
                     'promo_type'           => $this->modalPromoType,
                     'promo_duration_start' => $this->modalDurationStart ? Carbon::parse($this->modalDurationStart) : now(),
                     'promo_duration_end'   => $this->modalDurationEnd ? Carbon::parse($this->modalDurationEnd) : null,
+                    'promo_tickets_available' => $this->modalPromoTickets !== '' && $this->modalPromoTickets !== null ? (int) $this->modalPromoTickets : null,
                 ]);
             }
 

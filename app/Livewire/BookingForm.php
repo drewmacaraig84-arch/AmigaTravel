@@ -2150,6 +2150,26 @@ class BookingForm extends Component
                     }
                     if ($lockedStc && $lockedStc->tickets_available !== null) {
                         $lockedStc->decrement('tickets_available');
+                        
+                        if ($lockedStc->is_promo && $lockedStc->promo_tickets_available !== null) {
+                            $lockedStc->decrement('promo_tickets_available');
+                            $lockedStc->refresh();
+                            if ($lockedStc->promo_tickets_available <= 0) {
+                                $basePrice = (float) ($lockedStc->transportClass?->price ?? 0);
+                                $regularPrice = $lockedStc->original_price !== null ? (float) $lockedStc->original_price : ($basePrice > 0 ? $basePrice : (float) $lockedStc->additional_price);
+                                $lockedStc->update([
+                                    'rate_type'            => 'regular',
+                                    'is_promo'             => false,
+                                    'additional_price'     => $regularPrice,
+                                    'original_price'       => null,
+                                    'promo_type'           => null,
+                                    'promo_duration_start' => null,
+                                    'promo_duration_end'   => null,
+                                    'promo_tickets_available' => null,
+                                ]);
+                                \App\Models\Schedule::bust();
+                            }
+                        }
                     }
                 }
 
@@ -2160,6 +2180,26 @@ class BookingForm extends Component
                     }
                     if ($lockedReturnStc && $lockedReturnStc->tickets_available !== null) {
                         $lockedReturnStc->decrement('tickets_available');
+                        
+                        if ($lockedReturnStc->is_promo && $lockedReturnStc->promo_tickets_available !== null) {
+                            $lockedReturnStc->decrement('promo_tickets_available');
+                            $lockedReturnStc->refresh();
+                            if ($lockedReturnStc->promo_tickets_available <= 0) {
+                                $basePrice = (float) ($lockedReturnStc->transportClass?->price ?? 0);
+                                $regularPrice = $lockedReturnStc->original_price !== null ? (float) $lockedReturnStc->original_price : ($basePrice > 0 ? $basePrice : (float) $lockedReturnStc->additional_price);
+                                $lockedReturnStc->update([
+                                    'rate_type'            => 'regular',
+                                    'is_promo'             => false,
+                                    'additional_price'     => $regularPrice,
+                                    'original_price'       => null,
+                                    'promo_type'           => null,
+                                    'promo_duration_start' => null,
+                                    'promo_duration_end'   => null,
+                                    'promo_tickets_available' => null,
+                                ]);
+                                \App\Models\Schedule::bust();
+                            }
+                        }
                     }
                 }
 

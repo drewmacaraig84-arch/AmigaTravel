@@ -18,6 +18,7 @@ class ScheduleTransportClass extends Pivot
         'additional_price',
         'original_price',
         'tickets_available',
+        'promo_tickets_available',
         'has_bed',
         'is_active',
         'is_promo',

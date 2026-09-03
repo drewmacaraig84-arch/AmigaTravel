@@ -407,6 +407,25 @@
                                 </div>
                             </div>
 
+                            {{-- Promo Ticket Quota --}}
+                            <div class="pt-1 mt-4">
+                                <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 truncate">
+                                    Promo Tickets Allocation (Quota) <span class="font-normal text-gray-400 text-[11px]">(Optional)</span>
+                                </label>
+                                <div class="relative">
+                                    <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm select-none">🎫</span>
+                                    <input type="number"
+                                        min="0"
+                                        wire:model="modalPromoTickets"
+                                        placeholder="e.g. 50 (Leave blank for unlimited)"
+                                        class="promo-theme-input w-full rounded-xl pl-10 pr-4 py-2.5 text-sm font-semibold border transition shadow-sm"
+                                    />
+                                </div>
+                                <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-2 leading-relaxed">
+                                    When this quota reaches 0, the schedule will automatically revert back to the regular fare.
+                                </p>
+                            </div>
+
                             {{-- Notice / Policy Disclaimer for Promo Tiers --}}
                             {{-- Super Promo Policy --}}
                             <div x-show="rateType === 'super_promotional'" x-cloak class="rounded-xl p-4 text-xs leading-relaxed border mt-2 bg-purple-50/80 dark:bg-purple-950/40 border-purple-300 dark:border-purple-800 text-purple-950 dark:text-purple-200" style="border-color: #a855f7 !important;">
