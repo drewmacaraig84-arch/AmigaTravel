@@ -140,6 +140,16 @@ class Booking extends Model
                     ]);
             }
         });
+
+        static::saved(function (Booking $booking) {
+            if ($booking->wasRecentlyCreated || $booking->wasChanged(['status', 'rebooking_status', 'disruption_status', 'refund_amount', 'refund_processed_at', 'refund_reference', 'refund_status'])) {
+                \App\Support\AdminNotificationFeed::clearAllCache();
+            }
+        });
+
+        static::deleted(function () {
+            \App\Support\AdminNotificationFeed::clearAllCache();
+        });
     }
 
     public function isUserCancelled(): bool

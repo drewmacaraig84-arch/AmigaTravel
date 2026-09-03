@@ -16,6 +16,11 @@ class AdminNotificationFeed
     protected array $notificationsByUser = [];
     protected array $statusesByUser = [];
 
+    public static function clearAllCache(): void
+    {
+        Cache::increment('admin_notification_feed_v');
+    }
+
     public function getForUser(User $user): Collection
     {
         return Cache::remember($this->cacheKey($user), self::CACHE_TTL, function () use ($user) {
@@ -31,10 +36,13 @@ class AdminNotificationFeed
         return $notifications
             ->map(function (array $notification) use ($statuses): array {
                 $status = $statuses->get($notification['id']);
+                $autoRead = ! empty($notification['auto_read']);
+                $explicitlyUnread = ($status !== null && $status->read_at === null);
+                $isRead = ($autoRead && ! $explicitlyUnread) || ($status?->read_at !== null);
 
                 return array_merge($notification, [
-                    'is_read' => $status?->read_at !== null,
-                    'read_at' => $status?->read_at,
+                    'is_read' => $isRead,
+                    'read_at' => $status?->read_at ?? ($isRead ? ($notification['created_at'] ?? now()) : null),
                 ]);
             })
             ->filter(function (array $notification) use ($statuses): bool {
@@ -65,12 +73,14 @@ class AdminNotificationFeed
 
     protected function cacheKey(User $user): string
     {
-        return "admin_notification_feed:{$user->id}";
+        $v = Cache::get('admin_notification_feed_v', 1);
+        return "admin_notification_feed:{$user->id}:v{$v}";
     }
 
     protected function statusCacheKey(User $user): string
     {
-        return "admin_notification_feed_statuses:{$user->id}";
+        $v = Cache::get('admin_notification_feed_v', 1);
+        return "admin_notification_feed_statuses:{$user->id}:v{$v}";
     }
 
     public function getUnreadCountForUser(User $user): int
@@ -102,6 +112,20 @@ class AdminNotificationFeed
         $this->clearCacheForUser($user);
 
         return $updated;
+    }
+
+    public function markAllAsRead(User $user): int
+    {
+        $allIds = $this->getForUser($user)
+            ->where('is_read', false)
+            ->pluck('id')
+            ->all();
+
+        if (empty($allIds)) {
+            return 0;
+        }
+
+        return $this->markAsRead($user, $allIds);
     }
 
     public function markAsUnread(User $user, array $notificationIds): int
@@ -144,6 +168,20 @@ class AdminNotificationFeed
         $this->clearCacheForUser($user);
 
         return $deleted;
+    }
+
+    public function markBookingNotificationsAsRead(User $user, int $bookingId): int
+    {
+        $targetIds = [
+            'booking-new-' . $bookingId,
+            'booking-cancel-' . $bookingId,
+            'booking-rebook-' . $bookingId,
+            'booking-refund-req-' . $bookingId,
+            'booking-refund-done-' . $bookingId,
+            'booking-op-rebook-' . $bookingId,
+        ];
+
+        return $this->markAsRead($user, $targetIds);
     }
 
     protected function collectNotifications(): Collection
@@ -191,6 +229,7 @@ class AdminNotificationFeed
                         'message' => "Refund of ₱" . number_format((float) $booking->refund_amount, 2) . " disbursed for {$paxLabel} in #{$booking->transaction_number}" . (filled($booking->refund_reference) ? " (Ref: {$booking->refund_reference})" : ""),
                         'created_at' => $booking->refund_processed_at ?? $booking->updated_at ?? $booking->created_at,
                         'url' => '/admin/refunds',
+                        'auto_read' => true,
                     ]);
                 } else {
                     $notifications->push([
@@ -200,6 +239,7 @@ class AdminNotificationFeed
                         'message' => "{$paxLabel} requested ₱" . number_format((float) $booking->refund_amount, 2) . " refund for #{$booking->transaction_number}",
                         'created_at' => $booking->updated_at ?? $booking->created_at,
                         'url' => '/admin/refunds',
+                        'auto_read' => false,
                     ]);
                 }
             } elseif ($booking->status === 'cancelled') {
@@ -211,34 +251,41 @@ class AdminNotificationFeed
                     'message' => "{$paxLabel} cancelled booking #" . $booking->transaction_number,
                     'created_at' => $booking->updated_at ?? $booking->created_at,
                     'url' => '/admin/bookings/' . $booking->id,
+                    'auto_read' => false,
                 ]);
             }
 
-            if ($booking->status === 'pending' && ! $booking->is_rebooked) {
+            // Booking notification
+            if (! $booking->is_rebooked) {
+                $isPending = ($booking->status === 'pending');
                 $notifications->push([
                     'id' => 'booking-new-' . $booking->id,
                     'type' => 'new_booking',
-                    'title' => 'New booking',
+                    'title' => $isPending ? 'New booking' : 'Booking ' . ucfirst($booking->status),
                     'message' => $booking->client_name . ' placed booking #' . $booking->transaction_number,
                     'created_at' => $booking->created_at,
                     'url' => '/admin/bookings/' . $booking->id,
+                    'auto_read' => ! $isPending,
                 ]);
             }
 
-            if ($booking->is_rebooked && $booking->rebooking_status === 'pending') {
+            if ($booking->is_rebooked) {
+                $isPendingRebook = ($booking->rebooking_status === 'pending');
                 $paxLabel = $itemLabel($booking, ['rebooking_pending', 'operator_rebooking', 'rebooked']);
                 $notifications->push([
                     'id' => 'booking-rebook-' . $booking->id,
                     'type' => 'rebooking',
-                    'title' => 'Rebooking request',
+                    'title' => $isPendingRebook ? 'Rebooking request' : 'Rebooking ' . ucfirst($booking->rebooking_status ?? 'processed'),
                     'message' => "{$paxLabel} submitted a rebooking request for #{$booking->transaction_number}",
                     'created_at' => $booking->updated_at ?? $booking->created_at,
                     'url' => '/admin/manage-rebookings',
+                    'auto_read' => ! $isPendingRebook,
                 ]);
             }
 
             // Operator Reschedule Request Notification
-            if ($booking->status === 'operator_rebooking' || ($booking->isServiceCancellation() && $booking->disruption_status === 'reschedule_requested' && $booking->rebooking_status === 'reschedule_requested')) {
+            if ($booking->status === 'operator_rebooking' || ($booking->isServiceCancellation() && $booking->disruption_status === 'reschedule_requested')) {
+                $isPendingReschedule = ($booking->rebooking_status === 'reschedule_requested');
                 $paxLabel = $itemLabel($booking, ['operator_rebooking', 'rebooking_pending']);
                 $notifications->push([
                     'id' => 'booking-op-rebook-' . $booking->id,
@@ -247,6 +294,7 @@ class AdminNotificationFeed
                     'message' => "{$paxLabel} requested replacement schedule for cancelled trip #{$booking->transaction_number}",
                     'created_at' => $booking->updated_at ?? $booking->created_at,
                     'url' => '/admin/manage-rebookings',
+                    'auto_read' => ! $isPendingReschedule,
                 ]);
             }
         }

@@ -29,6 +29,16 @@ class ViewBooking extends ViewRecord
 {
     protected static string $resource = BookingResource::class;
 
+    public function mount(int | string $record): void
+    {
+        parent::mount($record);
+
+        $user = Auth::user();
+        if ($user instanceof \App\Models\User && $user->isStaff()) {
+            app(\App\Support\AdminNotificationFeed::class)->markBookingNotificationsAsRead($user, (int) $record);
+        }
+    }
+
     private function resolveStorageUrl(?string $path = null): ?string
     {
         if (blank($path)) {

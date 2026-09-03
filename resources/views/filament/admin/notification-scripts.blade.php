@@ -129,6 +129,28 @@ window.adminNotificationBell = function (config) {
         },
 
         async markRead(ids = null)   { await this.sendAction('/admin/notifications/api/mark-read',   'POST',   ids ?? this.selectedIds); },
+        async markAllRead() {
+            this.busy = true;
+            try {
+                const res = await fetch('/admin/notifications/api/mark-all-read', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                    },
+                    credentials: 'same-origin',
+                });
+                if (!res.ok) return;
+                await this.fetchDropdown();
+                this.unreadCount = 0;
+                this.selectedIds = [];
+                this.actionMenuOpen = false;
+                this.showSuccess('All notifications marked as read.');
+            } finally {
+                this.busy = false;
+            }
+        },
         async markUnread(ids = null) { await this.sendAction('/admin/notifications/api/mark-unread', 'POST',   ids ?? this.selectedIds); },
         async confirmDelete()        { await this.sendAction('/admin/notifications/api',             'DELETE', this.deleteTargetIds); },
 
@@ -326,6 +348,27 @@ window.adminNotificationsPage = function () {
         },
 
         async markRead(ids = null)   { await this.sendAction('/admin/notifications/api/mark-read',   'POST',   ids ?? this.selectedIds); },
+        async markAllRead() {
+            this.busy = true;
+            try {
+                const res = await fetch('/admin/notifications/api/mark-all-read', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                    },
+                    credentials: 'same-origin',
+                });
+                if (!res.ok) return;
+                await this.loadNotifications(1);
+                this.unreadCount = 0;
+                this.selectedIds = [];
+                this.showSuccess('All notifications marked as read.');
+            } finally {
+                this.busy = false;
+            }
+        },
         async markUnread(ids = null) { await this.sendAction('/admin/notifications/api/mark-unread', 'POST',   ids ?? this.selectedIds); },
         async confirmDelete()        { await this.sendAction('/admin/notifications/api',             'DELETE', this.deleteTargetIds); },
 

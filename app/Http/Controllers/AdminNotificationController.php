@@ -96,6 +96,24 @@ class AdminNotificationController
         ]);
     }
 
+    public function markAllRead(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $user = $request->user();
+
+        if (! $user instanceof User || ! $user->isStaff()) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
+        $count = app(AdminNotificationFeed::class)->markAllAsRead($user);
+
+        return response()->json([
+            'success' => true,
+            'count' => $count,
+            'unread' => 0,
+            'message' => 'All notifications marked as read.',
+        ]);
+    }
+
     public function markUnread(Request $request): \Illuminate\Http\JsonResponse
     {
         $user = $request->user();

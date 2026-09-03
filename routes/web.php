@@ -569,6 +569,7 @@ Route::middleware(['auth:admin,web', 'admin'])->group(function () {
     Route::get('/admin/notifications/dropdown', [AdminNotificationController::class, 'dropdown']);
     Route::get('/admin/notifications/api/list', [AdminNotificationController::class, 'list']);
     Route::post('/admin/notifications/api/mark-read', [AdminNotificationController::class, 'markRead']);
+    Route::post('/admin/notifications/api/mark-all-read', [AdminNotificationController::class, 'markAllRead']);
     Route::post('/admin/notifications/api/mark-unread', [AdminNotificationController::class, 'markUnread']);
     Route::delete('/admin/notifications/api', [AdminNotificationController::class, 'destroy']);
     Route::get('/admin/manage-refunds', fn () => redirect('/admin/refunds'));
