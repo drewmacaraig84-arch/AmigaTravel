@@ -85,21 +85,27 @@ class UserResource extends Resource
                     ->same('password')
                     ->dehydrated(false)
                     ->required(fn (?object $livewire): bool => $livewire instanceof Pages\CreateUser),
-                TextInput::make('role')
+                \Filament\Forms\Components\Select::make('role')
                     ->label('Role')
+                    ->options([
+                        'Super Admin' => 'Super Admin (Full System & Crash Diagnostics Access)',
+                        'Admin' => 'Admin (Full Operational Admin)',
+                        'Staff' => 'Staff (Standard Staff Access)',
+                        'Finance' => 'Finance (Financial & Invoicing)',
+                        'User' => 'User (Regular Customer)',
+                    ])
                     ->required()
-                    ->placeholder('e.g. Super Admin, Admin, Staff, Finance, User')
+                    ->default('Staff')
                     ->reactive()
                     ->afterStateUpdated(function (\Filament\Forms\Set $set, $state) {
-                        $normalized = strtolower(trim($state));
-                        if (in_array($normalized, ['super admin', 'superadmin', 'super_admin', 'admin', 'administrator'])) {
+                        $normalized = strtolower(trim((string) $state));
+                        if (in_array($normalized, ['super admin', 'superadmin', 'super_admin', 'admin', 'administrator'], true)) {
                             $set('is_admin', true);
                             $set('is_staff', true);
                         } elseif ($normalized === 'user') {
                             $set('is_admin', false);
                             $set('is_staff', false);
                         } else {
-                            // Any custom role implies staff access so they can log in
                             $set('is_admin', false);
                             $set('is_staff', true);
                         }

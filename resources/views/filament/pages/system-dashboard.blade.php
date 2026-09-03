@@ -605,49 +605,6 @@
                         </table>
                     </div>
                 </div>
-
-                {{-- Stack Trace Modal --}}
-                @if($selectedLog)
-                    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-                        <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
-                            <div class="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950">
-                                <div class="flex items-center gap-3">
-                                    <span class="inline-flex items-center px-2.5 py-1 rounded text-xs font-extrabold uppercase bg-rose-600 text-white">
-                                        {{ $selectedLog['level'] }}
-                                    </span>
-                                    <span class="text-xs font-mono text-slate-400">{{ $selectedLog['timestamp'] }}</span>
-                                </div>
-                                <button wire:click="closeLogDetails" type="button" class="text-slate-400 hover:text-white transition-colors p-1">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </button>
-                            </div>
-
-                            <div class="p-6 overflow-y-auto space-y-4 text-xs">
-                                <div>
-                                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Message</span>
-                                    <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 font-mono text-rose-300 break-all leading-relaxed">
-                                        {{ $selectedLog['message'] }}
-                                    </div>
-                                </div>
-
-                                @if(!empty($selectedLog['trace']))
-                                    <div>
-                                        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Stack Trace & Call Stack</span>
-                                        <pre class="p-4 rounded-xl bg-black/90 border border-slate-800 font-mono text-slate-300 overflow-x-auto text-[11px] leading-relaxed whitespace-pre-wrap">{{ $selectedLog['trace'] }}</pre>
-                                    </div>
-                                @endif
-                            </div>
-
-                            <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-end">
-                                <button wire:click="closeLogDetails" type="button" class="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-colors">
-                                    Close Inspector
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                @endif
             </div>
         @endif
 
@@ -775,6 +732,50 @@
             </div>
         @endif
     </div>
+
+    {{-- ═══ Full Screen Stack Trace / Log Details Modal (Root Level) ═══ --}}
+    @if($selectedLog)
+        <div class="fixed inset-0 flex items-center justify-center p-4 sm:p-6" style="position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 999999 !important; background-color: rgba(2, 6, 23, 0.88) !important; backdrop-filter: blur(8px) !important;">
+            <div class="rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden" style="background-color: #0f172a !important; border: 1px solid #334155 !important; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.95) !important;">
+                <div class="p-5 flex items-center justify-between" style="background-color: #020617 !important; border-bottom: 1px solid #1e293b !important;">
+                    <div class="flex items-center gap-3">
+                        <span class="inline-flex items-center px-3 py-1 rounded text-xs font-extrabold uppercase {{ $selectedLog['level'] === 'INFO' ? 'bg-blue-600' : ($selectedLog['level'] === 'WARNING' ? 'bg-amber-600' : 'bg-rose-600') }} text-white shadow-sm">
+                            {{ $selectedLog['level'] }}
+                        </span>
+                        <span class="text-xs font-mono text-slate-300">{{ $selectedLog['timestamp'] }}</span>
+                        <span class="text-xs font-mono text-slate-400 bg-slate-800 px-2.5 py-0.5 rounded border border-slate-700">{{ $selectedLog['environment'] ?? 'production' }}</span>
+                    </div>
+                    <button wire:click="closeLogDetails" type="button" class="text-slate-400 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-slate-800">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="p-6 overflow-y-auto space-y-4 text-xs">
+                    <div>
+                        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Incident Message & Log Output</span>
+                        <div class="p-4 rounded-xl font-mono text-xs break-all leading-relaxed" style="background-color: #020617 !important; border: 1px solid #1e293b !important; color: #38bdf8 !important;">
+                            {{ $selectedLog['message'] }}
+                        </div>
+                    </div>
+
+                    @if(!empty($selectedLog['trace']))
+                        <div>
+                            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Stack Trace & Call Stack</span>
+                            <pre class="p-4 rounded-xl font-mono text-slate-300 overflow-x-auto text-[11px] leading-relaxed whitespace-pre-wrap" style="background-color: #000000 !important; border: 1px solid #1e293b !important;">{{ $selectedLog['trace'] }}</pre>
+                        </div>
+                    @endif
+                </div>
+
+                <div class="p-4 flex justify-end" style="background-color: #020617 !important; border-top: 1px solid #1e293b !important;">
+                    <button wire:click="closeLogDetails" type="button" class="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-colors border border-slate-700 shadow-sm">
+                        Close Inspector
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
 
     {{-- ═════════════════════════════════════════════════════════════════════ --}}
     {{-- ═══ ApexCharts Interactive JavaScript Engine ════════════════════════ --}}
