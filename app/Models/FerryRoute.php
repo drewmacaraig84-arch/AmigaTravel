@@ -238,7 +238,7 @@ class FerryRoute extends Model
     {
         $cacheKey = 'ferry_route:schedule_origins_v4:' . md5(serialize([$mode, $operator]));
 
-        return \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addHours(2), function () use ($mode, $operator) {
+        return \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(10), function () use ($mode, $operator) {
             return static::query()
                 ->active()
                 ->when($mode, fn ($query) => $query->where('mode', $mode))
@@ -257,7 +257,7 @@ class FerryRoute extends Model
     {
         $cacheKey = 'ferry_route:schedule_destinations_v4:' . md5(serialize([$origin, $mode, $operator, $requireReturn]));
 
-        return \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addHours(2), function () use ($origin, $mode, $operator, $requireReturn) {
+        return \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(10), function () use ($origin, $mode, $operator, $requireReturn) {
             $query = static::query()
                 ->active()
                 ->where('origin', $origin)
@@ -309,7 +309,7 @@ class FerryRoute extends Model
     {
         $cacheKey = 'ferry_route:schedule_operators_v4:' . md5(serialize([$mode]));
 
-        return \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addHours(2), function () use ($mode) {
+        return \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(10), function () use ($mode) {
             return \App\Models\Operator::query()
                 ->where('is_active', true)
                 ->when($mode, function ($query, $mode) {
@@ -334,7 +334,7 @@ class FerryRoute extends Model
     {
         $cacheKey = 'ferry_route:bidirectional:' . md5(serialize([$origin, $destination, $mode, $operator]));
 
-        return \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addHours(2), function () use ($origin, $destination, $mode, $operator) {
+        return \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(10), function () use ($origin, $destination, $mode, $operator) {
             $hasForward = static::query()
                 ->active()
                 ->where('origin', $origin)

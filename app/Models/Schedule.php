@@ -652,32 +652,108 @@ class Schedule extends Model
     {
         try {
             $driver = config('cache.default');
-            if ($driver === 'redis') {
-                try {
-                    $redis = \Illuminate\Support\Facades\Redis::connection(config('cache.stores.redis.connection', 'cache'));
-                    $patterns = [
-                        'api:schedule:*',
-                        'api:origins:*',
-                        'api:destinations:*',
-                        'api:operators:*',
-                        'api:available_dates:*',
-                        'api:all_schedules:*',
-                        'ferry_route:*',
-                    ];
-                    foreach ($patterns as $pattern) {
-                        $keys = $redis->keys($pattern);
-                        if (!empty($keys)) {
-                            $redis->del($keys);
+
+            // 1. Redis Store: active when cache store is redis or running with Redis on Railway
+            $isRedisDriver = $driver === 'redis' || (! app()->runningUnitTests() && in_array(env('CACHE_STORE'), ['redis', 'octane'], true));
+            if ($isRedisDriver) {
+                $connections = array_unique([
+                    config('cache.stores.redis.connection', 'cache'),
+                    'default',
+                ]);
+
+                $redisPrefix = (string) config('database.redis.options.prefix', '');
+                $cachePrefix = (string) config('cache.prefix', '');
+
+                $patterns = [
+                    '*api:schedule:*',
+                    '*api:origins:*',
+                    '*api:destinations:*',
+                    '*api:operators:*',
+                    '*api:available_dates:*',
+                    '*api:all_schedules:*',
+                    '*ferry_route:*',
+                    '*schedule_origins*',
+                    '*schedule_destinations*',
+                    '*schedule_operators*',
+                    '*web:activeRoutes*',
+                    '*web:schedules:*',
+                ];
+
+                foreach ($connections as $connName) {
+                    try {
+                        $redis = \Illuminate\Support\Facades\Redis::connection($connName);
+                        foreach ($patterns as $pattern) {
+                            $keys = $redis->keys($pattern);
+                            if (! empty($keys)) {
+                                $toDelete = [];
+                                foreach ($keys as $k) {
+                                    $toDelete[] = $k;
+                                    if ($redisPrefix !== '' && str_starts_with($k, $redisPrefix)) {
+                                        $stripped = substr($k, strlen($redisPrefix));
+                                        $toDelete[] = $stripped;
+                                        if ($cachePrefix !== '' && str_starts_with($stripped, $cachePrefix)) {
+                                            \Illuminate\Support\Facades\Cache::forget(substr($stripped, strlen($cachePrefix)));
+                                        }
+                                    } elseif ($cachePrefix !== '' && str_starts_with($k, $cachePrefix)) {
+                                        \Illuminate\Support\Facades\Cache::forget(substr($k, strlen($cachePrefix)));
+                                    }
+                                }
+                                $toDelete = array_values(array_unique(array_filter($toDelete)));
+                                if (! empty($toDelete)) {
+                                    $redis->del($toDelete);
+                                }
+                            }
                         }
+                    } catch (\Throwable) {
                     }
-                } catch (\Throwable) {
-                    // Fallback to tags if direct keys command unavailable
                 }
             }
 
-            // Also clear known standalone keys
+            // 2. Database Store: delete from cache table
+            if ($driver === 'database') {
+                try {
+                    $table = config('cache.stores.database.table', 'cache');
+                    \Illuminate\Support\Facades\DB::table($table)
+                        ->where(function ($q) {
+                            $q->where('key', 'like', '%api:schedule:%')
+                              ->orWhere('key', 'like', '%api:origins:%')
+                              ->orWhere('key', 'like', '%api:destinations:%')
+                              ->orWhere('key', 'like', '%api:operators:%')
+                              ->orWhere('key', 'like', '%api:available_dates:%')
+                              ->orWhere('key', 'like', '%api:all_schedules:%')
+                              ->orWhere('key', 'like', '%ferry_route:%')
+                              ->orWhere('key', 'like', '%schedule_origins%')
+                              ->orWhere('key', 'like', '%schedule_destinations%')
+                              ->orWhere('key', 'like', '%schedule_operators%')
+                              ->orWhere('key', 'like', '%web:activeRoutes%')
+                              ->orWhere('key', 'like', '%web:schedules%');
+                        })
+                        ->delete();
+                } catch (\Throwable) {
+                }
+            }
+
+            // 3. File Store: flush file cache so local dev updates immediately
+            if ($driver === 'file') {
+                try {
+                    \Illuminate\Support\Facades\Cache::flush();
+                } catch (\Throwable) {
+                }
+            }
+
+            // 4. Direct cache keys via Cache facade
+            \Illuminate\Support\Facades\Cache::forget('web:activeRoutes');
             \Illuminate\Support\Facades\Cache::forget('ferry_route:schedule_origins_v4');
             \Illuminate\Support\Facades\Cache::forget('ferry_route:schedule_operators_v4');
+            \Illuminate\Support\Facades\Cache::forget('gracia:active_rule');
+
+            // 5. Cache tags if supported
+            if (\Illuminate\Support\Facades\Cache::supportsTags()) {
+                try {
+                    \Illuminate\Support\Facades\Cache::tags(['schedules', 'routes'])->flush();
+                } catch (\Throwable) {
+                }
+            }
         } catch (\Throwable) {
             // Ignore cache driver errors
         }

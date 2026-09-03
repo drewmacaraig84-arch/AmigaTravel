@@ -217,9 +217,28 @@ class ViewTransportClass extends ViewRecord
 
         $basePrice = (float) $this->getRecord()->price;
 
-        ScheduleTransportClass::where('transport_class_id', $this->getRecord()->id)
+        $stcs = ScheduleTransportClass::where('transport_class_id', $this->getRecord()->id)
             ->whereIn('schedule_id', $targets)
-            ->update(['additional_price' => $basePrice]);
+            ->get();
+
+        foreach ($stcs as $stc) {
+            // Restore to original_price if it was saved, or fallback to class base price if > 0, otherwise keep existing additional_price
+            $restoredPrice = $stc->original_price !== null
+                ? (float) $stc->original_price
+                : ($basePrice > 0 ? $basePrice : (float) $stc->additional_price);
+
+            $stc->update([
+                'additional_price'     => $restoredPrice,
+                'original_price'       => null,
+                'rate_type'            => 'regular',
+                'is_promo'             => false,
+                'promo_type'           => null,
+                'promo_duration_start' => null,
+                'promo_duration_end'   => null,
+            ]);
+        }
+
+        Schedule::bust();
 
         $count = count($targets);
 
@@ -228,7 +247,7 @@ class ViewTransportClass extends ViewRecord
         }
 
         Notification::make()
-            ->title("Restored to ₱" . number_format($basePrice, 2) . " for {$count} schedule(s)")
+            ->title("Restored {$count} schedule(s) to regular fare")
             ->success()
             ->send();
     }
@@ -285,15 +304,24 @@ class ViewTransportClass extends ViewRecord
 
         $price = max(0, (float) $this->modalPrice);
 
+        $stcs = ScheduleTransportClass::where('transport_class_id', $this->getRecord()->id)
+            ->whereIn('schedule_id', $this->selectedSchedules)
+            ->get();
+
         if ($this->modalRateType === 'regular') {
-            $updateData = [
-                'rate_type'            => 'regular',
-                'is_promo'             => false,
-                'additional_price'     => $price,
-                'promo_type'           => null,
-                'promo_duration_start' => null,
-                'promo_duration_end'   => null,
-            ];
+            foreach ($stcs as $stc) {
+                // If reverting to regular, restore to original_price if available, otherwise use entered price
+                $regularPrice = $stc->original_price !== null ? (float) $stc->original_price : $price;
+                $stc->update([
+                    'rate_type'            => 'regular',
+                    'is_promo'             => false,
+                    'additional_price'     => $regularPrice,
+                    'original_price'       => null,
+                    'promo_type'           => null,
+                    'promo_duration_start' => null,
+                    'promo_duration_end'   => null,
+                ]);
+            }
             $tierLabel = 'Regular Fare';
         } else {
             // Promotional or Super Promotional
@@ -310,21 +338,25 @@ class ViewTransportClass extends ViewRecord
                 }
             }
 
-            $updateData = [
-                'rate_type'            => $this->modalRateType,
-                'is_promo'             => true,
-                'additional_price'     => $price,
-                'promo_type'           => $this->modalPromoType,
-                'promo_duration_start' => $this->modalDurationStart ? Carbon::parse($this->modalDurationStart) : now(),
-                'promo_duration_end'   => $this->modalDurationEnd ? Carbon::parse($this->modalDurationEnd) : null,
-            ];
+            foreach ($stcs as $stc) {
+                // Preserve original regular price before applying promo price
+                $origPrice = $stc->original_price !== null
+                    ? $stc->original_price
+                    : ($stc->is_promo ? null : $stc->additional_price);
+
+                $stc->update([
+                    'rate_type'            => $this->modalRateType,
+                    'is_promo'             => true,
+                    'additional_price'     => $price,
+                    'original_price'       => $origPrice,
+                    'promo_type'           => $this->modalPromoType,
+                    'promo_duration_start' => $this->modalDurationStart ? Carbon::parse($this->modalDurationStart) : now(),
+                    'promo_duration_end'   => $this->modalDurationEnd ? Carbon::parse($this->modalDurationEnd) : null,
+                ]);
+            }
 
             $tierLabel = $this->modalRateType === 'super_promotional' ? 'Super Promo' : 'Promotional';
         }
-
-        ScheduleTransportClass::where('transport_class_id', $this->getRecord()->id)
-            ->whereIn('schedule_id', $this->selectedSchedules)
-            ->update($updateData);
 
         Schedule::bust();
 

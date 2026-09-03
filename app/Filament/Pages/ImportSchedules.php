@@ -167,6 +167,7 @@ class ImportSchedules extends Page
                         ->send();
                 }
 
+                \App\Models\Schedule::bust();
                 $this->reset('uploadedFile');
                 return;
             }
@@ -207,6 +208,7 @@ class ImportSchedules extends Page
                         ->send();
                 }
 
+                \App\Models\Schedule::bust();
                 $this->reset('uploadedFile');
                 return;
             }
@@ -279,6 +281,7 @@ class ImportSchedules extends Page
                     ->send();
             }
 
+            \App\Models\Schedule::bust();
             $this->reset('uploadedFile');
         } catch (Throwable $e) {
             Notification::make()

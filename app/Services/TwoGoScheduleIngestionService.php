@@ -332,6 +332,9 @@ class TwoGoScheduleIngestionService
 
             DB::commit();
 
+            // Bust all schedule and route caches so client website/app sees imported schedules immediately
+            \App\Models\Schedule::bust();
+
             return [
                 'success' => true,
                 'message' => "Successfully ingested 2GO schedules from {$startDate->format('M d, Y')} to {$endDate->format('M d, Y')}.",

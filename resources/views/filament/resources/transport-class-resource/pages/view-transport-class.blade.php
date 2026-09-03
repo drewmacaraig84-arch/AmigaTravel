@@ -39,10 +39,10 @@
                     <x-heroicon-m-pencil-square class="h-4 w-4" />
                     Edit Price
                 </button>
-                <button x-on:click="if(confirm('Restore {{ $selectedCount }} schedule(s) to base price ₱{{ number_format($basePrice, 2) }}?')) $wire.restorePrice()"
+                <button x-on:click="if(confirm('Restore {{ $selectedCount }} selected schedule(s) to regular fare?')) $wire.restorePrice()"
                     class="inline-flex items-center gap-2 rounded-lg bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white text-sm font-medium px-4 py-2 transition-colors shadow-sm">
                     <x-heroicon-m-arrow-path class="h-4 w-4" />
-                    Restore Price
+                    Restore Regular Fare
                 </button>
             </div>
         </div>
@@ -318,7 +318,7 @@
                                     Class Add-on Price <span class="font-normal text-gray-400">(₱)</span>
                                 </label>
                                 <span class="text-xs font-medium px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
-                                    Base Class Price: <strong class="text-gray-900 dark:text-white">₱{{ number_format($basePrice, 2) }}</strong>
+                                    Default / Base: <strong class="text-gray-900 dark:text-white">₱{{ number_format($basePrice > 0 ? $basePrice : (float)($this->modalPrice ?: 0), 2) }}</strong>
                                 </span>
                             </div>
                             <div class="relative">
@@ -547,7 +547,7 @@
                                         Edit ({{ count($selectedInRoute) }})
                                     </button>
                                     <button
-                                        x-on:click="if(confirm('Restore {{ count($selectedInRoute) }} schedule(s) to ₱{{ number_format($basePrice, 2) }}?')) $wire.restorePrice()"
+                                        x-on:click="if(confirm('Restore {{ count($selectedInRoute) }} schedule(s) to regular fare?')) $wire.restorePrice()"
                                         title="Restore price for {{ count($selectedInRoute) }} selected"
                                         class="inline-flex items-center gap-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-medium px-2.5 py-1.5 transition-colors">
                                         <x-heroicon-m-arrow-path class="h-3.5 w-3.5" />
@@ -585,7 +585,8 @@
                                             $promoStart  = $pivot->promo_duration_start ? \Carbon\Carbon::parse($pivot->promo_duration_start) : null;
                                             $promoEnd    = $pivot->promo_duration_end ? \Carbon\Carbon::parse($pivot->promo_duration_end) : null;
                                             $addOnPrice  = (float) ($pivot->additional_price ?? 0);
-                                            $isBasePrice = abs($addOnPrice - $basePrice) < 0.01;
+                                            $origPrice   = $pivot->original_price !== null ? (float) $pivot->original_price : ($basePrice > 0 ? $basePrice : $addOnPrice);
+                                            $isBasePrice = abs($addOnPrice - $origPrice) < 0.01;
                                             $now         = now();
 
                                             $rateBadge = match($rateType) {
@@ -626,7 +627,7 @@
                                                     ₱{{ number_format($addOnPrice, 2) }}
                                                 </span>
                                                 @if (!$isBasePrice)
-                                                    <span class="ml-1 text-xs text-gray-400 dark:text-gray-500 line-through">₱{{ number_format($basePrice, 2) }}</span>
+                                                    <span class="ml-1 text-xs text-gray-400 dark:text-gray-500 line-through">₱{{ number_format($origPrice, 2) }}</span>
                                                 @endif
                                             </td>
                                             <td class="px-4 py-3 text-gray-700 dark:text-gray-200">
@@ -681,8 +682,8 @@
                                                         Edit
                                                     </button>
                                                     <button
-                                                        x-on:click="if(confirm('Restore this schedule to base price ₱{{ number_format($basePrice, 2) }}?')) $wire.restorePrice({{ $schedule->id }})"
-                                                        title="Restore to base price ₱{{ number_format($basePrice, 2) }}"
+                                                        x-on:click="if(confirm('Restore this schedule to regular fare (₱{{ number_format($origPrice, 2) }})?')) $wire.restorePrice({{ $schedule->id }})"
+                                                        title="Restore to regular fare (₱{{ number_format($origPrice, 2) }})"
                                                         class="inline-flex items-center gap-1 rounded-md bg-amber-500 hover:bg-amber-600 text-white text-xs font-medium px-2 py-1 transition-colors">
                                                         <x-heroicon-m-arrow-path class="h-3 w-3" />
                                                         Restore

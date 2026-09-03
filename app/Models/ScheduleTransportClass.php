@@ -16,6 +16,7 @@ class ScheduleTransportClass extends Pivot
         'transport_class_id',
         'description',
         'additional_price',
+        'original_price',
         'tickets_available',
         'has_bed',
         'is_active',
@@ -29,6 +30,7 @@ class ScheduleTransportClass extends Pivot
 
     protected $casts = [
         'additional_price' => 'decimal:2',
+        'original_price' => 'decimal:2',
         'has_bed' => 'boolean',
         'is_active' => 'boolean',
         'is_promo' => 'boolean',
@@ -131,6 +133,11 @@ class ScheduleTransportClass extends Pivot
 
     public function getEffectivePrice(): float
     {
+        // When a temporary promo has expired, automatically fall back to the pre-promo regular price
+        if ($this->isTemporaryPromo() && $this->isPromoExpired() && $this->original_price !== null) {
+            return (float) $this->original_price;
+        }
+
         if ($this->additional_price !== null) {
             return (float) $this->additional_price;
         }

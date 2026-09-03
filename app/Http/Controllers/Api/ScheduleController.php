@@ -31,7 +31,7 @@ class ScheduleController extends Controller
         $operator = $request->input('operator', '');
         $cacheKey = "api:origins:{$mode}:{$operator}";
 
-        $origins = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addHours(6), function () use ($mode, $operator) {
+        $origins = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(10), function () use ($mode, $operator) {
             return FerryRoute::scheduleOrigins($mode ?: null, $operator ?: null);
         });
 
@@ -46,7 +46,7 @@ class ScheduleController extends Controller
         $mode = $request->input('mode', '');
         $cacheKey = "api:operators:{$mode}";
 
-        $operators = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addHours(6), function () use ($mode) {
+        $operators = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(10), function () use ($mode) {
             return FerryRoute::scheduleOperatorsFor($mode ?: null);
         });
 
@@ -68,7 +68,7 @@ class ScheduleController extends Controller
         $requireReturn = $tripType === 'round_trip' ? '1' : '0';
         $cacheKey = "api:destinations:{$origin}:{$mode}:{$operator}:{$requireReturn}";
 
-        $destinations = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addHours(6), function () use ($origin, $mode, $operator, $tripType) {
+        $destinations = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(10), function () use ($origin, $mode, $operator, $tripType) {
             return FerryRoute::scheduleDestinationsFor($origin, $mode ?: null, $operator ?: null, $tripType === 'round_trip');
         });
 
@@ -91,7 +91,7 @@ class ScheduleController extends Controller
         $operator = $request->input('operator', '');
         $cacheKey = "api:available_dates:{$origin}:{$destination}:{$mode}:{$operator}";
 
-        $dates = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(30), function () use ($origin, $destination, $mode, $operator) {
+        $dates = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(5), function () use ($origin, $destination, $mode, $operator) {
             $query = FerryRoute::where('is_active', true)
                 ->where('origin', $origin)
                 ->where('destination', $destination);
@@ -141,7 +141,7 @@ class ScheduleController extends Controller
         $operator    = $request->input('operator', null);
 
         // Fetch the active earning rule (no need to cache a model instance to avoid unserialize errors)
-        $activeRule = \Illuminate\Support\Facades\Cache::remember('gracia:active_rule', now()->addMinutes(30), function () {
+        $activeRule = \Illuminate\Support\Facades\Cache::remember('gracia:active_rule', now()->addMinutes(15), function () {
             return \App\Models\GraciaEarningRule::where('is_active', true)
                 ->where(function ($q) { $q->whereNull('starts_at')->orWhere('starts_at', '<=', now()); })
                 ->where(function ($q) { $q->whereNull('ends_at')->orWhere('ends_at', '>=', now()); })
@@ -150,14 +150,12 @@ class ScheduleController extends Controller
         });
 
         // Cache schedule search results per route/date/mode/operator.
-        // 5-minute TTL is safe: schedules don't change mid-day but we need
-        // near-real-time ticket availability after busy booking windows.
         $cacheKey = 'api:schedule:search:'
             . md5("{$origin}:{$destination}:{$date}:{$mode}:{$operator}");
 
         $schedules = \Illuminate\Support\Facades\Cache::remember(
             $cacheKey,
-            now()->addMinutes(5),
+            now()->addMinutes(2),
             function () use ($origin, $destination, $date, $mode, $operator, $activeRule) {
                 return Schedule::forRouteAndDate($origin, $destination, $date, $mode, $operator)
                     ->get()

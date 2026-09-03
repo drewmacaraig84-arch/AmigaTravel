@@ -124,7 +124,7 @@ $renderWebsitePage = function (string $page, string $view) {
         'pageContent' => $settingsData['content'] ?? [],
         'heroImages' => collect($settingsData['hero_images'] ?? []),
         'bookingCards' => collect($settingsData['booking_cards'] ?? $settingsData['content']['booking_cards'] ?? []),
-        'activeRoutes' => \Illuminate\Support\Facades\Cache::remember('web:activeRoutes', now()->addMinutes(15), function () {
+        'activeRoutes' => \Illuminate\Support\Facades\Cache::remember('web:activeRoutes', now()->addMinutes(3), function () {
             try {
                 return \App\Models\FerryRoute::query()
                     ->active()
@@ -246,7 +246,7 @@ Route::get('/schedules', function (\Illuminate\Http\Request $request) {
     $startDate = $request->query('start_date', \Carbon\Carbon::today()->format('Y-m-d'));
     $endDate = $request->query('end_date', \Carbon\Carbon::today()->addDays(6)->format('Y-m-d'));
 
-    $routes = \Illuminate\Support\Facades\Cache::remember('web:schedules:' . $startDate . ':' . $endDate, now()->addMinutes(5), function () use ($startDate, $endDate) {
+    $routes = \Illuminate\Support\Facades\Cache::remember('web:schedules:' . $startDate . ':' . $endDate, now()->addMinutes(3), function () use ($startDate, $endDate) {
         $routesData = App\Models\FerryRoute::with([
             'vehicle',
             'schedules' => function ($query) use ($startDate, $endDate) {

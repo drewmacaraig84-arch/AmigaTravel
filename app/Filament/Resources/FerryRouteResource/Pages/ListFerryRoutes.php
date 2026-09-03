@@ -86,6 +86,7 @@ class ListFerryRoutes extends ListRecords
                                 ->success()
                                 ->send();
                         }
+                        \App\Models\Schedule::bust();
                     } catch (\Throwable $e) {
                         Notification::make()
                             ->title('Import Processing Error')

@@ -174,6 +174,9 @@ class ScheduleCsvImportService
             }
         }
 
+        // Bust all schedule and route caches so client website/app sees imported schedules immediately
+        Schedule::bust();
+
         return [
             'imported' => $importedCount,
             'skipped' => $skippedCount,
