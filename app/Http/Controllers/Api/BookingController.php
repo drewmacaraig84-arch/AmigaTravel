@@ -189,6 +189,18 @@ class BookingController extends Controller
             $data['sla_voucher_note'] = $booking->getSlaVoucherNote(null, true);
             $data['refund_status'] = $booking->refund_status ?? ($booking->isRefundPending() ? 'pending' : null);
             $data['refund_message'] = $booking->getRefundMessage();
+            $data['rejection_reason'] = $booking->rejection_reason;
+            $data['rejection_notes'] = $booking->rejection_notes;
+            $data['rejected_at'] = $booking->rejected_at?->toIso8601String();
+            $data['rebooking_rejection_reason'] = $booking->rebooking_rejection_reason;
+            $data['rebooking_rejection_notes'] = $booking->rebooking_rejection_notes;
+            $data['rebooking_rejected_at'] = $booking->rebooking_rejected_at?->toIso8601String();
+            $data['rejection_message'] = $booking->status === 'rejected'
+                ? ($booking->rejection_reason ? "Payment verification unsuccessful: {$booking->rejection_reason}." : 'Payment verification could not be completed.')
+                : null;
+            $data['rebooking_rejection_message'] = $booking->rebooking_status === 'rejected'
+                ? ($booking->rebooking_rejection_reason ? "Rebooking request was not approved: {$booking->rebooking_rejection_reason}. Your original booking remains active." : 'Rebooking request was not approved. Your original booking remains active.')
+                : null;
             $data['refund_id_image_url'] = filled($booking->refund_id_image) ? storage_asset_path($booking->refund_id_image) : null;
             $data['refund_ticket_file_url'] = filled($booking->refund_ticket_file) ? storage_asset_path($booking->refund_ticket_file) : null;
             $data['refund_auth_letter_url'] = filled($booking->refund_auth_letter) ? storage_asset_path($booking->refund_auth_letter) : null;
@@ -334,6 +346,18 @@ class BookingController extends Controller
         $data['sla_voucher_note'] = $booking->getSlaVoucherNote(null, true);
         $data['refund_status'] = $booking->refund_status ?? ($booking->isRefundPending() ? 'pending' : null);
         $data['refund_message'] = $booking->getRefundMessage();
+        $data['rejection_reason'] = $booking->rejection_reason;
+        $data['rejection_notes'] = $booking->rejection_notes;
+        $data['rejected_at'] = $booking->rejected_at?->toIso8601String();
+        $data['rebooking_rejection_reason'] = $booking->rebooking_rejection_reason;
+        $data['rebooking_rejection_notes'] = $booking->rebooking_rejection_notes;
+        $data['rebooking_rejected_at'] = $booking->rebooking_rejected_at?->toIso8601String();
+        $data['rejection_message'] = $booking->status === 'rejected'
+            ? ($booking->rejection_reason ? "Payment verification unsuccessful: {$booking->rejection_reason}." : 'Payment verification could not be completed.')
+            : null;
+        $data['rebooking_rejection_message'] = $booking->rebooking_status === 'rejected'
+            ? ($booking->rebooking_rejection_reason ? "Rebooking request was not approved: {$booking->rebooking_rejection_reason}. Your original booking remains active." : 'Rebooking request was not approved. Your original booking remains active.')
+            : null;
         $data['refund_reference'] = $booking->refund_reference;
         $data['refund_proof_url'] = filled($booking->refund_proof) ? storage_asset_path($booking->refund_proof) : null;
         $data['refund_acknowledgement_url'] = (in_array($booking->status, ['cancelled', 'operator_cancelled']) && (float) $booking->refund_amount > 0)

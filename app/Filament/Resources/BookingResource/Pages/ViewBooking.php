@@ -995,6 +995,63 @@ class ViewBooking extends ViewRecord
                 ->color('success')
                 ->visible(fn (): bool => $this->record->status === 'pending'),
 
+            Actions\Action::make('rejectBooking')
+                ->label('Reject Booking')
+                ->icon('heroicon-m-x-circle')
+                ->color('danger')
+                ->visible(fn (): bool => $this->record->status === 'pending')
+                ->disabled(fn (): bool => ! $this->record->transaction
+                    || $this->record->transaction->payment_status === 'unpaid'
+                    || $this->record->isVerificationLocked()
+                    || $this->record->isReviewClaimedByOther(Auth::user()))
+                ->tooltip(fn (): ?string => match (true) {
+                    $this->record->isReviewClaimedByOther(Auth::user()) => $this->record->getReviewClaimTooltip(Auth::user()),
+                    ! $this->record->transaction => 'No payment transaction found for this booking.',
+                    $this->record->transaction->payment_status === 'unpaid' => 'Cannot reject: Payment status is Unpaid.',
+                    default => $this->record->verificationTimerTooltip(),
+                })
+                ->form([
+                    Forms\Components\Radio::make('rejection_reason')
+                        ->label('Reason for Rejection')
+                        ->options(array_combine(Booking::REJECTION_REASONS, Booking::REJECTION_REASONS))
+                        ->required()
+                        ->live()
+                        ->columns(1),
+                    Forms\Components\Textarea::make('rejection_notes')
+                        ->label('Additional Notes / Specified Reason')
+                        ->placeholder('Please provide specific details here...')
+                        ->rows(3)
+                        ->maxLength(1000)
+                        ->helperText('Required when selecting "Other — please specify reason". Optional otherwise.')
+                        ->required(fn (Forms\Get $get): bool => $get('rejection_reason') === 'Other — please specify reason')
+                        ->visible(fn (Forms\Get $get): bool => filled($get('rejection_reason'))),
+                ])
+                ->modalHeading('Reject Booking Payment')
+                ->modalDescription('Please select the reason for rejecting this booking\'s payment. The client will be notified by email with a polite explanation and guidance on next steps.')
+                ->modalSubmitActionLabel('Reject & Notify Client')
+                ->modalWidth('lg')
+                ->action(function (array $data): void {
+                    $booking = $this->record;
+                    $reason  = $data['rejection_reason'];
+                    $notes   = filled($data['rejection_notes'] ?? '') ? trim($data['rejection_notes']) : null;
+
+                    // If "Other", use the notes as the displayed reason
+                    if ($reason === 'Other — please specify reason' && $notes) {
+                        $reason = 'Other: ' . $notes;
+                        $notes  = null;
+                    }
+
+                    $booking->rejectBooking($reason, $notes, Auth::user());
+
+                    Notification::make()
+                        ->title('Booking Rejected')
+                        ->body("Booking #{$booking->transaction_number} has been rejected. The client has been notified by email.")
+                        ->danger()
+                        ->send();
+
+                    $this->redirect(BookingResource::getUrl('index'));
+                }),
+
             Actions\Action::make('releaseReview')
                 ->label('Release Claim')
                 ->icon('heroicon-m-lock-open')

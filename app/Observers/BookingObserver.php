@@ -26,12 +26,12 @@ class BookingObserver
             $newStatus = $booking->status;
             $oldStatus = $booking->getOriginal('status');
 
-            $cancelledStatuses = [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED];
+            $cancelledStatuses = [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED, Booking::STATUS_REJECTED];
 
             $becomingCancelled = in_array($newStatus, $cancelledStatuses, true);
             $wasAlreadyCancelled = in_array($oldStatus, $cancelledStatuses, true);
 
-            // --- RESTORE tickets when a booking is cancelled ---
+            // --- RESTORE tickets when a booking is cancelled or rejected ---
             if ($becomingCancelled && ! $wasAlreadyCancelled) {
                 $this->restoreTickets($booking);
             }
@@ -45,14 +45,15 @@ class BookingObserver
             $user = User::where('email', $booking->client_email)->first();
             if ($user) {
                 if ($newStatus === Booking::STATUS_CONFIRMED && $oldStatus !== Booking::STATUS_CONFIRMED) {
-                    if ($booking->is_rebooked || in_array($booking->rebooking_status, ['verified', 'approved'], true) || $oldStatus === Booking::STATUS_PENDING_REBOOKING) {
+                    if ($booking->rebooking_status === 'rejected') {
+                        // Reverted from pending_rebooking to confirmed due to rebooking rejection — do not award points or notify confirmed
+                    } elseif ($booking->is_rebooked || in_array($booking->rebooking_status, ['verified', 'approved'], true) || $oldStatus === Booking::STATUS_PENDING_REBOOKING) {
                         UserNotification::notify($user->id, "Rebooking Confirmed", "Your rebooking for {$booking->transaction_number} is confirmed! You can now view and download your updated tickets.", 'rebooking', 'check_circle', ['transaction_number' => $booking->transaction_number]);
+                        app(\App\Services\GraciaPointsService::class)->awardPointsForBooking($booking);
                     } else {
                         UserNotification::notify($user->id, "Booking Confirmed", "Your booking {$booking->transaction_number} is confirmed! You can now view and download your tickets.", 'booking', 'check_circle', ['transaction_number' => $booking->transaction_number]);
+                        app(\App\Services\GraciaPointsService::class)->awardPointsForBooking($booking);
                     }
-                    
-                    // Award Gracia Points on confirmation
-                    app(\App\Services\GraciaPointsService::class)->awardPointsForBooking($booking);
                 } elseif ($newStatus === Booking::STATUS_CANCELLED && $oldStatus !== Booking::STATUS_CANCELLED) {
                     UserNotification::notify($user->id, "Booking Cancelled", "Your booking {$booking->transaction_number} was automatically cancelled.", 'booking', 'cancel', ['transaction_number' => $booking->transaction_number]);
                 } elseif ($newStatus === Booking::STATUS_OPERATOR_CANCELLED && $oldStatus !== Booking::STATUS_OPERATOR_CANCELLED) {
@@ -64,11 +65,13 @@ class BookingObserver
         if ($booking->wasChanged('rebooking_status')) {
             $newRebookingStatus = $booking->rebooking_status;
             $user = User::where('email', $booking->client_email)->first();
-            if ($user && in_array($newRebookingStatus, ['rejected', 'declined'])) {
+            // Note: Booking::rejectRebooking() sends its own detailed notification with reason.
+            // Only notify here for other decline statuses if needed.
+            if ($user && in_array($newRebookingStatus, ['declined'], true)) {
                 UserNotification::notify(
                     $user->id,
-                    "Rebooking Rejected",
-                    "Your rebooking request for {$booking->transaction_number} has been rejected.",
+                    "Rebooking Declined",
+                    "Your rebooking request for {$booking->transaction_number} has been declined.",
                     'rebooking',
                     'cancel'
                 );

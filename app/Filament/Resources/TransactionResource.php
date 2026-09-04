@@ -169,7 +169,7 @@ class TransactionResource extends Resource
                                 $state === 'pending' => 'warning',
                                 $state === 'confirmed' => 'success',
                                 in_array($state, ['cancelled', 'operator_cancelled']) && $record->booking && $record->booking->refund_amount > 0 => 'info',
-                                in_array($state, ['cancelled', 'operator_cancelled']) => 'danger',
+                                in_array($state, ['cancelled', 'operator_cancelled', 'rejected']) => 'danger',
                                 default => 'secondary',
                             }),
                         TextEntry::make('booking.client_name')
@@ -394,7 +394,7 @@ class TransactionResource extends Resource
                         $state === 'paid' => 'success',
                         $state === 'pending' => 'warning',
                         $state === 'cancelled' && $record->booking && $record->booking->refund_amount > 0 => 'info',
-                        $state === 'cancelled' => 'danger',
+                        in_array($state, ['cancelled', 'rejected']) => 'danger',
                         default => 'gray',
                     })
                     ->sortable(),
@@ -422,7 +422,7 @@ class TransactionResource extends Resource
                         $state === 'pending' => 'warning',
                         $state === 'confirmed' => 'success',
                         in_array($state, ['cancelled', 'operator_cancelled']) && $record->booking && $record->booking->refund_amount > 0 => 'info',
-                        in_array($state, ['cancelled', 'operator_cancelled']) => 'danger',
+                        in_array($state, ['cancelled', 'operator_cancelled', 'rejected']) => 'danger',
                         default => 'secondary',
                     }),
                 TextColumn::make('verification_timer')
@@ -455,6 +455,7 @@ class TransactionResource extends Resource
                         'pending' => 'Pending',
                         'paid' => 'Paid',
                         'cancelled' => 'Cancelled',
+                        'rejected' => 'Rejected',
                     ]),
             ])
             ->actions([
@@ -590,6 +591,67 @@ class TransactionResource extends Resource
                     ->requiresConfirmation()
                     ->color('success')
                     ->visible(fn (Transaction $record): bool => $record->payment_status !== 'paid' && $record->booking?->status !== 'cancelled'),
+
+                Tables\Actions\Action::make('reject')
+                    ->label('Reject payment')
+                    ->icon('heroicon-m-x-circle')
+                    ->color('danger')
+                    ->visible(fn (Transaction $record): bool => $record->payment_status === 'pending' && ! in_array($record->booking?->status, ['cancelled', 'rejected']))
+                    ->disabled(fn (Transaction $record): bool => $record->payment_status === 'unpaid'
+                        || $record->isVerificationLocked()
+                        || ($record->booking && $record->booking->isReviewClaimedByOther(Auth::user())))
+                    ->tooltip(fn (Transaction $record): ?string => match (true) {
+                        $record->booking && $record->booking->isReviewClaimedByOther(Auth::user()) => $record->booking->getReviewClaimTooltip(Auth::user()),
+                        $record->payment_status === 'unpaid' => 'Cannot reject: Payment status is Unpaid.',
+                        default => $record->verificationTimerTooltip(),
+                    })
+                    ->form([
+                        \Filament\Forms\Components\Radio::make('rejection_reason')
+                            ->label('Reason for Rejection')
+                            ->options(array_combine(Booking::REJECTION_REASONS, Booking::REJECTION_REASONS))
+                            ->required()
+                            ->live()
+                            ->columns(1),
+                        \Filament\Forms\Components\Textarea::make('rejection_notes')
+                            ->label('Additional Notes / Specified Reason')
+                            ->placeholder('Please provide specific details here...')
+                            ->rows(3)
+                            ->maxLength(1000)
+                            ->helperText('Required when selecting "Other — please specify reason". Optional otherwise.')
+                            ->required(fn (\Filament\Forms\Get $get): bool => $get('rejection_reason') === 'Other — please specify reason')
+                            ->visible(fn (\Filament\Forms\Get $get): bool => filled($get('rejection_reason'))),
+                    ])
+                    ->modalHeading('Reject Payment Verification')
+                    ->modalDescription('Please select the reason for rejecting this payment. The client will be notified by email with a polite explanation and guidance on next steps.')
+                    ->modalSubmitActionLabel('Reject & Notify Client')
+                    ->modalWidth('lg')
+                    ->action(function (Transaction $record, array $data): void {
+                        $reason = $data['rejection_reason'];
+                        $notes  = filled($data['rejection_notes'] ?? '') ? trim($data['rejection_notes']) : null;
+
+                        if ($reason === 'Other — please specify reason' && $notes) {
+                            $reason = 'Other: ' . $notes;
+                            $notes  = null;
+                        }
+
+                        $booking = $record->booking;
+
+                        if ($booking) {
+                            if ($booking->rebooking_status === 'pending') {
+                                $booking->rejectRebooking($reason, $notes, Auth::user());
+                            } else {
+                                $booking->rejectBooking($reason, $notes, Auth::user());
+                            }
+                        } else {
+                            $record->update(['payment_status' => 'rejected']);
+                        }
+
+                        Notification::make()
+                            ->title('Payment Rejected')
+                            ->body('Payment has been rejected and the client has been notified.')
+                            ->danger()
+                            ->send();
+                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

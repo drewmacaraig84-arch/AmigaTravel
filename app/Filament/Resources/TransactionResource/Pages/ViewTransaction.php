@@ -144,6 +144,70 @@ class ViewTransaction extends ViewRecord
                 ->requiresConfirmation()
                 ->color('success')
                 ->visible(fn (): bool => $this->record->payment_status === 'pending' && $this->record->booking?->status !== 'cancelled'),
+
+            Actions\Action::make('reject')
+                ->label('Reject Payment')
+                ->icon('heroicon-m-x-circle')
+                ->color('danger')
+                ->visible(fn (): bool => $this->record->payment_status === 'pending' && ! in_array($this->record->booking?->status, ['cancelled', 'rejected']))
+                ->disabled(fn (): bool => $this->record->payment_status === 'unpaid'
+                    || $this->record->isVerificationLocked()
+                    || ($this->record->booking && $this->record->booking->isReviewClaimedByOther(Auth::user())))
+                ->tooltip(fn (): ?string => match (true) {
+                    $this->record->booking && $this->record->booking->isReviewClaimedByOther(Auth::user()) => $this->record->booking->getReviewClaimTooltip(Auth::user()),
+                    $this->record->payment_status === 'unpaid' => 'Cannot reject: Payment status is Unpaid.',
+                    default => $this->record->verificationTimerTooltip(),
+                })
+                ->form([
+                    \Filament\Forms\Components\Radio::make('rejection_reason')
+                        ->label('Reason for Rejection')
+                        ->options(array_combine(Booking::REJECTION_REASONS, Booking::REJECTION_REASONS))
+                        ->required()
+                        ->live()
+                        ->columns(1),
+                    \Filament\Forms\Components\Textarea::make('rejection_notes')
+                        ->label('Additional Notes / Specified Reason')
+                        ->placeholder('Please provide specific details here...')
+                        ->rows(3)
+                        ->maxLength(1000)
+                        ->helperText('Required when selecting "Other — please specify reason". Optional otherwise.')
+                        ->required(fn (\Filament\Forms\Get $get): bool => $get('rejection_reason') === 'Other — please specify reason')
+                        ->visible(fn (\Filament\Forms\Get $get): bool => filled($get('rejection_reason'))),
+                ])
+                ->modalHeading('Reject Payment Verification')
+                ->modalDescription('Please select the reason for rejecting this payment. The client will be notified by email with a polite explanation and guidance on next steps.')
+                ->modalSubmitActionLabel('Reject & Notify Client')
+                ->modalWidth('lg')
+                ->action(function (array $data): void {
+                    $record = $this->record;
+                    $reason = $data['rejection_reason'];
+                    $notes  = filled($data['rejection_notes'] ?? '') ? trim($data['rejection_notes']) : null;
+
+                    if ($reason === 'Other — please specify reason' && $notes) {
+                        $reason = 'Other: ' . $notes;
+                        $notes  = null;
+                    }
+
+                    $booking = $record->booking;
+
+                    if ($booking) {
+                        if ($booking->rebooking_status === 'pending') {
+                            $booking->rejectRebooking($reason, $notes, Auth::user());
+                        } else {
+                            $booking->rejectBooking($reason, $notes, Auth::user());
+                        }
+                    } else {
+                        $record->update(['payment_status' => 'rejected']);
+                    }
+
+                    Notification::make()
+                        ->title('Payment Rejected')
+                        ->body('Payment has been rejected and the client has been notified.')
+                        ->danger()
+                        ->send();
+
+                    $this->redirect(TransactionResource::getUrl('index'));
+                }),
             Actions\DeleteAction::make(),
         ];
     }

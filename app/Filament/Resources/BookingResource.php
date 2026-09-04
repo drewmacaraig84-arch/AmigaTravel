@@ -153,7 +153,7 @@ class BookingResource extends Resource
                         'pending' => 'warning',
                         'confirmed' => 'success',
                         'operator_rebooking' => 'info',
-                        'cancelled', 'operator_cancelled' => 'danger',
+                        'cancelled', 'operator_cancelled', 'rejected' => 'danger',
                         default => 'secondary',
                     }),
                 Tables\Columns\TextColumn::make('transaction.payment_status')
@@ -163,7 +163,7 @@ class BookingResource extends Resource
                     ->color(fn (?string $state): string => match ($state) {
                         'paid' => 'success',
                         'pending' => 'warning',
-                        'cancelled' => 'danger',
+                        'cancelled', 'rejected' => 'danger',
                         default => 'gray',
                     })
                     ->placeholder('—'),
@@ -219,6 +219,7 @@ class BookingResource extends Resource
                         'operator_rebooking' => 'Operator Rebooking',
                         'operator_cancelled' => 'Cancelled by Operator',
                         'cancelled' => 'Cancelled',
+                        'rejected' => 'Rejected',
                     ]),
                 SelectFilter::make('transaction_payment_status')
                     ->label('Payment status')
@@ -227,6 +228,7 @@ class BookingResource extends Resource
                         'pending' => 'Pending verification',
                         'paid' => 'Paid',
                         'cancelled' => 'Cancelled',
+                        'rejected' => 'Rejected',
                     ])
                     ->query(function (Builder $query, array $data) {
                         if (blank($data['value'] ?? null)) {

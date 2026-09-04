@@ -6223,7 +6223,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
               if (status == 'confirmed' || status == 'paid') {
                 statusColor = kGreen;
               }
-              if (status == 'cancelled' || status == 'operator_cancelled') {
+              if (status == 'cancelled' || status == 'operator_cancelled' || status == 'rejected') {
                 statusColor = isResumed ? kGreen : Colors.red;
               }
 
@@ -7121,8 +7121,167 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             'Request pending verification',
             'New dates and ticket will appear after admin approval.'
           ]),
+        if (_booking['status'] == 'rejected') ...[
+          Card(
+            color: const Color(0xFFFFF1F2),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: Color(0xFFFECDD3)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.cancel_outlined, color: Color(0xFFBE123C), size: 22),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Payment Verification Unsuccessful',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: Color(0xFF9F1239),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'We were unable to verify your payment proof for this booking.',
+                    style: TextStyle(fontSize: 13, color: kSlate700),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFFECDD3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Reason: ${_booking['rejection_reason'] ?? 'Invalid or unverified payment proof'}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: Color(0xFF9F1239),
+                          ),
+                        ),
+                        if (_booking['rejection_notes'] != null && _booking['rejection_notes'].toString().trim().isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            'Note: ${_booking['rejection_notes']}',
+                            style: const TextStyle(fontSize: 12, color: kSlate600),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'If you have questions or wish to submit updated payment details, please reach out to customer support with your transaction number.',
+                    style: TextStyle(fontSize: 12, color: kSlate600),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+        if (_booking['rebooking_status'] == 'rejected') ...[
+          Card(
+            color: const Color(0xFFFFFBEB),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: Color(0xFFFDE68A)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Color(0xFFD97706), size: 22),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Rebooking Request Not Approved',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: Color(0xFF92400E),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFFDE68A)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Reason: ${_booking['rebooking_rejection_reason'] ?? 'Payment could not be verified'}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: Color(0xFF92400E),
+                          ),
+                        ),
+                        if (_booking['rebooking_rejection_notes'] != null && _booking['rebooking_rejection_notes'].toString().trim().isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            'Note: ${_booking['rebooking_rejection_notes']}',
+                            style: const TextStyle(fontSize: 12, color: kSlate600),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFECFDF5),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFA7F3D0)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.check_circle, color: Color(0xFF059669), size: 18),
+                        SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Your original booking remains confirmed and active.',
+                            style: TextStyle(fontSize: 12, color: Color(0xFF065F46), fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
         if (_booking['status'] != 'cancelled' &&
-            _booking['status'] != 'operator_cancelled') ...[
+            _booking['status'] != 'operator_cancelled' &&
+            _booking['status'] != 'rejected') ...[
           if (_paymentStatus == 'paid') ...[
             if (_booking['confirmation_url'] != null && _booking['confirmation_url'].toString().trim().isNotEmpty)
               FilledButton.icon(
@@ -7529,6 +7688,9 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         statusTitle = 'REFUND PROCESSING (24–48 HRS)';
         bg = const Color(0xFFD97706);
       }
+    } else if (status == 'rejected') {
+      statusTitle = 'PAYMENT REJECTED';
+      bg = Colors.red.shade700;
     } else if (status == 'cancelled') {
       statusTitle = 'CANCELLED';
       bg = Colors.red.shade700;
@@ -12566,6 +12728,7 @@ class _PassengerItemsCardState extends State<_PassengerItemsCard> {
         status == 'rebooking_pending' ||
         status == 'rebooked' ||
         status == 'cancelled' ||
+        status == 'rejected' ||
         status == 'operator_cancelled';
   }
 
@@ -12597,6 +12760,7 @@ class _PassengerItemsCardState extends State<_PassengerItemsCard> {
     return switch (status) {
       'confirmed'          => const Color(0xFFDCFCE7),
       'cancelled'          => const Color(0xFFFEE2E2),
+      'rejected'           => const Color(0xFFFEE2E2),
       'operator_cancelled' => const Color(0xFFFEE2E2),
       'refund_pending'     => const Color(0xFFFFEDD5),
       'refunded'           => const Color(0xFFDBEAFE),
@@ -12611,6 +12775,7 @@ class _PassengerItemsCardState extends State<_PassengerItemsCard> {
     return switch (status) {
       'confirmed'          => const Color(0xFF166534),
       'cancelled'          => const Color(0xFF991B1B),
+      'rejected'           => const Color(0xFF991B1B),
       'operator_cancelled' => const Color(0xFF991B1B),
       'refund_pending'     => const Color(0xFF9A3412),
       'refunded'           => const Color(0xFF1E40AF),
@@ -12625,6 +12790,7 @@ class _PassengerItemsCardState extends State<_PassengerItemsCard> {
     return switch (status) {
       'confirmed'          => 'Confirmed',
       'cancelled'          => 'Cancelled',
+      'rejected'           => 'Rejected',
       'operator_cancelled' => 'Cancelled by Operator',
       'refund_pending'     => 'Refund Pending',
       'refunded'           => 'Refunded',
@@ -15884,7 +16050,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   void _handleNotificationTap(Map<String, dynamic> notif) async {
     final String type = (notif['type'] ?? 'general').toString().toLowerCase();
-    final String targetId = (notif['target_id'] ?? notif['transaction_number'] ?? '').toString().trim();
+    final extraData = notif['data'] is Map ? notif['data'] : null;
+    final String targetId = (notif['target_id'] ?? extraData?['transaction_number'] ?? notif['transaction_number'] ?? '').toString().trim();
 
     // Mark as read immediately when tapped
     if (notif['is_read'] != true && notif['is_read'] != 1) {
@@ -15892,6 +16059,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
 
     if (type == 'booking' ||
+        type == 'rebooking' ||
         type == 'payment' ||
         type == 'service_cancellation' ||
         type == 'service_resumption' ||
