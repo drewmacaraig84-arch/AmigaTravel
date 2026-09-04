@@ -76,6 +76,8 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
                     $matches = true;
                 } elseif ($this->title === 'Cancelled Bookings' && in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount <= 0 && ! $isPendingRefund) {
                     $matches = true;
+                } elseif ($this->title === 'Rejected Bookings' && $booking->status === Booking::STATUS_REJECTED) {
+                    $matches = true;
                 }
 
                 if (! $matches) {
@@ -148,6 +150,8 @@ class BookingsSheet implements FromCollection, WithTitle, WithHeadings, WithMapp
                         $matches = ($p->status === 'pending' && ! $p->isRebooked() && ! $p->isRefundItem()) || $p->isRebookingPending();
                     } elseif ($this->title === 'Cancelled Bookings') {
                         $matches = $p->isCancelled() && (float) $p->refund_amount <= 0 && ! $p->isRefundPending() && $p->refund_status !== 'pending';
+                    } elseif ($this->title === 'Rejected Bookings') {
+                        $matches = $p->status === 'rejected' || $booking->status === Booking::STATUS_REJECTED;
                     }
 
                     if (! $matches) {

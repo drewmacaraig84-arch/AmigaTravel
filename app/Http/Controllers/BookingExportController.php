@@ -101,6 +101,10 @@ class BookingExportController extends Controller
                 && ($booking->passengers->isEmpty() || $booking->passengers->every(fn($p) => $p->isCancelled() && (float)$p->refund_amount <= 0));
         });
 
+        $rejectedBookings = $bookings->filter(function ($booking) {
+            return $booking->status === Booking::STATUS_REJECTED;
+        });
+
         return [
             'Verified Bookings'       => $verifiedBookings,
             'Rebooked Bookings'       => $rebookedBookings,
@@ -108,6 +112,7 @@ class BookingExportController extends Controller
             'Pending Refund Bookings' => $pendingRefundBookings,
             'Pending Bookings'        => $pendingBookings,
             'Cancelled Bookings'      => $cancelledBookings,
+            'Rejected Bookings'       => $rejectedBookings,
         ];
     }
 

@@ -28,9 +28,9 @@
                         background: 'transparent',
                         animations: { enabled: true, easing: 'easeinout', speed: 600 },
                     },
-                    series: data.series || [0, 0, 0],
-                    labels: data.labels || ['Confirmed', 'Pending', 'Cancelled'],
-                    colors: ['#10b981', '#f59e0b', '#ef4444'],
+                    series: data.series || [0, 0, 0, 0],
+                    labels: data.labels || ['Confirmed', 'Pending', 'Cancelled', 'Rejected'],
+                    colors: ['#10b981', '#f59e0b', '#64748b', '#e11d48'],
                     plotOptions: {
                         pie: {
                             donut: {
