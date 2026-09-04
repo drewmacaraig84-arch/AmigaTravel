@@ -12,7 +12,6 @@ use App\Models\VehicleRate;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Throwable;
 use ZipArchive;
 
@@ -99,6 +98,22 @@ class StarliteScheduleIngestionService
                 '4 to 4.9 meters (Regular Car / SUV)' => 17100,
             ],
         ],
+        'Batangas|Roxas City, Capiz' => [
+            'base_price' => 2580,
+            'accommodations' => [
+                ['name' => 'Reclining Seat', 'price' => 2580, 'has_bed' => false, 'tickets' => 80],
+                ['name' => 'Economy Bed Bunk', 'price' => 2580, 'has_bed' => true, 'tickets' => 150],
+                ['name' => 'Tourist Bed Bunk', 'price' => 3200, 'has_bed' => true, 'tickets' => 100],
+                ['name' => 'Cabin', 'price' => 3820, 'has_bed' => true, 'tickets' => 40],
+                ['name' => 'VIP Room (2-3 pax)', 'price' => 11500, 'has_bed' => true, 'tickets' => 4],
+            ],
+            'vehicle_rates' => [
+                'Motorcycle' => 8010,
+                'Below 3 meters' => 8010,
+                '3 to 3.9 meters (Small Car)' => 15300,
+                '4 to 4.9 meters (Regular Car / SUV)' => 17100,
+            ],
+        ],
         'Cebu|Surigao' => [
             'base_price' => 1550,
             'accommodations' => [
@@ -113,22 +128,6 @@ class StarliteScheduleIngestionService
                 'Below 3 meters' => 5380,
                 '3 to 3.9 meters (Small Car)' => 10140,
                 '4 to 4.9 meters (Regular Car / SUV)' => 12310,
-            ],
-        ],
-        'Cebu|Nasipit' => [
-            'base_price' => 1520,
-            'accommodations' => [
-                ['name' => 'Reclining Seat', 'price' => 1520, 'has_bed' => false, 'tickets' => 80],
-                ['name' => 'Economy Bed Bunk', 'price' => 1700, 'has_bed' => true, 'tickets' => 120],
-                ['name' => 'Tourist Bed Bunk', 'price' => 2070, 'has_bed' => true, 'tickets' => 80],
-                ['name' => 'Cabin', 'price' => 2580, 'has_bed' => true, 'tickets' => 30],
-                ['name' => 'VIP Room (2-3 pax)', 'price' => 8200, 'has_bed' => true, 'tickets' => 4],
-            ],
-            'vehicle_rates' => [
-                'Motorcycle' => 4030,
-                'Below 3 meters' => 6720,
-                '3 to 3.9 meters (Small Car)' => 12210,
-                '4 to 4.9 meters (Regular Car / SUV)' => 14900,
             ],
         ],
         'Cebu|Dapitan' => [
@@ -147,6 +146,70 @@ class StarliteScheduleIngestionService
                 '4 to 4.9 meters (Regular Car / SUV)' => 9000,
             ],
         ],
+        'Batangas|Sibuyan (Magdiwang)' => [
+            'base_price' => 1240,
+            'accommodations' => [
+                ['name' => 'Reclining Seat', 'price' => 1240, 'has_bed' => false, 'tickets' => 80],
+                ['name' => 'Economy Bed Bunk', 'price' => 1240, 'has_bed' => true, 'tickets' => 120],
+                ['name' => 'Tourist Bed Bunk', 'price' => 1860, 'has_bed' => true, 'tickets' => 80],
+                ['name' => 'Cabin', 'price' => 3200, 'has_bed' => true, 'tickets' => 30],
+                ['name' => 'VIP Room (2-3 pax)', 'price' => 9600, 'has_bed' => true, 'tickets' => 4],
+            ],
+            'vehicle_rates' => [
+                'Motorcycle' => 5900,
+                'Below 3 meters' => 9730,
+                '3 to 3.9 meters (Small Car)' => 15620,
+                '4 to 4.9 meters (Regular Car / SUV)' => 15620,
+            ],
+        ],
+        'Batangas|Sibuyan (Magdiwang), Romblon' => [
+            'base_price' => 1240,
+            'accommodations' => [
+                ['name' => 'Reclining Seat', 'price' => 1240, 'has_bed' => false, 'tickets' => 80],
+                ['name' => 'Economy Bed Bunk', 'price' => 1240, 'has_bed' => true, 'tickets' => 120],
+                ['name' => 'Tourist Bed Bunk', 'price' => 1860, 'has_bed' => true, 'tickets' => 80],
+                ['name' => 'Cabin', 'price' => 3200, 'has_bed' => true, 'tickets' => 30],
+                ['name' => 'VIP Room (2-3 pax)', 'price' => 9600, 'has_bed' => true, 'tickets' => 4],
+            ],
+            'vehicle_rates' => [
+                'Motorcycle' => 5900,
+                'Below 3 meters' => 9730,
+                '3 to 3.9 meters (Small Car)' => 15620,
+                '4 to 4.9 meters (Regular Car / SUV)' => 15620,
+            ],
+        ],
+        'Batangas|Cajidiocan' => [
+            'base_price' => 1550,
+            'accommodations' => [
+                ['name' => 'Reclining Seat', 'price' => 1550, 'has_bed' => false, 'tickets' => 60],
+                ['name' => 'Economy Bed Bunk', 'price' => 1550, 'has_bed' => true, 'tickets' => 80],
+                ['name' => 'Tourist Bed Bunk', 'price' => 2170, 'has_bed' => true, 'tickets' => 60],
+                ['name' => 'Cabin', 'price' => 3410, 'has_bed' => true, 'tickets' => 20],
+                ['name' => 'VIP Room (2-3 pax)', 'price' => 9900, 'has_bed' => true, 'tickets' => 4],
+            ],
+            'vehicle_rates' => [
+                'Motorcycle' => 5900,
+                'Below 3 meters' => 9730,
+                '3 to 3.9 meters (Small Car)' => 15620,
+                '4 to 4.9 meters (Regular Car / SUV)' => 15620,
+            ],
+        ],
+        'Batangas|Cajidiocan, Romblon' => [
+            'base_price' => 1550,
+            'accommodations' => [
+                ['name' => 'Reclining Seat', 'price' => 1550, 'has_bed' => false, 'tickets' => 60],
+                ['name' => 'Economy Bed Bunk', 'price' => 1550, 'has_bed' => true, 'tickets' => 80],
+                ['name' => 'Tourist Bed Bunk', 'price' => 2170, 'has_bed' => true, 'tickets' => 60],
+                ['name' => 'Cabin', 'price' => 3410, 'has_bed' => true, 'tickets' => 20],
+                ['name' => 'VIP Room (2-3 pax)', 'price' => 9900, 'has_bed' => true, 'tickets' => 4],
+            ],
+            'vehicle_rates' => [
+                'Motorcycle' => 5900,
+                'Below 3 meters' => 9730,
+                '3 to 3.9 meters (Small Car)' => 15620,
+                '4 to 4.9 meters (Regular Car / SUV)' => 15620,
+            ],
+        ],
         'Batangas|Romblon' => [
             'base_price' => 1240,
             'accommodations' => [
@@ -163,20 +226,20 @@ class StarliteScheduleIngestionService
                 '4 to 4.9 meters (Regular Car / SUV)' => 14590,
             ],
         ],
-        'Batangas|Sibuyan (Magdiwang)' => [
+        'Batangas|Romblon, Romblon' => [
             'base_price' => 1240,
             'accommodations' => [
                 ['name' => 'Reclining Seat', 'price' => 1240, 'has_bed' => false, 'tickets' => 80],
                 ['name' => 'Economy Bed Bunk', 'price' => 1240, 'has_bed' => true, 'tickets' => 120],
                 ['name' => 'Tourist Bed Bunk', 'price' => 1860, 'has_bed' => true, 'tickets' => 80],
-                ['name' => 'Cabin', 'price' => 3200, 'has_bed' => true, 'tickets' => 30],
-                ['name' => 'VIP Room (2-3 pax)', 'price' => 9600, 'has_bed' => true, 'tickets' => 4],
+                ['name' => 'Cabin', 'price' => 2790, 'has_bed' => true, 'tickets' => 30],
+                ['name' => 'VIP Room (2-3 pax)', 'price' => 8300, 'has_bed' => true, 'tickets' => 4],
             ],
             'vehicle_rates' => [
-                'Motorcycle' => 5900,
-                'Below 3 meters' => 9730,
-                '3 to 3.9 meters (Small Car)' => 15620,
-                '4 to 4.9 meters (Regular Car / SUV)' => 15620,
+                'Motorcycle' => 4860,
+                'Below 3 meters' => 8070,
+                '3 to 3.9 meters (Small Car)' => 14590,
+                '4 to 4.9 meters (Regular Car / SUV)' => 14590,
             ],
         ],
         'Romblon|Sibuyan (Magdiwang)' => [
@@ -226,16 +289,6 @@ class StarliteScheduleIngestionService
                 '4 to 4.9 meters (Regular Car / SUV)' => 10450,
             ],
         ],
-        'Odiongan|Caticlan' => [
-            'base_price' => 863,
-            'accommodations' => [
-                ['name' => 'Reclining Seat', 'price' => 863, 'has_bed' => false, 'tickets' => 60],
-                ['name' => 'Economy Bed Bunk', 'price' => 863, 'has_bed' => true, 'tickets' => 80],
-                ['name' => 'Tourist Bed Bunk', 'price' => 1035, 'has_bed' => true, 'tickets' => 60],
-                ['name' => 'Cabin', 'price' => 1725, 'has_bed' => true, 'tickets' => 20],
-                ['name' => 'VIP Room (2-3 pax)', 'price' => 4945, 'has_bed' => true, 'tickets' => 4],
-            ],
-        ],
         'Batangas|Cajidiocan' => [
             'base_price' => 1550,
             'accommodations' => [
@@ -268,30 +321,18 @@ class StarliteScheduleIngestionService
                 '4 to 4.9 meters (Regular Car / SUV)' => 7200,
             ],
         ],
-        'Batangas|Odiongan' => [
-            'base_price' => 1380,
-            'accommodations' => [
-                ['name' => 'Reclining Seat', 'price' => 1380, 'has_bed' => false, 'tickets' => 60],
-                ['name' => 'Economy Bed Bunk', 'price' => 1380, 'has_bed' => true, 'tickets' => 80],
-                ['name' => 'Tourist Bed Bunk', 'price' => 2070, 'has_bed' => true, 'tickets' => 60],
-                ['name' => 'Cabin', 'price' => 3105, 'has_bed' => true, 'tickets' => 20],
-                ['name' => 'VIP Room (2-3 pax)', 'price' => 9315, 'has_bed' => true, 'tickets' => 4],
-            ],
-        ],
-        'Roxas Mindoro|Odiongan' => [
-            'base_price' => 800,
-            'accommodations' => [
-                ['name' => 'Reclining Seat', 'price' => 800, 'has_bed' => false, 'tickets' => 60],
-                ['name' => 'Economy Bed Bunk', 'price' => 800, 'has_bed' => true, 'tickets' => 80],
-                ['name' => 'Tourist Bed Bunk', 'price' => 1000, 'has_bed' => true, 'tickets' => 60],
-            ],
-        ],
         'Romblon|Cajidiocan' => [
             'base_price' => 445,
             'accommodations' => [
                 ['name' => 'Reclining Seat', 'price' => 445, 'has_bed' => false, 'tickets' => 60],
                 ['name' => 'Economy Bed Bunk', 'price' => 445, 'has_bed' => true, 'tickets' => 80],
                 ['name' => 'Tourist Bed Bunk', 'price' => 600, 'has_bed' => true, 'tickets' => 60],
+            ],
+            'vehicle_rates' => [
+                'Motorcycle' => 720,
+                'Below 3 meters' => 1340,
+                '3 to 3.9 meters (Small Car)' => 3930,
+                '4 to 4.9 meters (Regular Car / SUV)' => 3930,
             ],
         ],
         'Cajidiocan|Roxas Capiz' => [
@@ -301,6 +342,12 @@ class StarliteScheduleIngestionService
                 ['name' => 'Economy Bed Bunk', 'price' => 1035, 'has_bed' => true, 'tickets' => 80],
                 ['name' => 'Tourist Bed Bunk', 'price' => 1135, 'has_bed' => true, 'tickets' => 60],
                 ['name' => 'Cabin', 'price' => 1550, 'has_bed' => true, 'tickets' => 20],
+            ],
+            'vehicle_rates' => [
+                'Motorcycle' => 3310,
+                'Below 3 meters' => 5480,
+                '3 to 3.9 meters (Small Car)' => 10140,
+                '4 to 4.9 meters (Regular Car / SUV)' => 10140,
             ],
         ],
         'Roxas Mindoro|Buruanga' => [
@@ -314,16 +361,16 @@ class StarliteScheduleIngestionService
     ];
 
     public function __construct(
-        protected LocationCodeResolver $locationResolver = new LocationCodeResolver(),
+        protected LocationCodeResolver $locationResolver = new LocationCodeResolver,
     ) {}
 
     /**
      * Ingest Starlite Ferries schedules and rates.
      * STRICTLY scoped to Starlite operator to prevent touching other operators.
      *
-     * @param string|null $excelFilePath Custom path to VESSEL ROUTE.xlsx (defaults to starlite_schedules dir)
-     * @param Carbon|null $startDate Horizon start date (defaults to today)
-     * @param Carbon|null $endDate Horizon end date (defaults to +60 days)
+     * @param  string|null  $excelFilePath  Custom path to VESSEL ROUTE.xlsx (defaults to starlite_schedules dir)
+     * @param  Carbon|null  $startDate  Horizon start date (defaults to today)
+     * @param  Carbon|null  $endDate  Horizon end date (defaults to +60 days)
      * @return array Summary of sync results
      */
     public function ingest(
@@ -641,26 +688,54 @@ class StarliteScheduleIngestionService
      */
     public function lookupFareMatrix(string $origin, string $destination): array
     {
-        $key1 = "{$origin}|{$destination}";
-        $key2 = "{$destination}|{$origin}";
+        $directPairs = [
+            "{$origin}|{$destination}",
+            "{$destination}|{$origin}",
+        ];
 
-        if (isset(self::STARLITE_FARE_MATRIX[$key1])) {
-            return self::STARLITE_FARE_MATRIX[$key1];
+        foreach ($directPairs as $key) {
+            if (isset(self::STARLITE_FARE_MATRIX[$key])) {
+                return self::STARLITE_FARE_MATRIX[$key];
+            }
         }
 
-        if (isset(self::STARLITE_FARE_MATRIX[$key2])) {
-            return self::STARLITE_FARE_MATRIX[$key2];
-        }
+        $origLower = strtolower($origin);
+        $destLower = strtolower($destination);
 
-        // Fuzzy match if exact pair not found
+        $targetHasSibuyan = str_contains($origLower, 'sibuyan') || str_contains($destLower, 'sibuyan') || str_contains($origLower, 'magdiwang') || str_contains($destLower, 'magdiwang');
+        $targetHasCajidiocan = str_contains($origLower, 'cajidiocan') || str_contains($destLower, 'cajidiocan');
+
+        $bestMatch = null;
+        $bestLength = 0;
+
         foreach (self::STARLITE_FARE_MATRIX as $pair => $config) {
             [$o, $d] = explode('|', $pair);
-            if (
-                (str_contains(strtolower($origin), strtolower($o)) && str_contains(strtolower($destination), strtolower($d))) ||
-                (str_contains(strtolower($origin), strtolower($d)) && str_contains(strtolower($destination), strtolower($o)))
-            ) {
-                return $config;
+            $oLower = strtolower($o);
+            $dLower = strtolower($d);
+
+            $matchForward = (str_contains($origLower, $oLower) && str_contains($destLower, $dLower));
+            $matchReverse = (str_contains($origLower, $dLower) && str_contains($destLower, $oLower));
+
+            if ($matchForward || $matchReverse) {
+                $pairHasSibuyan = str_contains($oLower, 'sibuyan') || str_contains($dLower, 'sibuyan') || str_contains($oLower, 'magdiwang') || str_contains($dLower, 'magdiwang');
+                if ($targetHasSibuyan && ! $pairHasSibuyan) {
+                    continue;
+                }
+
+                $pairHasCajidiocan = str_contains($oLower, 'cajidiocan') || str_contains($dLower, 'cajidiocan');
+                if ($targetHasCajidiocan && ! $pairHasCajidiocan) {
+                    continue;
+                }
+
+                if (strlen($pair) > $bestLength) {
+                    $bestMatch = $config;
+                    $bestLength = strlen($pair);
+                }
             }
+        }
+
+        if ($bestMatch) {
+            return $bestMatch;
         }
 
         return [
@@ -670,6 +745,84 @@ class StarliteScheduleIngestionService
                 ['name' => 'Tourist Bed Bunk', 'price' => 850, 'has_bed' => true, 'tickets' => 80],
             ],
         ];
+    }
+
+    /**
+     * Get route-specific vehicle rates for Starlite Ferries.
+     *
+     * @return array<string, float>|null
+     */
+    public static function getVehicleRatesForRoute(?string $origin, ?string $destination): ?array
+    {
+        if (blank($origin) || blank($destination)) {
+            return null;
+        }
+
+        $resolver = new LocationCodeResolver;
+        $normOrig = $resolver->resolve($origin, 'ferry');
+        $normDest = $resolver->resolve($destination, 'ferry');
+
+        $directPairs = [
+            "{$origin}|{$destination}",
+            "{$destination}|{$origin}",
+            "{$normOrig}|{$normDest}",
+            "{$normDest}|{$normOrig}",
+        ];
+
+        foreach ($directPairs as $key) {
+            if (isset(self::STARLITE_FARE_MATRIX[$key]['vehicle_rates'])) {
+                return self::STARLITE_FARE_MATRIX[$key]['vehicle_rates'];
+            }
+        }
+
+        $normOrigLower = strtolower($normOrig);
+        $normDestLower = strtolower($normDest);
+        $origLower = strtolower($origin);
+        $destLower = strtolower($destination);
+
+        $targetHasSibuyan = str_contains($normOrigLower, 'sibuyan') || str_contains($normDestLower, 'sibuyan') || str_contains($origLower, 'sibuyan') || str_contains($destLower, 'sibuyan') || str_contains($origLower, 'magdiwang') || str_contains($destLower, 'magdiwang');
+        $targetHasCajidiocan = str_contains($normOrigLower, 'cajidiocan') || str_contains($normDestLower, 'cajidiocan') || str_contains($origLower, 'cajidiocan') || str_contains($destLower, 'cajidiocan');
+
+        $bestMatch = null;
+        $bestLength = 0;
+
+        foreach (self::STARLITE_FARE_MATRIX as $pair => $config) {
+            if (! isset($config['vehicle_rates'])) {
+                continue;
+            }
+            [$o, $d] = explode('|', $pair);
+            $oLower = strtolower($o);
+            $dLower = strtolower($d);
+
+            $matchForward = (
+                (str_contains($normOrigLower, $oLower) || str_contains($origLower, $oLower)) &&
+                (str_contains($normDestLower, $dLower) || str_contains($destLower, $dLower))
+            );
+
+            $matchReverse = (
+                (str_contains($normOrigLower, $dLower) || str_contains($origLower, $dLower)) &&
+                (str_contains($normDestLower, $oLower) || str_contains($destLower, $oLower))
+            );
+
+            if ($matchForward || $matchReverse) {
+                $pairHasSibuyan = str_contains($oLower, 'sibuyan') || str_contains($dLower, 'sibuyan') || str_contains($oLower, 'magdiwang') || str_contains($dLower, 'magdiwang');
+                if ($targetHasSibuyan && ! $pairHasSibuyan) {
+                    continue;
+                }
+
+                $pairHasCajidiocan = str_contains($oLower, 'cajidiocan') || str_contains($dLower, 'cajidiocan');
+                if ($targetHasCajidiocan && ! $pairHasCajidiocan) {
+                    continue;
+                }
+
+                if (strlen($pair) > $bestLength) {
+                    $bestMatch = $config['vehicle_rates'];
+                    $bestLength = strlen($pair);
+                }
+            }
+        }
+
+        return $bestMatch;
     }
 
     /**
@@ -807,6 +960,7 @@ class StarliteScheduleIngestionService
             if (str_contains($origin, 'Dapitan') || str_contains($destination, 'Dapitan')) {
                 return 'SATURN';
             }
+
             return 'SATURN';
         }
 
@@ -817,6 +971,7 @@ class StarliteScheduleIngestionService
             if (str_contains($origin, 'Roxas') || str_contains($destination, 'Roxas')) {
                 return 'RESILIENCE';
             }
+
             return 'RELIANCE';
         }
 
@@ -870,7 +1025,7 @@ class StarliteScheduleIngestionService
         // Clean up notations like (LCT), (ROPAX), AND, /
         $clean = preg_replace('/\([^)]+\)/', '', $clean);
         $clean = str_replace([' AND ', ' and ', '/', ';', ':10:30PM'], [',', ',', ',', ',', ',10:30PM'], $clean);
-        
+
         $chunks = explode(',', $clean);
         foreach ($chunks as $chunk) {
             $chunk = trim($chunk);
@@ -881,10 +1036,12 @@ class StarliteScheduleIngestionService
             // Match times like "12:30AM", "7:30 AM", "1:00PM", "2AM", "6PM", "12NN", "9PM"
             if ($chunk === '12NN' || $chunk === '12 NOON' || $chunk === '12:00NN') {
                 $times[] = '12:00';
+
                 continue;
             }
             if ($chunk === '12MN' || $chunk === '12 MIDNIGHT') {
                 $times[] = '00:00';
+
                 continue;
             }
 
@@ -921,6 +1078,7 @@ class StarliteScheduleIngestionService
         if (preg_match('/([0-9]+)\s*(?:&|AND)?\s*([0-9]+)?\s*MIN/i', $clean, $m)) {
             $hours = (int) $m[1];
             $mins = isset($m[2]) ? (int) $m[2] : 0;
+
             return ($hours * 60) + $mins;
         }
 
@@ -985,7 +1143,7 @@ class StarliteScheduleIngestionService
      */
     protected function parseXlsxRows(string $filePath): array
     {
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         if ($zip->open($filePath) !== true) {
             throw new \RuntimeException('Unable to open XLSX file.');
         }

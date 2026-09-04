@@ -2,59 +2,63 @@
 
 namespace App\Livewire;
 
-use App\Mail\BookingConfirmation;
-use App\Mail\BookingCreated;
+use App\Actions\Bookings\CreateBookingAction;
+use App\Jobs\SendBookingConfirmationJob;
 use App\Models\Accommodation;
+use App\Models\AirlineBaggageRule;
 use App\Models\Booking;
 use App\Models\Discount;
 use App\Models\FerryRoute;
-use App\Models\Tour;
-use App\Models\TourDate;
+use App\Models\Operator;
 use App\Models\Passenger;
 use App\Models\PaymentSetting;
+use App\Models\PromotionalTicket;
 use App\Models\Schedule;
 use App\Models\ScheduleAccommodation;
 use App\Models\ScheduleTransportClass;
+use App\Models\Tour;
+use App\Models\TourDate;
+use App\Models\Transaction;
 use App\Models\TransportClass;
 use App\Models\VehicleBrand;
 use App\Models\VehicleModel;
 use App\Models\VehicleRate;
-use App\Models\Transaction;
-use App\Models\PromotionalTicket;
+use App\Models\Voucher;
+use App\Services\StarliteScheduleIngestionService;
+use App\Services\VoucherService;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
-use App\Models\Voucher;
-use App\Services\VoucherService;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithFileUploads;
-use Carbon\Carbon;
-use Spatie\LaravelPdf\Facades\Pdf;
-use Illuminate\Support\Facades\Log;
 use Throwable;
-use Dompdf\Dompdf;
-use Dompdf\Options;
 
 class BookingForm extends Component
 {
     use WithFileUploads;
 
     public string $voucher_code = '';
+
     public ?array $appliedVoucher = null;
+
     public ?string $voucherError = null;
+
     public ?string $voucherSuccess = null;
-    
+
     protected function failedValidation(\Illuminate\Contracts\Validation\Validator $validator)
     {
         $this->dispatch('validation-error');
         parent::failedValidation($validator);
     }
-    
+
     public function applyVoucher(VoucherService $voucherService): void
     {
         $this->voucherError = null;
@@ -63,6 +67,7 @@ class BookingForm extends Component
         $code = strtoupper(trim($this->voucher_code));
         if (empty($code)) {
             $this->voucherError = 'Please enter a voucher code.';
+
             return;
         }
 
@@ -91,14 +96,15 @@ class BookingForm extends Component
 
         $result = $voucherService->validateAndCalculate($code, $bookingData);
 
-        if (!$result['valid']) {
+        if (! $result['valid']) {
             $this->appliedVoucher = null;
             $this->voucherError = $result['message'];
+
             return;
         }
 
         $this->appliedVoucher = $result;
-        $this->voucherSuccess = "Voucher '{$result['voucher_code']}' applied! You save ₱" . number_format($result['discount_amount'], 2) . ".";
+        $this->voucherSuccess = "Voucher '{$result['voucher_code']}' applied! You save ₱".number_format($result['discount_amount'], 2).'.';
         $this->saveDraft();
     }
 
@@ -113,21 +119,21 @@ class BookingForm extends Component
 
     public function getVoucherDiscountAmount(): float
     {
-        return ($this->appliedVoucher && !empty($this->appliedVoucher['discount_amount']))
+        return ($this->appliedVoucher && ! empty($this->appliedVoucher['discount_amount']))
             ? floatval($this->appliedVoucher['discount_amount'])
             : 0.0;
     }
-    
+
     public function confirmOperatorSelection(): void
     {
         $this->showOperatorConfirmation = false;
-        $confirmKey = 'confirmed_operator_' . $this->mode . '_' . ($this->operator ?: 'all');
+        $confirmKey = 'confirmed_operator_'.$this->mode.'_'.($this->operator ?: 'all');
         session()->put($confirmKey, true);
     }
-    
+
     public function changeSelection()
     {
-        $confirmKey = 'confirmed_operator_' . $this->mode . '_' . ($this->operator ?: 'all');
+        $confirmKey = 'confirmed_operator_'.$this->mode.'_'.($this->operator ?: 'all');
         session()->forget($confirmKey);
         // Clear the pre-selected values so the user can choose again
         $this->adults = 1;
@@ -139,46 +145,81 @@ class BookingForm extends Component
         $this->isModePreselected = false;
         $this->isOperatorPreselected = false;
         $this->showOperatorConfirmation = false;
-        
+
         return redirect('/');
     }
+
     public int $step = 1;
+
     public string $trip_type = 'one_way';
+
     public string $mode = '';
+
     public string $origin = '';
+
     public string $destination = '';
+
     public ?string $departure_date = null;
+
     public ?string $return_date = null;
+
     public ?int $duration_days = null;
+
     public array $available_package_dates = [];
+
     public array $available_schedule_dates = [];
+
     public array $available_return_schedule_dates = [];
+
     public array $availableReturnSchedules = [];
+
     public int $adults = 1;
+
     public int $children = 0;
+
     public int $minors = 0;
+
     public int $infants = 0;
+
     public ?int $selected_schedule_id = null;
+
     public bool $showPassengerInfoModal = false;
+
     public bool $showMinorAgeWarning = false;
+
     public bool $hasSeenMinorAgeWarning = false;
+
     public bool $showModeDropdown = false;
+
     public bool $showOperatorDropdown = false;
+
     public bool $showOriginDropdown = false;
+
     public bool $showDestinationDropdown = false;
+
     public string $originSearch = '';
+
     public string $destinationSearch = '';
+
     public ?string $operator = null;
+
     public bool $showPresentIdWarning = false;
+
     public bool $hasSeenPresentIdWarning = false;
+
     public bool $showDataPrivacyWarning = true;
+
     public bool $showOperatorConfirmation = false;
+
     public bool $isOperatorPreselected = false;
+
     public bool $isModePreselected = false;
 
     // Each entry: ['type' => 'adult'|'child', 'name' => '', 'discount_id' => null]
     public array $passengers = [];
+
     public array $studentIdProofFronts = [];
+
     public array $studentIdProofBacks = [];
 
     protected $validationAttributes = [
@@ -205,58 +246,99 @@ class BookingForm extends Component
 
     // Selected schedule accommodation id
     public ?int $selected_schedule_accommodation_id = null;
+
     public ?int $selected_return_schedule_id = null;
+
     public ?int $selected_return_schedule_accommodation_id = null;
+
     public ?int $selected_transport_class_id = null;
+
     public ?int $selected_return_transport_class_id = null;
 
     public ?int $tour_id = null;
+
     public ?int $tour_date_id = null;
+
     public ?Tour $tour = null;
+
     public ?TourDate $selectedTourDate = null;
 
     // Prefilled package info (from CSV)
     public string $package_name = '';
+
     public string $package_price = '';
+
     public bool $prefilled_from_package = false;
 
     // Car booking fields
     public bool $has_vehicle = false;
+
     public string $vehicle_booking_method = 'category';
+
     public ?int $selected_vehicle_rate_id = null;
+
     public ?int $selected_brand_id = null;
+
     public ?int $selected_model_id = null;
+
     public string $vehicle_type = '';
+
     public string $vehicle_plate_number = '';
+
     public ?float $vehicle_price = null;
+
     public string $driver_first_name = '';
+
     public string $driver_middle_name = '';
+
     public string $driver_last_name = '';
+
     public string $driver_name = '';  // computed full name, kept for backward compat
+
     public ?string $driver_birthday = null;
+
     public bool $showBaggageRules = false;
+
     public bool $hasExtraBaggage = false;
+
     public string $baggage_trip_type = 'local'; // 'local' or 'international'
+
     public string $selected_baggage_airline = '';
+
     public string $extra_baggage_weight = '';
+
     public ?float $extra_baggage_price = null;
+
     public ?string $extra_baggage_type = '';
+
     public ?string $extra_baggage_specify = '';
+
     // NOTE: use_promo_ticket is kept for ferry bookings (backward compat).
     // For airline bookings the per-passenger $passengers[n]['use_promo'] flag is used instead.
     public bool $use_promo_ticket = false;
 
     public string $client_name = '';
+
     public string $client_email = '';
+
     public string $client_phone = '';
+
     public bool $showTermsModal = false;
+
     public bool $showPrivacyModal = false;
+
     public bool $hasAcceptedTerms = false;
+
     public bool $hasAcceptedPrivacy = false;
+
     public bool $showTermsAgreementWarning = false;
+
     public bool $showPrivacyAgreementWarning = false;
+
     public bool $isSubmittingBooking = false;
+
     public ?int $selected_hotel_id = null;
+
     public array $availableSchedules = [];
 
     public function mount(): void
@@ -270,20 +352,20 @@ class BookingForm extends Component
 
         // Check if we have tour/package query params first
         $allowed = [
-            'trip_type','mode','operator','origin','destination','departure_date','return_date','duration_days','adults','children','minors','infants',
-            'client_name','client_email','client_phone','hasAcceptedTerms','hasAcceptedPrivacy','selected_hotel','selected_hotel_id','hotel','package_name','price','tour_id','tour_date_id','has_vehicle',
-            'vehicle_booking_method','selected_vehicle_rate_id','selected_brand_id','selected_model_id','vehicle_plate_number','driver_first_name','driver_middle_name','driver_last_name','driver_name','driver_birthday'
+            'trip_type', 'mode', 'operator', 'origin', 'destination', 'departure_date', 'return_date', 'duration_days', 'adults', 'children', 'minors', 'infants',
+            'client_name', 'client_email', 'client_phone', 'hasAcceptedTerms', 'hasAcceptedPrivacy', 'selected_hotel', 'selected_hotel_id', 'hotel', 'package_name', 'price', 'tour_id', 'tour_date_id', 'has_vehicle',
+            'vehicle_booking_method', 'selected_vehicle_rate_id', 'selected_brand_id', 'selected_model_id', 'vehicle_plate_number', 'driver_first_name', 'driver_middle_name', 'driver_last_name', 'driver_name', 'driver_birthday',
         ];
-        $packageQueryKeys = ['tour_id','tour_date_id','package_name','price','available_dates'];
+        $packageQueryKeys = ['tour_id', 'tour_date_id', 'package_name', 'price', 'available_dates'];
         $hasPackageQueryParams = ! empty(array_intersect(array_keys(request()->query()), $packageQueryKeys));
-        
+
         // Check if mode and operator are pre-selected from card click
         $this->isModePreselected = ! empty(request()->query('mode'));
         $this->isOperatorPreselected = ! empty(request()->query('operator'));
 
         // If we have package/tour query params, ignore session draft entirely; otherwise load draft first
         $hasSessionDraft = session()->has('booking_draft');
-        if (!$hasPackageQueryParams && $hasSessionDraft) {
+        if (! $hasPackageQueryParams && $hasSessionDraft) {
             $draft = session('booking_draft', []);
             foreach ($draft as $key => $value) {
                 if (property_exists($this, $key)) {
@@ -339,10 +421,10 @@ class BookingForm extends Component
                 if ($this->tour->destination) {
                     $this->destination = $this->tour->destination;
                 }
-                
+
                 // Set duration days from the tour!
                 $this->duration_days = $this->tour->duration_days;
-                
+
                 // If a tour date was passed, preselect it; otherwise allow the user to pick from tour dates
                 if ($reqTourDate) {
                     $this->tour_date_id = intval($reqTourDate);
@@ -362,7 +444,7 @@ class BookingForm extends Component
             if (in_array($key, $allowed, true) && property_exists($this, $key)) {
                 $hasQueryParamsPrefill = true;
                 // cast ints where appropriate
-                if (in_array($key, ['adults','children','minors','infants','duration_days','selected_vehicle_rate_id','selected_brand_id','selected_model_id'], true)) {
+                if (in_array($key, ['adults', 'children', 'minors', 'infants', 'duration_days', 'selected_vehicle_rate_id', 'selected_brand_id', 'selected_model_id'], true)) {
                     $this->{$key} = intval($value);
                 } elseif ($key === 'has_vehicle') {
                     $this->{$key} = filter_var($value, FILTER_VALIDATE_BOOLEAN);
@@ -419,14 +501,16 @@ class BookingForm extends Component
 
             foreach ($candidates as $cand) {
                 $cand = trim((string) $cand);
-                if ($cand === '') continue;
+                if ($cand === '') {
+                    continue;
+                }
                 try {
                     $dt = Carbon::parse($cand);
                     $iso = $dt->format('Y-m-d');
                     if (! in_array($iso, $this->available_package_dates, true)) {
                         $this->available_package_dates[] = $iso;
                     }
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     // ignore unparseable entries
                 }
             }
@@ -437,9 +521,9 @@ class BookingForm extends Component
         if ($durationDays !== null) {
             $this->duration_days = intval($durationDays);
         }
-        
+
         // Show clarification modal if mode and operator are pre-selected from a card click (only if not already confirmed)
-        $confirmKey = 'confirmed_operator_' . $this->mode . '_' . ($this->operator ?: 'all');
+        $confirmKey = 'confirmed_operator_'.$this->mode.'_'.($this->operator ?: 'all');
         if ($this->isModePreselected && $this->isOperatorPreselected && ! session()->has($confirmKey)) {
             $this->showOperatorConfirmation = true;
         }
@@ -462,7 +546,7 @@ class BookingForm extends Component
         // If hotel name was provided (hotel) but selected_hotel_id not, try to resolve by name
         $hotelName = request()->query('hotel') ?? request()->query('selected_hotel');
         if (! empty($hotelName) && empty($this->selected_hotel_id)) {
-            $hotel = Accommodation::query()->where('name', 'like', '%' . trim($hotelName) . '%')->first();
+            $hotel = Accommodation::query()->where('name', 'like', '%'.trim($hotelName).'%')->first();
             if ($hotel) {
                 $this->selected_hotel_id = $hotel->id;
             }
@@ -545,7 +629,7 @@ class BookingForm extends Component
     #[Computed]
     public function operatorLogos(): array
     {
-        return \App\Models\Operator::where('is_active', true)
+        return Operator::where('is_active', true)
             ->whereNotNull('logo_path')
             ->get()
             ->mapWithKeys(function ($op) {
@@ -553,40 +637,41 @@ class BookingForm extends Component
             })
             ->toArray();
     }
-    
+
     #[Computed]
     public function baggageRules(): ?array
     {
         if (blank($this->operator)) {
             return null;
         }
-        
-        $json = \Illuminate\Support\Facades\Cache::remember('baggage_rules_json_v1', now()->addHours(12), function () {
+
+        $json = Cache::remember('baggage_rules_json_v1', now()->addHours(12), function () {
             $filePath = base_path('baggage-rules.json');
-            if (!file_exists($filePath)) {
+            if (! file_exists($filePath)) {
                 return null;
             }
+
             return json_decode(file_get_contents($filePath), true);
         });
-        if (!$json) {
+        if (! $json) {
             return null;
         }
 
         $carriers = $json['carriers'] ?? [];
         $meta = $json['meta'] ?? [];
-        
+
         // Normalize operator name to match with possible keys
         $normalizedOperator = strtolower(trim($this->operator));
-        
+
         foreach ($carriers as $carrier) {
             $carrierName = strtolower(trim($carrier['name'] ?? ''));
             $carrierId = strtolower(trim($carrier['id'] ?? ''));
-            
+
             if (str_contains($carrierName, $normalizedOperator) || str_contains($normalizedOperator, $carrierName) || $carrierId === $normalizedOperator) {
                 return array_merge($carrier, ['meta' => $meta]);
             }
         }
-        
+
         return null;
     }
 
@@ -606,14 +691,14 @@ class BookingForm extends Component
     public function isSuperPromo(): bool
     {
         if ($this->selected_schedule_id && $this->selected_transport_class_id) {
-            $stc = \App\Models\ScheduleTransportClass::resolveForSchedule($this->selected_schedule_id, $this->selected_transport_class_id);
+            $stc = ScheduleTransportClass::resolveForSchedule($this->selected_schedule_id, $this->selected_transport_class_id);
             if ($stc && $stc->isSuperPromo()) {
                 return true;
             }
         }
 
         if ($this->selected_return_schedule_id && $this->selected_return_transport_class_id) {
-            $retStc = \App\Models\ScheduleTransportClass::resolveForSchedule($this->selected_return_schedule_id, $this->selected_return_transport_class_id);
+            $retStc = ScheduleTransportClass::resolveForSchedule($this->selected_return_schedule_id, $this->selected_return_transport_class_id);
             if ($retStc && $retStc->isSuperPromo()) {
                 return true;
             }
@@ -634,7 +719,7 @@ class BookingForm extends Component
             $this->clampPassengersToMax();
         }
 
-        if ($this->trip_type === 'round_trip' && !empty($this->destination)) {
+        if ($this->trip_type === 'round_trip' && ! empty($this->destination)) {
             $hasReturn = FerryRoute::hasBidirectionalSchedules(
                 $this->origin,
                 $this->destination,
@@ -649,7 +734,7 @@ class BookingForm extends Component
                 $this->availableReturnSchedules = [];
             }
         }
-        
+
         if ($this->trip_type === 'one_way') {
             $this->return_date = null;
             $this->selected_return_schedule_id = null;
@@ -658,14 +743,15 @@ class BookingForm extends Component
             $this->available_return_schedule_dates = [];
             $this->syncPassengerEntries();
             $this->saveDraft();
+
             return;
         }
-        
-        if (!$this->updateReturnDateFromDuration() && !empty($this->departure_date) && empty($this->return_date)) {
+
+        if (! $this->updateReturnDateFromDuration() && ! empty($this->departure_date) && empty($this->return_date)) {
             try {
                 $dt = Carbon::parse($this->departure_date);
                 $this->return_date = $dt->addDay()->format('Y-m-d');
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
             }
         }
         $this->updateAvailableScheduleDates();
@@ -689,7 +775,7 @@ class BookingForm extends Component
             $this->clampPassengersToMax();
         }
 
-        if ($this->trip_type === 'round_trip' && !empty($this->destination)) {
+        if ($this->trip_type === 'round_trip' && ! empty($this->destination)) {
             $hasReturn = FerryRoute::hasBidirectionalSchedules(
                 $this->origin,
                 $this->destination,
@@ -704,7 +790,7 @@ class BookingForm extends Component
                 $this->availableReturnSchedules = [];
             }
         }
-        
+
         if ($this->trip_type === 'one_way') {
             $this->return_date = null;
             $this->selected_return_schedule_id = null;
@@ -713,14 +799,15 @@ class BookingForm extends Component
             $this->available_return_schedule_dates = [];
             $this->syncPassengerEntries();
             $this->saveDraft();
+
             return;
         }
-        
-        if (!$this->updateReturnDateFromDuration() && !empty($this->departure_date) && empty($this->return_date)) {
+
+        if (! $this->updateReturnDateFromDuration() && ! empty($this->departure_date) && empty($this->return_date)) {
             try {
                 $dt = Carbon::parse($this->departure_date);
                 $this->return_date = $dt->addDay()->format('Y-m-d');
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
             }
         }
         $this->updateAvailableScheduleDates();
@@ -734,12 +821,12 @@ class BookingForm extends Component
         $this->selected_schedule_id = null;
         $this->selected_return_schedule_id = null;
         $this->availableSchedules = [];
-        
+
         // If it's a tour package with duration, recalculate return date
-        if (($this->prefilled_from_package || $this->tour_id) && !empty($this->duration_days) && $this->duration_days > 1) {
+        if (($this->prefilled_from_package || $this->tour_id) && ! empty($this->duration_days) && $this->duration_days > 1) {
             $this->updateReturnDateFromDuration();
         }
-        
+
         $this->saveDraft();
     }
 
@@ -787,8 +874,9 @@ class BookingForm extends Component
             if ($this->trip_type !== 'round_trip') {
                 $this->trip_type = 'round_trip';
             }
+
             return true;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // ignore parse errors
             return false;
         }
@@ -852,6 +940,7 @@ class BookingForm extends Component
             $this->showOperatorDropdown = false;
             $this->showOriginDropdown = false;
             $this->showDestinationDropdown = false;
+
             return;
         }
 
@@ -922,6 +1011,7 @@ class BookingForm extends Component
     {
         session()->forget('has_accepted_data_privacy_warning');
         Cookie::queue(Cookie::forget('data_privacy_accepted'));
+
         return redirect()->to('/');
     }
 
@@ -929,7 +1019,8 @@ class BookingForm extends Component
     {
         $scope = $this->autoDetectBaggageScope();
         $this->baggage_trip_type = $scope;
-        return \App\Models\AirlineBaggageRule::getRatesForBooking($scope);
+
+        return AirlineBaggageRule::getRatesForBooking($scope);
     }
 
     public function autoDetectBaggageScope(): string
@@ -945,7 +1036,7 @@ class BookingForm extends Component
             }
         }
         if ($this->origin && $this->destination) {
-            $routeScope = \App\Models\FerryRoute::query()
+            $routeScope = FerryRoute::query()
                 ->where('origin', $this->origin)
                 ->where('destination', $this->destination)
                 ->whereNotNull('trip_type')
@@ -1090,6 +1181,7 @@ class BookingForm extends Component
                 $total += floatval($pax['extra_baggage_price']);
             }
         }
+
         return $total;
     }
 
@@ -1105,10 +1197,11 @@ class BookingForm extends Component
         $parts = [];
         foreach ($this->passengers as $idx => $pax) {
             if (! empty($pax['extra_baggage_weight']) && (float) ($pax['extra_baggage_price'] ?? 0) > 0) {
-                $paxName = ! empty($pax['name']) ? $pax['name'] : 'Traveler #' . ($idx + 1);
+                $paxName = ! empty($pax['name']) ? $pax['name'] : 'Traveler #'.($idx + 1);
                 $parts[] = "{$paxName} ({$pax['extra_baggage_weight']})";
             }
         }
+
         return implode(', ', $parts);
     }
 
@@ -1176,6 +1269,7 @@ class BookingForm extends Component
         if ($this->prefilled_from_package || $this->tour_id) {
             $this->available_schedule_dates = [];
             $this->available_return_schedule_dates = [];
+
             return;
         }
 
@@ -1184,6 +1278,7 @@ class BookingForm extends Component
         if (empty($this->mode) || empty($this->origin) || empty($this->destination)) {
             $this->available_schedule_dates = [];
             $this->available_return_schedule_dates = [];
+
             return;
         }
 
@@ -1191,14 +1286,14 @@ class BookingForm extends Component
             ->where('departure_time', '>=', now())
             ->whereHas('ferryRoute', function ($query) {
                 $query->where('origin', $this->origin)
-                      ->where('destination', $this->destination)
-                      ->where('mode', $this->mode)
-                      ->where('is_active', true);
+                    ->where('destination', $this->destination)
+                    ->where('mode', $this->mode)
+                    ->where('is_active', true);
 
                 if (! empty($this->operator)) {
                     $query->where(function ($q) {
                         $q->where('operator', $this->operator)
-                          ->orWhere('operator', 'like', '%' . $this->operator . '%');
+                            ->orWhere('operator', 'like', '%'.$this->operator.'%');
                     });
                 }
             })
@@ -1227,9 +1322,9 @@ class BookingForm extends Component
                 ->whereDate('departure_time', $urlDate)
                 ->whereHas('ferryRoute', function ($q) {
                     $q->where('origin', $this->origin)
-                      ->where('destination', $this->destination)
-                      ->where('mode', $this->mode)
-                      ->where('is_active', true);
+                        ->where('destination', $this->destination)
+                        ->where('mode', $this->mode)
+                        ->where('is_active', true);
                 })
                 ->exists();
             if ($exists) {
@@ -1242,14 +1337,14 @@ class BookingForm extends Component
             ->where('departure_time', '>=', now())
             ->whereHas('ferryRoute', function ($query) {
                 $query->where('origin', $this->destination)
-                      ->where('destination', $this->origin)
-                      ->where('mode', $this->mode)
-                      ->where('is_active', true);
+                    ->where('destination', $this->origin)
+                    ->where('mode', $this->mode)
+                    ->where('is_active', true);
 
                 if (! empty($this->operator)) {
                     $query->where(function ($q) {
                         $q->where('operator', $this->operator)
-                          ->orWhere('operator', 'like', '%' . $this->operator . '%');
+                            ->orWhere('operator', 'like', '%'.$this->operator.'%');
                     });
                 }
             })
@@ -1283,7 +1378,7 @@ class BookingForm extends Component
         $this->showOriginDropdown = false;
         $this->dispatch('dropdownOpened', 'destination');
     }
-    
+
     public function updatedOperator(): void
     {
         $this->selected_schedule_id = null;
@@ -1293,7 +1388,7 @@ class BookingForm extends Component
         $this->saveDraft();
     }
 
-    #[\Livewire\Attributes\On('datePickerUpdated')]
+    #[On('datePickerUpdated')]
     public function datePickerUpdated($field = null, $value = null): void
     {
         if (is_array($field)) {
@@ -1317,7 +1412,7 @@ class BookingForm extends Component
 
         try {
             $this->validateOnly($field, $this->allRules());
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             // Log/ignore partial step validation errors during date picking
         }
 
@@ -1333,6 +1428,7 @@ class BookingForm extends Component
     {
         if ($propertyName === 'trip_type') {
             $this->saveDraft();
+
             return;
         }
         if ($propertyName === 'tour_date_id') {
@@ -1342,6 +1438,7 @@ class BookingForm extends Component
                 $this->return_date = Carbon::parse($this->selectedTourDate->date)->addDays($this->tour->duration_days)->format('Y-m-d');
             }
             $this->saveDraft();
+
             return;
         }
         if (str_starts_with($propertyName, 'selected_accommodation_ids')) {
@@ -1359,8 +1456,11 @@ class BookingForm extends Component
 
         if (in_array($propertyName, ['origin', 'destination', 'departure_date'], true)) {
             $this->selected_schedule_id = null;
-        $this->selected_return_schedule_id = null;
+            $this->selected_return_schedule_id = null;
             $this->availableSchedules = [];
+            if ($this->has_vehicle && $this->selected_vehicle_rate_id) {
+                $this->updatedSelectedVehicleRateId($this->selected_vehicle_rate_id);
+            }
         }
 
         if ($propertyName === 'origin') {
@@ -1413,7 +1513,7 @@ class BookingForm extends Component
         $this->saveDraft();
         try {
             $this->validateOnly($propertyName, $this->allRules());
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // Ignore validation exception during typing
         }
     }
@@ -1432,7 +1532,7 @@ class BookingForm extends Component
         if (! empty($rules)) {
             try {
                 $this->validate($rules);
-            } catch (\Illuminate\Validation\ValidationException $e) {
+            } catch (ValidationException $e) {
                 $this->dispatch('validation-error');
                 throw $e;
             }
@@ -1445,11 +1545,11 @@ class BookingForm extends Component
 
                 if (empty($this->availableSchedules)) {
                     $this->dispatch('validation-error');
-                    throw \Illuminate\Validation\ValidationException::withMessages([
-                        'departure_date' => 'No ferry schedules are available for this route on the selected date. (DEBUG: origin=' . $this->origin . ', dest=' . $this->destination . ', date=' . $this->departure_date . ', mode=' . $this->mode . ', operator=' . $this->operator . ')',
+                    throw ValidationException::withMessages([
+                        'departure_date' => 'No ferry schedules are available for this route on the selected date. (DEBUG: origin='.$this->origin.', dest='.$this->destination.', date='.$this->departure_date.', mode='.$this->mode.', operator='.$this->operator.')',
                     ]);
                 }
-                
+
                 if ($this->trip_type === 'round_trip' && empty($this->availableReturnSchedules)) {
                     throw ValidationException::withMessages([
                         'return_date' => 'No return schedules are available for this route on the selected date. Try another date.',
@@ -1497,7 +1597,7 @@ class BookingForm extends Component
         $this->updateBaggagePriceFromRates();
         $this->saveDraft();
     }
-    
+
     public function selectReturnSchedule(int $scheduleId): void
     {
         $this->selected_return_schedule_id = $scheduleId;
@@ -1517,7 +1617,7 @@ class BookingForm extends Component
 
     protected function getAvailableReturnSchedules(): array
     {
-        if ($this->trip_type !== 'round_trip' || !$this->return_date) {
+        if ($this->trip_type !== 'round_trip' || ! $this->return_date) {
             return [];
         }
 
@@ -1573,19 +1673,26 @@ class BookingForm extends Component
         }
 
         // Helper to grab existing from either driver or adult if they toggle has_vehicle
-        $getExisting = function($t, $index) use ($existingByType) {
+        $getExisting = function ($t, $index) use ($existingByType) {
             $pool = $existingByType->get($t, collect())->values();
-            if ($pool->has($index)) return $pool->get($index);
+            if ($pool->has($index)) {
+                return $pool->get($index);
+            }
             // Fallback for switching between adult and driver
-            if ($t === 'driver') return $existingByType->get('adult', collect())->values()->get(0);
-            if ($t === 'adult' && $index === 0) return $existingByType->get('driver', collect())->values()->get(0);
+            if ($t === 'driver') {
+                return $existingByType->get('adult', collect())->values()->get(0);
+            }
+            if ($t === 'adult' && $index === 0) {
+                return $existingByType->get('driver', collect())->values()->get(0);
+            }
+
             return null;
         };
 
         foreach ($types as $type => $count) {
             for ($i = 0; $i < $count; $i++) {
                 $existing = $getExisting($type, $i) ?? [];
-                
+
                 $passenger = array_merge([
                     'type' => $type,
                     'name' => '',
@@ -1782,6 +1889,7 @@ class BookingForm extends Component
             $this->vehicle_type = '';
             $this->vehicle_price = null;
             $this->saveDraft();
+
             return;
         }
 
@@ -1797,6 +1905,7 @@ class BookingForm extends Component
             $this->vehicle_type = '';
             $this->vehicle_price = null;
             $this->saveDraft();
+
             return;
         }
 
@@ -1804,7 +1913,7 @@ class BookingForm extends Component
         $brandName = $this->vehicleBrandCatalog->firstWhere('id', (int) $this->selected_brand_id)?->name;
 
         if ($model) {
-            $this->vehicle_type = trim(($brandName ? $brandName . ' ' : '') . $model->name);
+            $this->vehicle_type = trim(($brandName ? $brandName.' ' : '').$model->name);
             $this->vehicle_price = floatval($model->price);
         }
 
@@ -1862,7 +1971,6 @@ class BookingForm extends Component
         $this->saveDraft();
     }
 
-
     public function submit()
     {
         try {
@@ -1888,6 +1996,7 @@ class BookingForm extends Component
                     'type' => 'warning',
                     'message' => 'You need to read and agree to continue.',
                 ]);
+
                 return;
             }
 
@@ -1899,6 +2008,7 @@ class BookingForm extends Component
                     'type' => 'warning',
                     'message' => 'You need to read and agree to continue.',
                 ]);
+
                 return;
             }
         } catch (ValidationException $e) {
@@ -1908,19 +2018,19 @@ class BookingForm extends Component
                 'message' => 'Please review the highlighted fields and try again.',
             ]);
             throw $e;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('submit() pre-flight error', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
             $this->dispatch('validation-error');
             throw ValidationException::withMessages([
-                'step' => 'Could not validate booking: ' . $e->getMessage(),
+                'step' => 'Could not validate booking: '.$e->getMessage(),
             ]);
         }
 
-        $lockKey = 'booking_submit_lock_' . $this->getId();
-        $lock = \Illuminate\Support\Facades\Cache::lock($lockKey, 60);
+        $lockKey = 'booking_submit_lock_'.$this->getId();
+        $lock = Cache::lock($lockKey, 60);
 
         if (! $lock->get()) {
             return; // Silently ignore duplicate clicks while processing
@@ -1939,12 +2049,13 @@ class BookingForm extends Component
             $this->isSubmittingBooking = false;
             $success = true;
             $this->redirect(route('payment.show', $transaction), navigate: false);
+
             return null;
         } catch (ValidationException $e) {
             $this->isSubmittingBooking = false;
             $this->dispatch('validation-error');
             throw $e;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('submit() processBooking fatal', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
@@ -1952,7 +2063,7 @@ class BookingForm extends Component
             $this->isSubmittingBooking = false;
             $this->dispatch('validation-error');
             throw ValidationException::withMessages([
-                'step' => 'Booking failed to save. Please review and try again. Error: ' . $e->getMessage(),
+                'step' => 'Booking failed to save. Please review and try again. Error: '.$e->getMessage(),
             ]);
         } finally {
             if (! $success) {
@@ -1972,6 +2083,7 @@ class BookingForm extends Component
                 'type' => 'warning',
                 'message' => 'You need to read and agree to continue.',
             ]);
+
             return;
         }
 
@@ -1979,11 +2091,12 @@ class BookingForm extends Component
 
         if (! $this->hasAcceptedPrivacy) {
             $this->showPrivacyModal = true;
+
             return;
         }
 
-        $lockKey = 'booking_submit_lock_' . $this->getId();
-        $lock = \Illuminate\Support\Facades\Cache::lock($lockKey, 60);
+        $lockKey = 'booking_submit_lock_'.$this->getId();
+        $lock = Cache::lock($lockKey, 60);
 
         if (! $lock->get()) {
             return; // Silently ignore duplicate clicks while processing
@@ -2002,12 +2115,13 @@ class BookingForm extends Component
             $this->isSubmittingBooking = false;
             $success = true;
             $this->redirect(route('payment.show', $transaction), navigate: false);
+
             return null;
         } catch (ValidationException $e) {
             $this->isSubmittingBooking = false;
             $this->dispatch('validation-error');
             throw $e;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('confirmTermsAndContinue fatal', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
@@ -2015,7 +2129,7 @@ class BookingForm extends Component
             $this->isSubmittingBooking = false;
             $this->dispatch('validation-error');
             throw ValidationException::withMessages([
-                'step' => 'Booking failed to save: ' . $e->getMessage(),
+                'step' => 'Booking failed to save: '.$e->getMessage(),
             ]);
         } finally {
             if (! $success) {
@@ -2042,7 +2156,7 @@ class BookingForm extends Component
                     ->with(['ferryRoute.operatorRecord'])
                     ->forRouteAndDate($this->origin, $this->destination, $this->departure_date, $this->mode)
                     ->findOrFail($this->selected_schedule_id);
-            } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            } catch (ModelNotFoundException $e) {
                 $this->dispatch('validation-error');
                 throw ValidationException::withMessages([
                     'selected_schedule_id' => 'The selected schedule is no longer available. Please review and try again.',
@@ -2138,19 +2252,19 @@ class BookingForm extends Component
                     $lockedReturnAccom->decrement('tickets_available');
                 }
 
-                $depStc = \App\Models\ScheduleTransportClass::resolveForSchedule($schedule?->id, $this->selected_transport_class_id);
+                $depStc = ScheduleTransportClass::resolveForSchedule($schedule?->id, $this->selected_transport_class_id);
                 $retStc = ($returnSchedule && $this->selected_return_transport_class_id)
-                    ? \App\Models\ScheduleTransportClass::resolveForSchedule($returnSchedule->id, $this->selected_return_transport_class_id)
+                    ? ScheduleTransportClass::resolveForSchedule($returnSchedule->id, $this->selected_return_transport_class_id)
                     : null;
 
                 if ($depStc) {
-                    $lockedStc = \App\Models\ScheduleTransportClass::where('id', $depStc->id)->lockForUpdate()->first();
+                    $lockedStc = ScheduleTransportClass::where('id', $depStc->id)->lockForUpdate()->first();
                     if ($lockedStc && $lockedStc->tickets_available !== null && $lockedStc->tickets_available <= 0) {
                         throw new \RuntimeException('Sorry, this class is now fully booked. Please choose another option.');
                     }
                     if ($lockedStc && $lockedStc->tickets_available !== null) {
                         $lockedStc->decrement('tickets_available');
-                        
+
                         if ($lockedStc->is_promo && $lockedStc->promo_tickets_available !== null) {
                             $lockedStc->decrement('promo_tickets_available');
                             $lockedStc->refresh();
@@ -2158,29 +2272,29 @@ class BookingForm extends Component
                                 $basePrice = (float) ($lockedStc->transportClass?->price ?? 0);
                                 $regularPrice = $lockedStc->original_price !== null ? (float) $lockedStc->original_price : ($basePrice > 0 ? $basePrice : (float) $lockedStc->additional_price);
                                 $lockedStc->update([
-                                    'rate_type'            => 'regular',
-                                    'is_promo'             => false,
-                                    'additional_price'     => $regularPrice,
-                                    'original_price'       => null,
-                                    'promo_type'           => null,
+                                    'rate_type' => 'regular',
+                                    'is_promo' => false,
+                                    'additional_price' => $regularPrice,
+                                    'original_price' => null,
+                                    'promo_type' => null,
                                     'promo_duration_start' => null,
-                                    'promo_duration_end'   => null,
+                                    'promo_duration_end' => null,
                                     'promo_tickets_available' => null,
                                 ]);
-                                \App\Models\Schedule::bust();
+                                Schedule::bust();
                             }
                         }
                     }
                 }
 
                 if ($retStc) {
-                    $lockedReturnStc = \App\Models\ScheduleTransportClass::where('id', $retStc->id)->lockForUpdate()->first();
+                    $lockedReturnStc = ScheduleTransportClass::where('id', $retStc->id)->lockForUpdate()->first();
                     if ($lockedReturnStc && $lockedReturnStc->tickets_available !== null && $lockedReturnStc->tickets_available <= 0) {
                         throw new \RuntimeException('Sorry, the return trip class is now fully booked. Please choose another option.');
                     }
                     if ($lockedReturnStc && $lockedReturnStc->tickets_available !== null) {
                         $lockedReturnStc->decrement('tickets_available');
-                        
+
                         if ($lockedReturnStc->is_promo && $lockedReturnStc->promo_tickets_available !== null) {
                             $lockedReturnStc->decrement('promo_tickets_available');
                             $lockedReturnStc->refresh();
@@ -2188,16 +2302,16 @@ class BookingForm extends Component
                                 $basePrice = (float) ($lockedReturnStc->transportClass?->price ?? 0);
                                 $regularPrice = $lockedReturnStc->original_price !== null ? (float) $lockedReturnStc->original_price : ($basePrice > 0 ? $basePrice : (float) $lockedReturnStc->additional_price);
                                 $lockedReturnStc->update([
-                                    'rate_type'            => 'regular',
-                                    'is_promo'             => false,
-                                    'additional_price'     => $regularPrice,
-                                    'original_price'       => null,
-                                    'promo_type'           => null,
+                                    'rate_type' => 'regular',
+                                    'is_promo' => false,
+                                    'additional_price' => $regularPrice,
+                                    'original_price' => null,
+                                    'promo_type' => null,
                                     'promo_duration_start' => null,
-                                    'promo_duration_end'   => null,
+                                    'promo_duration_end' => null,
                                     'promo_tickets_available' => null,
                                 ]);
-                                \App\Models\Schedule::bust();
+                                Schedule::bust();
                             }
                         }
                     }
@@ -2212,7 +2326,7 @@ class BookingForm extends Component
                 $voucherDiscountAmount = 0.0;
                 $subtotalBeforeVoucher = null;
 
-                if ($this->appliedVoucher && !empty($this->appliedVoucher['voucher_code'])) {
+                if ($this->appliedVoucher && ! empty($this->appliedVoucher['voucher_code'])) {
                     $voucherModel = Voucher::where('code', strtoupper($this->appliedVoucher['voucher_code']))->first();
                     if ($voucherModel) {
                         $voucherDiscountAmount = floatval($this->appliedVoucher['discount_amount'] ?? 0);
@@ -2260,7 +2374,7 @@ class BookingForm extends Component
                     'has_extra_baggage' => $this->getExtraBaggageTotalPrice() > 0,
                     'extra_baggage_weight' => $this->getTotalBaggageWeightSummary(),
                     'extra_baggage_price' => $this->getExtraBaggageTotalPrice(),
-                    'driver_name' => trim(trim($this->driver_first_name) . ' ' . trim($this->driver_middle_name) . ' ' . trim($this->driver_last_name)),
+                    'driver_name' => trim(trim($this->driver_first_name).' '.trim($this->driver_middle_name).' '.trim($this->driver_last_name)),
                     'driver_birthday' => $this->driver_birthday,
                     'promotional_ticket_id' => $usedPromoTicket?->id,
                     'promo_ticket_count' => $promoTicketCount,
@@ -2287,7 +2401,7 @@ class BookingForm extends Component
                 $retBasePrice = $returnSchedule ? (float) ($returnSchedule->price ?? 0) : 0.0;
                 $retAccPrice = $returnScheduleAccommodation ? (float) $returnScheduleAccommodation->price : 0.0;
 
-                $discountsKeyed = \App\Models\Discount::all()->keyBy('id');
+                $discountsKeyed = Discount::all()->keyBy('id');
 
                 foreach ($this->passengers as $idx => $passenger) {
                     $isAirlinePromo = strtolower($this->mode) === 'airline' && ! empty($passenger['use_promo']) && $usedPromoTicket;
@@ -2341,32 +2455,32 @@ class BookingForm extends Component
                     $itemTotal = max(0, ($grossFare + $grossAcc) - $discAmount + $webAdminFeePerPax + $txFeePerPax + $extraBaggagePricePax);
 
                     Passenger::create([
-                        'booking_id'             => $booking->id,
-                        'item_number'            => $itemNum,
-                        'ticket_number'          => $booking->transaction_number . '-' . $itemNum,
-                        'status'                 => 'pending',
-                        'type'                   => $passenger['type'],
-                        'name'                   => $passenger['name'] ?: null,
-                        'birthdate'              => !empty($passenger['birthdate']) ? $passenger['birthdate'] : null,
-                        'discount_id'            => $hasDiscount ? ($passenger['discount_id'] ?: null) : null,
-                        'promotional_ticket_id'  => $isAirlinePromo ? $usedPromoTicket->id : null,
-                        'is_promo'               => $paxRateType !== 'regular',
-                        'rate_type'              => $paxRateType,
-                        'promo_price'            => $isAirlinePromo ? floatval($usedPromoTicket->promo_price) : null,
-                        'passport_country'       => !empty($passenger['passport_country']) ? $passenger['passport_country'] : null,
-                        'passport_number'        => !empty($passenger['passport_number']) ? $passenger['passport_number'] : null,
-                        'passport_issuance_date' => !empty($passenger['passport_issuance_date']) ? $passenger['passport_issuance_date'] : null,
-                        'passport_expiry_date'   => !empty($passenger['passport_expiry_date']) ? $passenger['passport_expiry_date'] : null,
-                        'extra_baggage_weight'   => !empty($passenger['extra_baggage_weight']) ? $passenger['extra_baggage_weight'] : null,
-                        'extra_baggage_price'    => $extraBaggagePricePax,
-                        'fare_amount'            => $grossFare,
-                        'accommodation_amount'   => $grossAcc,
-                        'discount_amount'        => $discAmount,
+                        'booking_id' => $booking->id,
+                        'item_number' => $itemNum,
+                        'ticket_number' => $booking->transaction_number.'-'.$itemNum,
+                        'status' => 'pending',
+                        'type' => $passenger['type'],
+                        'name' => $passenger['name'] ?: null,
+                        'birthdate' => ! empty($passenger['birthdate']) ? $passenger['birthdate'] : null,
+                        'discount_id' => $hasDiscount ? ($passenger['discount_id'] ?: null) : null,
+                        'promotional_ticket_id' => $isAirlinePromo ? $usedPromoTicket->id : null,
+                        'is_promo' => $paxRateType !== 'regular',
+                        'rate_type' => $paxRateType,
+                        'promo_price' => $isAirlinePromo ? floatval($usedPromoTicket->promo_price) : null,
+                        'passport_country' => ! empty($passenger['passport_country']) ? $passenger['passport_country'] : null,
+                        'passport_number' => ! empty($passenger['passport_number']) ? $passenger['passport_number'] : null,
+                        'passport_issuance_date' => ! empty($passenger['passport_issuance_date']) ? $passenger['passport_issuance_date'] : null,
+                        'passport_expiry_date' => ! empty($passenger['passport_expiry_date']) ? $passenger['passport_expiry_date'] : null,
+                        'extra_baggage_weight' => ! empty($passenger['extra_baggage_weight']) ? $passenger['extra_baggage_weight'] : null,
+                        'extra_baggage_price' => $extraBaggagePricePax,
+                        'fare_amount' => $grossFare,
+                        'accommodation_amount' => $grossAcc,
+                        'discount_amount' => $discAmount,
                         'voucher_discount_share' => 0,
-                        'points_discount_share'  => 0,
-                        'web_admin_fee_share'    => $webAdminFeePerPax,
-                        'transaction_fee_share'  => $txFeePerPax,
-                        'item_total'             => $itemTotal,
+                        'points_discount_share' => 0,
+                        'web_admin_fee_share' => $webAdminFeePerPax,
+                        'transaction_fee_share' => $txFeePerPax,
+                        'item_total' => $itemTotal,
                     ]);
                 }
 
@@ -2440,7 +2554,7 @@ class BookingForm extends Component
             throw ValidationException::withMessages([
                 'selected_schedule_id' => $e->getMessage(),
             ]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('Booking creation failed in DB transaction', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
@@ -2449,7 +2563,7 @@ class BookingForm extends Component
             $this->isSubmittingBooking = false;
             $this->dispatch('validation-error');
             throw ValidationException::withMessages([
-                'step' => 'Booking could not be saved. Please review your details and try again. (' . $e->getMessage() . ')',
+                'step' => 'Booking could not be saved. Please review your details and try again. ('.$e->getMessage().')',
             ]);
         }
 
@@ -2464,12 +2578,12 @@ class BookingForm extends Component
         $booking->load('passengers.discount', 'scheduleAccommodation', 'transportClasses', 'transaction', 'schedule', 'returnSchedule');
 
         // Bust the schedule search cache so the public Schedules page shows updated ticket counts immediately
-        \App\Actions\Bookings\CreateBookingAction::bustScheduleCache(
+        CreateBookingAction::bustScheduleCache(
             $booking->getScheduleModel(),
             $booking->getReturnScheduleModel()
         );
 
-        \App\Jobs\SendBookingConfirmationJob::dispatch($booking);
+        SendBookingConfirmationJob::dispatch($booking);
 
         return $transaction;
     }
@@ -2485,6 +2599,7 @@ class BookingForm extends Component
                 'type' => 'warning',
                 'message' => 'You need to read and agree to continue.',
             ]);
+
             return;
         }
 
@@ -2492,11 +2607,12 @@ class BookingForm extends Component
 
         if (! $this->hasAcceptedTerms) {
             $this->showTermsModal = true;
+
             return;
         }
 
-        $lockKey = 'booking_submit_lock_' . $this->getId();
-        $lock = \Illuminate\Support\Facades\Cache::lock($lockKey, 60);
+        $lockKey = 'booking_submit_lock_'.$this->getId();
+        $lock = Cache::lock($lockKey, 60);
 
         if (! $lock->get()) {
             return; // Silently ignore duplicate clicks while processing
@@ -2515,12 +2631,13 @@ class BookingForm extends Component
             $this->isSubmittingBooking = false;
             $success = true;
             $this->redirect(route('payment.show', $transaction), navigate: false);
+
             return null;
         } catch (ValidationException $e) {
             $this->isSubmittingBooking = false;
             $this->dispatch('validation-error');
             throw $e;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('confirmPrivacyAndContinue fatal', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
@@ -2528,7 +2645,7 @@ class BookingForm extends Component
             $this->isSubmittingBooking = false;
             $this->dispatch('validation-error');
             throw ValidationException::withMessages([
-                'step' => 'Booking failed to save: ' . $e->getMessage(),
+                'step' => 'Booking failed to save: '.$e->getMessage(),
             ]);
         } finally {
             if (! $success) {
@@ -2554,7 +2671,7 @@ class BookingForm extends Component
     #[Computed]
     public function discounts()
     {
-        $items = \Illuminate\Support\Facades\Cache::remember('catalog:discounts_v3', now()->addHours(6), function () {
+        $items = Cache::remember('catalog:discounts_v3', now()->addHours(6), function () {
             return Discount::all()->sortBy('name')->values()->toArray();
         });
 
@@ -2564,7 +2681,7 @@ class BookingForm extends Component
     #[Computed]
     public function transportClassCatalog()
     {
-        $items = \Illuminate\Support\Facades\Cache::remember('catalog:transport_classes_v3', now()->addHours(6), function () {
+        $items = Cache::remember('catalog:transport_classes_v3', now()->addHours(6), function () {
             return TransportClass::query()->where('is_active', true)->orderBy('name')->get()->toArray();
         });
 
@@ -2574,17 +2691,47 @@ class BookingForm extends Component
     #[Computed]
     public function vehicleRateCatalog()
     {
-        $items = \Illuminate\Support\Facades\Cache::remember('api:vehicle_rates_v3', now()->addHours(6), function () {
+        $items = Cache::remember('api:vehicle_rates_v3', now()->addHours(6), function () {
             return VehicleRate::query()->where('is_active', true)->orderBy('sort_order')->get()->toArray();
         });
 
-        return VehicleRate::hydrate($items);
+        $rates = VehicleRate::hydrate($items);
+
+        $origin = $this->origin;
+        $destination = $this->destination;
+
+        if ($this->selected_schedule_id) {
+            $sched = Schedule::with('ferryRoute')->find($this->selected_schedule_id);
+            if ($sched?->ferryRoute) {
+                $origin = $sched->ferryRoute->origin;
+                $destination = $sched->ferryRoute->destination;
+            }
+        }
+
+        $routeRates = StarliteScheduleIngestionService::getVehicleRatesForRoute($origin, $destination);
+
+        if (! empty($routeRates)) {
+            foreach ($rates as $rate) {
+                foreach ($routeRates as $catName => $catPrice) {
+                    if (
+                        strcasecmp($rate->name, $catName) === 0 ||
+                        str_contains(strtolower($rate->name), strtolower($catName)) ||
+                        str_contains(strtolower($catName), strtolower($rate->name))
+                    ) {
+                        $rate->price = (float) $catPrice;
+                        break;
+                    }
+                }
+            }
+        }
+
+        return $rates;
     }
 
     #[Computed]
     public function vehicleBrandCatalog()
     {
-        $items = \Illuminate\Support\Facades\Cache::remember('catalog:vehicle_brands_v3', now()->addHours(6), function () {
+        $items = Cache::remember('catalog:vehicle_brands_v3', now()->addHours(6), function () {
             return VehicleBrand::query()->where('is_active', true)->orderBy('sort_order')->get()->toArray();
         });
 
@@ -2595,7 +2742,7 @@ class BookingForm extends Component
     public function vehicleModelCatalog()
     {
         if ($this->selected_brand_id) {
-            $items = \Illuminate\Support\Facades\Cache::remember('catalog:vehicle_models_v3:' . (int) $this->selected_brand_id, now()->addHours(6), function () {
+            $items = Cache::remember('catalog:vehicle_models_v3:'.(int) $this->selected_brand_id, now()->addHours(6), function () {
                 return VehicleModel::query()
                     ->where('vehicle_brand_id', (int) $this->selected_brand_id)
                     ->where('is_active', true)
@@ -2613,7 +2760,7 @@ class BookingForm extends Component
     #[Computed]
     public function accommodationCatalog()
     {
-        $items = \Illuminate\Support\Facades\Cache::remember('api:accommodations_v3', now()->addHours(6), function () {
+        $items = Cache::remember('api:accommodations_v3', now()->addHours(6), function () {
             return Accommodation::query()->where('is_active', true)->orderBy('name')->get()->toArray();
         });
 
@@ -2636,6 +2783,7 @@ class BookingForm extends Component
     {
         if ($this->step < 2) {
             session()->forget('booking_draft');
+
             return;
         }
 
@@ -2740,18 +2888,18 @@ class BookingForm extends Component
                     },
                 ],
                 'has_vehicle' => 'boolean',
-            'vehicle_booking_method' => $this->has_vehicle ? 'required|string|in:category,brand_model' : 'nullable|string|in:category,brand_model',
-            'selected_vehicle_rate_id' => $this->has_vehicle && $this->vehicle_booking_method === 'category' && $this->vehicleRateCatalog->isNotEmpty() ? 'required|integer|exists:vehicle_rates,id' : 'nullable',
-            'selected_brand_id' => $this->has_vehicle && $this->vehicle_booking_method === 'brand_model' ? 'required|integer|exists:vehicle_brands,id' : 'nullable',
-            'selected_model_id' => $this->has_vehicle && $this->vehicle_booking_method === 'brand_model' ? 'required|integer|exists:vehicle_models,id' : 'nullable',
-            'vehicle_type' => $this->vehicleRateCatalog->isNotEmpty() ? 'nullable|string|max:255' : 'required_if:has_vehicle,true|nullable|string|max:255',
-            'vehicle_plate_number' => 'required_if:has_vehicle,true|nullable|string|max:255',
-            'vehicle_price' => 'required_if:has_vehicle,true|nullable|numeric|min:0',
-            'driver_first_name' => 'required_if:has_vehicle,true|nullable|string|max:255',
-            'driver_middle_name' => 'nullable|string|max:255',
-            'driver_last_name' => 'required_if:has_vehicle,true|nullable|string|max:255',
-            'driver_birthday' => 'required_if:has_vehicle,true|nullable|date|before:today',
-            'extra_baggage_weight' => 'nullable|numeric|min:0|max:100',
+                'vehicle_booking_method' => $this->has_vehicle ? 'required|string|in:category,brand_model' : 'nullable|string|in:category,brand_model',
+                'selected_vehicle_rate_id' => $this->has_vehicle && $this->vehicle_booking_method === 'category' && $this->vehicleRateCatalog->isNotEmpty() ? 'required|integer|exists:vehicle_rates,id' : 'nullable',
+                'selected_brand_id' => $this->has_vehicle && $this->vehicle_booking_method === 'brand_model' ? 'required|integer|exists:vehicle_brands,id' : 'nullable',
+                'selected_model_id' => $this->has_vehicle && $this->vehicle_booking_method === 'brand_model' ? 'required|integer|exists:vehicle_models,id' : 'nullable',
+                'vehicle_type' => $this->vehicleRateCatalog->isNotEmpty() ? 'nullable|string|max:255' : 'required_if:has_vehicle,true|nullable|string|max:255',
+                'vehicle_plate_number' => 'required_if:has_vehicle,true|nullable|string|max:255',
+                'vehicle_price' => 'required_if:has_vehicle,true|nullable|numeric|min:0',
+                'driver_first_name' => 'required_if:has_vehicle,true|nullable|string|max:255',
+                'driver_middle_name' => 'nullable|string|max:255',
+                'driver_last_name' => 'required_if:has_vehicle,true|nullable|string|max:255',
+                'driver_birthday' => 'required_if:has_vehicle,true|nullable|date|before:today',
+                'extra_baggage_weight' => 'nullable|numeric|min:0|max:100',
             ],
             2 => [
                 'selected_schedule_id' => $this->tour_id ? 'nullable' : 'required|integer|exists:schedules,id',
@@ -2790,8 +2938,9 @@ class BookingForm extends Component
             return false;
         }
         $domesticPorts = ['manila', 'batangas', 'calapan', 'caticlan', 'boracay', 'boracay (caticlan)', 'cebu', 'davao', 'roxas', 'puerto princesa', 'el nido', 'coron', 'bacolod', 'iloilo', 'tagbilaran', 'bohol', 'siargao', 'zamboanga', 'general santos', 'clark', 'laoag', 'legazpi', 'dumaguete', 'tacloban', 'cagayan de oro', 'butuan', 'ozamiz', 'dipolog', 'pagadian', 'surigao', 'tandag', 'camiguin', 'batanes', 'basco', 'busuanga', 'san jose'];
-        return !in_array(strtolower(trim($this->origin ?? '')), $domesticPorts, true)
-            || !in_array(strtolower(trim($this->destination ?? '')), $domesticPorts, true);
+
+        return ! in_array(strtolower(trim($this->origin ?? '')), $domesticPorts, true)
+            || ! in_array(strtolower(trim($this->destination ?? '')), $domesticPorts, true);
     }
 
     protected function allRules(): array
@@ -2879,21 +3028,21 @@ class BookingForm extends Component
                 'selected_schedule_id' => 'The selected schedule is no longer available for this route and date.',
             ]);
         }
-        
+
         $sched = Schedule::query()->find($this->selected_schedule_id);
         if ($sched && $sched->transportClasses()->where('transport_classes.is_active', true)->exists() && ! $this->selected_transport_class_id) {
             throw ValidationException::withMessages([
                 'selected_transport_class_id' => 'Please select a transport class for your schedule.',
             ]);
         }
-        
-        if ($this->trip_type === 'round_trip' && !$this->tour_id) {
+
+        if ($this->trip_type === 'round_trip' && ! $this->tour_id) {
             if (! $this->selected_return_schedule_id) {
                 throw ValidationException::withMessages([
                     'selected_return_schedule_id' => 'Please select a return schedule.',
                 ]);
             }
-            
+
             $isReturnValid = Schedule::query()
                 ->forRouteAndDate($this->destination, $this->origin, $this->return_date, $this->mode)
                 ->where('id', $this->selected_return_schedule_id)
@@ -2916,7 +3065,7 @@ class BookingForm extends Component
 
     protected function generateTransactionNumber(): string
     {
-        return 'AGT-' . now()->format('Ymd') . '-' . rand(1000, 9999);
+        return 'AGT-'.now()->format('Ymd').'-'.rand(1000, 9999);
     }
 
     public function isBookingShortHaul(): bool
@@ -2925,7 +3074,7 @@ class BookingForm extends Component
             return false;
         }
 
-        if ($this->prefilled_from_package || $this->tour_id || (!empty($this->duration_days) && $this->duration_days > 0)) {
+        if ($this->prefilled_from_package || $this->tour_id || (! empty($this->duration_days) && $this->duration_days > 0)) {
             return false;
         }
 
@@ -2938,8 +3087,10 @@ class BookingForm extends Component
             $depMins = $this->parseScheduleDurationMinutes($depSchedule);
             if ($retSchedule) {
                 $retMins = $this->parseScheduleDurationMinutes($retSchedule);
+
                 return max($depMins, $retMins) < 300;
             }
+
             return $depMins < 300;
         }
 
@@ -2948,23 +3099,24 @@ class BookingForm extends Component
 
     protected function parseScheduleDurationMinutes(?array $schedule): int
     {
-        if (!$schedule) {
+        if (! $schedule) {
             return 0;
         }
-        if (!empty($schedule['duration_minutes'])) {
+        if (! empty($schedule['duration_minutes'])) {
             return (int) $schedule['duration_minutes'];
         }
         if (isset($schedule['is_short_haul'])) {
             return $schedule['is_short_haul'] ? 60 : 360;
         }
-        if (!empty($schedule['duration'])) {
+        if (! empty($schedule['duration'])) {
             preg_match('/(?:(\d+)\s*h)?\s*(?:(\d+)\s*m)?/i', $schedule['duration'], $m);
-            $hours = !empty($m[1]) ? (int) $m[1] : 0;
-            $mins = !empty($m[2]) ? (int) $m[2] : 0;
+            $hours = ! empty($m[1]) ? (int) $m[1] : 0;
+            $mins = ! empty($m[2]) ? (int) $m[2] : 0;
             if ($hours > 0 || $mins > 0) {
                 return ($hours * 60) + $mins;
             }
         }
+
         return 0;
     }
 
@@ -2976,7 +3128,7 @@ class BookingForm extends Component
     public function calculateTotalPrice(): float
     {
         // If booking a prefilled package from CSV API or a tour with package_price
-        if (($this->prefilled_from_package || $this->tour_id) && !empty($this->package_price)) {
+        if (($this->prefilled_from_package || $this->tour_id) && ! empty($this->package_price)) {
             // Parse package_price: remove currency symbols and commas
             $cleanPrice = preg_replace('/[^0-9.]/', '', $this->package_price);
             $base = floatval($cleanPrice);
@@ -2995,9 +3147,10 @@ class BookingForm extends Component
             $transactionFee = $settings->getTransactionFee($isShortHaul) * $multiplier;
 
             $subtotal = $transportTotal + $vehicleTotal + $hotelTotal + $serviceFee + $accommodationFee + $transactionFee;
+
             return max(0, $subtotal - $this->getVoucherDiscountAmount());
         }
-        
+
         // If booking an Eloquent tour with tour pricing (future use when price_from is added)
         if ($this->tour_id && $this->tour) {
             $base = property_exists($this->tour, 'price_from') ? $this->tour->price_from : 0;
@@ -3024,30 +3177,35 @@ class BookingForm extends Component
             $transactionFee = $settings->getTransactionFee($isShortHaul) * $multiplier;
 
             $subtotal = $transportTotal + $vehicleTotal + $hotelTotal + $serviceFee + $accommodationFee + $transactionFee;
+
             return max(0, $subtotal - $this->getVoucherDiscountAmount());
         }
 
         $baseSchedulePrice = $this->getSelectedSchedulePrice();
         $scheduleAccommodationPrice = $this->getSelectedScheduleAccommodationPrice();
-        
+
         $returnSchedulePrice = $this->getSelectedReturnSchedulePrice();
         $returnScheduleAccommodationPrice = $this->getSelectedReturnScheduleAccommodationPrice();
-        
+
         $discountsById = $this->discounts->keyBy('id');
 
         $departureTransportClassTotal = 0;
         $hasPromoClass = false;
         if ($this->selected_transport_class_id && $this->selected_schedule_id) {
-            $stc = \App\Models\ScheduleTransportClass::resolveForSchedule($this->selected_schedule_id, $this->selected_transport_class_id);
+            $stc = ScheduleTransportClass::resolveForSchedule($this->selected_schedule_id, $this->selected_transport_class_id);
             $departureTransportClassTotal = $stc ? $stc->getEffectivePrice() : 0.0;
-            if ($stc && $stc->is_promo) $hasPromoClass = true;
+            if ($stc && $stc->is_promo) {
+                $hasPromoClass = true;
+            }
         }
 
         $returnTransportClassTotal = 0;
         if ($this->trip_type === 'round_trip' && $this->selected_return_transport_class_id && $this->selected_return_schedule_id) {
-            $rstc = \App\Models\ScheduleTransportClass::resolveForSchedule($this->selected_return_schedule_id, $this->selected_return_transport_class_id);
+            $rstc = ScheduleTransportClass::resolveForSchedule($this->selected_return_schedule_id, $this->selected_return_transport_class_id);
             $returnTransportClassTotal = $rstc ? $rstc->getEffectivePrice() : 0.0;
-            if ($rstc && $rstc->is_promo) $hasPromoClass = true;
+            if ($rstc && $rstc->is_promo) {
+                $hasPromoClass = true;
+            }
         }
 
         $isFerry = (strtolower($this->mode ?? '') !== 'airline');
@@ -3133,10 +3291,10 @@ class BookingForm extends Component
         // Service fee: charged per ticket + transport class
         $multiplier = $this->getFeeMultiplier();
         $serviceFee = ($multiplier * $settings->getWebAdminFee($isShortHaul));
-        
+
         // Accommodation fee: only charged if hotel is actually selected AND has a price
         $accommodationFee = $hotelTotal > 0 ? floatval($settings->fee_per_accommodation) : 0;
-        
+
         $transactionFee = $settings->getTransactionFee($isShortHaul) * $multiplier;
 
         $gross = $transportTotal + $transportClassTotal + $vehicleTotal + $hotelTotal + $serviceFee + $accommodationFee + $transactionFee + $this->getExtraBaggageTotalPrice();
@@ -3179,22 +3337,26 @@ class BookingForm extends Component
         $departureTransportClassTotal = 0;
         $hasPromoClass = false;
         if ($this->selected_transport_class_id && $this->selected_schedule_id) {
-            $stc = \App\Models\ScheduleTransportClass::resolveForSchedule($this->selected_schedule_id, $this->selected_transport_class_id);
+            $stc = ScheduleTransportClass::resolveForSchedule($this->selected_schedule_id, $this->selected_transport_class_id);
             $departureTransportClassTotal = $stc ? $stc->getEffectivePrice() : 0.0;
-            if ($stc && $stc->is_promo) $hasPromoClass = true;
+            if ($stc && $stc->is_promo) {
+                $hasPromoClass = true;
+            }
         }
 
         $returnTransportClassTotal = 0;
         if ($this->trip_type === 'round_trip' && $this->selected_return_transport_class_id && $this->selected_return_schedule_id) {
-            $rstc = \App\Models\ScheduleTransportClass::resolveForSchedule($this->selected_return_schedule_id, $this->selected_return_transport_class_id);
+            $rstc = ScheduleTransportClass::resolveForSchedule($this->selected_return_schedule_id, $this->selected_return_transport_class_id);
             $returnTransportClassTotal = $rstc ? $rstc->getEffectivePrice() : 0.0;
-            if ($rstc && $rstc->is_promo) $hasPromoClass = true;
+            if ($rstc && $rstc->is_promo) {
+                $hasPromoClass = true;
+            }
         }
 
         // Calculate totals considering discounts
         $discountsById = $this->discounts->keyBy('id');
         $activePromoTicket = (strtolower($this->mode) === 'airline') ? $this->getActivePromoTicket() : null;
-        
+
         $totalDepartureTicket = 0;
         $totalReturnTicket = 0;
         $totalDepartureAccommodation = 0;
@@ -3225,7 +3387,7 @@ class BookingForm extends Component
                 }
             }
 
-            $isAirlinePromoPassenger = (strtolower($this->mode) === 'airline' && !empty($passenger['use_promo']) && $activePromoTicket);
+            $isAirlinePromoPassenger = (strtolower($this->mode) === 'airline' && ! empty($passenger['use_promo']) && $activePromoTicket);
             if ($isAirlinePromoPassenger) {
                 $depTicket = floatval($activePromoTicket->promo_price) + $departureTransportClassTotal;
                 $retTicket = ($returnTicketPrice + $returnTransportClassTotal) * $paxMultiplier;
@@ -3233,7 +3395,7 @@ class BookingForm extends Component
                 $depTicket = ($departureTicketPrice + $departureTransportClassTotal) * $paxMultiplier;
                 $retTicket = ($returnTicketPrice + $returnTransportClassTotal) * $paxMultiplier;
             }
-            
+
             $isMinorPax = in_array($type, ['child', 'minor'], true) || (! $isFerry && $type === 'infant');
             $hasDiscount = ! empty($passenger['discount_id'])
                 && ! $this->isSuperPromo
@@ -3273,14 +3435,14 @@ class BookingForm extends Component
         $multiplier = $this->getFeeMultiplier();
         $isShortHaul = $this->isBookingShortHaul();
         $breakdown['fee_per_traveler'] = $multiplier * $settings->getWebAdminFee($isShortHaul);
-        
+
         // Accommodation fee: only charged if hotel is actually selected AND has a price
         $breakdown['fee_per_accommodation'] = $breakdown['hotel'] > 0 ? floatval($settings->fee_per_accommodation) : 0;
 
         $breakdown['transaction_fee'] = $settings->getTransactionFee($isShortHaul) * $multiplier;
 
         // Calculate subtotal (sum of all items before voucher)
-        $subtotal = 
+        $subtotal =
             $breakdown['departure_ticket'] +
             $breakdown['return_ticket'] +
             $breakdown['accommodation'] +
@@ -3377,12 +3539,12 @@ class BookingForm extends Component
         }
 
         $this->adults--;
-        
+
         // Ensure infants don't exceed adults
         if ($this->infants > $this->adults) {
             $this->infants = $this->adults;
         }
-        
+
         $this->saveDraft();
     }
 
@@ -3410,7 +3572,7 @@ class BookingForm extends Component
         $this->children--;
         $this->saveDraft();
     }
-    
+
     public function incrementMinors(): void
     {
         if ($this->adults + $this->children + (strtolower($this->mode) === 'airline' ? $this->minors + $this->infants : 0) >= $this->getMaxPassengers()) {
@@ -3430,7 +3592,7 @@ class BookingForm extends Component
         $this->minors--;
         $this->saveDraft();
     }
-    
+
     public function incrementInfants(): void
     {
         if ($this->infants >= $this->adults) {
@@ -3479,26 +3641,21 @@ class BookingForm extends Component
             $isAirline = strtolower($this->mode ?? '') === 'airline';
 
             foreach ($this->passengers as $index => $passenger) {
-                $type      = strtolower($passenger['type'] ?? 'adult');
+                $type = strtolower($passenger['type'] ?? 'adult');
                 $birthdate = $passenger['birthdate'] ?? null;
 
                 // --- Age-range check per passenger type ---
                 if ($birthdate && strtotime($birthdate)) {
-                    $dob     = \Carbon\Carbon::parse($birthdate);
-                    $ageYrs  = $dob->diffInYears(now());
+                    $dob = Carbon::parse($birthdate);
+                    $ageYrs = $dob->diffInYears(now());
                     $ageMths = $dob->diffInMonths(now());
 
                     $ageError = match (true) {
-                        $type === 'adult' && $ageYrs < 12
-                            => 'Adult passenger must be 12 years old or above.',
-                        $type === 'minor' && ($ageYrs < 7 || $ageYrs > 11)
-                            => 'Minor passenger must be 7 to 11 years old.',
-                        $type === 'child' && $isAirline && ($ageYrs < 2 || $ageYrs > 6)
-                            => 'Child passenger (airline) must be 2 to 6 years old.',
-                        $type === 'child' && !$isAirline && ($ageYrs < 2 || $ageYrs > 11)
-                            => 'Child passenger (ferry) must be 2 to 11 years old.',
-                        $type === 'infant' && $ageMths > 23
-                            => 'Infant passenger must be 0 to 23 months old.',
+                        $type === 'adult' && $ageYrs < 12 => 'Adult passenger must be 12 years old or above.',
+                        $type === 'minor' && ($ageYrs < 7 || $ageYrs > 11) => 'Minor passenger must be 7 to 11 years old.',
+                        $type === 'child' && $isAirline && ($ageYrs < 2 || $ageYrs > 6) => 'Child passenger (airline) must be 2 to 6 years old.',
+                        $type === 'child' && ! $isAirline && ($ageYrs < 2 || $ageYrs > 11) => 'Child passenger (ferry) must be 2 to 11 years old.',
+                        $type === 'infant' && $ageMths > 23 => 'Infant passenger must be 0 to 23 months old.',
                         default => null,
                     };
 
@@ -3536,7 +3693,7 @@ class BookingForm extends Component
                     }
                     // Age check: Senior must be 60 years old or older
                     if ($birthdate && strtotime($birthdate)) {
-                        $age = \Carbon\Carbon::parse($birthdate)->diffInYears(now());
+                        $age = Carbon::parse($birthdate)->diffInYears(now());
                         if ($age < 60) {
                             $validator->errors()->add(
                                 "passengers.{$index}.discount_id",
@@ -3556,7 +3713,6 @@ class BookingForm extends Component
 
         $validator->validate();
     }
-
 
     public function togglePassengerInfoModal(): void
     {
@@ -3584,7 +3740,7 @@ class BookingForm extends Component
             $proofEntries[$index] = [
                 'front' => $front,
                 'back' => $back,
-                'passenger_name' => trim((string) ($passenger['name'] ?? '')) ?: trim((string) (($passenger['first_name'] ?? '') . ' ' . ($passenger['last_name'] ?? ''))),
+                'passenger_name' => trim((string) ($passenger['name'] ?? '')) ?: trim((string) (($passenger['first_name'] ?? '').' '.($passenger['last_name'] ?? ''))),
                 'student_number' => $passenger['student_number'] ?? null,
                 'discount_name' => $discount->name,
             ];
@@ -3646,6 +3802,7 @@ class BookingForm extends Component
             return null;
         }
         $schedule = Schedule::query()->find($this->selected_schedule_id);
+
         return $schedule ? $schedule->activePromotionalTicket() : null;
     }
 
