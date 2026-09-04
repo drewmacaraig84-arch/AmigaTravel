@@ -1478,7 +1478,7 @@
     @endphp
     <div class="max-w-7xl mx-auto px-4 mt-10 amiga-animate-on-scroll amiga-transition" x-data='{ 
         currentSlide: 0, slides: @json($__promo_slides), currentVideo: 0, 
-        videos: ["{{ asset('video/Concept_A_smooth_motion_graph.mp4') }}", "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"], 
+        videos: ["{{ asset("video/Coral Reef Safari.mp4") }}", "{{ asset("video/Concept_A_smooth_motion_graph.mp4") }}"], 
         modalOpen: false, modalImage: null, zoomLevel: 1,
         showControls: true, controlTimeout: null,
         changeVideo(index, container) {
@@ -1513,7 +1513,7 @@
                                x-transition:enter-start="opacity-0"
                                x-transition:enter-end="opacity-100"
                                class="absolute inset-0 w-full h-full object-cover"
-                               autoplay muted loop playsinline controls
+                               autoplay muted loop playsinline controls preload="metadata"
                                :src="video">
                         </video>
                     </template>
