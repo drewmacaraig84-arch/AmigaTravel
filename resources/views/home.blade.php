@@ -1478,7 +1478,7 @@
     @endphp
     <div class="max-w-7xl mx-auto px-4 mt-10 amiga-animate-on-scroll amiga-transition" x-data='{ 
         currentSlide: 0, slides: @json($__promo_slides), currentVideo: 0, 
-        videos: ["{{ asset("video/Coral Reef Safari.mp4") }}", "{{ asset("video/Concept_A_smooth_motion_graph.mp4") }}"], 
+        videos: ["{{ asset("video/" . rawurlencode("Coral Reef Safari.mp4")) }}", "{{ asset("video/Concept_A_smooth_motion_graph.mp4") }}"], 
         modalOpen: false, modalImage: null, zoomLevel: 1,
         showControls: true, controlTimeout: null,
         changeVideo(index, container) {
