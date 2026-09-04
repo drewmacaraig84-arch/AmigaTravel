@@ -25,13 +25,26 @@ class ScheduleController extends Controller
         return array_values($data);
     }
 
+    /**
+     * Cache remember with graceful fallback to fresh execution if cache store throws.
+     */
+    private function rememberCache(string $key, \DateTimeInterface|\DateInterval|int $ttl, \Closure $callback): mixed
+    {
+        try {
+            return \Illuminate\Support\Facades\Cache::remember($key, $ttl, $callback);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("Cache failed for [{$key}]: " . $e->getMessage());
+            return $callback();
+        }
+    }
+
     public function origins(Request $request)
     {
         $mode = $request->input('mode', '');
         $operator = $request->input('operator', '');
         $cacheKey = "api:origins:{$mode}:{$operator}";
 
-        $origins = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(10), function () use ($mode, $operator) {
+        $origins = $this->rememberCache($cacheKey, now()->addMinutes(10), function () use ($mode, $operator) {
             return FerryRoute::scheduleOrigins($mode ?: null, $operator ?: null);
         });
 
@@ -46,7 +59,7 @@ class ScheduleController extends Controller
         $mode = $request->input('mode', '');
         $cacheKey = "api:operators:{$mode}";
 
-        $operators = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(10), function () use ($mode) {
+        $operators = $this->rememberCache($cacheKey, now()->addMinutes(10), function () use ($mode) {
             return FerryRoute::scheduleOperatorsFor($mode ?: null);
         });
 
@@ -68,7 +81,7 @@ class ScheduleController extends Controller
         $requireReturn = $tripType === 'round_trip' ? '1' : '0';
         $cacheKey = "api:destinations:{$origin}:{$mode}:{$operator}:{$requireReturn}";
 
-        $destinations = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(10), function () use ($origin, $mode, $operator, $tripType) {
+        $destinations = $this->rememberCache($cacheKey, now()->addMinutes(10), function () use ($origin, $mode, $operator, $tripType) {
             return FerryRoute::scheduleDestinationsFor($origin, $mode ?: null, $operator ?: null, $tripType === 'round_trip');
         });
 
@@ -91,7 +104,7 @@ class ScheduleController extends Controller
         $operator = $request->input('operator', '');
         $cacheKey = "api:available_dates:{$origin}:{$destination}:{$mode}:{$operator}";
 
-        $dates = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(5), function () use ($origin, $destination, $mode, $operator) {
+        $dates = $this->rememberCache($cacheKey, now()->addMinutes(5), function () use ($origin, $destination, $mode, $operator) {
             $query = FerryRoute::where('is_active', true)
                 ->where('origin', $origin)
                 ->where('destination', $destination);
@@ -141,7 +154,7 @@ class ScheduleController extends Controller
         $operator    = $request->input('operator', null);
 
         // Fetch the active earning rule (no need to cache a model instance to avoid unserialize errors)
-        $activeRule = \Illuminate\Support\Facades\Cache::remember('gracia:active_rule', now()->addMinutes(15), function () {
+        $activeRule = $this->rememberCache('gracia:active_rule', now()->addMinutes(15), function () {
             return \App\Models\GraciaEarningRule::where('is_active', true)
                 ->where(function ($q) { $q->whereNull('starts_at')->orWhere('starts_at', '<=', now()); })
                 ->where(function ($q) { $q->whereNull('ends_at')->orWhere('ends_at', '>=', now()); })
@@ -153,7 +166,7 @@ class ScheduleController extends Controller
         $cacheKey = 'api:schedule:search:'
             . md5("{$origin}:{$destination}:{$date}:{$mode}:{$operator}");
 
-        $schedules = \Illuminate\Support\Facades\Cache::remember(
+        $schedules = $this->rememberCache(
             $cacheKey,
             now()->addMinutes(2),
             function () use ($origin, $destination, $date, $mode, $operator, $activeRule) {
@@ -193,10 +206,24 @@ class ScheduleController extends Controller
         $startDate = $request->query('start_date', \Carbon\Carbon::today()->format('Y-m-d'));
         $endDate   = $request->query('end_date',   \Carbon\Carbon::today()->addDays(6)->format('Y-m-d'));
 
+        // Validate date format to prevent parsing crashes
+        try {
+            $startCarbon = \Carbon\Carbon::parse($startDate);
+            $endCarbon = \Carbon\Carbon::parse($endDate);
+            if ($endCarbon->lt($startCarbon)) {
+                $endDate = $startCarbon->copy()->addDays(6)->format('Y-m-d');
+            }
+        } catch (\Throwable) {
+            $startDate = \Carbon\Carbon::today()->format('Y-m-d');
+            $endDate = \Carbon\Carbon::today()->addDays(6)->format('Y-m-d');
+        }
+
         $cacheKey = 'api:all_schedules:' . $startDate . ':' . $endDate;
 
-        $routes = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(10), function () use ($startDate, $endDate) {
+        $routes = $this->rememberCache($cacheKey, now()->addMinutes(10), function () use ($startDate, $endDate) {
             return FerryRoute::with([
+                'operatorRecord',
+                'vehicle',
                 'schedules' => function ($query) use ($startDate, $endDate) {
                     $query->active()
                           ->whereBetween('departure_time', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
@@ -216,8 +243,15 @@ class ScheduleController extends Controller
             $arr = is_array($route) ? $route : $route->toArray();
             if (isset($arr['schedules'])) {
                 $filtered = array_filter($arr['schedules'], function($schedule) use ($now) {
-                    $dt = \Carbon\Carbon::parse(is_array($schedule) ? $schedule['departure_time'] : $schedule->departure_time);
-                    return $dt->isAfter($now);
+                    $val = is_array($schedule) ? ($schedule['departure_time'] ?? null) : ($schedule->departure_time ?? null);
+                    if (! $val) {
+                        return false;
+                    }
+                    try {
+                        return \Carbon\Carbon::parse($val)->isAfter($now);
+                    } catch (\Throwable) {
+                        return false;
+                    }
                 });
                 $arr['schedules'] = $this->ensureSequentialArray($filtered);
             }

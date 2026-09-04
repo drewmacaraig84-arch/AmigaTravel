@@ -3,6 +3,7 @@
 @section('content')
 {{-- Hero Section --}}
 @php
+    $routes = collect($routes);
     $origins = $routes->pluck('origin')->unique()->sort()->values();
     $destinations = $routes->pluck('destination')->unique()->sort()->values();
 @endphp
@@ -273,12 +274,13 @@
                                 <div x-ref="slider" class="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 hide-scroll" style="scrollbar-width: none;">
                                     @foreach($route->schedules as $schedule)
                                         @php 
-                                            $departureIso = \Carbon\Carbon::parse($schedule->departure_time)->toIso8601String();
-                                            $schIsPast = \Carbon\Carbon::parse($schedule->departure_time)->isPast(); 
+                                            $depTime = $schedule->departure_time ? \Carbon\Carbon::parse($schedule->departure_time) : null;
+                                            $departureIso = $depTime ? $depTime->toIso8601String() : '';
+                                            $schIsPast = $depTime ? $depTime->isPast() : false; 
                                         @endphp
                                         <div class="snap-start shrink-0 w-full md:w-[calc(50%-0.5rem)] xl:w-[calc(33.333%-0.67rem)]"
                                              x-data="{ isPast: {{ $schIsPast ? 'true' : 'false' }}, depTime: new Date('{{ $departureIso }}') }"
-                                             x-init="if (!isPast) { setInterval(() => { if (new Date() >= depTime) { isPast = true; } }, 1000) }">
+                                             x-init="if (!isPast && '{{ $departureIso }}') { setInterval(() => { if (new Date() >= depTime) { isPast = true; } }, 1000) }">
                                             <div class="h-full group relative rounded-xl border bg-white/80 backdrop-blur-sm p-4 transition-all duration-200"
                                                  :class="isPast ? 'border-slate-200 opacity-60' : 'border-slate-200 hover:border-[#216417]/30 hover:shadow-md'">
                                                 {{-- Departed ribbon --}}
@@ -327,7 +329,7 @@
                                                 {{-- Time Bar --}}
                                                 <div class="flex items-center gap-3 py-3 border-t border-b border-slate-100">
                                                     <div class="text-center">
-                                                        <p class="text-sm sm:text-base font-bold text-slate-900 leading-tight">{{ $schedule->formatted_departure }}</p>
+                                                        <p class="text-sm sm:text-base font-bold text-slate-900 leading-tight">{{ $schedule->departure_time ? \Carbon\Carbon::parse($schedule->departure_time)->format('g:i A') : '—' }}</p>
                                                         <p class="text-[10px] uppercase tracking-wider text-slate-400 mt-1">Depart</p>
                                                     </div>
                                                     <div class="flex-1 flex flex-col items-center">
@@ -345,7 +347,7 @@
                                                         </div>
                                                     </div>
                                                     <div class="text-center">
-                                                        <p class="text-sm sm:text-base font-bold text-slate-900 leading-tight">{{ $schedule->formatted_arrival }}</p>
+                                                        <p class="text-sm sm:text-base font-bold text-slate-900 leading-tight">{{ $schedule->arrival_time ? \Carbon\Carbon::parse($schedule->arrival_time)->format('g:i A') : '—' }}</p>
                                                         <p class="text-[10px] uppercase tracking-wider text-slate-400 mt-1">Arrive</p>
                                                     </div>
                                                 </div>

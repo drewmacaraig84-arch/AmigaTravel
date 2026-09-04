@@ -280,9 +280,17 @@ class Schedule extends Model
 
         $accommodations = $this->relationLoaded('scheduleAccommodations')
             ? $this->scheduleAccommodations
-            : $this->scheduleAccommodations()->where('is_active', true)->get();
+            : ($this->relationLoaded('transportClasses') ? collect() : $this->scheduleAccommodations()->where('is_active', true)->get());
 
         $names = $accommodations->pluck('name')->filter()->all();
+
+        if (empty($names)) {
+            $transportClasses = $this->relationLoaded('transportClasses')
+                ? $this->transportClasses
+                : $this->transportClasses()->get();
+
+            $names = $transportClasses->pluck('name')->filter()->all();
+        }
 
         return empty($names) ? 'Standard accommodation' : implode(', ', $names);
     }
@@ -569,7 +577,7 @@ class Schedule extends Model
                 'id'                 => $promoTicket->id,
                 'promo_price'        => floatval($promoTicket->promo_price),
                 'quantity_remaining' => $promoTicket->remaining_quantity,
-                'ends_at'            => $promoTicket->ends_at->toISOString(),
+                'ends_at'            => $promoTicket->ends_at ? Carbon::parse($promoTicket->ends_at)->toISOString() : null,
             ] : null,
             'accommodations' => $activeAccommodations
                 ->map(fn (ScheduleAccommodation $accommodation) => [
@@ -625,8 +633,8 @@ class Schedule extends Model
                         'rate_type' => $effectiveRateType,
                         'rate_code' => $pivot?->rate_code,
                         'promo_type' => $promoType,
-                        'promo_duration_start' => $pivot?->promo_duration_start?->toISOString(),
-                        'promo_duration_end' => $pivot?->promo_duration_end?->toISOString(),
+                        'promo_duration_start' => $promoStart?->toISOString(),
+                        'promo_duration_end' => $promoEnd?->toISOString(),
                         'code' => $classCode,
                         'name' => $class->name,
                         'description' => $pivot?->description ?? $class->description,

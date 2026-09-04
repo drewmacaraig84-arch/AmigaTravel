@@ -246,38 +246,64 @@ Route::get('/schedules', function (\Illuminate\Http\Request $request) {
     $startDate = $request->query('start_date', \Carbon\Carbon::today()->format('Y-m-d'));
     $endDate = $request->query('end_date', \Carbon\Carbon::today()->addDays(6)->format('Y-m-d'));
 
-    $routes = \Illuminate\Support\Facades\Cache::remember('web:schedules:' . $startDate . ':' . $endDate, now()->addMinutes(3), function () use ($startDate, $endDate) {
-        $routesData = App\Models\FerryRoute::with([
+    // Validate date format to prevent parsing crashes
+    try {
+        $startCarbon = \Carbon\Carbon::parse($startDate);
+        $endCarbon = \Carbon\Carbon::parse($endDate);
+        if ($endCarbon->lt($startCarbon)) {
+            $endDate = $startCarbon->copy()->addDays(6)->format('Y-m-d');
+        }
+    } catch (\Throwable) {
+        $startDate = \Carbon\Carbon::today()->format('Y-m-d');
+        $endDate = \Carbon\Carbon::today()->addDays(6)->format('Y-m-d');
+    }
+
+    $fetchRoutes = function () use ($startDate, $endDate) {
+        return App\Models\FerryRoute::with([
             'vehicle',
+            'operatorRecord',
             'schedules' => function ($query) use ($startDate, $endDate) {
-            $query->active()
-                  ->where('departure_time', '>=',
-                      // When viewing today, exclude schedules whose departure has already passed (to the second)
-                      \Carbon\Carbon::parse($startDate)->isToday()
-                          ? \Carbon\Carbon::now()
-                          : \Carbon\Carbon::parse($startDate)->startOfDay()
-                  )
-                  ->where('departure_time', '<=', \Carbon\Carbon::parse($endDate)->endOfDay())
-                  ->orderBy('departure_time');
+                $query->active()
+                      ->where('departure_time', '>=',
+                          \Carbon\Carbon::parse($startDate)->isToday()
+                              ? \Carbon\Carbon::now()
+                              : \Carbon\Carbon::parse($startDate)->startOfDay()
+                      )
+                      ->where('departure_time', '<=', \Carbon\Carbon::parse($endDate)->endOfDay())
+                      ->orderBy('departure_time');
             },
             'schedules.scheduleAccommodations',
             'schedules.transportClasses',
-            'schedules.vehicle',
-            'schedules.ferryRoute',
-        ])->where('is_active', true)->orderBy('origin')->orderBy('destination')->get();
-        
-        return $routesData->filter(fn ($route) => $route->schedules->isNotEmpty());
-    });
+        ])
+        ->where('is_active', true)
+        ->orderBy('origin')
+        ->orderBy('destination')
+        ->get()
+        ->filter(fn ($route) => $route->schedules->isNotEmpty())
+        ->values();
+    };
 
+    try {
+        $cacheKey = 'web:schedules:' . $startDate . ':' . $endDate;
+        $routes = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(3), $fetchRoutes);
+    } catch (\Throwable $e) {
+        \Illuminate\Support\Facades\Log::warning('Schedules cache retrieval error: ' . $e->getMessage());
+        $routes = $fetchRoutes();
+    }
 
-    class_exists(\App\Models\WebsiteSetting::class);
-    $settingsData = \Illuminate\Support\Facades\Cache::remember('website_settings:page:schedules', now()->addHour(), function () {
-        try {
-            return WebsiteSetting::firstWhere('page', 'schedules')?->toArray() ?? [];
-        } catch (\Throwable $e) {
-            return [];
-        }
-    });
+    $settingsData = [];
+    try {
+        $settingsData = \Illuminate\Support\Facades\Cache::remember('website_settings:page:schedules', now()->addHour(), function () {
+            try {
+                return WebsiteSetting::firstWhere('page', 'schedules')?->toArray() ?? [];
+            } catch (\Throwable $e) {
+                return [];
+            }
+        });
+    } catch (\Throwable) {
+        $settingsData = [];
+    }
+
     $pageSettings = (object) ($settingsData ?? []);
     $pageContent = $settingsData['content'] ?? [];
 
