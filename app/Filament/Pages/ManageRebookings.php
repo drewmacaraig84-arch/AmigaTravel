@@ -110,7 +110,7 @@ class ManageRebookings extends Page implements HasTable
                         default => $state ? ucfirst(str_replace('_', ' ', $state)) : null,
                     })
                     ->color(fn (?string $state): string => match ($state) {
-                        'rebooking_required' => 'danger',
+                        'rebooking_required', 'rejected' => 'danger',
                         'reschedule_requested' => 'info',
                         'verified' => 'success',
                         'pending' => 'warning',
@@ -185,6 +185,7 @@ class ManageRebookings extends Page implements HasTable
                         'rebooking_required' => 'Rebooking Required',
                         'reschedule_requested' => 'Reschedule Requested',
                         'verified' => 'Rebooked / Verified',
+                        'rejected' => 'Rejected',
                     ]),
                 SelectFilter::make('disruption_status')
                     ->label('Disruption status')
@@ -309,6 +310,47 @@ class ManageRebookings extends Page implements HasTable
                             ->columnSpanFull(),
                     ])
                     ->extraModalFooterActions([
+                        Tables\Actions\Action::make('rejectRebookingModal')
+                            ->label('Reject Rebooking')
+                            ->color('danger')
+                            ->icon('heroicon-m-x-circle')
+                            ->form([
+                                Forms\Components\Radio::make('rejection_reason')
+                                    ->label('Reason for Rejection')
+                                    ->options(array_combine(Booking::REJECTION_REASONS, Booking::REJECTION_REASONS))
+                                    ->required()
+                                    ->live()
+                                    ->columns(1),
+                                Forms\Components\Textarea::make('rejection_notes')
+                                    ->label('Additional Notes / Specified Reason')
+                                    ->placeholder('Please provide specific details here...')
+                                    ->rows(3)
+                                    ->maxLength(1000)
+                                    ->helperText('Required when selecting "Other — please specify reason". Optional otherwise.')
+                                    ->required(fn (Forms\Get $get): bool => $get('rejection_reason') === 'Other — please specify reason')
+                                    ->visible(fn (Forms\Get $get): bool => filled($get('rejection_reason'))),
+                            ])
+                            ->modalHeading('Reject Rebooking Request')
+                            ->modalDescription('Please select the reason for rejecting this rebooking request. The original booking will remain active and confirmed. The client will be notified politely by email.')
+                            ->modalSubmitActionLabel('Reject & Notify Client')
+                            ->modalWidth('lg')
+                            ->action(function (Booking $record, array $data): void {
+                                $reason = $data['rejection_reason'];
+                                $notes  = filled($data['rejection_notes'] ?? '') ? trim($data['rejection_notes']) : null;
+
+                                if ($reason === 'Other — please specify reason' && $notes) {
+                                    $reason = 'Other: ' . $notes;
+                                    $notes  = null;
+                                }
+
+                                $record->rejectRebooking($reason, $notes, Auth::user());
+
+                                Notification::make()
+                                    ->title('Rebooking Request Rejected')
+                                    ->body("Rebooking request for #{$record->transaction_number} was rejected. Original booking remains active.")
+                                    ->danger()
+                                    ->send();
+                            }),
                         Tables\Actions\Action::make('releaseClaim')
                             ->label('Release Review')
                             ->color('gray')
@@ -387,6 +429,52 @@ class ManageRebookings extends Page implements HasTable
                         }
                     })
                     ->visible(fn (Booking $record): bool => in_array($record->status, ['confirmed', 'pending_rebooking', 'pending']) && $record->rebooking_status === 'pending'),
+
+                Tables\Actions\Action::make('rejectRebooking')
+                    ->label('Reject')
+                    ->icon('heroicon-m-x-circle')
+                    ->color('danger')
+                    ->button()
+                    ->visible(fn (Booking $record): bool => in_array($record->status, ['confirmed', 'pending_rebooking', 'pending']) && $record->rebooking_status === 'pending')
+                    ->disabled(fn (Booking $record): bool => $record->isReviewClaimedByOther(Auth::user()))
+                    ->tooltip(fn (Booking $record): ?string => $record->isReviewClaimedByOther(Auth::user()) ? $record->getReviewClaimTooltip(Auth::user()) : null)
+                    ->form([
+                        Forms\Components\Radio::make('rejection_reason')
+                            ->label('Reason for Rejection')
+                            ->options(array_combine(Booking::REJECTION_REASONS, Booking::REJECTION_REASONS))
+                            ->required()
+                            ->live()
+                            ->columns(1),
+                        Forms\Components\Textarea::make('rejection_notes')
+                            ->label('Additional Notes / Specified Reason')
+                            ->placeholder('Please provide specific details here...')
+                            ->rows(3)
+                            ->maxLength(1000)
+                            ->helperText('Required when selecting "Other — please specify reason". Optional otherwise.')
+                            ->required(fn (Forms\Get $get): bool => $get('rejection_reason') === 'Other — please specify reason')
+                            ->visible(fn (Forms\Get $get): bool => filled($get('rejection_reason'))),
+                    ])
+                    ->modalHeading('Reject Rebooking Request')
+                    ->modalDescription('Please select the reason for rejecting this rebooking request. The original booking will remain active and confirmed. The client will be notified politely by email.')
+                    ->modalSubmitActionLabel('Reject & Notify Client')
+                    ->modalWidth('lg')
+                    ->action(function (Booking $record, array $data): void {
+                        $reason = $data['rejection_reason'];
+                        $notes  = filled($data['rejection_notes'] ?? '') ? trim($data['rejection_notes']) : null;
+
+                        if ($reason === 'Other — please specify reason' && $notes) {
+                            $reason = 'Other: ' . $notes;
+                            $notes  = null;
+                        }
+
+                        $record->rejectRebooking($reason, $notes, Auth::user());
+
+                        Notification::make()
+                            ->title('Rebooking Request Rejected')
+                            ->body("Rebooking request for #{$record->transaction_number} was rejected. Original booking remains active.")
+                            ->danger()
+                            ->send();
+                    }),
 
                 Tables\Actions\Action::make('approveReschedule')
                     ->label('Approve Reschedule')

@@ -50,17 +50,19 @@ class MyPage extends Page
         $completed = (clone $baseQuery)->where('status', 'confirmed')->count();
         $pending = (clone $baseQuery)->whereIn('status', ['pending', 'pending_rebooking', 'refund_pending'])->count();
         $cancelled = (clone $baseQuery)->whereIn('status', ['cancelled', 'operator_cancelled'])->count();
+        $rejected = (clone $baseQuery)->where('status', Booking::STATUS_REJECTED)->count();
         $revenue = (clone $baseQuery)->where('status', 'confirmed')->sum('total_price') ?: 0;
 
         $completionRate = $total > 0 ? round(($completed / $total) * 100, 1) : 100;
 
         $this->stats = [
             'total_transactions' => $total,
-            'completed' => $completed,
-            'pending' => $pending,
-            'cancelled' => $cancelled,
-            'revenue_handled' => $revenue,
-            'completion_rate' => $completionRate,
+            'completed'          => $completed,
+            'pending'            => $pending,
+            'cancelled'          => $cancelled,
+            'rejected'           => $rejected,
+            'revenue_handled'    => $revenue,
+            'completion_rate'    => $completionRate,
         ];
 
         $this->recentBookings = (clone $baseQuery)
@@ -161,6 +163,13 @@ class MyPage extends Page
             return in_array($b->status, [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED]);
         });
 
+        $rejected = $myBookings->filter(function ($b) use ($refunded, $rebooked, $pending, $confirmed, $cancelled, $pendingRebook, $pendingRefund) {
+            if ($refunded->contains('id', $b->id) || $rebooked->contains('id', $b->id) || $pending->contains('id', $b->id) || $confirmed->contains('id', $b->id) || $cancelled->contains('id', $b->id) || $pendingRebook->contains('id', $b->id) || $pendingRefund->contains('id', $b->id)) {
+                return false;
+            }
+            return $b->status === Booking::STATUS_REJECTED;
+        });
+
         return [
             'Confirmed Bookings'       => $confirmed,
             'Rebooked Bookings'        => $rebooked,
@@ -169,6 +178,7 @@ class MyPage extends Page
             'Pending Rebook'           => $pendingRebook,
             'Pending Bookings'         => $pending,
             'Cancelled Bookings'       => $cancelled,
+            'Rejected Bookings'        => $rejected,
         ];
     }
 

@@ -252,6 +252,26 @@
                 </div>
             </div>
         </div>
+
+        <div class="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-gray-200 min-h-[220px] dark:bg-gray-900 dark:ring-white/10">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <p class="text-xs uppercase tracking-[0.24em] text-slate-400">Month to date</p>
+                    <p class="mt-4 text-lg font-semibold text-slate-900 dark:text-white">Rejection Rate</p>
+                    <p class="mt-4 text-4xl font-extrabold text-slate-900 dark:text-white">{{ $stats['rejection_rate'] ?? 0 }}%</p>
+                    <p class="mt-3 text-sm text-slate-500 dark:text-slate-400">
+                        {{ $stats['rejected_bookings'] ?? 0 }} rejected
+                        @if(($stats['rejected_rebookings'] ?? 0) > 0)
+                            · {{ $stats['rejected_rebookings'] }} rebooking
+                        @endif
+                    </p>
+                </div>
+                <div class="flex flex-col items-end gap-3">
+                    <div class="h-14 w-28 rounded-3xl bg-slate-100 dark:bg-slate-800" wire:ignore id="spark-rejections"></div>
+                    <x-heroicon-o-no-symbol class="h-6 w-6 text-rose-500" />
+                </div>
+            </div>
+        </div>
     </div>
 
     {{-- ═══ Charts Row 1: Revenue + Booking Volume ═══ --}}
@@ -313,6 +333,7 @@
                                             'confirmed' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400',
                                             'pending' => 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400',
                                             'cancelled' => 'bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400',
+                                            'rejected' => 'bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400',
                                             default => 'bg-gray-100 text-gray-600',
                                         };
                                     @endphp
@@ -451,7 +472,7 @@
     {{-- ═══ Payment Analytics Row ═══ --}}
     <div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10 w-full">
         <h3 class="text-base font-semibold text-gray-950 dark:text-white mb-4">Payment Analytics</h3>
-        <div class="grid w-full gap-6 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+        <div class="grid w-full gap-6 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
             <div class="text-center">
                 <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ $paymentAnalytics['paid'] ?? 0 }}</p>
                 <p class="text-xs text-gray-500 mt-1">Paid</p>
@@ -463,6 +484,10 @@
             <div class="text-center">
                 <p class="text-2xl font-bold text-red-600 dark:text-red-400">{{ $paymentAnalytics['failed'] ?? 0 }}</p>
                 <p class="text-xs text-gray-500 mt-1">Failed</p>
+            </div>
+            <div class="text-center">
+                <p class="text-2xl font-bold text-rose-600 dark:text-rose-400">{{ $paymentAnalytics['rejected'] ?? 0 }}</p>
+                <p class="text-xs text-gray-500 mt-1">Rejected</p>
             </div>
             <div class="text-center">
                 <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $paymentAnalytics['total'] ?? 0 }}</p>
@@ -570,9 +595,9 @@
             reportCharts.status = new ApexCharts(statEl, {
                 ...bt,
                 chart: { ...bt.chart, type: 'donut', height: 280 },
-                series: data.statusDistribution?.series || [0, 0, 0],
-                labels: data.statusDistribution?.labels || ['Confirmed', 'Pending', 'Cancelled'],
-                colors: ['#10b981', '#f59e0b', '#ef4444'],
+                series: data.statusDistribution?.series || [0, 0, 0, 0],
+                labels: data.statusDistribution?.labels || ['Confirmed', 'Pending', 'Cancelled', 'Rejected'],
+                colors: ['#10b981', '#f59e0b', '#64748b', '#e11d48'],
                 plotOptions: { pie: { donut: { size: '70%', labels: { show: true, name: { color: dark ? '#fff' : '#1f2937' }, value: { color: dark ? '#fff' : '#1f2937', fontSize: '22px', fontWeight: 700 }, total: { show: true, label: 'Total', color: dark ? '#9ca3af' : '#6b7280', formatter: (w) => w.globals.seriesTotals.reduce((a, b) => a + b, 0) } } } } },
                 stroke: { width: 2, colors: [dark ? '#111827' : '#fff'] },
                 legend: { position: 'bottom', labels: { colors: dark ? '#d1d5db' : '#374151' }, fontSize: '12px', markers: { size: 8, shape: 'circle' }, itemMargin: { horizontal: 10, vertical: 4 } },
@@ -639,6 +664,7 @@
                     { id: 'spark-completion', series: data.statusDistribution?.series || [], color: '#10B981' },
                     { id: 'spark-cancellation', series: data.statusDistribution?.series || [], color: '#ef4444' },
                     { id: 'spark-rebookings', series: data.bookingVolume?.series?.[0]?.data || [], color: '#3b82f6' },
+                    { id: 'spark-rejections', series: data.statusDistribution?.series || [], color: '#e11d48' },
                 ];
 
                 sparkConfigs.forEach(cfg => {

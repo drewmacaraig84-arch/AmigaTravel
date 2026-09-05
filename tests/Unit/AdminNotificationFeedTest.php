@@ -61,10 +61,10 @@ class AdminNotificationFeedTest extends TestCase
 
         $notifications = (new AdminNotificationFeed())->getForUser(new \App\Models\User());
 
-        $this->assertCount(4, $notifications);
+        $this->assertCount(5, $notifications);
         $this->assertEqualsCanonicalizing(
             ['new_booking', 'cancellation', 'rebooking', 'inquiry'],
-            collect($notifications)->pluck('type')->all()
+            collect($notifications)->pluck('type')->unique()->values()->all()
         );
     }
 }

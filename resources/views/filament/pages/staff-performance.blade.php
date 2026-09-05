@@ -240,6 +240,9 @@
                             <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300 text-center">
                                 Cancelled
                             </th>
+                            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300 text-center">
+                                Rejected
+                            </th>
                             <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300 text-right">
                                 Revenue Handled
                             </th>
@@ -301,6 +304,11 @@
                                         {{ $staff['cancelled_bookings'] }}
                                     </span>
                                 </td>
+                                <td class="px-6 py-4 text-center">
+                                    <span class="inline-flex items-center rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-semibold text-rose-800 dark:bg-rose-900/60 dark:text-rose-200">
+                                        {{ $staff['rejected_bookings'] ?? 0 }}
+                                    </span>
+                                </td>
                                 <td class="px-6 py-4 text-right">
                                     <span class="font-extrabold text-sm text-gray-900 dark:text-white tabular-nums">
                                         ₱{{ number_format($staff['total_revenue_handled'], 2) }}
@@ -353,10 +361,11 @@
                                                                 'confirmed' => 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200',
                                                                 'pending', 'pending_rebooking' => 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200',
                                                                 'cancelled', 'operator_cancelled' => 'bg-red-100 text-red-800 dark:bg-red-900/60 dark:text-red-200',
+                                                                'rejected' => 'bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-200',
                                                                 'refunded' => 'bg-purple-100 text-purple-800 dark:bg-purple-900/60 dark:text-purple-200',
                                                                 default => 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
                                                             };
-                                                            $handledAt = $booking->verified_at ?? $booking->refund_processed_at ?? $booking->created_at;
+                                                            $handledAt = $booking->verified_at ?? $booking->refund_processed_at ?? $booking->rejected_at ?? $booking->rebooking_rejected_at ?? $booking->created_at;
                                                         @endphp
                                                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                                                             <td class="px-4 py-3 font-mono text-xs font-bold text-amber-600 dark:text-amber-400">
@@ -394,7 +403,7 @@
                                                         </tr>
                                                     @empty
                                                         <tr>
-                                                            <td colspan="7" class="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">
+                                                            <td colspan="9" class="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">
                                                                 No bookings found for this staff member in the selected period.
                                                             </td>
                                                         </tr>
@@ -407,7 +416,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="px-6 py-12 text-center text-sm text-gray-400 dark:text-gray-500">
+                                <td colspan="9" class="px-6 py-12 text-center text-sm text-gray-400 dark:text-gray-500">
                                     No staff members or performance data found.
                                 </td>
                             </tr>

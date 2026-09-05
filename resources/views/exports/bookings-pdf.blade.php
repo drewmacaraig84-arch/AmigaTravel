@@ -66,6 +66,7 @@
         .status-refunded           { background-color: #8e44ad; color: #ffffff; }
         .status-cancelled          { background-color: #e74c3c; color: #ffffff; }
         .status-operator-cancelled { background-color: #c0392b; color: #ffffff; }
+        .status-rejected           { background-color: #be123c; color: #ffffff; }
         .totals-row td {
             background-color: #ecf0f1;
             font-weight: bold;
@@ -149,6 +150,8 @@
                         $matches = true;
                     } elseif ($title === 'Cancelled Bookings' && in_array($booking->status, ['cancelled', 'operator_cancelled']) && $booking->refund_amount <= 0 && ! $isPendingRefund) {
                         $matches = true;
+                    } elseif ($title === 'Rejected Bookings' && $booking->status === 'rejected') {
+                        $matches = true;
                     }
 
                     if ($matches) {
@@ -173,6 +176,8 @@
                             $matches = ($p->status === 'pending' && ! $p->isRebooked() && ! $p->isRefundItem()) || $p->isRebookingPending();
                         } elseif ($title === 'Cancelled Bookings') {
                             $matches = $p->isCancelled() && (float) $p->refund_amount <= 0 && ! $p->isRefundPending() && $p->refund_status !== 'pending';
+                        } elseif ($title === 'Rejected Bookings') {
+                            $matches = $p->status === 'rejected' || $booking->status === 'rejected';
                         }
 
                         if ($matches) {

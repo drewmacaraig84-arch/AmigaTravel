@@ -68,6 +68,7 @@
                                                         'confirmed' => ['bg' => '#dcfce7', 'text' => '#166534'],
                                                         'cancelled' => ['bg' => '#fee2e2', 'text' => '#991b1b'],
                                                         'operator_cancelled' => ['bg' => '#fee2e2', 'text' => '#991b1b'],
+                                                        'rejected' => ['bg' => '#fee2e2', 'text' => '#991b1b'],
                                                     ];
                                                     $sStyle = $statusColors[$b->status] ?? $statusColors['pending'];
                                                 @endphp
@@ -90,6 +91,7 @@
                                 'confirmed' => ['bg' => '#dcfce7', 'text' => '#166534'],
                                 'cancelled' => ['bg' => '#fee2e2', 'text' => '#991b1b'],
                                 'operator_cancelled' => ['bg' => '#fee2e2', 'text' => '#991b1b'],
+                                'rejected' => ['bg' => '#fee2e2', 'text' => '#991b1b'],
                             ];
                             $statusStyle = $statusColors[$booking->status] ?? $statusColors['pending'];
                         @endphp
@@ -253,13 +255,88 @@
                                         </span>
                                     @endif
                                     <span class="rounded-full px-4 py-1.5 text-sm font-semibold" @style(['background' => $statusStyle['bg'], 'color' => $statusStyle['text']])>
-                                        {{ in_array($booking->status, ['cancelled', 'operator_cancelled']) && (float) $booking->refund_amount > 0 ? $booking->getRefundStatusLabel() : ($booking->status === 'operator_cancelled' ? 'Cancelled by Operator' : ($booking->status === 'cancelled' ? 'Cancelled' : ucfirst($booking->status))) }}
+                                        {{ in_array($booking->status, ['cancelled', 'operator_cancelled']) && (float) $booking->refund_amount > 0 ? $booking->getRefundStatusLabel() : ($booking->status === 'operator_cancelled' ? 'Cancelled by Operator' : ($booking->status === 'cancelled' ? 'Cancelled' : ($booking->status === 'rejected' ? 'Rejected' : ucfirst($booking->status)))) }}
                                         @if($booking->rebooking_status === 'pending')
                                             (Rebooking Pending)
+                                        @elseif($booking->rebooking_status === 'rejected')
+                                            (Rebooking Rejected)
                                         @endif
                                     </span>
                                 </div>
                             </div>
+
+                            @if($booking->status === 'rejected')
+                                <div class="rounded-2xl border border-rose-300 bg-rose-50/80 p-5 shadow-sm space-y-3">
+                                    <div class="flex items-center gap-2.5 text-rose-900 font-bold text-sm">
+                                        <svg class="h-5 w-5 shrink-0 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                        </svg>
+                                        Payment Verification Unsuccessful
+                                    </div>
+                                    <div class="space-y-2 text-xs sm:text-sm text-slate-700 leading-relaxed">
+                                        <p>
+                                            We were unable to verify your payment proof for this booking.
+                                        </p>
+                                        <div class="rounded-xl bg-white/90 border border-rose-200 p-3.5 space-y-1.5 shadow-sm">
+                                            <div>
+                                                <span class="font-bold text-slate-600">Reason:</span>
+                                                <span class="font-semibold text-rose-900">{{ $booking->rejection_reason ?? 'Invalid or unverified payment proof' }}</span>
+                                            </div>
+                                            @if($booking->rejection_notes)
+                                                <div>
+                                                    <span class="font-bold text-slate-600">Additional Details:</span>
+                                                    <span class="text-slate-800">{{ $booking->rejection_notes }}</span>
+                                                </div>
+                                            @endif
+                                            @if($booking->rejected_at)
+                                                <div class="text-[11px] text-slate-500">
+                                                    Reviewed on {{ $booking->rejected_at->format('M d, Y h:i A') }}
+                                                </div>
+                                            @endif
+                                        </div>
+                                        <p class="text-xs text-slate-600 font-medium">
+                                            If you have questions or would like to submit updated payment details, please reach out to our customer support team with your transaction number <strong class="text-slate-900">#{{ $booking->transaction_number }}</strong>.
+                                        </p>
+                                    </div>
+                                </div>
+                            @endif
+
+                            @if($booking->rebooking_status === 'rejected')
+                                <div class="rounded-2xl border border-amber-300 bg-amber-50/80 p-5 shadow-sm space-y-3">
+                                    <div class="flex items-center gap-2.5 text-amber-900 font-bold text-sm">
+                                        <svg class="h-5 w-5 shrink-0 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        Rebooking Request Not Approved
+                                    </div>
+                                    <div class="space-y-2 text-xs sm:text-sm text-slate-700 leading-relaxed">
+                                        <p>
+                                            Your recent rebooking request could not be approved due to the following reason:
+                                        </p>
+                                        <div class="rounded-xl bg-white/90 border border-amber-200 p-3.5 space-y-1.5 shadow-sm">
+                                            <div>
+                                                <span class="font-bold text-slate-600">Reason:</span>
+                                                <span class="font-semibold text-amber-950">{{ $booking->rebooking_rejection_reason ?? 'Payment or documentation could not be verified' }}</span>
+                                            </div>
+                                            @if($booking->rebooking_rejection_notes)
+                                                <div>
+                                                    <span class="font-bold text-slate-600">Additional Details:</span>
+                                                    <span class="text-slate-800">{{ $booking->rebooking_rejection_notes }}</span>
+                                                </div>
+                                            @endif
+                                            @if($booking->rebooking_rejected_at)
+                                                <div class="text-[11px] text-slate-500">
+                                                    Reviewed on {{ $booking->rebooking_rejected_at->format('M d, Y h:i A') }}
+                                                </div>
+                                            @endif
+                                        </div>
+                                        <div class="rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-xs text-emerald-900 flex items-center gap-2">
+                                            <span class="text-base">✅</span>
+                                            <span><strong>Your original booking remains active and confirmed:</strong> Your original travel schedule for <strong>{{ $booking->departure_date->format('M d, Y') }}</strong> is completely preserved.</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
 
                             @if(in_array($booking->status, ['cancelled', 'operator_cancelled']) && (float) $booking->refund_amount > 0)
                                 <div class="rounded-2xl border {{ $booking->isRefundCompleted() ? 'border-emerald-200 bg-emerald-50/70' : 'border-amber-200 bg-amber-50/70' }} p-5 shadow-sm space-y-3">
@@ -705,7 +782,7 @@
 
                             <div class="space-y-4">
                                 <div class="flex flex-wrap gap-3">
-                                    @if(!in_array($booking->status, ['cancelled', 'operator_cancelled']))
+                                    @if(!in_array($booking->status, ['cancelled', 'operator_cancelled', 'rejected']))
                                         {{-- Done button only for unpaid pending bookings --}}
                                         @if($booking->transaction && in_array($booking->transaction->payment_status, ['pending', 'unpaid'], true) && $booking->status === 'pending')
                                             <a href="{{ route('home') }}" class="inline-flex items-center justify-center rounded-3xl px-6 py-3 text-sm font-semibold text-white shadow-sm transition" style="background:#ee018d;" onmouseover="this.style.background='#c30172'" onmouseout="this.style.background='#ee018d'">

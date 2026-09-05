@@ -35,6 +35,7 @@
         .section-pending-rebook { background-color: #fff7ed; color: #9a3412; border-left: 4px solid #ea580c; }
         .section-pending        { background-color: #fefce8; color: #854d0e; border-left: 4px solid #eab308; }
         .section-cancelled      { background-color: #fef2f2; color: #991b1b; border-left: 4px solid #ef4444; }
+        .section-rejected       { background-color: #fff1f2; color: #9f1239; border-left: 4px solid #be123c; }
 
         table {
             width: 100%;
@@ -134,6 +135,7 @@
                 'Pending Rebook' => 'section-pending-rebook',
                 'Pending Bookings' => 'section-pending',
                 'Cancelled Bookings' => 'section-cancelled',
+                'Rejected Bookings' => 'section-rejected',
                 default => 'section-confirmed',
             };
 
@@ -145,6 +147,7 @@
                 'Pending Rebook' => '#ea580c',
                 'Pending Bookings' => '#d97706',
                 'Cancelled Bookings' => '#dc2626',
+                'Rejected Bookings' => '#be123c',
                 default => '#334155',
             };
             $subtotal = 0;

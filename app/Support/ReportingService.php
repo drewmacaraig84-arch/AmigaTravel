@@ -164,8 +164,9 @@ class ReportingService
                     $counts['confirmed'] ?? 0,
                     $counts['pending'] ?? 0,
                     $counts['cancelled'] ?? 0,
+                    $counts['rejected'] ?? 0,
                 ],
-                'labels' => ['Confirmed', 'Pending', 'Cancelled'],
+                'labels' => ['Confirmed', 'Pending', 'Cancelled', 'Rejected'],
             ];
         });
     }
@@ -176,27 +177,35 @@ class ReportingService
     {
         return Cache::remember("recent_activity_{$limit}", self::CACHE_TTL, function () use ($limit) {
             $bookings = Booking::query()
-                ->orderByDesc(DB::raw('COALESCE(verified_at, updated_at, created_at)'))
+                ->orderByDesc(DB::raw('COALESCE(verified_at, rejected_at, rebooking_rejected_at, updated_at, created_at)'))
                 ->take($limit)
-                ->get(['id', 'transaction_number', 'client_name', 'origin', 'destination', 'status', 'total_price', 'created_at', 'updated_at', 'verified_at', 'is_rebooked', 'rebooking_status'])
+                ->get(['id', 'transaction_number', 'client_name', 'origin', 'destination', 'status', 'total_price', 'created_at', 'updated_at', 'verified_at', 'rejected_at', 'is_rebooked', 'rebooking_status', 'rebooking_rejected_at'])
                 ->map(fn (Booking $b) => [
                     'type' => 'booking',
-                    'icon' => 'heroicon-o-ticket',
+                    'icon' => $b->status === 'rejected' ? 'heroicon-o-x-circle' : 'heroicon-o-ticket',
                     'title' => $b->status === 'cancelled'
                         ? "Booking cancelled {$b->transaction_number}"
-                        : ($b->is_rebooked && $b->rebooking_status === 'pending'
-                            ? "Rebooking request for {$b->transaction_number}"
-                            : ($b->status === 'confirmed' && $b->verified_at
-                                ? "Booking verified {$b->transaction_number}"
-                                : "New booking {$b->transaction_number}")),
+                        : ($b->status === 'rejected'
+                            ? "Payment rejected {$b->transaction_number}"
+                            : ($b->is_rebooked && $b->rebooking_status === 'pending'
+                                ? "Rebooking request for {$b->transaction_number}"
+                                : ($b->is_rebooked && $b->rebooking_status === 'rejected'
+                                    ? "Rebooking rejected {$b->transaction_number}"
+                                    : ($b->status === 'confirmed' && $b->verified_at
+                                        ? "Booking verified {$b->transaction_number}"
+                                        : "New booking {$b->transaction_number}")))),
                     'description' => $b->status === 'cancelled'
                         ? "{$b->client_name} cancelled {$b->origin} → {$b->destination}"
-                        : ($b->status === 'confirmed' && $b->verified_at
-                            ? "Booking confirmed for {$b->client_name} · {$b->origin} → {$b->destination}"
-                            : "{$b->client_name} · {$b->origin} → {$b->destination}"),
+                        : ($b->status === 'rejected'
+                            ? "Payment rejected for {$b->client_name} · {$b->origin} → {$b->destination}"
+                            : ($b->is_rebooked && $b->rebooking_status === 'rejected'
+                                ? "Rebooking rejected for {$b->client_name} · {$b->origin} → {$b->destination}"
+                                : ($b->status === 'confirmed' && $b->verified_at
+                                    ? "Booking confirmed for {$b->client_name} · {$b->origin} → {$b->destination}"
+                                    : "{$b->client_name} · {$b->origin} → {$b->destination}"))),
                     'status' => $b->status,
                     'amount' => $b->total_price,
-                    'time' => with($b->verified_at ?? $b->updated_at ?? $b->created_at, function ($value) {
+                    'time' => with($b->verified_at ?? $b->rejected_at ?? $b->rebooking_rejected_at ?? $b->updated_at ?? $b->created_at, function ($value) {
                         if ($value === null) {
                             return null;
                         }
@@ -282,6 +291,8 @@ class ReportingService
             $confirmed = (clone $query)->where('status', 'confirmed')->count();
             $pending = (clone $query)->where('status', 'pending')->count();
             $cancelled = (clone $query)->where('status', 'cancelled')->count();
+            $rejected = (clone $query)->where('status', 'rejected')->count();
+            $rejectedRebookings = (clone $query)->where('is_rebooked', true)->where('rebooking_status', 'rejected')->count();
 
             $totalRevenue = (float) (clone $query)
                 ->whereHas('transactions', fn (Builder $q) => $q->where('payment_status', 'paid'))
@@ -300,6 +311,7 @@ class ReportingService
             $avgBookingValue = $total > 0 ? $totalRevenue / $total : 0;
             $completionRate = $total > 0 ? round(($confirmed / $total) * 100, 1) : 0;
             $cancellationRate = $total > 0 ? round(($cancelled / $total) * 100, 1) : 0;
+            $rejectionRate = $total > 0 ? round(($rejected / $total) * 100, 1) : 0;
 
             // Previous period stats for trend comparison
             $prevStats = $this->getPreviousPeriodStats($period, $startDate, $endDate);
@@ -314,6 +326,7 @@ class ReportingService
             $totalPassengers = (clone $paxQuery)->count();
             $confirmedPassengers = (clone $paxQuery)->where('status', 'confirmed')->count();
             $cancelledPassengers = (clone $paxQuery)->whereIn('status', ['cancelled', 'operator_cancelled'])->count();
+            $rejectedPassengers = (clone $paxQuery)->where('status', 'rejected')->count();
             $refundedPassengers = (clone $paxQuery)->where('status', 'refunded')->count();
             $rebookedPassengers = (clone $paxQuery)->where('status', 'rebooked')->count();
             $totalRefundDisbursed = (float) (clone $paxQuery)->where('status', 'refunded')->sum('refund_amount');
@@ -323,6 +336,8 @@ class ReportingService
                 'completed_bookings' => $confirmed,
                 'pending_bookings' => $pending,
                 'cancelled_bookings' => $cancelled,
+                'rejected_bookings' => $rejected,
+                'rejected_rebookings' => $rejectedRebookings,
                 'total_revenue' => $totalRevenue,
                 'pending_revenue' => $pendingRevenue,
                 'cancelled_revenue' => $cancelledFees,
@@ -330,12 +345,14 @@ class ReportingService
                 'avg_booking_value' => $avgBookingValue,
                 'completion_rate' => $completionRate,
                 'cancellation_rate' => $cancellationRate,
+                'rejection_rate' => $rejectionRate,
                 'prev_total_bookings' => $prevStats['total'],
                 'prev_total_revenue' => $prevStats['revenue'],
                 // Item-level passenger metrics
                 'total_passengers' => $totalPassengers,
                 'confirmed_passengers' => $confirmedPassengers,
                 'cancelled_passengers' => $cancelledPassengers,
+                'rejected_passengers' => $rejectedPassengers,
                 'refunded_passengers' => $refundedPassengers,
                 'rebooked_passengers' => $rebookedPassengers,
                 'total_refund_disbursed' => $totalRefundDisbursed,
@@ -366,6 +383,7 @@ class ReportingService
                 'confirmed' => $counts['confirmed'] ?? 0,
                 'pending' => $counts['pending'] ?? 0,
                 'cancelled' => ($counts['cancelled'] ?? 0) + ($counts['operator_cancelled'] ?? 0),
+                'rejected' => $counts['rejected'] ?? 0,
                 'refund_pending' => $counts['refund_pending'] ?? 0,
                 'refunded' => $counts['refunded'] ?? 0,
                 'rebooking_pending' => $counts['rebooking_pending'] ?? 0,
@@ -686,6 +704,7 @@ class ReportingService
                 'paid' => $byStatus['paid'] ?? 0,
                 'pending' => $byStatus['pending'] ?? 0,
                 'failed' => $byStatus['failed'] ?? 0,
+                'rejected' => $byStatus['rejected'] ?? 0,
                 'total' => $totalTransactions,
                 'proof_upload_rate' => $proofUploadRate,
             ];
@@ -746,6 +765,8 @@ class ReportingService
             $baseQuery = Booking::query()->where(function ($q) use ($user) {
                 $q->where('verified_by_user_id', $user->id)
                   ->orWhere('refund_processed_by_user_id', $user->id)
+                  ->orWhere('rejected_by_user_id', $user->id)
+                  ->orWhere('rebooking_rejected_by_user_id', $user->id)
                   ->orWhereHas('transactions', fn (Builder $tq) => $tq->where('verified_by_user_id', $user->id))
                   ->orWhereHas('passengers', fn (Builder $pq) => $pq->where('verified_by_user_id', $user->id)->orWhere('refund_processed_by_user_id', $user->id));
             });
@@ -754,8 +775,12 @@ class ReportingService
                 $baseQuery->where(function ($dq) use ($date) {
                     $dq->whereDate('verified_at', $date)
                        ->orWhereDate('refund_processed_at', $date)
+                       ->orWhereDate('rejected_at', $date)
+                       ->orWhereDate('rebooking_rejected_at', $date)
                        ->orWhere(function ($sub) use ($date) {
-                           $sub->whereNull('verified_at')->whereDate('created_at', $date);
+                           $sub->whereNull('verified_at')
+                               ->whereNull('rejected_at')
+                               ->whereDate('created_at', $date);
                        });
                 });
             } elseif ($startDate && $endDate) {
@@ -767,8 +792,12 @@ class ReportingService
                 $baseQuery->where(function ($dq) use ($start, $end) {
                     $dq->whereBetween('verified_at', [$start, $end])
                        ->orWhereBetween('refund_processed_at', [$start, $end])
+                       ->orWhereBetween('rejected_at', [$start, $end])
+                       ->orWhereBetween('rebooking_rejected_at', [$start, $end])
                        ->orWhere(function ($sub) use ($start, $end) {
-                           $sub->whereNull('verified_at')->whereBetween('created_at', [$start, $end]);
+                           $sub->whereNull('verified_at')
+                               ->whereNull('rejected_at')
+                               ->whereBetween('created_at', [$start, $end]);
                        });
                 });
             } elseif ($period) {
@@ -779,6 +808,11 @@ class ReportingService
             $confirmed = (clone $baseQuery)->where('status', Booking::STATUS_CONFIRMED)->count();
             $pending = (clone $baseQuery)->whereIn('status', [Booking::STATUS_PENDING, Booking::STATUS_PENDING_REBOOKING, 'refund_pending'])->count();
             $cancelled = (clone $baseQuery)->whereIn('status', [Booking::STATUS_CANCELLED, Booking::STATUS_OPERATOR_CANCELLED])->count();
+            $rejected = (clone $baseQuery)->where(function ($rq) use ($user) {
+                $rq->where('status', Booking::STATUS_REJECTED)
+                   ->orWhere('rejected_by_user_id', $user->id)
+                   ->orWhere('rebooking_rejected_by_user_id', $user->id);
+            })->count();
             $refunded = (clone $baseQuery)->where(function ($rq) {
                 $rq->where('refund_amount', '>', 0)->orWhere('refund_status', 'completed');
             })->count();
@@ -793,10 +827,10 @@ class ReportingService
             $completionRate = $total > 0 ? round(($confirmed / $total) * 100, 1) : 0;
 
             $latestAction = (clone $baseQuery)
-                ->orderByDesc(DB::raw('COALESCE(verified_at, refund_processed_at, updated_at, created_at)'))
+                ->orderByDesc(DB::raw('COALESCE(verified_at, refund_processed_at, rejected_at, rebooking_rejected_at, updated_at, created_at)'))
                 ->first();
 
-            $latestActionAt = $latestAction ? ($latestAction->verified_at ?? $latestAction->refund_processed_at ?? $latestAction->updated_at ?? $latestAction->created_at) : null;
+            $latestActionAt = $latestAction ? ($latestAction->verified_at ?? $latestAction->refund_processed_at ?? $latestAction->rejected_at ?? $latestAction->rebooking_rejected_at ?? $latestAction->updated_at ?? $latestAction->created_at) : null;
 
             return [
                 'id' => $user->id,
@@ -808,6 +842,7 @@ class ReportingService
                 'completed_bookings' => $confirmed,
                 'pending_bookings' => $pending,
                 'cancelled_bookings' => $cancelled,
+                'rejected_bookings' => $rejected,
                 'refunded_bookings' => $refunded,
                 'total_revenue_handled' => $revenue,
                 'completion_rate' => $completionRate,
@@ -833,6 +868,7 @@ class ReportingService
             'pending' => $counts['pending'] ?? 0,
             'confirmed' => $counts['confirmed'] ?? 0,
             'cancelled' => $counts['cancelled'] ?? 0,
+            'rejected' => $counts['rejected'] ?? 0,
         ];
     }
 }

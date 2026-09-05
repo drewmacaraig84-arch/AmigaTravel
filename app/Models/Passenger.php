@@ -406,6 +406,11 @@ class Passenger extends Model
         $isSuperPromo = ($this->rate_type ?? 'regular') === 'super_promotional';
         $isPromo = in_array($this->rate_type ?? 'regular', ['promotional', 'super_promotional'], true) || (bool) ($this->is_promo ?? false);
 
+        $gross = (float) ($this->fare_amount ?? 0) + (float) ($this->accommodation_amount ?? 0);
+        if ($gross <= 0) {
+            $gross = (float) ($this->price ?? 0);
+        }
+
         $disc    = ($isSuperPromo || $isPromo) ? 0.0 : (float) ($this->discount_amount ?? 0);
         if (! ($isSuperPromo || $isPromo) && $disc <= 0 && $this->discount) {
             $disc = $this->discount->computeDiscountAmount($gross);

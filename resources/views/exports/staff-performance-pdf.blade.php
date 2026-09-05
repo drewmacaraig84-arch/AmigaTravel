@@ -127,6 +127,7 @@
                 <th style="width: 65px; text-align: center;">Completed</th>
                 <th style="width: 55px; text-align: center;">Pending</th>
                 <th style="width: 55px; text-align: center;">Cancelled</th>
+                <th style="width: 55px; text-align: center;">Rejected</th>
                 <th style="width: 55px; text-align: center;">Refunded</th>
                 <th style="width: 90px; text-align: right;">Revenue Handled</th>
                 <th style="width: 65px; text-align: center;">Success Rate</th>
@@ -139,6 +140,7 @@
                 $sumCompleted = 0;
                 $sumPending = 0;
                 $sumCancelled = 0;
+                $sumRejected = 0;
                 $sumRefunded = 0;
                 $sumRevenue = 0;
             @endphp
@@ -148,6 +150,7 @@
                     $sumCompleted += (int) $s['completed_bookings'];
                     $sumPending += (int) $s['pending_bookings'];
                     $sumCancelled += (int) $s['cancelled_bookings'];
+                    $sumRejected += (int) ($s['rejected_bookings'] ?? 0);
                     $sumRefunded += (int) $s['refunded_bookings'];
                     $sumRevenue += (float) $s['total_revenue_handled'];
                     $role = $s['is_admin'] ? 'Administrator' : ($s['is_staff'] ? 'Staff' : 'User');
@@ -161,6 +164,7 @@
                     <td style="text-align: center; color: #059669; font-weight: bold;">{{ $s['completed_bookings'] }}</td>
                     <td style="text-align: center; color: #d97706;">{{ $s['pending_bookings'] }}</td>
                     <td style="text-align: center; color: #dc2626;">{{ $s['cancelled_bookings'] }}</td>
+                    <td style="text-align: center; color: #be123c; font-weight: bold;">{{ $s['rejected_bookings'] ?? 0 }}</td>
                     <td style="text-align: center; color: #7c3aed;">{{ $s['refunded_bookings'] }}</td>
                     <td style="text-align: right; font-weight: bold; color: #047857;">₱{{ number_format($s['total_revenue_handled'], 2) }}</td>
                     <td style="text-align: center; font-weight: bold;">{{ $s['completion_rate'] }}%</td>
@@ -168,7 +172,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="12" style="text-align: center; padding: 15px; color: #64748b;">
+                    <td colspan="13" style="text-align: center; padding: 15px; color: #64748b;">
                         No staff performance records found.
                     </td>
                 </tr>
@@ -179,6 +183,7 @@
                 <td style="text-align: center; font-weight: bold; color: #059669;">{{ $sumCompleted }}</td>
                 <td style="text-align: center; font-weight: bold; color: #d97706;">{{ $sumPending }}</td>
                 <td style="text-align: center; font-weight: bold; color: #dc2626;">{{ $sumCancelled }}</td>
+                <td style="text-align: center; font-weight: bold; color: #be123c;">{{ $sumRejected }}</td>
                 <td style="text-align: center; font-weight: bold; color: #7c3aed;">{{ $sumRefunded }}</td>
                 <td style="text-align: right; font-weight: bold; color: #047857;">₱{{ number_format($sumRevenue, 2) }}</td>
                 <td colspan="2"></td>

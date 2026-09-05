@@ -137,6 +137,8 @@ class StaffPerformance extends Page
         $query = Booking::query()->where(function ($q) use ($staffId) {
             $q->where('verified_by_user_id', $staffId)
               ->orWhere('refund_processed_by_user_id', $staffId)
+              ->orWhere('rejected_by_user_id', $staffId)
+              ->orWhere('rebooking_rejected_by_user_id', $staffId)
               ->orWhereHas('transactions', fn ($tq) => $tq->where('verified_by_user_id', $staffId))
               ->orWhereHas('passengers', fn ($pq) => $pq->where('verified_by_user_id', $staffId)->orWhere('refund_processed_by_user_id', $staffId));
         });
@@ -147,8 +149,12 @@ class StaffPerformance extends Page
             $query->where(function ($dq) use ($start, $end) {
                 $dq->whereBetween('verified_at', [$start, $end])
                    ->orWhereBetween('refund_processed_at', [$start, $end])
+                   ->orWhereBetween('rejected_at', [$start, $end])
+                   ->orWhereBetween('rebooking_rejected_at', [$start, $end])
                    ->orWhere(function ($sub) use ($start, $end) {
-                       $sub->whereNull('verified_at')->whereBetween('created_at', [$start, $end]);
+                       $sub->whereNull('verified_at')
+                           ->whereNull('rejected_at')
+                           ->whereBetween('created_at', [$start, $end]);
                    });
             });
         } elseif ($this->period && $this->period !== 'all_time' && $this->period !== 'custom') {
@@ -156,7 +162,7 @@ class StaffPerformance extends Page
         }
 
         return $query->with(['transaction', 'schedule.ferryRoute', 'passengers'])
-            ->orderByDesc(DB::raw('COALESCE(verified_at, refund_processed_at, updated_at, created_at)'))
+            ->orderByDesc(DB::raw('COALESCE(verified_at, refund_processed_at, rejected_at, rebooking_rejected_at, updated_at, created_at)'))
             ->get();
     }
 
@@ -176,6 +182,7 @@ class StaffPerformance extends Page
                 'Completed Bookings',
                 'Pending Bookings',
                 'Cancelled Bookings',
+                'Rejected Bookings',
                 'Refunded Bookings',
                 'Total Revenue Handled (PHP)',
                 'Success Rate (%)',
@@ -193,6 +200,7 @@ class StaffPerformance extends Page
                     $staff['completed_bookings'],
                     $staff['pending_bookings'],
                     $staff['cancelled_bookings'],
+                    $staff['rejected_bookings'] ?? 0,
                     $staff['refunded_bookings'],
                     number_format($staff['total_revenue_handled'], 2, '.', ''),
                     $staff['completion_rate'] . '%',

@@ -22,6 +22,22 @@ class Booking extends Model
     public const STATUS_CANCELLED = 'cancelled';
     public const STATUS_OPERATOR_CANCELLED = 'operator_cancelled';
     public const STATUS_OPERATOR_REBOOKING = 'operator_rebooking';
+    public const STATUS_REJECTED = 'rejected';
+
+    public const REJECTION_REASONS = [
+        'Invalid or incorrect proof of payment',
+        'Amount paid does not match the required amount',
+        'Payment reference/transaction number is incorrect or cannot be verified',
+        'Duplicate proof of payment',
+        'Screenshot/image is unclear or unreadable',
+        'Proof of payment is incomplete or cropped',
+        'Payment was sent to the wrong account',
+        'Transaction is unsuccessful, failed, cancelled, or reversed',
+        'Payment date does not match the submitted transaction',
+        'Proof of payment appears altered or cannot be authenticated',
+        'No payment record found',
+        'Other — please specify reason',
+    ];
 
     protected $fillable = [
         'user_id',
@@ -105,6 +121,14 @@ class Booking extends Model
         'review_claimed_by_user_id',
         'review_claimed_at',
         'review_type',
+        'rejection_reason',
+        'rejection_notes',
+        'rejected_at',
+        'rejected_by_user_id',
+        'rebooking_rejection_reason',
+        'rebooking_rejection_notes',
+        'rebooking_rejected_at',
+        'rebooking_rejected_by_user_id',
     ];
 
     public const REVIEW_CLAIM_TTL_MINUTES = 10;
@@ -399,6 +423,8 @@ class Booking extends Model
         'sla_voucher_issued_at' => 'datetime',
         'refund_processed_at' => 'datetime',
         'review_claimed_at' => 'datetime',
+        'rejected_at' => 'datetime',
+        'rebooking_rejected_at' => 'datetime',
     ];
 
     /**
@@ -519,6 +545,16 @@ class Booking extends Model
         return $this->belongsTo(User::class, 'review_claimed_by_user_id');
     }
 
+    public function rejectedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'rejected_by_user_id');
+    }
+
+    public function rebookingRejectedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'rebooking_rejected_by_user_id');
+    }
+
     public function isReviewClaimed(int $ttlMinutes = self::REVIEW_CLAIM_TTL_MINUTES): bool
     {
         if (! $this->review_claimed_by_user_id || ! $this->review_claimed_at) {
@@ -580,6 +616,168 @@ class Booking extends Model
             'review_claimed_at' => null,
             'review_type' => null,
         ]);
+
+        return true;
+    }
+
+    /**
+     * Reject a booking payment verification request.
+     * Marks the booking as rejected, sends email, in-app and FCM push notifications.
+     */
+    public function rejectBooking(string $reason, ?string $notes = null, ?User $staff = null): bool
+    {
+        $now = now();
+
+        $this->update([
+            'status'              => self::STATUS_REJECTED,
+            'rejection_reason'    => $reason,
+            'rejection_notes'     => $notes,
+            'rejected_at'         => $now,
+            'rejected_by_user_id' => $staff?->id,
+        ]);
+
+        // Mark transaction as rejected
+        if ($this->transaction) {
+            $this->transaction->update(['payment_status' => 'rejected']);
+        }
+
+        // Release review lock
+        $this->releaseReview(null, true);
+
+        // Send rejection email
+        if (filled($this->client_email)) {
+            try {
+                \Illuminate\Support\Facades\Mail::to($this->client_email)
+                    ->send(new \App\Mail\BookingRejectedMail($this->fresh(), $reason, $notes));
+            } catch (\Throwable $e) {
+                Log::warning('BookingRejectedMail send failed: ' . $e->getMessage());
+            }
+        }
+
+        // In-app notification
+        if ($this->user_id) {
+            try {
+                \App\Models\UserNotification::notify(
+                    $this->user_id,
+                    '❌ Booking Payment Not Verified',
+                    "Your payment for booking #{$this->transaction_number} could not be verified. Reason: {$reason}. Please check your email for details and next steps.",
+                    'booking',
+                    'cancel',
+                    ['transaction_number' => $this->transaction_number, 'action' => 'rejected']
+                );
+            } catch (\Throwable $e) {
+                Log::warning('Booking rejection in-app notification failed: ' . $e->getMessage());
+            }
+        }
+
+        // Firebase FCM push notification
+        if (filled($this->client_email)) {
+            try {
+                \App\Services\FirebasePushService::sendToTopic(
+                    'user_' . md5(strtolower(trim($this->client_email))),
+                    '❌ Payment Not Verified — Action Required',
+                    "Booking #{$this->transaction_number}: {$reason}. Please check your email for guidance.",
+                    [
+                        'type'               => 'booking_rejected',
+                        'transaction_number' => $this->transaction_number,
+                    ]
+                );
+            } catch (\Throwable $e) {
+                Log::warning('Booking rejection FCM push failed: ' . $e->getMessage());
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Reject a rebooking request.
+     * Reverts the booking to confirmed, marks rebooking as rejected,
+     * sends email, in-app and FCM push notifications.
+     */
+    public function rejectRebooking(string $reason, ?string $notes = null, ?User $staff = null): bool
+    {
+        $now = now();
+
+        $previousStatus = $this->status;
+
+        $updateData = [
+            'rebooking_rejection_reason'    => $reason,
+            'rebooking_rejection_notes'     => $notes,
+            'rebooking_rejected_at'         => $now,
+            'rebooking_rejected_by_user_id' => $staff?->id,
+            'rebooking_status'              => 'rejected',
+        ];
+
+        // Revert booking status back to confirmed if it was pending_rebooking
+        if ($previousStatus === self::STATUS_PENDING_REBOOKING) {
+            $updateData['status'] = self::STATUS_CONFIRMED;
+        }
+
+        $this->update($updateData);
+
+        // Revert affected passenger items back to confirmed / reset rebooking flags
+        $this->passengers()
+            ->whereIn('status', [
+                \App\Models\Passenger::STATUS_REBOOKING_PENDING,
+                \App\Models\Passenger::STATUS_OPERATOR_REBOOKING,
+            ])
+            ->update([
+                'status'           => \App\Models\Passenger::STATUS_CONFIRMED,
+                'rebooking_status' => 'rejected',
+                'is_rebooked'      => false,
+            ]);
+
+        // Mark rebooking transaction payment as rejected
+        if ($this->transaction && $this->transaction->rebooking_proof_of_payment) {
+            $this->transaction->update(['payment_status' => 'rejected']);
+        }
+
+        // Release review lock
+        $this->releaseReview(null, true);
+
+        // Send rejection email
+        if (filled($this->client_email)) {
+            try {
+                \Illuminate\Support\Facades\Mail::to($this->client_email)
+                    ->send(new \App\Mail\RebookingRejectedMail($this->fresh(), $reason, $notes));
+            } catch (\Throwable $e) {
+                Log::warning('RebookingRejectedMail send failed: ' . $e->getMessage());
+            }
+        }
+
+        // In-app notification
+        if ($this->user_id) {
+            try {
+                \App\Models\UserNotification::notify(
+                    $this->user_id,
+                    '❌ Rebooking Request Not Approved',
+                    "Your rebooking request for booking #{$this->transaction_number} was not approved. Reason: {$reason}. Your original booking remains active. Please check your email for details.",
+                    'booking',
+                    'cancel',
+                    ['transaction_number' => $this->transaction_number, 'action' => 'rebooking_rejected']
+                );
+            } catch (\Throwable $e) {
+                Log::warning('Rebooking rejection in-app notification failed: ' . $e->getMessage());
+            }
+        }
+
+        // Firebase FCM push notification
+        if (filled($this->client_email)) {
+            try {
+                \App\Services\FirebasePushService::sendToTopic(
+                    'user_' . md5(strtolower(trim($this->client_email))),
+                    '❌ Rebooking Not Approved',
+                    "Booking #{$this->transaction_number}: Rebooking request was not approved — {$reason}. Your original booking is still active.",
+                    [
+                        'type'               => 'rebooking_rejected',
+                        'transaction_number' => $this->transaction_number,
+                    ]
+                );
+            } catch (\Throwable $e) {
+                Log::warning('Rebooking rejection FCM push failed: ' . $e->getMessage());
+            }
+        }
 
         return true;
     }
