@@ -4,7 +4,7 @@
  * Comprehensive, feature-by-feature operational guide exclusively for System Administrators,
  * Business Owners, Branch Managers, Operations Supervisors, and IT Staff.
  * 
- * Strictly structured: 14 Pages Total, exactly 1 Page per Chapter (Ch 1 - Ch 12),
+ * Strictly structured: 16 Pages Total, exactly 1 Page per Chapter (Ch 1 - Ch 14),
  * with Table of Contents on Page 2, and Executive Cover on Page 1.
  */
 
@@ -16,7 +16,7 @@ use Dompdf\Options;
 ini_set('memory_limit', '512M');
 ini_set('max_execution_time', '300');
 
-echo "Generating Dedicated Admin Manual PDF (14-Page Master Edition)...\n";
+echo "Generating Dedicated Admin Manual PDF (16-Page Master Edition)...\n";
 
 function getBase64Image($relativePath) {
     $fullPath = __DIR__ . '/' . ltrim($relativePath, '/\\');
@@ -294,18 +294,19 @@ function buildHtml() {
         .toc-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 7.2pt;
+            font-size: 6.8pt;
+            line-height: 1.2;
         }
         .toc-table td {
-            padding: 2.2px 0;
+            padding: 1.5px 0;
             border-bottom: 1px dotted #cbd5e1;
         }
         .toc-part {
             font-weight: bold;
             color: #216417;
-            padding-top: 5px !important;
+            padding-top: 3.5px !important;
             border-bottom: 1.5px solid #216417 !important;
-            font-size: 7.8pt;
+            font-size: 7.2pt;
         }
         .toc-page {
             text-align: right;
@@ -329,7 +330,7 @@ function buildHtml() {
         <div class="cover-title">ADMINISTRATOR<br>OPERATIONS MANUAL</div>
         <div class="cover-divider"></div>
         <div class="cover-subtitle">
-            The Complete Master Operations &amp; System Governance Guide for<br>
+            The Complete Master Operations, Modals &amp; System Governance Guide for<br>
             <strong>Business Owners, Branch Managers, Operations Supervisors, and IT Administrators</strong>
         </div>
 
@@ -342,7 +343,7 @@ function buildHtml() {
                 </td>
                 <td width="25%" class="cover-pillar-card">
                     <strong class="text-green" style="font-size: 8.5pt;">OPERATIONS</strong><br>
-                    <span style="font-size: 7.8pt; font-weight: bold; color: #1e293b;">Bookings &amp; Cargo</span><br>
+                    <span style="font-size: 7.8pt; font-weight: bold; color: #1e293b;">Bookings &amp; Manifests</span><br>
                     <span style="font-size: 7.2pt; color: #64748b;">Manifests, Proofs, Tickets &amp; RoRo</span>
                 </td>
                 <td width="25%" class="cover-pillar-card">
@@ -351,16 +352,16 @@ function buildHtml() {
                     <span style="font-size: 7.2pt; color: #64748b;">Routes, Timetables, Importers &amp; Disruptions</span>
                 </td>
                 <td width="25%" class="cover-pillar-card">
-                    <strong class="text-green" style="font-size: 8.5pt;">FINANCE</strong><br>
-                    <span style="font-size: 7.8pt; font-weight: bold; color: #1e293b;">Reports &amp; Settings</span><br>
-                    <span style="font-size: 7.2pt; color: #64748b;">Refunds, Sales, Staff Audits &amp; Website CMS</span>
+                    <strong class="text-green" style="font-size: 8.5pt;">FINANCE &amp; MODALS</strong><br>
+                    <span style="font-size: 7.8pt; font-weight: bold; color: #1e293b;">Dialogs &amp; Reports</span><br>
+                    <span style="font-size: 7.2pt; color: #64748b;">Refunds, Sales, Staff Audits &amp; Modal Guides</span>
                 </td>
             </tr>
         </table>
 
         <div class="cover-meta">
             <strong>Platform:</strong> Laravel 11 / Filament 3 &bull; MySQL &bull; Flutter API &bull; Livewire 3<br>
-            <strong>Version:</strong> v1.0.44+48 (Production Edition) &bull; <strong>Scope:</strong> Complete Admin Panel Coverage<br>
+            <strong>Version:</strong> v1.0.44+48 (Production Edition) &bull; <strong>Scope:</strong> Complete Admin Panel &amp; Interactive Modals Guide<br>
             <strong>Ownership &amp; Authority:</strong> Business Owners, Branch Managers, and Operations Directors.
         </div>
     </div>
@@ -370,7 +371,7 @@ function buildHtml() {
     <!-- ========================================================================= -->
     <div class="page-break">
         <h2>Table of Contents</h2>
-        <p class="text-muted" style="font-size: 7.5pt; margin-bottom: 6px;">This operations manual covers every administrative feature, setting, and resource in the Amiga Gracia system.</p>
+        <p class="text-muted" style="font-size: 7.2pt; margin-bottom: 5px;">This operations manual covers every administrative feature, interactive modal dialog, setting, and resource in the Amiga Gracia system.</p>
 
         <table width="100%" style="border-collapse: collapse;">
             <tr>
@@ -491,10 +492,7 @@ function buildHtml() {
                             <td>6.4 Airline Baggage Rules &amp; Rolling Cargo Rates</td>
                             <td class="toc-page">8</td>
                         </tr>
-                    </table>
-                </td>
-                <td width="48%" style="vertical-align: top; padding-left: 10px;">
-                    <table class="toc-table">
+
                         <tr>
                             <td colspan="2" class="toc-part">CHAPTER 7: SCHEDULE MANAGEMENT</td>
                         </tr>
@@ -514,7 +512,10 @@ function buildHtml() {
                             <td>7.4 Modifying &amp; Cancelling Existing Schedules</td>
                             <td class="toc-page">9</td>
                         </tr>
-
+                    </table>
+                </td>
+                <td width="48%" style="vertical-align: top; padding-left: 10px;">
+                    <table class="toc-table">
                         <tr>
                             <td colspan="2" class="toc-part">CHAPTER 8: REBOOKINGS &amp; REFUNDS</td>
                         </tr>
@@ -605,6 +606,46 @@ function buildHtml() {
                         <tr>
                             <td>12.3 Complete Status Master Dictionary</td>
                             <td class="toc-page">14</td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" class="toc-part">CHAPTER 13: OPERATIONS &amp; VERIFICATION MODALS</td>
+                        </tr>
+                        <tr>
+                            <td>13.1 Payment Proof Verification &amp; Rejection Modals</td>
+                            <td class="toc-page">15</td>
+                        </tr>
+                        <tr>
+                            <td>13.2 Booking Manifest &amp; Discount ID Review Slide-Over</td>
+                            <td class="toc-page">15</td>
+                        </tr>
+                        <tr>
+                            <td>13.3 Airline E-Ticket Attachment Dialog</td>
+                            <td class="toc-page">15</td>
+                        </tr>
+                        <tr>
+                            <td>13.4 Rebooking Review &amp; Approval Modal</td>
+                            <td class="toc-page">15</td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" class="toc-part">CHAPTER 14: FINANCE, DISRUPTIONS &amp; CMS MODALS</td>
+                        </tr>
+                        <tr>
+                            <td>14.1 Refund Disbursement &amp; Exclusive Review Lock</td>
+                            <td class="toc-page">16</td>
+                        </tr>
+                        <tr>
+                            <td>14.2 Service Cancellation &amp; Resumption Modals</td>
+                            <td class="toc-page">16</td>
+                        </tr>
+                        <tr>
+                            <td>14.3 Schedule Ingestion &amp; Timetable Modals</td>
+                            <td class="toc-page">16</td>
+                        </tr>
+                        <tr>
+                            <td>14.4 Vouchers, Push Alerts &amp; Staff Account Modals</td>
+                            <td class="toc-page">16</td>
                         </tr>
                     </table>
                 </td>
@@ -1257,7 +1298,7 @@ function buildHtml() {
     <!-- ========================================================================= -->
     <!-- PAGE 14: CHAPTER 12 - TROUBLESHOOTING & STATUS MASTER -->
     <!-- ========================================================================= -->
-    <div>
+    <div class="page-break">
         <h2>Chapter 12: Admin Troubleshooting &amp; System Maintenance</h2>
 
         <h3>12.1 System Diagnostic Endpoints</h3>
@@ -1316,8 +1357,132 @@ function buildHtml() {
                 <td>Voyage/flight suspended by operator or Coast Guard due to weather. Passenger eligible for free replacement trip or full refund.</td>
             </tr>
         </table>
+    </div>
 
-        <div style="margin-top: 8px; text-align: center; border-top: 2px solid #216417; padding-top: 5px;">
+    <!-- ========================================================================= -->
+    <!-- PAGE 15: CHAPTER 13 - INTERACTIVE MODALS GUIDE (PART 1) -->
+    <!-- ========================================================================= -->
+    <div class="page-break">
+        <h2>Chapter 13: Master Modal Operations Guide (Operations, Proofs &amp; Rebookings)</h2>
+        <p class="text-muted" style="font-size: 7.2pt; margin-bottom: 5px;">A step-by-step operational standard for every interactive dialog window and modal in the ticketing workflow.</p>
+
+        <h3>13.1 Payment Proof Verification Modal (`ManageProofs`)</h3>
+        <p>Opened by clicking the green <strong>Verify</strong> button on any pending customer payment screenshot:</p>
+        <div class="step-card">
+            <span class="step-badge">Visual Inspection</span> <strong>Full-Resolution Proof Lightbox:</strong> Inspect the uploaded GCash, Maya, or bank transfer receipt. Ensure reference number, payment timestamp, recipient merchant name, and total amount match down to the exact centavo.
+        </div>
+        <div class="step-card">
+            <span class="step-badge">Data Entry</span> <strong>Confirmed Reference No.:</strong> Type or confirm the bank transaction reference number into the input field.
+        </div>
+        <div class="step-card">
+            <span class="step-badge">Action Button</span> <strong>Click [Confirm &amp; Issue Tickets]:</strong>
+            <p style="margin: 2px 0 0 0; font-size: 7.3pt;">
+                <strong>Automated System Triggers:</strong> (1) Status updates to <strong style="color: #16a34a;">CONFIRMED</strong>; (2) Allocates seat inventories; (3) Automatically generates the standardized E-Ticket PDF with QR boarding pass; (4) Dispatches the confirmation email with PDF attachment; (5) Credits customer's Gracia Points loyalty balance.
+            </p>
+        </div>
+
+        <h3>13.2 Payment Rejection Modal (`ManageProofs`)</h3>
+        <p>Opened by clicking the red <strong>Reject Payment</strong> button on invalid, short, or unreadable receipts:</p>
+        <div class="step-card">
+            <span class="step-badge">Required Input</span> <strong>Rejection Reason Textarea:</strong> Enter clear, actionable feedback for the client (e.g., <em>"Reference number not found in BDO records"</em>, <em>"Short payment: ₱400 balance remaining"</em>, or <em>"Screenshot is cut off / blurry"</em>).
+        </div>
+        <div class="step-card">
+            <span class="step-badge">Action Button</span> <strong>Click [Confirm Rejection]:</strong>
+            <p style="margin: 2px 0 0 0; font-size: 7.3pt;">
+                <strong>Automated System Triggers:</strong> (1) Booking status transitions to <strong style="color: #ef4444;">REJECTED</strong>; (2) Sends immediate email alert displaying the rejection reason and a secure link for the customer to re-upload proof; (3) Logs the rejecting staff member's ID in the branch <strong>Rejection Rate KPI</strong>.
+            </p>
+        </div>
+
+        <h3>13.3 View Booking &amp; Manifest Slide-Over Modal (`BookingResource`)</h3>
+        <p>Opened by clicking the <strong>View</strong> (eye icon) button or clicking any transaction number:</p>
+        <ul>
+            <li><strong>Passenger Manifest Review:</strong> Review full legal names, gender, birth dates, age classifications, and assigned seat/cabin numbers.</li>
+            <li><strong>Statutory Discount Inspection:</strong> Click the preview badge for <strong>Senior Citizen (OSCA ID)</strong>, <strong>PWD ID</strong>, or <strong>Student ID</strong> to view the uploaded government card photo. Verify photo and birth date before honoring the 20% discount.</li>
+            <li><strong>Rolling Cargo (RoRo) Freight:</strong> Inspect vehicle plate number, brand, model, freight classification, and certified driver.</li>
+            <li><strong>Ticket Downloads:</strong> Click <em>Download Ticket PDF</em> or generate individual single-passenger boarding passes.</li>
+        </ul>
+
+        <h3>13.4 Commercial Airline Confirmation Attachment Modal (`Receipts &amp; Tickets`)</h3>
+        <p>Opened by clicking <strong>Attach Airline PDF</strong> on commercial flight bookings (Cebu Pacific, PAL, AirAsia):</p>
+        <div class="step-card">
+            <span class="step-badge">Uploader</span> <strong>Custom Airline Confirmation PDF:</strong> Attach the official PDF e-ticket with PNR barcode downloaded from the airline portal. Optional: paste the airline web check-in URL into <code>ticket_url</code>.
+        </div>
+        <p style="font-size: 7.3pt; margin-top: 2px;">
+            <strong>Result:</strong> When travelers click <em>Download Ticket</em> on the mobile app or website, the system delivers the authentic airline PNR document.
+        </p>
+
+        <h3>13.5 Rebooking Review &amp; Approval Modal (`ManageRebookings`)</h3>
+        <p>Opened by clicking <strong>Review Rebooking</strong> on requests marked <code>reschedule_requested</code>:</p>
+        <ul>
+            <li><strong>Side-by-Side Comparison:</strong> Compares original departure date, route, and vessel with the newly selected replacement voyage.</li>
+            <li><strong>Automated Fare Difference:</strong> Calculates new fare vs original fare, displaying the net rate difference (<code>price_diff</code>).</li>
+            <li><strong>Payment Proof:</strong> Inspects receipt screenshot if the traveler upgraded to a higher cabin tier.</li>
+            <li><strong>Approval Action:</strong> Click <strong>Approve Rebooking</strong> to update status to <strong style="color: #0284c7;">REBOOKED</strong> and re-issue the updated itinerary, or <strong>Decline Rebooking</strong> with explanatory notes.</li>
+        </ul>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- PAGE 16: CHAPTER 14 - INTERACTIVE MODALS GUIDE (PART 2) -->
+    <!-- ========================================================================= -->
+    <div>
+        <h2>Chapter 14: Master Modal Operations Guide (Refunds, Disruptions &amp; Settings)</h2>
+        <p class="text-muted" style="font-size: 7.2pt; margin-bottom: 5px;">Operational reference for finance disbursements, weather emergencies, schedule imports, and system settings.</p>
+
+        <h3>14.1 Refund Disbursement &amp; Exclusive Review Lock (`ManageRefunds`)</h3>
+        <div class="step-card">
+            <span class="step-badge">Step 1</span> <strong>Claim Review Lock:</strong> Click <em>Process Refund</em>. The modal activates an exclusive <strong>10-minute timer lock</strong>. Other staff see <em>"Locked by [Your Name]"</em> to prevent duplicate payouts.
+        </div>
+        <div class="step-card">
+            <span class="step-badge">Step 2</span> <strong>Inspect Financials &amp; Destination:</strong> Review Original Total, Fee Deduction (e.g. 20% penalty, or ₱0 for weather cancellations), and <strong>Net Refund Payable</strong>. Review recipient account: GCash number, Maya wallet, or Bank Name + Account No. + Holder Name.
+        </div>
+        <div class="step-card">
+            <span class="step-badge">Step 3</span> <strong>Disburse &amp; Record Proof:</strong> Transfer funds via corporate banking. Type the <strong>Disbursement Reference Number</strong> and upload the transfer receipt screenshot into <strong>Disbursement Proof</strong>.
+        </div>
+        <div class="step-card">
+            <span class="step-badge">Step 4</span> <strong>Click [Complete Disbursement]:</strong> Updates booking and passenger status to <strong style="color: #9333ea;">REFUNDED</strong>, generates and emails the official <strong>E-Refund Acknowledgement PDF</strong>, and clears the review lock.
+        </div>
+
+        <h3>14.2 Service Disruption &amp; Resumption Modals (`ServiceCancellationResource`)</h3>
+        <ul>
+            <li><strong>New Cancellation Modal:</strong> Select Service Type (*Ferry* or *Airline*), Scope (*Specific Schedule*, *Carrier Date*, or *Date Range*), Reason (*PAGASA Storm Signal*, *Coast Guard Gale Warning*, *Safety*), and Customer Message. Click <strong>Finalize Cancellation</strong> to mark bookings as <strong style="color: #dc2626;">DISRUPTED</strong> and dispatch reschedule alerts.</li>
+            <li><strong>Declare Resume Date Modal:</strong> When maritime clearance is granted, click <strong>Declare Resume Date</strong> and select the date. The system auto-seeds eligible replacement sailings across the next <strong>14 days</strong> and alerts travelers that free rebooking is active.</li>
+        </ul>
+
+        <h3>14.3 Automated Schedule Ingestion Modal (`ImportSchedules`)</h3>
+        <p>Open <em>Travel &amp; Tours &rarr; Import Schedules</em>. Select <strong>Starlite Ferries</strong> from the Operator dropdown, specify the Date Range (e.g. Next 60 Days), and click <strong>Start Automated Ingestion</strong>. The engine queries the timetable repository, verifies fleet assignments, and populates all scheduled sailings, accommodations, and pricing tiers without duplicates.</p>
+
+        <h3>14.4 Marketing Voucher Creation Modal (`VoucherResource`)</h3>
+        <p>Open <em>Travel &rarr; Vouchers</em> and click <strong>+ New Voucher</strong>:</p>
+        <ul>
+            <li><strong>Code &amp; Deduction:</strong> Enter promo code; select <em>Percentage</em> (e.g. 10%) or <em>Fixed Amount</em> (₱200).</li>
+            <li><strong>Financial Guardrails:</strong> Set <strong>Max Discount Cap</strong> (<code>max_discount</code>), <strong>Min Spend</strong>, and <strong>Total Usage Limit</strong>.</li>
+            <li><strong>Fraud Prevention:</strong> Enable <strong>One Use Per Customer</strong>. Anti-stacking rule prevents use on super-promos.</li>
+        </ul>
+
+        <h3>14.5 Broadcast Push Notification &amp; Payment Gateway Modals</h3>
+        <div class="two-col">
+            <table width="100%">
+                <tr>
+                    <td class="col-half">
+                        <div class="step-card">
+                            <strong class="text-green">Broadcast Push Alert (`AppNotificationResource`):</strong><br>
+                            Click <em>+ New Notification</em>. Enter title, body text, and select target audience. Click <strong>Send Broadcast</strong> to deliver instant alerts via Firebase Cloud Messaging (FCM).
+                        </div>
+                    </td>
+                    <td class="col-half-last">
+                        <div class="step-card">
+                            <strong class="text-green">Payment Settings (`ManagePaymentSettings`):</strong><br>
+                            Upload official merchant <strong>GCash QR</strong> and <strong>Maya QR</strong> images. Update official corporate BDO, BPI, or Landbank account numbers displayed at checkout.
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <h3>14.6 Staff Account Creation &amp; 8-Point Permissions Modal (`UserResource`)</h3>
+        <p>Open <em>Administration &rarr; Users</em> and click <strong>+ New User</strong>. Enter staff member's legal name, email, and password. Select Role (<em>Admin</em> or <em>Staff</em>). Check authorized modules: <code>Bookings</code>, <code>Manifests</code>, <code>Proofs</code>, <code>Schedules</code>, <code>Vouchers</code>, <code>Discounts</code>, <code>Refunds</code>, and <code>Reports</code>. Click <strong>Create Staff Account</strong>.</p>
+
+        <div style="margin-top: 6px; text-align: center; border-top: 2px solid #216417; padding-top: 4px;">
             <strong class="text-green" style="font-size: 8.8pt;">AMIGA GRACIA TRAVEL SERVICES &bull; ADMINISTRATOR OPERATIONS MANUAL</strong><br>
             <span class="text-muted" style="font-size: 7.2pt;">Official Governance Documentation &bull; For Internal Administrative &amp; Executive Use Only</span>
         </div>
