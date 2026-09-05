@@ -751,6 +751,7 @@ function buildHtml() {
                 <strong style="color: #d97706;">PENDING</strong>,
                 <strong style="color: #16a34a;">CONFIRMED</strong>,
                 <strong style="color: #dc2626;">CANCELLED</strong>,
+                <strong style="color: #ef4444;">REJECTED</strong>,
                 <strong style="color: #0284c7;">REBOOKED</strong>,
                 <strong style="color: #9333ea;">REFUNDED</strong>, or
                 <strong style="color: #dc2626;">DISRUPTED</strong>.
@@ -859,7 +860,7 @@ function buildHtml() {
         <h3>4.3 Approving &amp; Rejecting Transactions</h3>
         <ul>
             <li><strong>Approving a Transaction:</strong> Click the green <strong>Verify &amp; Confirm</strong> button. The system immediately updates the booking status to <strong style="color: #16a34a;">CONFIRMED</strong>, updates seat inventories, credits the customer's Gracia Points, and triggers automated email delivery of their official E-Ticket PDF.</li>
-            <li><strong>Rejecting an Invalid Receipt:</strong> Click <strong>Reject Payment</strong>. You will be prompted to type an internal explanation (e.g., <em>"Reference number not found in bank logs"</em> or <em>"Short payment: ₱500 balance remaining"</em>). The customer is notified to re-upload proof.</li>
+            <li><strong>Rejecting an Invalid Receipt:</strong> Click <strong>Reject Payment</strong>. Enter an internal explanation (e.g., <em>"Reference number not found in bank logs"</em> or <em>"Short payment"</em>). The booking status transitions to <strong style="color: #ef4444;">REJECTED</strong>, the customer is notified with the reason, and the rejection is logged in the branch Rejection Rate KPI.</li>
         </ul>
 
         <h3>4.4 Server Storage Protection: Proof Retention Rules</h3>
@@ -1061,12 +1062,12 @@ function buildHtml() {
         <h3>8.3 Emergency Service Disruptions &amp; Weather Cancellations</h3>
         <p>During severe weather (typhoon signal warnings from PAGASA or Coast Guard gale warnings), ferry trips and flights are grounded. The <strong>Travel &amp; Tours &rarr; Service Cancellations</strong> module manages these crises smoothly:</p>
 
-        <div class="callout callout-danger">
-            <div class="callout-title">[FORCE MAJEURE / WEATHER CANCELLATION PROTOCOL]</div>
-            <strong>1. Declare Cancelled Voyage:</strong> Select the affected route, operator, and date. Mark the status as <em>Weather Cancellation (Force Majeure)</em>.<br>
-            <strong>2. Link Replacement Schedules:</strong> Administrators select alternate future schedules (e.g. the morning sailing once the storm clears) as designated <em>Replacement Schedules</em>.<br>
-            <strong>3. Automated Passenger Alerts:</strong> All affected passengers receive push notifications and emails informing them that their voyage was grounded due to weather.<br>
-            <strong>4. Zero-Fee Transfer:</strong> Affected travelers can open their mobile app or website account and transfer their tickets to any linked replacement voyage with <strong>100% waived rebooking fees</strong>! Status updates to <strong style="color: #dc2626;">DISRUPTED</strong>.
+        <div class="callout callout-danger" style="margin-bottom: 2px;">
+            <div class="callout-title">[FORCE MAJEURE / SERVICE CANCELLATION PROTOCOL]</div>
+            <strong>1. Declare Cancelled Voyage:</strong> Select route, carrier, and date under <em>Travel &amp; Tours &rarr; Service Cancellations</em>. System marks bookings as <strong style="color: #dc2626;">DISRUPTED</strong>.<br>
+            <strong>2. Resumption &amp; 14-Day Replacements:</strong> When travel resumes, administrators declare the <em>Resume Date</em>, auto-seeding eligible replacement sailings across the next 14 days.<br>
+            <strong>3. Zero-Fee Rebooking (₱0.00 Penalty):</strong> All rebooking surcharges and revalidation fees are 100% waived. Same-tier replacement is <strong>₱0.00</strong>. If upgrading to a higher class, travelers only pay the net fare difference (<code>price_diff</code>). Downgrades are disabled self-service to protect customer value.<br>
+            <strong>4. 100% Full Refund Guarantee:</strong> Travelers who decline replacement trips receive a <strong>100% full refund</strong> with zero penalty deductions (exempt from standard 20% fees and 24-hr cutoffs).
         </div>
     </div>
 
@@ -1201,6 +1202,10 @@ function buildHtml() {
                 <td>Total funds disbursed for ticket cancellations and passenger refunds.</td>
             </tr>
             <tr>
+                <td><strong>Rejection Rate &amp; Stats</strong></td>
+                <td>Tracks rejected bookings, rejected rebookings, and percentage rejection rate to identify fraud trends.</td>
+            </tr>
+            <tr>
                 <td><strong>Export Tools</strong></td>
                 <td>Download complete audited reports in <strong>PDF</strong> (for executive reviews), <strong>CSV / Excel</strong> (for accounting spreadsheets), or send to <strong>Print</strong>.</td>
             </tr>
@@ -1215,7 +1220,7 @@ function buildHtml() {
                         <div class="step-card">
                             <strong class="text-green">Productivity Metrics:</strong><br>
                             &bull; Total payment proofs verified per employee.<br>
-                            &bull; Total bookings successfully issued.<br>
+                            &bull; Total confirmed, rebooked, and rejected bookings.<br>
                             &bull; Average verification turnaround time per shift.
                         </div>
                     </td>
@@ -1288,7 +1293,12 @@ function buildHtml() {
             <tr>
                 <td><strong>Cancelled</strong></td>
                 <td><strong style="color: #dc2626;">CANCELLED</strong></td>
-                <td>Trip cancelled by traveler or payment rejected as fraudulent/unpaid. Ticket is void.</td>
+                <td>Trip cancelled voluntarily by traveler or operator. Ticket is void.</td>
+            </tr>
+            <tr>
+                <td><strong>Rejected</strong></td>
+                <td><strong style="color: #ef4444;">REJECTED</strong></td>
+                <td>Payment proof rejected as fraudulent/invalid, or rebooking denied. Recorded in branch Rejection Rate KPI.</td>
             </tr>
             <tr>
                 <td><strong>Rebooked</strong></td>
