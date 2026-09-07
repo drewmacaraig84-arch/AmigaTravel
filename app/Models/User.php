@@ -18,7 +18,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'phone', 'password', 'role', 'is_staff', 'is_admin', 'admin_permissions', 'api_token', 'referral_code', 'referred_by', 'referral_redeemed', 'welcome_bonus_claimed'])]
+#[Fillable(['name', 'email', 'phone', 'password', 'role', 'is_staff', 'is_admin', 'admin_permissions', 'api_token', 'referral_code', 'referred_by', 'referral_redeemed', 'welcome_bonus_claimed', 'deletion_scheduled_at', 'deletion_reason', 'deletion_feedback'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser
 {
@@ -119,6 +119,7 @@ class User extends Authenticatable implements FilamentUser
         'is_staff' => 'boolean',
         'is_admin' => 'boolean',
         'admin_permissions' => 'array',
+        'deletion_scheduled_at' => 'datetime',
     ];
 
     public function isSuperAdmin(): bool

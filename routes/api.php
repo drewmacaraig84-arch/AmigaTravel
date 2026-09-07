@@ -116,7 +116,11 @@ Route::middleware(['throttle:20,1', 'sensitive.actions'])->group(function () {
 // ─────────────────────────────────────────────────────────────────────────────
 Route::middleware(['auth:sanctum,api', 'throttle:60,1'])->group(function () {
     Route::post('/profile/update', [AuthController::class, 'updateProfile']);
-    Route::delete('/profile/delete', [AuthController::class, 'deleteAccount']);
+    Route::get('/profile/delete-eligibility',  [AuthController::class, 'getDeleteEligibility']);
+    Route::post('/profile/delete/request-otp', [AuthController::class, 'requestDeleteOtp']);
+    Route::post('/profile/delete/confirm',     [AuthController::class, 'confirmAccountDeletion']);
+    Route::post('/profile/delete/cancel',      [AuthController::class, 'cancelAccountDeletion']);
+    Route::delete('/profile/delete',           [AuthController::class, 'confirmAccountDeletion']);
     Route::get('/gracia-points', [\App\Http\Controllers\Api\GraciaPointsController::class, 'index']);
     Route::post('/vouchers/claim', [\App\Http\Controllers\Api\VoucherController::class, 'claim']);
 

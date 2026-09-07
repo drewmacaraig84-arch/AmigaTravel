@@ -27,6 +27,31 @@ Schema::create('users', function (Blueprint $table) {
     $table->string('api_token', 80)->nullable();
     $table->string('phone')->nullable();
     $table->string('referral_code')->nullable();
+    $table->timestamp('deletion_scheduled_at')->nullable();
+    $table->string('deletion_reason')->nullable();
+    $table->text('deletion_feedback')->nullable();
+    $table->timestamps();
+});
+
+Schema::create('bookings', function (Blueprint $table) {
+    $table->id();
+    $table->unsignedBigInteger('user_id')->nullable();
+    $table->string('client_email')->nullable();
+    $table->string('transaction_number')->nullable();
+    $table->string('origin')->nullable();
+    $table->string('destination')->nullable();
+    $table->date('departure_date')->nullable();
+    $table->date('return_date')->nullable();
+    $table->string('status')->default('confirmed');
+    $table->string('refund_status')->default('none');
+    $table->timestamps();
+});
+
+Schema::create('vouchers', function (Blueprint $table) {
+    $table->id();
+    $table->unsignedBigInteger('user_id')->nullable();
+    $table->string('code')->nullable();
+    $table->string('status')->default('active');
     $table->timestamps();
 });
 
@@ -107,7 +132,7 @@ report("API: /app-version returns Play Store, App Store, and AppGallery URLs", $
 $unauthResponse = app()->handle(\Illuminate\Http\Request::create('/api/profile/delete', 'DELETE'));
 report("API: DELETE /api/profile/delete rejects unauthenticated requests", $unauthResponse->getStatusCode() === 401, "Status: " . $unauthResponse->getStatusCode());
 
-// 3. Test DELETE /api/profile/delete deletes user, notifications, and balance
+// 3. Test Multi-Step Account Deletion Flow (Eligibility, Security Verification, 14-Day Grace Period, Cancellation, and Purge)
 $testUser = User::create([
     'name' => 'Store Readiness Test User',
     'email' => 'store_test_' . Str::random(8) . '@example.com',
@@ -128,21 +153,122 @@ GraciaUserBalance::create([
     'points' => 150,
 ]);
 
-$authRequest = \Illuminate\Http\Request::create('/api/profile/delete', 'DELETE');
-$authRequest->headers->set('Authorization', 'Bearer ' . $testUser->api_token);
-$authRequest->headers->set('Accept', 'application/json');
+// 3.1 Eligibility Check (No active bookings -> eligible: true)
+$eligRequest = \Illuminate\Http\Request::create('/api/profile/delete-eligibility', 'GET');
+$eligRequest->headers->set('Authorization', 'Bearer ' . $testUser->api_token);
+$eligRequest->headers->set('Accept', 'application/json');
+$eligResponse = app()->handle($eligRequest);
+$eligData = json_decode($eligResponse->getContent(), true);
 
-$authResponse = app()->handle($authRequest);
-$deleteData = json_decode($authResponse->getContent(), true);
+report("API: GET /api/profile/delete-eligibility returns eligible=true for clean account", 
+    $eligResponse->getStatusCode() === 200 && ($eligData['eligible'] ?? false) === true, 
+    $eligResponse->getContent()
+);
 
-$userExistsAfter = User::where('id', $testUser->id)->exists();
+// 3.2 Blocked Eligibility Check (Create upcoming confirmed booking -> eligible: false)
+$activeBooking = \App\Models\Booking::create([
+    'user_id' => $testUser->id,
+    'client_email' => $testUser->email,
+    'transaction_number' => 'TEST-BK-' . strtoupper(Str::random(6)),
+    'origin' => 'Batangas',
+    'destination' => 'Calapan',
+    'departure_date' => now()->addDays(3)->toDateString(),
+    'status' => \App\Models\Booking::STATUS_CONFIRMED,
+]);
+
+$eligResponse2 = app()->handle($eligRequest);
+$eligData2 = json_decode($eligResponse2->getContent(), true);
+report("API: GET /api/profile/delete-eligibility blocks deletion if upcoming trip exists", 
+    ($eligData2['eligible'] ?? true) === false && ($eligData2['active_bookings_count'] ?? 0) === 1, 
+    $eligResponse2->getContent()
+);
+
+// Remove active booking to test the rest of the flow
+$activeBooking->delete();
+
+// 3.3 Request Email OTP
+$otpRequest = \Illuminate\Http\Request::create('/api/profile/delete/request-otp', 'POST');
+$otpRequest->headers->set('Authorization', 'Bearer ' . $testUser->api_token);
+$otpRequest->headers->set('Accept', 'application/json');
+$otpResponse = app()->handle($otpRequest);
+$otpData = json_decode($otpResponse->getContent(), true);
+
+$cachedOtp = \Illuminate\Support\Facades\Cache::get('account_deletion_otp:' . strtolower($testUser->email));
+report("API: POST /api/profile/delete/request-otp generates and caches 6-digit OTP", 
+    $otpResponse->getStatusCode() === 200 && !empty($cachedOtp) && strlen($cachedOtp) === 6, 
+    "Cached OTP: $cachedOtp"
+);
+
+// 3.4 Confirm Deletion Rejects Invalid Credentials
+$invalidConfirmRequest = \Illuminate\Http\Request::create('/api/profile/delete/confirm', 'POST', [
+    'password' => 'wrongpassword',
+    'otp' => $cachedOtp,
+    'confirmation_text' => 'DELETE',
+]);
+$invalidConfirmRequest->headers->set('Authorization', 'Bearer ' . $testUser->api_token);
+$invalidConfirmRequest->headers->set('Accept', 'application/json');
+$invalidConfirmResponse = app()->handle($invalidConfirmRequest);
+report("API: POST /api/profile/delete/confirm rejects incorrect password", 
+    $invalidConfirmResponse->getStatusCode() === 422, 
+    $invalidConfirmResponse->getContent()
+);
+
+$invalidTextRequest = \Illuminate\Http\Request::create('/api/profile/delete/confirm', 'POST', [
+    'password' => 'password123',
+    'otp' => $cachedOtp,
+    'confirmation_text' => 'delete', // lowercase should fail
+]);
+$invalidTextRequest->headers->set('Authorization', 'Bearer ' . $testUser->api_token);
+$invalidTextRequest->headers->set('Accept', 'application/json');
+$invalidTextResponse = app()->handle($invalidTextRequest);
+report("API: POST /api/profile/delete/confirm requires typed uppercase 'DELETE'", 
+    $invalidTextResponse->getStatusCode() === 422, 
+    $invalidTextResponse->getContent()
+);
+
+// 3.5 Confirm Deletion Schedules 14-Day Grace Period
+$validConfirmRequest = \Illuminate\Http\Request::create('/api/profile/delete/confirm', 'POST', [
+    'password' => 'password123',
+    'otp' => $cachedOtp,
+    'confirmation_text' => 'DELETE',
+    'reason' => 'Testing account deletion',
+]);
+$validConfirmRequest->headers->set('Authorization', 'Bearer ' . $testUser->api_token);
+$validConfirmRequest->headers->set('Accept', 'application/json');
+$validConfirmResponse = app()->handle($validConfirmRequest);
+$confirmData = json_decode($validConfirmResponse->getContent(), true);
+
+$testUser->refresh();
+report("API: POST /api/profile/delete/confirm schedules account for deletion (Option A)", 
+    $validConfirmResponse->getStatusCode() === 200 && 
+    !empty($testUser->deletion_scheduled_at) && 
+    ($confirmData['days_remaining'] ?? 0) === 14, 
+    $validConfirmResponse->getContent()
+);
+
+// 3.6 Cancel / Restore Account Deletion
+$cancelRequest = \Illuminate\Http\Request::create('/api/profile/delete/cancel', 'POST');
+$cancelRequest->headers->set('Authorization', 'Bearer ' . $testUser->api_token);
+$cancelRequest->headers->set('Accept', 'application/json');
+$cancelResponse = app()->handle($cancelRequest);
+
+$testUser->refresh();
+report("API: POST /api/profile/delete/cancel restores account from grace period", 
+    $cancelResponse->getStatusCode() === 200 && is_null($testUser->deletion_scheduled_at), 
+    $cancelResponse->getContent()
+);
+
+// 3.7 Background Command: Purge accounts whose 14-day grace period has expired
+$testUser->update(['deletion_scheduled_at' => now()->subDays(15)]);
+\Illuminate\Support\Facades\Artisan::call('accounts:purge-scheduled');
+
+$userExistsAfterPurge = User::where('id', $testUser->id)->exists();
 $notificationsExistAfter = UserNotification::where('user_id', $testUser->id)->exists();
 $balanceExistsAfter = GraciaUserBalance::where('user_id', $testUser->id)->exists();
 
-report("API: DELETE /api/profile/delete returns success 200", $authResponse->getStatusCode() === 200 && ($deleteData['status'] ?? '') === 'success', "Response: " . $authResponse->getContent());
-report("API: DELETE /api/profile/delete permanently deletes user record", !$userExistsAfter, "User still in DB");
-report("API: DELETE /api/profile/delete cleans up user notifications", !$notificationsExistAfter, "Notifications still exist");
-report("API: DELETE /api/profile/delete cleans up user points balance", !$balanceExistsAfter, "Balance record still exists");
+report("CLI: accounts:purge-scheduled purges expired grace-period user", !$userExistsAfterPurge, "User still exists");
+report("CLI: accounts:purge-scheduled cleans up user notifications", !$notificationsExistAfter, "Notifications remain");
+report("CLI: accounts:purge-scheduled cleans up user points balance", !$balanceExistsAfter, "Points remain");
 
 // 4. AndroidManifest.xml verification
 $manifestContent = file_get_contents(__DIR__ . '/../flutter_app/android/app/src/main/AndroidManifest.xml');

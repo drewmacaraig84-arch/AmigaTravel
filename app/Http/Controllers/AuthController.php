@@ -227,6 +227,22 @@ class AuthController extends Controller
 
         $user = Auth::user();
 
+        // Check if account was scheduled for deletion
+        if ($user->deletion_scheduled_at) {
+            if (now()->greaterThan($user->deletion_scheduled_at)) {
+                // 14-day grace period has passed — purge account
+                \App\Models\UserNotification::where('user_id', $user->id)->delete();
+                \App\Models\GraciaUserBalance::where('user_id', $user->id)->delete();
+                \App\Models\GraciaPointLedger::where('user_id', $user->id)->delete();
+                \App\Models\UserLoginHistory::where('user_id', $user->id)->delete();
+                $user->delete();
+
+                return response()->json([
+                    'message' => 'This account has been permanently deleted as the 14-day grace period has expired.'
+                ], 410);
+            }
+        }
+
         // When a user logs in via the mobile app, activate their app user status so they start earning Gracia points
         if (!$user->is_app_user) {
             $user->is_app_user = true;
@@ -260,11 +276,16 @@ class AuthController extends Controller
         return response()->json([
             'status' => 'success',
             'user' => [
+                'id'    => $user->id,
                 'name'  => $user->name,
                 'email' => $user->email,
                 'phone' => $user->phone ?? '',
                 'referral_code' => $user->referral_code,
             ],
+            // Grace period status
+            'deletion_scheduled'    => !empty($user->deletion_scheduled_at),
+            'deletion_scheduled_at' => $user->deletion_scheduled_at?->toIso8601String(),
+            'days_remaining'        => $user->deletion_scheduled_at ? max(0, (int) ceil(now()->diffInSeconds($user->deletion_scheduled_at, false) / 86400)) : 0,
             // Legacy token — kept for backward compat
             'token'         => $user->api_token,
             // Sanctum token — use this in new Flutter builds
@@ -303,40 +324,204 @@ class AuthController extends Controller
         ]);
     }
 
-    public function deleteAccount(Request $request)
+    public function getDeleteEligibility(Request $request)
     {
         $user = auth()->guard('api')->user() ?? auth()->guard('sanctum')->user() ?? auth()->user();
         if (!$user) {
             return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
         }
 
-        $email = $user->email;
-        $userId = $user->id;
+        $email = strtolower(trim($user->email));
+        $today = now()->toDateString();
 
-        // Revoke all tokens
+        $activeBookings = Booking::where(function ($q) use ($user, $email) {
+                $q->where('user_id', $user->id)
+                  ->orWhere('client_email', $email);
+            })
+            ->where(function ($q) use ($today) {
+                $q->where(function ($sub) use ($today) {
+                    $sub->whereIn('status', [
+                        Booking::STATUS_PENDING,
+                        Booking::STATUS_PENDING_REBOOKING,
+                        Booking::STATUS_CONFIRMED,
+                        Booking::STATUS_OPERATOR_REBOOKING,
+                    ])->where(function ($d) use ($today) {
+                        $d->whereDate('departure_date', '>=', $today)
+                          ->orWhereDate('return_date', '>=', $today);
+                    });
+                })->orWhereIn('refund_status', ['pending', 'processing', 'requested']);
+            })
+            ->get(['id', 'transaction_number', 'origin', 'destination', 'departure_date', 'status', 'refund_status']);
+
+        $points = $user->graciaBalance?->points ?? 0;
+        $pointsWorth = number_format(($points / 100), 2);
+        $vouchersCount = \App\Models\Voucher::where('is_active', true)->where(function($q) { $q->whereNull('expires_at')->orWhere('expires_at', '>=', now()); })->count();
+
+        $isEligible = $activeBookings->isEmpty();
+
+        return response()->json([
+            'status' => 'success',
+            'eligible' => $isEligible,
+            'active_bookings_count' => $activeBookings->count(),
+            'active_bookings' => $activeBookings,
+            'points_forfeited' => $points,
+            'points_worth_php' => $pointsWorth,
+            'vouchers_count' => $vouchersCount,
+            'email' => $user->email,
+            'deletion_scheduled' => !empty($user->deletion_scheduled_at),
+            'deletion_scheduled_at' => $user->deletion_scheduled_at?->toIso8601String(),
+            'days_remaining' => $user->deletion_scheduled_at ? max(0, (int) ceil(now()->diffInSeconds($user->deletion_scheduled_at, false) / 86400)) : 0,
+        ]);
+    }
+
+    public function requestDeleteOtp(Request $request)
+    {
+        $user = auth()->guard('api')->user() ?? auth()->guard('sanctum')->user() ?? auth()->user();
+        if (!$user) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+        }
+
+        $email = strtolower(trim($user->email));
+        $code = (string) random_int(100000, 999999);
+        Cache::put('account_deletion_otp:' . $email, $code, now()->addMinutes(15));
+
+        try {
+            Mail::raw("Your Amiga Gracia account deletion verification code is {$code}.\n\nThis code will expire in 15 minutes.\n\nIf you did not initiate this request, please log into your account and change your password immediately.", function ($message) use ($email): void {
+                $message->to($email)->subject('Action Required: Amiga Gracia Account Deletion Verification Code');
+            });
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Account deletion OTP email failed: ' . $e->getMessage());
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'A 6-digit verification code has been sent to ' . $email . '.',
+        ]);
+    }
+
+    public function confirmAccountDeletion(Request $request)
+    {
+        $user = auth()->guard('api')->user() ?? auth()->guard('sanctum')->user() ?? auth()->user();
+        if (!$user) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+        }
+
+        $validated = $request->validate([
+            'password'          => 'required|string',
+            'otp'               => 'required|string|size:6',
+            'confirmation_text' => 'required|string',
+            'reason'            => 'nullable|string|max:255',
+            'feedback'          => 'nullable|string|max:1000',
+        ]);
+
+        // 1. Validate Password
+        if (!\Illuminate\Support\Facades\Hash::check($validated['password'], $user->password)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'The password you entered is incorrect.',
+            ], 422);
+        }
+
+        // 2. Validate OTP
+        $email = strtolower(trim($user->email));
+        $cachedOtp = Cache::get('account_deletion_otp:' . $email, '');
+        if (!hash_equals((string) $cachedOtp, $validated['otp'])) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'The verification code is invalid or has expired. Please request a new code.',
+            ], 422);
+        }
+
+        // 3. Validate Typed Confirmation "DELETE"
+        if (trim($validated['confirmation_text']) !== 'DELETE') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Please type DELETE in all capital letters to confirm.',
+            ], 422);
+        }
+
+        // 4. Double check Active Bookings
+        $today = now()->toDateString();
+        $hasActiveBookings = Booking::where(function ($q) use ($user, $email) {
+                $q->where('user_id', $user->id)
+                  ->orWhere('client_email', $email);
+            })
+            ->where(function ($q) use ($today) {
+                $q->where(function ($sub) use ($today) {
+                    $sub->whereIn('status', [
+                        Booking::STATUS_PENDING,
+                        Booking::STATUS_PENDING_REBOOKING,
+                        Booking::STATUS_CONFIRMED,
+                        Booking::STATUS_OPERATOR_REBOOKING,
+                    ])->where(function ($d) use ($today) {
+                        $d->whereDate('departure_date', '>=', $today)
+                          ->orWhereDate('return_date', '>=', $today);
+                    });
+                })->orWhereIn('refund_status', ['pending', 'processing', 'requested']);
+            })
+            ->exists();
+
+        if ($hasActiveBookings) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Your account cannot be deleted because you have active upcoming bookings or pending refunds.',
+            ], 422);
+        }
+
+        // Clear OTP cache
+        Cache::forget('account_deletion_otp:' . $email);
+        if (!empty($user->api_token)) {
+            Cache::forget('booking_lookup_token:' . hash('sha256', $user->api_token));
+        }
+
+        // Option A: 14-Day Grace Period
+        $scheduledDate = now()->addDays(14);
+        $user->deletion_scheduled_at = $scheduledDate;
+        $user->deletion_reason = $validated['reason'] ?? 'User requested';
+        $user->deletion_feedback = $validated['feedback'] ?? null;
+        $user->save();
+
+        // Revoke all active tokens so the user is signed out
         if (method_exists($user, 'tokens')) {
             $user->tokens()->delete();
         }
 
-        // Invalidate lookup cache
-        if (!empty($user->api_token)) {
-            Cache::forget('booking_lookup_token:' . hash('sha256', $user->api_token));
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Your account has been deactivated and scheduled for permanent deletion on ' . $scheduledDate->format('F d, Y') . '. You can restore your account at any time within the 14-day grace period simply by logging back in.',
+            'deletion_scheduled_at' => $scheduledDate->toIso8601String(),
+            'days_remaining' => 14,
+        ]);
+    }
+
+    public function cancelAccountDeletion(Request $request)
+    {
+        $user = auth()->guard('api')->user() ?? auth()->guard('sanctum')->user() ?? auth()->user();
+        if (!$user) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
         }
-        Cache::forget('booking_lookup_otp:' . strtolower($email));
 
-        // Delete user notifications and gracia balances/ledgers
-        \App\Models\UserNotification::where('user_id', $userId)->delete();
-        \App\Models\GraciaUserBalance::where('user_id', $userId)->delete();
-        \App\Models\GraciaPointLedger::where('user_id', $userId)->delete();
-        \App\Models\UserLoginHistory::where('user_id', $userId)->delete();
-
-        // Delete the user record
-        $user->delete();
+        $user->deletion_scheduled_at = null;
+        $user->deletion_reason = null;
+        $user->deletion_feedback = null;
+        $user->save();
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Your account and associated personal data have been permanently deleted in compliance with data privacy regulations.',
+            'message' => 'Account deletion has been cancelled. Your account, bookings, and Gracia Points are fully restored.',
+            'user' => [
+                'id'    => $user->id,
+                'name'  => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone ?? '',
+                'referral_code' => $user->referral_code,
+            ],
         ]);
+    }
+
+    public function deleteAccount(Request $request)
+    {
+        return $this->confirmAccountDeletion($request);
     }
 
     public function apiRegister(Request $request)

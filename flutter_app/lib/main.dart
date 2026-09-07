@@ -19,6 +19,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 import 'notification_service.dart';
 import 'forgot_password_screen.dart';
+import 'account_deletion_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -100,7 +101,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.139+150';
+  static const String appVersion = '1.0.140+151';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -5508,6 +5509,64 @@ class _ActivityScreenState extends State<ActivityScreen> {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200 && data['status'] == 'success') {
+        if (data['deletion_scheduled'] == true) {
+          final daysRemaining = data['days_remaining'] ?? 14;
+          final shouldRestore = await showDialog<bool>(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Row(
+                children: [
+                  Icon(Icons.history_toggle_off, color: Colors.orange, size: 28),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Account Deletion Pending',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                    ),
+                  ),
+                ],
+              ),
+              content: Text(
+                'This account was deactivated and scheduled for permanent deletion in $daysRemaining day(s).\n\n'
+                'Would you like to cancel the deletion request and restore your account now?',
+                style: const TextStyle(fontSize: 14, color: kSlate700, height: 1.4),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Keep Deactivated', style: TextStyle(color: kSlate500)),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kGreen,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: const Text('Restore Account'),
+                ),
+              ],
+            ),
+          );
+
+          if (shouldRestore == true) {
+            try {
+              final token = data['token'] ?? '';
+              await http.post(
+                Uri.parse('${UserSession.getBaseUrl()}/api/profile/delete/cancel'),
+                headers: {
+                  'Accept': 'application/json',
+                  'Authorization': 'Bearer $token',
+                },
+              );
+            } catch (_) {}
+          } else {
+            return;
+          }
+        }
+
         setState(() {
           UserSession.isLoggedIn = true;
           UserSession.userId = data['user']['id'] is int
@@ -8249,7 +8308,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 8),
           Center(
             child: TextButton.icon(
-              onPressed: () => _confirmDeleteAccount(context),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AccountDeletionScreen(),
+                  ),
+                );
+              },
               icon: const Icon(Icons.delete_forever, color: Colors.red),
               label: const Text(
                 'Delete Account',
@@ -8262,77 +8328,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 16),
         ],
-      ),
-    );
-  }
-
-  Future<void> _confirmDeleteAccount(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.red),
-            SizedBox(width: 8),
-            Text('Delete Account?'),
-          ],
-        ),
-        content: const Text(
-          'Are you sure you want to permanently delete your account? '
-          'This will delete your personal profile, credentials, and all accumulated Gracia Points. '
-          'This action cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Delete Permanently'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) return;
-
-    if (!mounted) return;
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(
-        child: CircularProgressIndicator(color: Colors.red),
-      ),
-    );
-
-    try {
-      if (UserSession.token.isNotEmpty) {
-        await http.delete(
-          Uri.parse('${UserSession.getBaseUrl()}/api/profile/delete'),
-          headers: {
-            'Accept': 'application/json',
-            'Authorization': 'Bearer ${UserSession.token}',
-          },
-        ).timeout(const Duration(seconds: 10));
-      }
-    } catch (_) {}
-
-    await UserSession.clear();
-
-    if (!mounted) return;
-    Navigator.of(context, rootNavigator: true).pop(); // dismiss loading
-    Navigator.of(context).pop(); // exit profile page
-
-    showTopSnack(
-      context,
-      const SnackBar(
-        content: Text('Your account and data have been deleted.'),
-        backgroundColor: Colors.grey,
       ),
     );
   }
