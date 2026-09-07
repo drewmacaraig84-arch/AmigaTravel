@@ -28,6 +28,29 @@ class ListVouchers extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
+            Actions\Action::make('websiteVoucherSetting')
+                ->label(fn () => \App\Models\WebsiteSetting::isWebsiteVouchersEnabled() ? 'Website Vouchers: ON' : 'Website Vouchers: OFF')
+                ->icon(fn () => \App\Models\WebsiteSetting::isWebsiteVouchersEnabled() ? 'heroicon-o-check-circle' : 'heroicon-o-x-circle')
+                ->color(fn () => \App\Models\WebsiteSetting::isWebsiteVouchersEnabled() ? 'success' : 'danger')
+                ->modalHeading('Website Voucher Settings')
+                ->modalDescription('Control whether the voucher / promo code section is visible and active on the public website checkout.')
+                ->modalSubmitActionLabel('Save Setting')
+                ->form([
+                    \Filament\Forms\Components\Toggle::make('enable_website_vouchers')
+                        ->label('Turn on voucher in website?')
+                        ->helperText('When turned off, the voucher adding section is removed from the website. When turned on, customers can add and apply vouchers.')
+                        ->default(fn () => \App\Models\WebsiteSetting::isWebsiteVouchersEnabled()),
+                ])
+                ->action(function (array $data): void {
+                    $enabled = (bool) $data['enable_website_vouchers'];
+                    \App\Models\WebsiteSetting::setWebsiteVouchersEnabled($enabled);
+                    Notification::make()
+                        ->title($enabled ? 'Vouchers turned ON in website' : 'Vouchers turned OFF in website')
+                        ->body($enabled ? 'The voucher adding section is now visible and active on the website.' : 'The voucher adding section has been removed from the website.')
+                        ->success()
+                        ->send();
+                }),
+
             Actions\Action::make('downloadVoucherTemplate')
                 ->label('Download Template')
                 ->icon('heroicon-o-arrow-down-tray')

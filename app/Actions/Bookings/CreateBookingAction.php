@@ -102,6 +102,9 @@ class CreateBookingAction
         $discountAmount     = 0;
 
         if (! empty($data['voucher_code'])) {
+            if (! \App\Models\WebsiteSetting::isWebsiteVouchersEnabled()) {
+                throw new \InvalidArgumentException('Voucher applications are currently disabled on the website.');
+            }
             $voucherResult = $this->voucherService->validateAndCalculate($data['voucher_code'], $data);
             if (! $voucherResult['valid']) {
                 throw new \InvalidArgumentException($voucherResult['message']);
@@ -125,6 +128,8 @@ class CreateBookingAction
             $isSuperPromoBooking,
             $isPromoBooking
         ) {
+            $paxCount = isset($data['passengers']) && is_array($data['passengers']) ? max(1, count($data['passengers'])) : 1;
+
             // --- Pessimistic locking: prevent last-ticket race condition ---
             // Lock the accommodation or transport-class row for the duration of this
             // transaction so that two concurrent bookings cannot both pass the
@@ -134,14 +139,14 @@ class CreateBookingAction
                     ->lockForUpdate()
                     ->first();
 
-                if (! $lockedAccom || $lockedAccom->tickets_available <= 0) {
+                if (! $lockedAccom || $lockedAccom->tickets_available < $paxCount) {
                     throw new \InvalidArgumentException(
-                        'Sorry, this accommodation is now fully booked. Please choose another option.'
+                        'Sorry, this accommodation does not have enough seats available. Please choose another option.'
                     );
                 }
 
                 // Decrement the availability counter atomically inside the transaction
-                $lockedAccom->decrement('tickets_available');
+                $lockedAccom->decrement('tickets_available', $paxCount);
             }
 
             if ($returnScheduleAccommodation) {
@@ -149,13 +154,13 @@ class CreateBookingAction
                     ->lockForUpdate()
                     ->first();
 
-                if (! $lockedReturnAccom || $lockedReturnAccom->tickets_available <= 0) {
+                if (! $lockedReturnAccom || $lockedReturnAccom->tickets_available < $paxCount) {
                     throw new \InvalidArgumentException(
-                        'Sorry, the return trip accommodation is now fully booked. Please choose another option.'
+                        'Sorry, the return trip accommodation does not have enough seats available. Please choose another option.'
                     );
                 }
 
-                $lockedReturnAccom->decrement('tickets_available');
+                $lockedReturnAccom->decrement('tickets_available', $paxCount);
             }
 
             if ($depStc) {
@@ -163,17 +168,17 @@ class CreateBookingAction
                     ->lockForUpdate()
                     ->first();
 
-                if ($lockedStc && $lockedStc->tickets_available !== null && $lockedStc->tickets_available <= 0) {
+                if ($lockedStc && $lockedStc->tickets_available !== null && $lockedStc->tickets_available < $paxCount) {
                     throw new \InvalidArgumentException(
-                        'Sorry, this class is now fully booked. Please choose another option.'
+                        'Sorry, this class does not have enough seats available. Please choose another option.'
                     );
                 }
 
                 if ($lockedStc && $lockedStc->tickets_available !== null) {
-                    $lockedStc->decrement('tickets_available');
+                    $lockedStc->decrement('tickets_available', $paxCount);
                     
                     if ($lockedStc->is_promo && $lockedStc->promo_tickets_available !== null) {
-                        $lockedStc->decrement('promo_tickets_available');
+                        $lockedStc->decrement('promo_tickets_available', min($paxCount, $lockedStc->promo_tickets_available));
                         $lockedStc->refresh();
                         if ($lockedStc->promo_tickets_available <= 0) {
                             $basePrice = (float) ($lockedStc->transportClass?->price ?? 0);
@@ -199,17 +204,17 @@ class CreateBookingAction
                     ->lockForUpdate()
                     ->first();
 
-                if ($lockedReturnStc && $lockedReturnStc->tickets_available !== null && $lockedReturnStc->tickets_available <= 0) {
+                if ($lockedReturnStc && $lockedReturnStc->tickets_available !== null && $lockedReturnStc->tickets_available < $paxCount) {
                     throw new \InvalidArgumentException(
-                        'Sorry, the return trip class is now fully booked. Please choose another option.'
+                        'Sorry, the return trip class does not have enough seats available. Please choose another option.'
                     );
                 }
 
                 if ($lockedReturnStc && $lockedReturnStc->tickets_available !== null) {
-                    $lockedReturnStc->decrement('tickets_available');
+                    $lockedReturnStc->decrement('tickets_available', $paxCount);
                     
                     if ($lockedReturnStc->is_promo && $lockedReturnStc->promo_tickets_available !== null) {
-                        $lockedReturnStc->decrement('promo_tickets_available');
+                        $lockedReturnStc->decrement('promo_tickets_available', min($paxCount, $lockedReturnStc->promo_tickets_available));
                         $lockedReturnStc->refresh();
                         if ($lockedReturnStc->promo_tickets_available <= 0) {
                             $basePrice = (float) ($lockedReturnStc->transportClass?->price ?? 0);

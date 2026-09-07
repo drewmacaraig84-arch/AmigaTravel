@@ -519,12 +519,30 @@ Route::get('/ticket/refund-acknowledgement/{transaction_number}', function ($tra
 })->name('ticket.refund-acknowledgement');
 
 // Serves dedicated single-passenger E-ticket PDF
-Route::get('/ticket/passenger/{passenger_id}', function ($passenger_id) {
-    $passenger = \App\Models\Passenger::query()
-        ->where('id', $passenger_id)
-        ->orWhere('ticket_number', $passenger_id)
-        ->with(['booking.schedule.ferryRoute.operatorRecord', 'booking.returnSchedule.ferryRoute.operatorRecord', 'booking.transportClasses', 'booking.accommodations', 'discount'])
-        ->firstOrFail();
+Route::get('/ticket/passenger/{identifier}', function ($identifier) {
+    if (is_numeric($identifier)) {
+        // Enforce authorization for sequential numeric ID to block IDOR enumeration
+        $user = auth()->user();
+        $passenger = \App\Models\Passenger::with(['booking.schedule.ferryRoute.operatorRecord', 'booking.returnSchedule.ferryRoute.operatorRecord', 'booking.transportClasses', 'booking.accommodations', 'discount'])
+            ->find($identifier);
+
+        if (! $passenger) {
+            abort(404, 'Ticket not found.');
+        }
+
+        $booking = $passenger->booking;
+        $isOwner = $user && ($user->id === $booking->user_id || strtolower((string) $user->email) === strtolower((string) $booking->client_email));
+        $isStaff = $user && ($user->is_staff || $user->is_admin);
+
+        if (! $isOwner && ! $isStaff) {
+            abort(403, 'Unauthorized. Please access your ticket using your unique Ticket Number.');
+        }
+    } else {
+        $passenger = \App\Models\Passenger::query()
+            ->where('ticket_number', $identifier)
+            ->with(['booking.schedule.ferryRoute.operatorRecord', 'booking.returnSchedule.ferryRoute.operatorRecord', 'booking.transportClasses', 'booking.accommodations', 'discount'])
+            ->firstOrFail();
+    }
 
     $booking = $passenger->booking;
 

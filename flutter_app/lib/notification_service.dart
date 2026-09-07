@@ -75,11 +75,21 @@ class NotificationService {
         },
       );
 
-      // 3. Register high-importance Android channel with OS
+      // 3. Register high-importance Android channels with OS
       const AndroidNotificationChannel channel = AndroidNotificationChannel(
         _channelId,
         _channelName,
         description: _channelDescription,
+        importance: Importance.max,
+        playSound: true,
+        enableVibration: true,
+        showBadge: true,
+      );
+
+      const AndroidNotificationChannel legacyChannel = AndroidNotificationChannel(
+        'high_importance_channel',
+        'High Importance Notifications',
+        description: 'Important notifications for bookings and alerts',
         importance: Importance.max,
         playSound: true,
         enableVibration: true,
@@ -91,6 +101,7 @@ class NotificationService {
               AndroidFlutterLocalNotificationsPlugin>();
       if (androidPlugin != null) {
         await androidPlugin.createNotificationChannel(channel);
+        await androidPlugin.createNotificationChannel(legacyChannel);
       }
 
       // 4. Handle Foreground FCM Messages

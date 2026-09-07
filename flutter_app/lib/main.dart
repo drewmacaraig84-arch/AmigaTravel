@@ -100,7 +100,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.138+149';
+  static const String appVersion = '1.0.139+150';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -196,6 +196,7 @@ class UserSession {
     await prefs.remove('token');
     await prefs.remove('lookupToken');
     await prefs.remove('referralCode');
+    await prefs.remove('phone');
     await prefs.remove('graciaPoints');
     await prefs.remove('pointsAwarded');
     await prefs.remove('spendThreshold');
@@ -204,6 +205,7 @@ class UserSession {
     userId = 0;
     username = 'Traveler';
     email = 'user@amigagracia.com';
+    phone = '';
     token = '';
     lookupToken = '';
     referralCode = null;
@@ -902,6 +904,9 @@ class _GlobalUpdateWrapperState extends State<GlobalUpdateWrapper>
         final data = jsonDecode(response.body);
         final latestVersion = data['version'] as String;
         final forceUpdate = data['force_update'] as bool? ?? true;
+        final playStoreUrl = data['play_store_url'] as String?;
+        final appStoreUrl = data['app_store_url'] as String?;
+        final appGalleryUrl = data['app_gallery_url'] as String?;
         final updateRequired = UserSession.isUpdateRequired(latestVersion);
         if (!updateRequired) {
           UpdateChecker._apkInstallTriggered = false;
@@ -910,7 +915,13 @@ class _GlobalUpdateWrapperState extends State<GlobalUpdateWrapper>
           final context = navigatorKey.currentContext;
           if (context != null) {
             if (!mounted) return;
-            await UpdateChecker.showUpdateDialog(context, latestVersion);
+            await UpdateChecker.showUpdateDialog(
+              context,
+              latestVersion,
+              playStoreUrl: playStoreUrl,
+              appStoreUrl: appStoreUrl,
+              appGalleryUrl: appGalleryUrl,
+            );
           }
         }
       }
@@ -931,7 +942,12 @@ class UpdateChecker {
   static DateTime? _updateInstalledTime;
 
   static Future<void> showUpdateDialog(
-      BuildContext context, String latestVersion) async {
+      BuildContext context,
+      String latestVersion, {
+      String? playStoreUrl,
+      String? appStoreUrl,
+      String? appGalleryUrl,
+  }) async {
     if (_dialogAlreadyVisible && _lastPromptedVersion == latestVersion) {
       return;
     }
@@ -942,6 +958,8 @@ class UpdateChecker {
 
     _dialogAlreadyVisible = true;
     _lastPromptedVersion = latestVersion;
+
+    final isIOS = !kIsWeb && Platform.isIOS;
 
     await showDialog(
       context: context,
@@ -958,7 +976,10 @@ class UpdateChecker {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                      'A new version ($latestVersion) of Amiga Gracia is available. Please update to continue using the app.'),
+                    isIOS
+                        ? 'A new version ($latestVersion) of Amiga Gracia is available on the App Store. Please update to continue.'
+                        : 'A new version ($latestVersion) of Amiga Gracia is available. Please update to continue using the app.',
+                  ),
                   if (isDownloading) ...[
                     const SizedBox(height: 20),
                     LinearProgressIndicator(value: progress, color: kGreen),
@@ -974,75 +995,96 @@ class UpdateChecker {
                 ],
               ),
               actions: [
-                if (!isDownloading)
+                if (isIOS)
                   FilledButton(
                     onPressed: () async {
-                      setState(() {
-                        isDownloading = true;
-                        dlError = '';
-                      });
-                      try {
-                        final apkUrl =
-                            '${UserSession.getBaseUrl()}/downloads/amiga-travel.apk?v=$latestVersion';
-                        final request = http.Request('GET', Uri.parse(apkUrl));
-                        final response = await http.Client().send(request);
-                        if (response.statusCode != 200) {
-                          throw Exception(
-                              'Server returned ${response.statusCode}');
-                        }
-
-                        final contentLength = response.contentLength ?? 1;
-                        final dir = await getExternalStorageDirectory();
-                        final file =
-                            File('${dir!.path}/update_$latestVersion.apk');
-                        final sink = file.openWrite();
-
-                        int bytes = 0;
-                        double lastProgress = 0.0;
-                        await response.stream.listen((List<int> chunk) {
-                          bytes += chunk.length;
-                          sink.add(chunk);
-                          double currentProgress = bytes / contentLength;
-                          if (currentProgress - lastProgress >= 0.01 ||
-                              currentProgress >= 1.0) {
-                            lastProgress = currentProgress;
-                            setState(() => progress = currentProgress);
-                          }
-                        }).asFuture();
-                        await sink.close();
-
-                        await UserSession.save();
-                        if (BookingData.activeSession != null) {
-                          await BookingData.activeSession!.saveToPrefs(
-                              BookingData.activeSession!.savedStep);
-                        }
-
-                        _apkInstallTriggered = true;
-                        UpdateChecker._updateInstalledTime = DateTime.now();
-
-                        final result = await OpenFilex.open(file.path);
-                        if (result.type != ResultType.done) {
-                          _apkInstallTriggered = false;
-                          UpdateChecker._updateInstalledTime = null;
-                          throw Exception(result.message);
-                        }
-
-                        if (context.mounted) {
-                          Navigator.of(context, rootNavigator: true).pop();
-                        }
-
-                        return;
-                      } catch (e) {
-                        debugPrint('Download error: $e');
-                        setState(() {
-                          isDownloading = false;
-                          dlError =
-                              'Failed to download update. Please try again or download from website.';
-                        });
-                      }
+                      final url = (appStoreUrl != null && appStoreUrl.isNotEmpty)
+                          ? appStoreUrl
+                          : 'https://apps.apple.com/app/amiga-gracia/id6470000000';
+                      await launchUrl(Uri.parse(url),
+                          mode: LaunchMode.externalApplication);
                     },
-                    child: const Text('Update Now'),
-                  ),
+                    child: const Text('Update on App Store'),
+                  )
+                else ...[
+                  if (playStoreUrl != null && playStoreUrl.isNotEmpty)
+                    TextButton(
+                      onPressed: () async {
+                        await launchUrl(Uri.parse(playStoreUrl),
+                            mode: LaunchMode.externalApplication);
+                      },
+                      child: const Text('Google Play'),
+                    ),
+                  if (!isDownloading)
+                    FilledButton(
+                      onPressed: () async {
+                        setState(() {
+                          isDownloading = true;
+                          dlError = '';
+                        });
+                        try {
+                          final apkUrl =
+                              '${UserSession.getBaseUrl()}/downloads/amiga-travel.apk?v=$latestVersion';
+                          final request = http.Request('GET', Uri.parse(apkUrl));
+                          final response = await http.Client().send(request);
+                          if (response.statusCode != 200) {
+                            throw Exception(
+                                'Server returned ${response.statusCode}');
+                          }
+
+                          final contentLength = response.contentLength ?? 1;
+                          final dir = await getExternalStorageDirectory();
+                          final file =
+                              File('${dir!.path}/update_$latestVersion.apk');
+                          final sink = file.openWrite();
+
+                          int bytes = 0;
+                          double lastProgress = 0.0;
+                          await response.stream.listen((List<int> chunk) {
+                            bytes += chunk.length;
+                            sink.add(chunk);
+                            double currentProgress = bytes / contentLength;
+                            if (currentProgress - lastProgress >= 0.01 ||
+                                currentProgress >= 1.0) {
+                              lastProgress = currentProgress;
+                              setState(() => progress = currentProgress);
+                            }
+                          }).asFuture();
+                          await sink.close();
+
+                          await UserSession.save();
+                          if (BookingData.activeSession != null) {
+                            await BookingData.activeSession!.saveToPrefs(
+                                BookingData.activeSession!.savedStep);
+                          }
+
+                          _apkInstallTriggered = true;
+                          UpdateChecker._updateInstalledTime = DateTime.now();
+
+                          final result = await OpenFilex.open(file.path);
+                          if (result.type != ResultType.done) {
+                            _apkInstallTriggered = false;
+                            UpdateChecker._updateInstalledTime = null;
+                            throw Exception(result.message);
+                          }
+
+                          if (context.mounted) {
+                            Navigator.of(context, rootNavigator: true).pop();
+                          }
+
+                          return;
+                        } catch (e) {
+                          debugPrint('Download error: $e');
+                          setState(() {
+                            isDownloading = false;
+                            dlError =
+                                'Failed to download update. Please try again or download from website.';
+                          });
+                        }
+                      },
+                      child: const Text('Update Now'),
+                    ),
+                ],
               ],
             );
           },
@@ -1171,10 +1213,19 @@ class _SplashLoaderScreenState extends State<SplashLoaderScreen> {
         final data = jsonDecode(response.body);
         final latestVersion = data['version'] as String;
         final forceUpdate = data['force_update'] as bool? ?? true;
+        final playStoreUrl = data['play_store_url'] as String?;
+        final appStoreUrl = data['app_store_url'] as String?;
+        final appGalleryUrl = data['app_gallery_url'] as String?;
 
         if (forceUpdate && UserSession.isUpdateRequired(latestVersion)) {
           if (mounted) {
-            await UpdateChecker.showUpdateDialog(context, latestVersion);
+            await UpdateChecker.showUpdateDialog(
+              context,
+              latestVersion,
+              playStoreUrl: playStoreUrl,
+              appStoreUrl: appStoreUrl,
+              appGalleryUrl: appGalleryUrl,
+            );
           }
           await UserSession.refreshInstalledAppVersion();
           if (!UserSession.isUpdateRequired(latestVersion)) {
@@ -8193,7 +8244,95 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ),
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 8),
+          Center(
+            child: TextButton.icon(
+              onPressed: () => _confirmDeleteAccount(context),
+              icon: const Icon(Icons.delete_forever, color: Colors.red),
+              label: const Text(
+                'Delete Account',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
         ],
+      ),
+    );
+  }
+
+  Future<void> _confirmDeleteAccount(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Delete Account?'),
+          ],
+        ),
+        content: const Text(
+          'Are you sure you want to permanently delete your account? '
+          'This will delete your personal profile, credentials, and all accumulated Gracia Points. '
+          'This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete Permanently'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: Colors.red),
+      ),
+    );
+
+    try {
+      if (UserSession.token.isNotEmpty) {
+        await http.delete(
+          Uri.parse('${UserSession.getBaseUrl()}/api/profile/delete'),
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': 'Bearer ${UserSession.token}',
+          },
+        ).timeout(const Duration(seconds: 10));
+      }
+    } catch (_) {}
+
+    await UserSession.clear();
+
+    if (!mounted) return;
+    Navigator.of(context, rootNavigator: true).pop(); // dismiss loading
+    Navigator.of(context).pop(); // exit profile page
+
+    showTopSnack(
+      context,
+      const SnackBar(
+        content: Text('Your account and data have been deleted.'),
+        backgroundColor: Colors.grey,
       ),
     );
   }
@@ -12363,7 +12502,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                       }
 
                       double passengerDiscount = 0.0;
-                      if (!isSuperPromo) {
+                      if (!isSuperPromo && !isPromo) {
                         for (var p in widget.booking.passengers) {
                           final pType = (p['type'] ?? '').toString().toLowerCase();
                           final isRegularMinor = !isPromo &&
@@ -13080,7 +13219,7 @@ class _PassengerItemsCardState extends State<_PassengerItemsCard> {
                         icon: const Icon(Icons.picture_as_pdf, size: 14, color: Color(0xFF16A34A)),
                         label: Text('Download Ticket (Item $itemNum)', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
                         onPressed: () async {
-                          final pId = p['id'] ?? p['ticket_number'];
+                          final pId = p['ticket_number'] ?? p['id'];
                           if (pId != null) {
                             final baseUrl = UserSession.getBaseUrl();
                             final url = Uri.parse('$baseUrl/ticket/passenger/$pId');

@@ -733,16 +733,38 @@ class BookingController extends Controller
 
         dispatch(function () use ($booking, $totalRefundAmount, $itemsLabel) {
             try {
-                $userTopic = 'user_' . md5(strtolower(trim($booking->client_email)));
+                $email = strtolower(trim($booking->client_email));
+                $topics = [
+                    'user_' . md5($email),
+                    'user_' . preg_replace('/[^a-zA-Z0-9-_.~%+]/', '_', $email),
+                ];
+                if ($booking->user_id) {
+                    $topics[] = 'user_' . $booking->user_id;
+                }
+                $topics = array_unique($topics);
+
                 $messaging = app('firebase.messaging');
                 $notification = \Kreait\Firebase\Messaging\Notification::create(
                     '💰 Refund Request Received',
                     "Your refund request of ₱" . number_format((float) $totalRefundAmount, 2) . " for {$itemsLabel} (booking #{$booking->transaction_number}) is being processed. Please allow 24–48 hours for disbursement."
                 );
-                $message = \Kreait\Firebase\Messaging\CloudMessage::new()
-                    ->withTopic($userTopic)
-                    ->withNotification($notification);
-                $messaging->send($message);
+                $androidConfig = \Kreait\Firebase\Messaging\AndroidConfig::fromArray([
+                    'notification' => [
+                        'channel_id' => 'amiga_travel_alerts',
+                    ],
+                ]);
+
+                foreach ($topics as $userTopic) {
+                    try {
+                        $message = \Kreait\Firebase\Messaging\CloudMessage::new()
+                            ->withTopic($userTopic)
+                            ->withNotification($notification)
+                            ->withAndroidConfig($androidConfig);
+                        $messaging->send($message);
+                    } catch (\Throwable $te) {
+                        \Illuminate\Support\Facades\Log::warning("FCM cancellation push failed for {$userTopic}: " . $te->getMessage());
+                    }
+                }
             } catch (\Exception $e) {
                 \Illuminate\Support\Facades\Log::error('FCM cancellation push failed: ' . $e->getMessage());
             }

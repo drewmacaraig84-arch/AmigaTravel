@@ -31,9 +31,11 @@ class BookingObserver
             $becomingCancelled = in_array($newStatus, $cancelledStatuses, true);
             $wasAlreadyCancelled = in_array($oldStatus, $cancelledStatuses, true);
 
-            // --- RESTORE tickets when a booking is cancelled or rejected ---
+            // --- RESTORE tickets and reverse/refund Gracia points when a booking is cancelled or rejected ---
             if ($becomingCancelled && ! $wasAlreadyCancelled) {
                 $this->restoreTickets($booking);
+                app(\App\Services\GraciaPointsService::class)->reversePointsForBooking($booking);
+                app(\App\Services\GraciaPointsService::class)->refundRedeemedPoints($booking);
             }
 
             // --- DEDUCT tickets if a booking is somehow un-cancelled back to active ---
@@ -84,16 +86,18 @@ class BookingObserver
     private function restoreTickets(Booking $booking): void
     {
         try {
+            $paxCount = max(1, $booking->relationLoaded('passengers') ? $booking->passengers->count() : $booking->passengers()->count());
+
             // Restore outbound schedule accommodation
             if ($booking->schedule_accommodation_id) {
                 ScheduleAccommodation::where('id', $booking->schedule_accommodation_id)
-                    ->increment('tickets_available');
+                    ->increment('tickets_available', $paxCount);
             }
 
             // Restore return schedule accommodation
             if ($booking->return_schedule_accommodation_id) {
                 ScheduleAccommodation::where('id', $booking->return_schedule_accommodation_id)
-                    ->increment('tickets_available');
+                    ->increment('tickets_available', $paxCount);
             }
 
             // Restore outbound transport class seat
@@ -110,7 +114,7 @@ class BookingObserver
                 if ($depTc) {
                     ScheduleTransportClass::where('schedule_id', $booking->schedule_id)
                         ->where('transport_class_id', $depTc->id)
-                        ->increment('tickets_available');
+                        ->increment('tickets_available', $paxCount);
                 }
             }
 
@@ -128,13 +132,14 @@ class BookingObserver
                 if ($returnTc) {
                     ScheduleTransportClass::where('schedule_id', $booking->return_schedule_id)
                         ->where('transport_class_id', $returnTc->id)
-                        ->increment('tickets_available');
+                        ->increment('tickets_available', $paxCount);
                 }
             }
 
             Log::info('Tickets restored after booking cancellation.', [
                 'booking_id'                       => $booking->id,
                 'transaction_number'               => $booking->transaction_number,
+                'passenger_count'                  => $paxCount,
                 'schedule_accommodation_id'        => $booking->schedule_accommodation_id,
                 'return_schedule_accommodation_id' => $booking->return_schedule_accommodation_id,
                 'schedule_id'                      => $booking->schedule_id,
@@ -160,16 +165,18 @@ class BookingObserver
     private function deductTickets(Booking $booking): void
     {
         try {
+            $paxCount = max(1, $booking->relationLoaded('passengers') ? $booking->passengers->count() : $booking->passengers()->count());
+
             if ($booking->schedule_accommodation_id) {
                 ScheduleAccommodation::where('id', $booking->schedule_accommodation_id)
-                    ->where('tickets_available', '>', 0)
-                    ->decrement('tickets_available');
+                    ->where('tickets_available', '>=', $paxCount)
+                    ->decrement('tickets_available', $paxCount);
             }
 
             if ($booking->return_schedule_accommodation_id) {
                 ScheduleAccommodation::where('id', $booking->return_schedule_accommodation_id)
-                    ->where('tickets_available', '>', 0)
-                    ->decrement('tickets_available');
+                    ->where('tickets_available', '>=', $paxCount)
+                    ->decrement('tickets_available', $paxCount);
             }
 
             if ($booking->schedule_id) {
@@ -184,8 +191,8 @@ class BookingObserver
                 if ($depTc) {
                     ScheduleTransportClass::where('schedule_id', $booking->schedule_id)
                         ->where('transport_class_id', $depTc->id)
-                        ->where('tickets_available', '>', 0)
-                        ->decrement('tickets_available');
+                        ->where('tickets_available', '>=', $paxCount)
+                        ->decrement('tickets_available', $paxCount);
                 }
             }
 
@@ -201,8 +208,8 @@ class BookingObserver
                 if ($returnTc) {
                     ScheduleTransportClass::where('schedule_id', $booking->return_schedule_id)
                         ->where('transport_class_id', $returnTc->id)
-                        ->where('tickets_available', '>', 0)
-                        ->decrement('tickets_available');
+                        ->where('tickets_available', '>=', $paxCount)
+                        ->decrement('tickets_available', $paxCount);
                 }
             }
 

@@ -52,23 +52,38 @@ class NotifyAffectedBookerJob implements ShouldQueue
                 $notifType = 'service_cancellation';
             }
 
-            // Send user-specific FCM push to only the affected user's device
+            // Send user-specific FCM push to the affected user's devices
             if (filled($this->booking->client_email)) {
-                $userTopic = 'user_' . md5(strtolower(trim($this->booking->client_email)));
+                $email = strtolower(trim($this->booking->client_email));
+                $topics = [
+                    'user_' . md5($email),
+                    'user_' . preg_replace('/[^a-zA-Z0-9-_.~%+]/', '_', $email),
+                ];
+                if ($this->booking->user_id) {
+                    $topics[] = 'user_' . $this->booking->user_id;
+                }
+                $topics = array_unique($topics);
+
                 $messaging = app(Messaging::class);
                 $notification = \Kreait\Firebase\Messaging\Notification::create($title, $body);
                 $androidConfig = \Kreait\Firebase\Messaging\AndroidConfig::fromArray([
                     'notification' => [
-                        'channel_id' => 'high_importance_channel',
+                        'channel_id' => 'amiga_travel_alerts',
                     ],
                 ]);
 
-                $message = \Kreait\Firebase\Messaging\CloudMessage::new()
-                    ->withTopic($userTopic)
-                    ->withNotification($notification)
-                    ->withData(['type' => $notifType, 'target_id' => $this->booking->transaction_number])
-                    ->withAndroidConfig($androidConfig);
-                $messaging->send($message);
+                foreach ($topics as $userTopic) {
+                    try {
+                        $message = \Kreait\Firebase\Messaging\CloudMessage::new()
+                            ->withTopic($userTopic)
+                            ->withNotification($notification)
+                            ->withData(['type' => $notifType, 'target_id' => $this->booking->transaction_number])
+                            ->withAndroidConfig($androidConfig);
+                        $messaging->send($message);
+                    } catch (\Throwable $te) {
+                        Log::warning("FCM topic push failed for {$userTopic}: " . $te->getMessage());
+                    }
+                }
             }
         } catch (\Exception $e) {
             Log::error("Failed creating push notification for disruption: " . $e->getMessage());

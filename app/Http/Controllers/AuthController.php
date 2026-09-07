@@ -227,17 +227,10 @@ class AuthController extends Controller
 
         $user = Auth::user();
 
+        // When a user logs in via the mobile app, activate their app user status so they start earning Gracia points
         if (!$user->is_app_user) {
-            $this->logUserLogin(
-                $user,
-                'api_login',
-                $request,
-                false,
-                'Denied: Account is not an app user.'
-            );
-            return response()->json([
-                'message' => 'This account isn\'t registered on the app. Try registering first.'
-            ], 403);
+            $user->is_app_user = true;
+            $user->save();
         }
 
         if (empty($user->referral_code)) {
@@ -307,6 +300,42 @@ class AuthController extends Controller
                 'phone' => $user->phone ?? '',
                 'referral_code' => $user->referral_code,
             ],
+        ]);
+    }
+
+    public function deleteAccount(Request $request)
+    {
+        $user = auth()->guard('api')->user() ?? auth()->guard('sanctum')->user() ?? auth()->user();
+        if (!$user) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+        }
+
+        $email = $user->email;
+        $userId = $user->id;
+
+        // Revoke all tokens
+        if (method_exists($user, 'tokens')) {
+            $user->tokens()->delete();
+        }
+
+        // Invalidate lookup cache
+        if (!empty($user->api_token)) {
+            Cache::forget('booking_lookup_token:' . hash('sha256', $user->api_token));
+        }
+        Cache::forget('booking_lookup_otp:' . strtolower($email));
+
+        // Delete user notifications and gracia balances/ledgers
+        \App\Models\UserNotification::where('user_id', $userId)->delete();
+        \App\Models\GraciaUserBalance::where('user_id', $userId)->delete();
+        \App\Models\GraciaPointLedger::where('user_id', $userId)->delete();
+        \App\Models\UserLoginHistory::where('user_id', $userId)->delete();
+
+        // Delete the user record
+        $user->delete();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Your account and associated personal data have been permanently deleted in compliance with data privacy regulations.',
         ]);
     }
 

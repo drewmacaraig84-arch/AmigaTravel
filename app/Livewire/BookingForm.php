@@ -64,6 +64,11 @@ class BookingForm extends Component
         $this->voucherError = null;
         $this->voucherSuccess = null;
 
+        if (! \App\Models\WebsiteSetting::isWebsiteVouchersEnabled()) {
+            $this->voucherError = 'Vouchers are currently disabled on the website.';
+            return;
+        }
+
         $code = strtoupper(trim($this->voucher_code));
         if (empty($code)) {
             $this->voucherError = 'Please enter a voucher code.';
@@ -2223,19 +2228,21 @@ class BookingForm extends Component
 
                 $usedSchedulePrice = $this->getSelectedSchedulePrice();
 
+                $paxCount = max(1, count($this->passengers));
+
                 // --- Decrement tickets_available (pessimistic lock to prevent overselling) ---
                 if ($scheduleAccommodation) {
                     $lockedAccom = ScheduleAccommodation::where('id', $scheduleAccommodation->id)
                         ->lockForUpdate()
                         ->first();
 
-                    if (! $lockedAccom || $lockedAccom->tickets_available <= 0) {
+                    if (! $lockedAccom || $lockedAccom->tickets_available < $paxCount) {
                         throw new \RuntimeException(
-                            'Sorry, this accommodation is now fully booked. Please choose another option.'
+                            'Sorry, this accommodation does not have enough available seats. Please choose another option.'
                         );
                     }
 
-                    $lockedAccom->decrement('tickets_available');
+                    $lockedAccom->decrement('tickets_available', $paxCount);
                 }
 
                 if ($returnScheduleAccommodation) {
@@ -2243,13 +2250,13 @@ class BookingForm extends Component
                         ->lockForUpdate()
                         ->first();
 
-                    if (! $lockedReturnAccom || $lockedReturnAccom->tickets_available <= 0) {
+                    if (! $lockedReturnAccom || $lockedReturnAccom->tickets_available < $paxCount) {
                         throw new \RuntimeException(
-                            'Sorry, the return trip accommodation is now fully booked. Please choose another option.'
+                            'Sorry, the return trip accommodation does not have enough available seats. Please choose another option.'
                         );
                     }
 
-                    $lockedReturnAccom->decrement('tickets_available');
+                    $lockedReturnAccom->decrement('tickets_available', $paxCount);
                 }
 
                 $depStc = ScheduleTransportClass::resolveForSchedule($schedule?->id, $this->selected_transport_class_id);
@@ -2259,14 +2266,14 @@ class BookingForm extends Component
 
                 if ($depStc) {
                     $lockedStc = ScheduleTransportClass::where('id', $depStc->id)->lockForUpdate()->first();
-                    if ($lockedStc && $lockedStc->tickets_available !== null && $lockedStc->tickets_available <= 0) {
-                        throw new \RuntimeException('Sorry, this class is now fully booked. Please choose another option.');
+                    if ($lockedStc && $lockedStc->tickets_available !== null && $lockedStc->tickets_available < $paxCount) {
+                        throw new \RuntimeException('Sorry, this class does not have enough available seats. Please choose another option.');
                     }
                     if ($lockedStc && $lockedStc->tickets_available !== null) {
-                        $lockedStc->decrement('tickets_available');
+                        $lockedStc->decrement('tickets_available', $paxCount);
 
                         if ($lockedStc->is_promo && $lockedStc->promo_tickets_available !== null) {
-                            $lockedStc->decrement('promo_tickets_available');
+                            $lockedStc->decrement('promo_tickets_available', min($paxCount, $lockedStc->promo_tickets_available));
                             $lockedStc->refresh();
                             if ($lockedStc->promo_tickets_available <= 0) {
                                 $basePrice = (float) ($lockedStc->transportClass?->price ?? 0);
@@ -2289,14 +2296,14 @@ class BookingForm extends Component
 
                 if ($retStc) {
                     $lockedReturnStc = ScheduleTransportClass::where('id', $retStc->id)->lockForUpdate()->first();
-                    if ($lockedReturnStc && $lockedReturnStc->tickets_available !== null && $lockedReturnStc->tickets_available <= 0) {
-                        throw new \RuntimeException('Sorry, the return trip class is now fully booked. Please choose another option.');
+                    if ($lockedReturnStc && $lockedReturnStc->tickets_available !== null && $lockedReturnStc->tickets_available < $paxCount) {
+                        throw new \RuntimeException('Sorry, the return trip class does not have enough available seats. Please choose another option.');
                     }
                     if ($lockedReturnStc && $lockedReturnStc->tickets_available !== null) {
-                        $lockedReturnStc->decrement('tickets_available');
+                        $lockedReturnStc->decrement('tickets_available', $paxCount);
 
                         if ($lockedReturnStc->is_promo && $lockedReturnStc->promo_tickets_available !== null) {
-                            $lockedReturnStc->decrement('promo_tickets_available');
+                            $lockedReturnStc->decrement('promo_tickets_available', min($paxCount, $lockedReturnStc->promo_tickets_available));
                             $lockedReturnStc->refresh();
                             if ($lockedReturnStc->promo_tickets_available <= 0) {
                                 $basePrice = (float) ($lockedReturnStc->transportClass?->price ?? 0);

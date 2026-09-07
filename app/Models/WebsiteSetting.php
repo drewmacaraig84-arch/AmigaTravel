@@ -74,4 +74,25 @@ class WebsiteSetting extends Model
             'is_active' => true,
         ]);
     }
+
+    public static function isWebsiteVouchersEnabled(): bool
+    {
+        return \Illuminate\Support\Facades\Cache::remember('website_vouchers_enabled', 3600, function () {
+            $setting = static::where('page', 'vouchers')->first();
+            if (!$setting || !is_array($setting->content)) {
+                return true;
+            }
+            return (bool) ($setting->content['enable_website_vouchers'] ?? true);
+        });
+    }
+
+    public static function setWebsiteVouchersEnabled(bool $enabled): void
+    {
+        $setting = static::getOrCreateByPage('vouchers');
+        $content = is_array($setting->content) ? $setting->content : [];
+        $content['enable_website_vouchers'] = $enabled;
+        $setting->content = $content;
+        $setting->save();
+        \Illuminate\Support\Facades\Cache::forget('website_vouchers_enabled');
+    }
 }

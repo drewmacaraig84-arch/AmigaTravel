@@ -45,5 +45,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Amiga Gracia needs camera access to allow you to take photos of identification documents and payment receipts for booking verification.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Amiga Gracia needs access to your photo library to select passenger ID documents and payment receipts for booking verification.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Amiga Gracia needs permission to save tickets, receipts, and booking vouchers to your photo library.</string>
 </dict>
 </plist>

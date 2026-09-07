@@ -70,7 +70,13 @@ Route::middleware('throttle:60,1')->group(function () {
             }
         }
         $forceUpdate = filter_var(env('APP_FORCE_UPDATE', false), FILTER_VALIDATE_BOOLEAN);
-        return response()->json(['version' => $version, 'force_update' => $forceUpdate]);
+        return response()->json([
+            'version' => $version,
+            'force_update' => $forceUpdate,
+            'play_store_url' => env('PLAY_STORE_URL', 'https://play.google.com/store/apps/details?id=com.amiga.travel.flutter_app'),
+            'app_store_url' => env('APP_STORE_URL', 'https://apps.apple.com/app/amiga-gracia/id6470000000'),
+            'app_gallery_url' => env('APP_GALLERY_URL', 'https://appgallery.huawei.com/app/C100000000'),
+        ]);
     });
 });
 
@@ -110,6 +116,7 @@ Route::middleware(['throttle:20,1', 'sensitive.actions'])->group(function () {
 // ─────────────────────────────────────────────────────────────────────────────
 Route::middleware(['auth:sanctum,api', 'throttle:60,1'])->group(function () {
     Route::post('/profile/update', [AuthController::class, 'updateProfile']);
+    Route::delete('/profile/delete', [AuthController::class, 'deleteAccount']);
     Route::get('/gracia-points', [\App\Http\Controllers\Api\GraciaPointsController::class, 'index']);
     Route::post('/vouchers/claim', [\App\Http\Controllers\Api\VoucherController::class, 'claim']);
 

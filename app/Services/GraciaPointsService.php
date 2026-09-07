@@ -28,14 +28,21 @@ class GraciaPointsService
     {
         if ($booking->status !== 'confirmed') return;
         
-        if (!$booking->user_id) {
+        $user = null;
+        if ($booking->user_id) {
+            $user = User::find($booking->user_id);
+        } elseif ($booking->client_email) {
             $user = User::where('email', $booking->client_email)->first();
             if ($user) {
                 $booking->user_id = $user->id;
                 $booking->save();
-            } else {
-                return;
             }
+        }
+
+        // Gracia Points are strictly exclusive to the mobile app.
+        // Points earning only starts once a user is an active mobile app user.
+        if (!$user || !$user->is_app_user) {
+            return;
         }
         
         $idempotencyKey = "booking_{$booking->id}_verified";
@@ -225,6 +232,8 @@ class GraciaPointsService
     public function awardPointsForRebookingFee(Booking $booking, float $rebookingFee, ?User $admin = null): void
     {
         if (!$booking->user_id) return;
+        $user = User::find($booking->user_id);
+        if (!$user || !$user->is_app_user) return;
         if ($rebookingFee <= 0) return;
 
         $idempotencyKey = "booking_{$booking->id}_rebooking_fee";

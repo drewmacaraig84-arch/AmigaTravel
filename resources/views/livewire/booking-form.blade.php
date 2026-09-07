@@ -1811,6 +1811,7 @@
                         </div>
 
                         {{-- Voucher / Promo Code Box --}}
+                        @if(\App\Models\WebsiteSetting::isWebsiteVouchersEnabled())
                         <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                             <div class="flex items-center justify-between">
                                 <div>
@@ -1875,6 +1876,7 @@
                                 @endif
                             @endif
                         </div>
+                        @endif
 
                         {{-- Price Breakdown --}}
                         @php

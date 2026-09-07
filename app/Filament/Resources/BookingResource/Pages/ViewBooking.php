@@ -1086,6 +1086,54 @@ class ViewBooking extends ViewRecord
                         ->success()
                         ->send();
                 }),
+
+            Actions\Action::make('reversePoints')
+                ->label('Reverse Gracia Points')
+                ->icon('heroicon-m-arrow-path-rounded-square')
+                ->color('warning')
+                ->visible(function (): bool {
+                    if (! $this->record->user_id) return false;
+                    $hasEarned = \App\Models\GraciaPointLedger::where('booking_id', $this->record->id)
+                        ->where('entry_type', 'earned')
+                        ->exists();
+                    $hasReversed = \App\Models\GraciaPointLedger::where('booking_id', $this->record->id)
+                        ->where('entry_type', 'reversed')
+                        ->exists();
+                    return $hasEarned && ! $hasReversed;
+                })
+                ->requiresConfirmation()
+                ->modalHeading('Reverse Gracia Points')
+                ->modalDescription(fn () => "Are you sure you want to reverse the Gracia points earned for booking #{$this->record->transaction_number}?")
+                ->action(function () {
+                    app(\App\Services\GraciaPointsService::class)->reversePointsForBooking($this->record, Auth::user());
+                    Notification::make()
+                        ->title('Points Reversed')
+                        ->body('Earned Gracia points for this booking have been reversed.')
+                        ->success()
+                        ->send();
+                }),
+
+            Actions\Action::make('refundRedeemedPoints')
+                ->label('Refund Redeemed Points')
+                ->icon('heroicon-m-sparkles')
+                ->color('info')
+                ->visible(function (): bool {
+                    if (! $this->record->user_id || $this->record->points_used <= 0) return false;
+                    return ! \App\Models\GraciaPointLedger::where('booking_id', $this->record->id)
+                        ->where('entry_type', 'refunded')
+                        ->exists();
+                })
+                ->requiresConfirmation()
+                ->modalHeading('Refund Redeemed Gracia Points')
+                ->modalDescription(fn () => "Are you sure you want to refund {$this->record->points_used} redeemed points back to the client's balance?")
+                ->action(function () {
+                    app(\App\Services\GraciaPointsService::class)->refundRedeemedPoints($this->record);
+                    Notification::make()
+                        ->title('Redeemed Points Refunded')
+                        ->body("{$this->record->points_used} Gracia points have been refunded to the client's balance.")
+                        ->success()
+                        ->send();
+                }),
         ];
     }
 

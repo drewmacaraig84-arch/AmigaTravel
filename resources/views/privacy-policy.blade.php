@@ -1,4 +1,4 @@
-﻿@extends('layouts.app')
+@extends('layouts.app')
 
 @section('content')
 <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
@@ -106,6 +106,24 @@
                 <li class="flex gap-2"><span class="text-[#008000] font-bold mt-0.5">&bull;</span><span><strong class="text-slate-700">Object</strong> &mdash; Object to the processing of your personal data.</span></li>
                 <li class="flex gap-2"><span class="text-[#008000] font-bold mt-0.5">&bull;</span><span><strong class="text-slate-700">Portability</strong> &mdash; Receive your data in a structured, readable format.</span></li>
             </ul>
+
+            {{-- Dedicated Account Deletion Info for Google Play / App Store / AppGallery Compliance --}}
+            <div id="account-deletion" class="mt-6 p-4 rounded-xl bg-slate-50 border border-slate-200">
+                <h3 class="text-sm font-bold text-slate-800 mb-2 flex items-center gap-1.5">
+                    <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    How to Request Account & Data Deletion
+                </h3>
+                <p class="text-xs text-slate-600 leading-relaxed mb-2">
+                    Users of Amiga Gracia may request permanent deletion of their account and associated personal data at any time:
+                </p>
+                <ol class="text-xs text-slate-600 space-y-1.5 list-decimal list-inside mb-3">
+                    <li><strong class="text-slate-700">In the Mobile App:</strong> Log in, navigate to <span class="font-semibold text-slate-800">My Profile</span>, tap <span class="font-semibold text-red-600">Delete Account</span>, and confirm. Your credentials, loyalty points, and personal profile will be deleted immediately.</li>
+                    <li><strong class="text-slate-700">Via Email:</strong> Send an email from your registered address to <a href="mailto:agtsreservation@amigagracia.com?subject=Account%20Deletion%20Request" class="text-[#008000] font-semibold underline">agtsreservation@amigagracia.com</a> with the subject <em>"Account Deletion Request"</em>. Requests are processed within 48 business hours.</li>
+                </ol>
+                <p class="text-xs text-slate-500 italic">
+                    Note: Anonymized transaction records and issued passenger manifests are retained for up to 3 years solely to satisfy Philippine maritime/aviation safety regulations and tax audit obligations.
+                </p>
+            </div>
         </div>
 
         {{-- Section 7 --}}

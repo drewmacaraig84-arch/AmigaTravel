@@ -21,6 +21,7 @@ use Filament\Tables;
 use Filament\Tables\Columns\BooleanColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Hash;
 
 class UserResource extends Resource
@@ -92,7 +93,6 @@ class UserResource extends Resource
                         'Admin' => 'Admin (Full Operational Admin)',
                         'Staff' => 'Staff (Standard Staff Access)',
                         'Finance' => 'Finance (Financial & Invoicing)',
-                        'User' => 'User (Regular Customer)',
                     ])
                     ->required()
                     ->default('Staff')
@@ -102,9 +102,6 @@ class UserResource extends Resource
                         if (in_array($normalized, ['super admin', 'superadmin', 'super_admin', 'admin', 'administrator'], true)) {
                             $set('is_admin', true);
                             $set('is_staff', true);
-                        } elseif ($normalized === 'user') {
-                            $set('is_admin', false);
-                            $set('is_staff', false);
                         } else {
                             $set('is_admin', false);
                             $set('is_staff', true);
@@ -195,6 +192,17 @@ class UserResource extends Resource
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make(),
             ]);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->where(function (Builder $query) {
+                $query->where('is_staff', true)
+                    ->orWhere('is_admin', true)
+                    ->orWhereIn('role', ['Super Admin', 'Admin', 'Staff', 'Finance']);
+            })
+            ->where('is_app_user', false);
     }
 
     public static function getRelations(): array

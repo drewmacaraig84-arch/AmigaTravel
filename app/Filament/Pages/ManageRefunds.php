@@ -492,6 +492,10 @@ class ManageRefunds extends Page implements HasTable, HasInfolists
                                     }
                                 }
 
+                                // Reverse any earned Gracia points and refund any redeemed points
+                                app(\App\Services\GraciaPointsService::class)->reversePointsForBooking($lockedBooking, Auth::user());
+                                app(\App\Services\GraciaPointsService::class)->refundRedeemedPoints($lockedBooking);
+
                                 $shouldNotify = true;
                             });
 
