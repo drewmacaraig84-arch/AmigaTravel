@@ -606,17 +606,17 @@ class AuthController extends Controller
         $email = strtolower(trim($validated['email']));
         $otp   = (string) random_int(100000, 999999);
 
-        // Cache the pending registration data for 10 minutes
+        // Cache the pending registration data for 15 minutes
         Cache::put('pending_register:' . $email, [
             'name'     => $validated['name'],
             'email'    => $email,
             'password' => \Illuminate\Support\Facades\Hash::make($validated['password']),
             'referral_code' => $validated['referral_code'] ?? null,
             'otp'      => $otp,
-        ], now()->addMinutes(2));
+        ], now()->addMinutes(15));
 
         Mail::raw(
-            "Hello {$validated['name']},\n\nYour Amiga Gracia registration verification code is: {$otp}\n\nThis code expires in 2 minutes. Do not share it with anyone.",
+            "Hello {$validated['name']},\n\nYour Amiga Gracia registration verification code is: {$otp}\n\nThis code expires in 5 minutes. Do not share it with anyone.",
             function ($message) use ($email, $validated): void {
                 $message->to($email)->subject('Amiga Gracia – Email Verification Code');
             }
@@ -646,10 +646,10 @@ class AuthController extends Controller
 
         $otp = (string) random_int(100000, 999999);
         $pending['otp'] = $otp;
-        Cache::put('pending_register:' . $email, $pending, now()->addMinutes(2));
+        Cache::put('pending_register:' . $email, $pending, now()->addMinutes(15));
 
         Mail::raw(
-            "Hello {$pending['name']},\n\nYour new Amiga Gracia registration verification code is: {$otp}\n\nThis code expires in 2 minutes. Do not share it with anyone.",
+            "Hello {$pending['name']},\n\nYour new Amiga Gracia registration verification code is: {$otp}\n\nThis code expires in 5 minutes. Do not share it with anyone.",
             function ($message) use ($email): void {
                 $message->to($email)->subject('Amiga Gracia – New Email Verification Code');
             }

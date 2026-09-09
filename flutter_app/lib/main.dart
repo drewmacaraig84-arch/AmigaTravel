@@ -101,7 +101,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.140+151';
+  static const String appVersion = '1.0.141+152';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -3918,18 +3918,23 @@ class _TravelScreenState extends State<TravelScreen>
                           shape: const RoundedRectangleBorder(
                               borderRadius: BorderRadius.vertical(
                                   top: Radius.circular(20))),
-                          builder: (modalCtx) => Padding(
-                            padding: EdgeInsets.only(
-                                bottom:
-                                    MediaQuery.of(modalCtx).viewInsets.bottom),
-                            child: SizedBox(
-                              height:
-                                  MediaQuery.of(modalCtx).size.height * 0.85,
-                              child: ActivityScreen(onLoginSuccess: () {
-                                Navigator.pop(
-                                    modalCtx); // Close the ActivityScreen modal on success
-                                _goToSchedule(); // Resume the booking flow
-                              }),
+                          builder: (modalCtx) => ScaffoldMessenger(
+                            child: Scaffold(
+                              backgroundColor: Colors.transparent,
+                              body: Padding(
+                                padding: EdgeInsets.only(
+                                    bottom:
+                                        MediaQuery.of(modalCtx).viewInsets.bottom),
+                                child: SizedBox(
+                                  height:
+                                      MediaQuery.of(modalCtx).size.height * 0.85,
+                                  child: ActivityScreen(onLoginSuccess: () {
+                                    Navigator.pop(
+                                        modalCtx); // Close the ActivityScreen modal on success
+                                    _goToSchedule(); // Resume the booking flow
+                                  }),
+                                ),
+                              ),
                             ),
                           ),
                         );
@@ -5166,6 +5171,12 @@ class _ActivityScreenState extends State<ActivityScreen> {
   bool _agreeTerms = false;
   bool _agreePrivacy = false;
 
+  // Field validation and error states
+  String? _nameError;
+  String? _emailError;
+  String? _passError;
+  String? _generalError;
+
   // OTP registration state
   String? _pendingRegisterEmail; // non-null when OTP step is active
   final _otpCtrl = TextEditingController();
@@ -5175,7 +5186,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
 
   void _startOtpTimer() {
     _otpTimer?.cancel();
-    setState(() => _otpCountdown = 120);
+    setState(() => _otpCountdown = 60);
     _otpTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) {
         timer.cancel();
@@ -5276,30 +5287,48 @@ class _ActivityScreenState extends State<ActivityScreen> {
     final password = _passCtrl.text;
     final name = _nameCtrl.text.trim();
 
-    if (name.isEmpty || email.isEmpty || password.isEmpty) {
-      showTopSnack(
-        context,
-        const SnackBar(
-            content: Text('Please fill in your username, email, and password.'),
-            backgroundColor: Colors.red),
-      );
-      return;
+    setState(() {
+      _nameError = null;
+      _emailError = null;
+      _passError = null;
+      _generalError = null;
+    });
+
+    bool hasError = false;
+    if (name.isEmpty) {
+      _nameError = 'Username is required.';
+      hasError = true;
     }
-    if (password.length < 8) {
-      showTopSnack(
-        context,
-        const SnackBar(
-            content: Text('Password must be at least 8 characters.'),
-            backgroundColor: Colors.red),
-      );
-      return;
+    if (email.isEmpty) {
+      _emailError = 'Email address is required.';
+      hasError = true;
+    } else if (!email.contains('@') || !email.contains('.')) {
+      _emailError = 'Please enter a valid email address.';
+      hasError = true;
+    }
+    if (password.isEmpty) {
+      _passError = 'Password is required.';
+      hasError = true;
+    } else if (password.length < 8) {
+      _passError = 'Password must be at least 8 characters.';
+      hasError = true;
     }
     if (!_agreeTerms || !_agreePrivacy) {
+      _generalError =
+          'You must agree to the Terms & Conditions and Data Privacy Policy to register.';
+      hasError = true;
+    }
+
+    if (hasError) {
+      setState(() {});
       showTopSnack(
         context,
-        const SnackBar(
-          content: Text(
-              'You must agree to the Terms & Conditions and Data Privacy Policy to register.'),
+        SnackBar(
+          content: Text(_passError ??
+              _nameError ??
+              _emailError ??
+              _generalError ??
+              'Please complete all required fields.'),
           backgroundColor: Colors.red,
         ),
       );
@@ -5336,6 +5365,16 @@ class _ActivityScreenState extends State<ActivityScreen> {
         final msg = data['message'] ??
             data['errors']?.values?.first?.first ??
             'Could not send OTP.';
+        if (mounted) {
+          setState(() {
+            _generalError = msg;
+            if (msg.toLowerCase().contains('email')) {
+              _emailError = msg;
+            } else if (msg.toLowerCase().contains('password')) {
+              _passError = msg;
+            }
+          });
+        }
         if (!mounted) return;
         showTopSnack(
           context,
@@ -5343,6 +5382,9 @@ class _ActivityScreenState extends State<ActivityScreen> {
         );
       }
     } catch (e) {
+      if (mounted) {
+        setState(() => _generalError = 'Connection error: $e');
+      }
       if (!mounted) return;
       showTopSnack(
         context,
@@ -5463,13 +5505,24 @@ class _ActivityScreenState extends State<ActivityScreen> {
         _otpCtrl.clear();
         _startOtpTimer();
       } else {
+        final errorMsg = data['message'] ?? 'Could not resend OTP.';
         if (!mounted) return;
         showTopSnack(
           context,
           SnackBar(
-              content: Text(data['message'] ?? 'Could not resend OTP.'),
+              content: Text(errorMsg),
               backgroundColor: Colors.red),
         );
+        if (errorMsg.toString().contains('register again') ||
+            errorMsg.toString().contains('expired') ||
+            response.statusCode == 422) {
+          setState(() {
+            _pendingRegisterEmail = null;
+            _otpTimer?.cancel();
+            _isSignUp = true;
+            _generalError = errorMsg;
+          });
+        }
       }
     } catch (e) {
       if (!mounted) return;
@@ -5487,7 +5540,24 @@ class _ActivityScreenState extends State<ActivityScreen> {
     final email = _emailCtrl.text.trim();
     final password = _passCtrl.text;
 
-    if (email.isEmpty || password.isEmpty) {
+    setState(() {
+      _nameError = null;
+      _emailError = null;
+      _passError = null;
+      _generalError = null;
+    });
+
+    bool hasError = false;
+    if (email.isEmpty) {
+      _emailError = 'Please enter your email.';
+      hasError = true;
+    }
+    if (password.isEmpty) {
+      _passError = 'Please enter your password.';
+      hasError = true;
+    }
+    if (hasError) {
+      setState(() {});
       showTopSnack(
         context,
         const SnackBar(
@@ -5598,6 +5668,11 @@ class _ActivityScreenState extends State<ActivityScreen> {
       } else {
         final errorMsg = data['message'] ??
             'Authentication failed. Please check your credentials.';
+        if (mounted) {
+          setState(() {
+            _generalError = errorMsg;
+          });
+        }
         if (!mounted) return;
         showTopSnack(
           context,
@@ -6095,15 +6170,48 @@ class _ActivityScreenState extends State<ActivityScreen> {
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 13, color: kSlate500),
             ),
-            const SizedBox(height: 36),
+            const SizedBox(height: 24),
+
+            if (_generalError != null) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.red.shade300),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline, color: Colors.red, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _generalError!,
+                        style: const TextStyle(
+                            color: Colors.red,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
 
             // ── Sign-up extra field: Username ──────────────────────────────
             if (_isSignUp) ...[
               TextField(
                 controller: _nameCtrl,
+                onChanged: (_) {
+                  if (_nameError != null) setState(() => _nameError = null);
+                  if (_generalError != null) setState(() => _generalError = null);
+                },
                 keyboardType: TextInputType.name,
                 decoration: InputDecoration(
                   labelText: 'Username',
+                  errorText: _nameError,
                   prefixIcon: const Icon(Icons.person_outline, color: kGreen),
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12)),
@@ -6126,9 +6234,14 @@ class _ActivityScreenState extends State<ActivityScreen> {
 
             TextField(
               controller: _emailCtrl,
+              onChanged: (_) {
+                if (_emailError != null) setState(() => _emailError = null);
+                if (_generalError != null) setState(() => _generalError = null);
+              },
               keyboardType: TextInputType.emailAddress,
               decoration: InputDecoration(
                 labelText: 'Email address',
+                errorText: _emailError,
                 prefixIcon: const Icon(Icons.email_outlined, color: kGreen),
                 border:
                     OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -6138,9 +6251,15 @@ class _ActivityScreenState extends State<ActivityScreen> {
 
             TextField(
               controller: _passCtrl,
+              onChanged: (_) {
+                if (_passError != null) setState(() => _passError = null);
+                if (_generalError != null) setState(() => _generalError = null);
+              },
               obscureText: _obscure,
               decoration: InputDecoration(
                 labelText: 'Password',
+                errorText: _passError,
+                helperText: _isSignUp ? 'Must be at least 8 characters' : null,
                 prefixIcon: const Icon(Icons.lock_outline, color: kGreen),
                 suffixIcon: IconButton(
                   icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility,
@@ -6277,6 +6396,10 @@ class _ActivityScreenState extends State<ActivityScreen> {
                 _emailCtrl.clear();
                 _passCtrl.clear();
                 _nameCtrl.clear();
+                _nameError = null;
+                _emailError = null;
+                _passError = null;
+                _generalError = null;
               }),
               child: Text(
                 _isSignUp
