@@ -1,4 +1,4 @@
-package com.amiga.travel.flutter_app
+package com.amigagracia.app
 
 import io.flutter.embedding.android.FlutterActivity
 
