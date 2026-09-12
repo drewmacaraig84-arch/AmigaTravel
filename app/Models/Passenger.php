@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Passenger extends Model
 {
+    use SoftDeletes;
     // ─── Item Status Constants ────────────────────────────────────────────────
     public const STATUS_PENDING              = 'pending';
     public const STATUS_CONFIRMED            = 'confirmed';

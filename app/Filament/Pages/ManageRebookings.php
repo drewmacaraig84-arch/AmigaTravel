@@ -225,7 +225,7 @@ class ManageRebookings extends Page implements HasTable
                         ? 'warning'
                         : ($record->isReviewClaimedByOther(Auth::user())
                             ? 'gray'
-                            : 'amber'))
+                            : 'primary'))
                     ->button()
                     ->modalWidth('3xl')
                     ->modalHeading('Review Rebooking Request & Verify')

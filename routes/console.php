@@ -16,4 +16,5 @@ Schedule::command('bookings:issue-sla-vouchers')->everyFiveMinutes();
 Schedule::command('vouchers:notify-expiring')->dailyAt('09:00');
 Schedule::command('app:cleanup-old-schedules')->daily();
 Schedule::command('accounts:purge-scheduled')->daily();
+Schedule::command('db:backup')->dailyAt('02:00');
 

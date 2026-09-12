@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
@@ -10,6 +11,8 @@ use Illuminate\Support\Facades\Storage;
 
 class Transaction extends Model
 {
+    use SoftDeletes;
+
     protected $fillable = [
         'booking_id',
         'payment_status',
@@ -24,6 +27,7 @@ class Transaction extends Model
         'student_discount_proofs',
         'verified_by_user_id',
         'verified_at',
+        'deleted_by_user_id',
     ];
 
     protected $casts = [

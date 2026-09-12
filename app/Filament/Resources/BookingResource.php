@@ -209,6 +209,19 @@ class BookingResource extends Resource
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('deleted_at')
+                    ->label('Deleted At')
+                    ->dateTime('M d, Y h:i A')
+                    ->sortable()
+                    ->toggleable()
+                    ->visible(fn (): bool => Auth::user() instanceof User && Auth::user()->isSuperAdmin()),
+                Tables\Columns\TextColumn::make('deletedBy.name')
+                    ->label('Deleted By')
+                    ->badge()
+                    ->color('danger')
+                    ->description(fn (Booking $record): ?string => $record->deletion_reason)
+                    ->toggleable()
+                    ->visible(fn (): bool => Auth::user() instanceof User && Auth::user()->isSuperAdmin()),
             ])
             ->filters([
                 SelectFilter::make('status')
@@ -238,9 +251,13 @@ class BookingResource extends Resource
                             $q->where('payment_status', $data['value']);
                         });
                     }),
+                Tables\Filters\TrashedFilter::make()
+                    ->visible(fn (): bool => Auth::user() instanceof User && Auth::user()->isSuperAdmin()),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
+                Tables\Actions\RestoreAction::make()
+                    ->visible(fn (Booking $record): bool => $record->trashed() && (Auth::user() instanceof User && Auth::user()->isSuperAdmin())),
                 Tables\Actions\Action::make('reviewBooking')
                     ->label(fn (Booking $record): string => $record->isReviewClaimedBy(Auth::user())
                         ? 'Resume Review'
@@ -254,7 +271,7 @@ class BookingResource extends Resource
                         ? 'warning'
                         : ($record->isReviewClaimedByOther(Auth::user())
                             ? 'gray'
-                            : 'amber'))
+                            : 'primary'))
                     ->button()
                     ->visible(fn (Booking $record): bool => $record->status === 'pending')
                     ->disabled(fn (Booking $record): bool => $record->isReviewClaimedByOther(Auth::user()))
@@ -287,7 +304,10 @@ class BookingResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->visible(fn (): bool => Auth::user() instanceof User && Auth::user()->isSuperAdmin()),
+                    Tables\Actions\RestoreBulkAction::make()
+                        ->visible(fn (): bool => Auth::user() instanceof User && Auth::user()->isSuperAdmin()),
                 ]),
             ]);
     }
@@ -303,12 +323,18 @@ class BookingResource extends Resource
 
     public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
     {
-        return parent::getEloquentQuery()
-            ->withoutGlobalScopes([
-                SoftDeletingScope::class,
-            ])
-            ->with(['transaction', 'user'])
+        $user = Auth::user();
+        $query = parent::getEloquentQuery()
+            ->with(['transaction', 'user', 'deletedBy'])
             ->reorder();
+
+        if ($user instanceof User && $user->isSuperAdmin()) {
+            return $query->withoutGlobalScopes([
+                SoftDeletingScope::class,
+            ]);
+        }
+
+        return $query;
     }
 
     public static function getPages(): array

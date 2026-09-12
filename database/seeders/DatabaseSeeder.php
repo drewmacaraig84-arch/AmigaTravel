@@ -39,7 +39,7 @@ class DatabaseSeeder extends Seeder
         );
 
         User::updateOrCreate(
-            ['email' => 'M.antaran23@yahoo'],
+            ['email' => 'M.antaran23@yahoo.com'],
             [
                 'name' => 'Admin Gracia',
                 'password' => bcrypt('Hellospidey203'),

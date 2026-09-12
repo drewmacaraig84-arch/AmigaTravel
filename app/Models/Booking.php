@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Mail\RebookingVerification;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -16,6 +17,8 @@ use Throwable;
 
 class Booking extends Model
 {
+    use SoftDeletes;
+
     public const STATUS_PENDING = 'pending';
     public const STATUS_PENDING_REBOOKING = 'pending_rebooking';
     public const STATUS_CONFIRMED = 'confirmed';
@@ -129,6 +132,8 @@ class Booking extends Model
         'rebooking_rejection_notes',
         'rebooking_rejected_at',
         'rebooking_rejected_by_user_id',
+        'deleted_by_user_id',
+        'deletion_reason',
     ];
 
     public const REVIEW_CLAIM_TTL_MINUTES = 10;
@@ -553,6 +558,11 @@ class Booking extends Model
     public function rebookingRejectedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'rebooking_rejected_by_user_id');
+    }
+
+    public function deletedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'deleted_by_user_id');
     }
 
     public function isReviewClaimed(int $ttlMinutes = self::REVIEW_CLAIM_TTL_MINUTES): bool

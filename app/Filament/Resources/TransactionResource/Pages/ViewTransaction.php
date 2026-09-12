@@ -208,7 +208,8 @@ class ViewTransaction extends ViewRecord
 
                     $this->redirect(TransactionResource::getUrl('index'));
                 }),
-            Actions\DeleteAction::make(),
+            Actions\DeleteAction::make()
+                ->visible(fn (): bool => \Illuminate\Support\Facades\Auth::user()?->isSuperAdmin() ?? false),
         ];
     }
 }

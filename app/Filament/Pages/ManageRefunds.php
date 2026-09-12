@@ -357,7 +357,7 @@ class ManageRefunds extends Page implements HasTable, HasInfolists
                         ? 'warning'
                         : ($record->isReviewClaimedByOther(Auth::user())
                             ? 'gray'
-                            : 'amber'))
+                            : 'primary'))
                     ->button()
                     ->modalWidth('3xl')
                     ->modalHeading('Review Refund Request & Disburse')

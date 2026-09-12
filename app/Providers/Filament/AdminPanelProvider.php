@@ -69,6 +69,7 @@ class AdminPanelProvider extends PanelProvider
             ->favicon(asset('images/amiga-logo-transparent.png'))
             ->colors([
                 'primary' => Color::Amber,
+                'amber' => Color::Amber,
                 'danger' => Color::Rose,
                 'gray' => Color::Gray,
                 'info' => Color::Blue,

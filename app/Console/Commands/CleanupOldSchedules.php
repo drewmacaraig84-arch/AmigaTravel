@@ -7,7 +7,7 @@ use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
 #[Signature('app:cleanup-old-schedules')]
-#[Description('Deletes schedules that have departed more than 1 day ago')]
+#[Description('Deactivates schedules that have departed more than 1 day ago (preserves historical bookings)')]
 class CleanupOldSchedules extends Command
 {
     /**
@@ -15,12 +15,10 @@ class CleanupOldSchedules extends Command
      */
     public function handle()
     {
-        $count = 0;
-        \App\Models\Schedule::where('departure_time', '<=', now()->subDay())->each(function ($schedule) use (&$count) {
-            $schedule->delete();
-            $count++;
-        });
+        $count = \App\Models\Schedule::where('is_active', true)
+            ->where('departure_time', '<=', now()->subDay())
+            ->update(['is_active' => false]);
 
-        $this->info("Deleted $count old schedules.");
+        $this->info("Deactivated $count old schedules while preserving all booking relations.");
     }
 }

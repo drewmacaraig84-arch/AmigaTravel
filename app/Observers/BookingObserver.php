@@ -233,4 +233,46 @@ class BookingObserver
             ]);
         }
     }
+
+    /**
+     * Handle soft-deletion of a booking.
+     * Records the user who initiated the deletion and cascades soft-delete to passengers and transactions.
+     */
+    public function deleting(Booking $booking): void
+    {
+        if (auth()->check() && empty($booking->deleted_by_user_id)) {
+            $booking->deleted_by_user_id = auth()->id();
+            $booking->saveQuietly();
+        }
+
+        // Cascade soft deletion to related records
+        $booking->passengers()->delete();
+        $booking->transaction()->delete();
+
+        Log::info('Booking soft-deleted with audit trail.', [
+            'booking_id' => $booking->id,
+            'transaction_number' => $booking->transaction_number,
+            'deleted_by_user_id' => $booking->deleted_by_user_id,
+        ]);
+    }
+
+    /**
+     * Handle restoration of a soft-deleted booking.
+     */
+    public function restoring(Booking $booking): void
+    {
+        $booking->deleted_by_user_id = null;
+        $booking->deletion_reason = null;
+        $booking->saveQuietly();
+
+        // Cascade restoration to related records
+        $booking->passengers()->restore();
+        $booking->transaction()->restore();
+
+        Log::info('Booking restored by Super Admin.', [
+            'booking_id' => $booking->id,
+            'transaction_number' => $booking->transaction_number,
+            'restored_by_user_id' => auth()->id(),
+        ]);
+    }
 }
