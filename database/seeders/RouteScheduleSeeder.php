@@ -511,8 +511,13 @@ class RouteScheduleSeeder extends Seeder
                         $route->update(['operator_id' => $operatorId, 'operator' => $operatorName]);
                     }
 
+                    // For 2GO routes, generate until end of December 2026; for other routes, generate 14-day window
+                    $routeEndDate = (str_contains(strtolower($operatorName ?? ''), '2go') || str_contains(strtolower($rData['operator'] ?? ''), '2go'))
+                        ? Carbon::parse('2026-12-31')
+                        : $endDate;
+
                     // 3. Create daily schedules across the date range
-                    for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
+                    for ($date = $startDate->copy(); $date->lte($routeEndDate); $date->addDay()) {
                         $departureTime = Carbon::parse($date->format('Y-m-d') . ' ' . $sData['dep_time']);
                         $arrivalTime = $departureTime->copy()->addMinutes($sData['duration']);
 
@@ -535,34 +540,36 @@ class RouteScheduleSeeder extends Seeder
                             ]
                         );
 
-                        // Collect accommodation records for bulk insertion
-                        foreach ($rData['accommodations'] as $accData) {
-                            $allAccRecords[] = [
-                                'schedule_id' => $schedule->id,
-                                'name' => $accData['name'],
-                                'description' => $accData['description'] ?? null,
-                                'price' => $accData['price'] ?? 0,
-                                'tickets_available' => 50,
-                                'has_bed' => $accData['has_bed'] ?? false,
-                                'is_active' => true,
-                                'sort_order' => $accData['sort_order'] ?? 1,
-                                'created_at' => $now,
-                                'updated_at' => $now,
-                            ];
-
-                            if (isset($transportClasses[$accData['name']])) {
-                                $tc = $transportClasses[$accData['name']];
-                                $allPivotRecords[] = [
+                        // Collect accommodation records for bulk insertion (only if newly created or missing)
+                        if ($schedule->wasRecentlyCreated || $schedule->scheduleAccommodations()->count() === 0) {
+                            foreach ($rData['accommodations'] as $accData) {
+                                $allAccRecords[] = [
                                     'schedule_id' => $schedule->id,
-                                    'transport_class_id' => $tc->id,
-                                    'additional_price' => $accData['price'] ?? 0,
-                                    'tickets_available' => 50,
+                                    'name' => $accData['name'],
                                     'description' => $accData['description'] ?? null,
+                                    'price' => $accData['price'] ?? 0,
+                                    'tickets_available' => 50,
                                     'has_bed' => $accData['has_bed'] ?? false,
                                     'is_active' => true,
+                                    'sort_order' => $accData['sort_order'] ?? 1,
                                     'created_at' => $now,
                                     'updated_at' => $now,
                                 ];
+
+                                if (isset($transportClasses[$accData['name']])) {
+                                    $tc = $transportClasses[$accData['name']];
+                                    $allPivotRecords[] = [
+                                        'schedule_id' => $schedule->id,
+                                        'transport_class_id' => $tc->id,
+                                        'additional_price' => $accData['price'] ?? 0,
+                                        'tickets_available' => 50,
+                                        'description' => $accData['description'] ?? null,
+                                        'has_bed' => $accData['has_bed'] ?? false,
+                                        'is_active' => true,
+                                        'created_at' => $now,
+                                        'updated_at' => $now,
+                                    ];
+                                }
                             }
                         }
                     }
