@@ -493,8 +493,13 @@
                                 <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
                                     <div class="flex flex-wrap items-center justify-between gap-4">
                                         <div>
-                                            <p class="text-slate-900 font-semibold">Vehicle booking</p>
-                                            <p class="mt-1 text-sm text-slate-600">Add a vehicle to your ferry trip (optional).</p>
+                                            <div class="flex items-center gap-2">
+                                                <p class="text-slate-900 font-semibold">Vehicle booking</p>
+                                                <span class="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200">
+                                                    3 days advance notice required
+                                                </span>
+                                            </div>
+                                            <p class="mt-1 text-sm text-slate-600">Add a vehicle to your ferry trip (optional). Requires departure date at least 3 days in advance.</p>
                                         </div>
                                         <label class="relative inline-flex cursor-pointer items-center gap-3">
                                             <input type="checkbox" wire:model.live="has_vehicle" class="peer sr-only" />

@@ -209,6 +209,10 @@ class ServiceCancellationManager
 
         $replacementSchedule = Schedule::findOrFail($replacementScheduleId);
 
+        if ($booking->has_vehicle) {
+            app(\App\Services\VehicleBookingPolicyService::class)->validateScheduleLeadTime($replacementSchedule, true, 'replacement_schedule_id');
+        }
+
         $booking->update([
             'preferred_replacement_schedule_id' => $replacementSchedule->id,
             'preferred_replacement_date' => $date,

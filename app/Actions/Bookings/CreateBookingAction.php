@@ -15,6 +15,7 @@ use App\Models\TransportClass;
 use App\Models\Transaction;
 use App\Models\Voucher;
 use App\Services\GraciaPointsService;
+use App\Services\VehicleBookingPolicyService;
 use App\Services\VoucherService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -24,6 +25,7 @@ class CreateBookingAction
     public function __construct(
         private readonly VoucherService $voucherService,
         private readonly GraciaPointsService $graciaPointsService,
+        private readonly VehicleBookingPolicyService $vehiclePolicyService = new VehicleBookingPolicyService(),
     ) {}
 
     /**
@@ -47,6 +49,14 @@ class CreateBookingAction
         $returnScheduleAccommodation = isset($data['selected_return_schedule_accommodation_id'])
             ? ScheduleAccommodation::find($data['selected_return_schedule_accommodation_id'])
             : null;
+
+        // --- Vehicle lead time cutoff policy enforcement ---
+        if (! empty($data['has_vehicle'])) {
+            $this->vehiclePolicyService->validateScheduleLeadTime($schedule, true, 'schedule_id');
+            if ($returnSchedule) {
+                $this->vehiclePolicyService->validateScheduleLeadTime($returnSchedule, true, 'return_schedule_id');
+            }
+        }
 
         // --- Rate tier validation ---
         $depStc = ScheduleTransportClass::resolveForSchedule($schedule->id, $data['selected_transport_class_id'] ?? null);

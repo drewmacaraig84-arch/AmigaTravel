@@ -69,6 +69,7 @@ class BookingResource extends Resource
             ->schema([
                 Forms\Components\Toggle::make('has_vehicle')
                     ->label('Has Vehicle')
+                    ->helperText('Policy: Vehicle bookings require a minimum of 3 days (72 hours) advance notice prior to departure.')
                     ->default(false),
                 Forms\Components\TextInput::make('vehicle_type')
                     ->label('Vehicle Type')

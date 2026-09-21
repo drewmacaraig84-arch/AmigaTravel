@@ -102,9 +102,10 @@ class ScheduleController extends Controller
         $destination = $request->input('destination');
         $mode = $request->input('mode', '');
         $operator = $request->input('operator', '');
-        $cacheKey = "api:available_dates:{$origin}:{$destination}:{$mode}:{$operator}";
+        $hasVehicle = $request->boolean('has_vehicle');
+        $cacheKey = "api:available_dates:{$origin}:{$destination}:{$mode}:{$operator}:" . ($hasVehicle ? '1' : '0');
 
-        $dates = $this->rememberCache($cacheKey, now()->addMinutes(5), function () use ($origin, $destination, $mode, $operator) {
+        $dates = $this->rememberCache($cacheKey, now()->addMinutes(5), function () use ($origin, $destination, $mode, $operator, $hasVehicle) {
             $query = FerryRoute::where('is_active', true)
                 ->where('origin', $origin)
                 ->where('destination', $destination);
@@ -130,6 +131,12 @@ class ScheduleController extends Controller
 
             $datesList = array_values(array_unique($datesList));
             sort($datesList);
+
+            if ($hasVehicle) {
+                $earliest = app(\App\Services\VehicleBookingPolicyService::class)->getEarliestVehicleBookingDate();
+                $datesList = array_values(array_filter($datesList, fn ($d) => $d >= $earliest));
+            }
+
             return $datesList;
         });
 
@@ -152,6 +159,7 @@ class ScheduleController extends Controller
         $date        = $request->input('date');
         $mode        = $request->input('mode', null);
         $operator    = $request->input('operator', null);
+        $hasVehicle  = $request->boolean('has_vehicle');
 
         // Fetch the active earning rule (no need to cache a model instance to avoid unserialize errors)
         $activeRule = $this->rememberCache('gracia:active_rule', now()->addMinutes(15), function () {
@@ -164,14 +172,17 @@ class ScheduleController extends Controller
 
         // Cache schedule search results per route/date/mode/operator.
         $cacheKey = 'api:schedule:search:'
-            . md5("{$origin}:{$destination}:{$date}:{$mode}:{$operator}");
+            . md5("{$origin}:{$destination}:{$date}:{$mode}:{$operator}:" . ($hasVehicle ? '1' : '0'));
 
         $schedules = $this->rememberCache(
             $cacheKey,
             now()->addMinutes(2),
-            function () use ($origin, $destination, $date, $mode, $operator, $activeRule) {
+            function () use ($origin, $destination, $date, $mode, $operator, $activeRule, $hasVehicle) {
                 return Schedule::forRouteAndDate($origin, $destination, $date, $mode, $operator)
                     ->get()
+                    ->filter(function ($schedule) use ($hasVehicle) {
+                        return ! $hasVehicle || app(\App\Services\VehicleBookingPolicyService::class)->isScheduleEligible($schedule);
+                    })
                     ->map(function ($schedule) use ($date, $activeRule) {
                         $arr = $schedule->toBookingArray($date);
                         $pts = 0;
@@ -186,7 +197,13 @@ class ScheduleController extends Controller
             }
         );
 
-        if (\Carbon\Carbon::parse($date)->isToday()) {
+        if ($hasVehicle) {
+            $policy = app(\App\Services\VehicleBookingPolicyService::class);
+            $schedules = collect($schedules)->filter(function ($schedule) use ($policy) {
+                $dep = $schedule['departure_time_iso'] ?? ($schedule['departure_time'] ?? null);
+                return $dep ? $policy->isScheduleEligible($dep) : false;
+            })->values();
+        } elseif (\Carbon\Carbon::parse($date)->isToday()) {
             $now = now();
             $schedules = collect($schedules)->filter(function ($schedule) use ($now) {
                 if (isset($schedule['departure_time_iso'])) {

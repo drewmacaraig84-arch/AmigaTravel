@@ -164,6 +164,9 @@
                     return this.departure_date;
                 }
                 let today = new Date();
+                if (this.has_vehicle) {
+                    today.setDate(today.getDate() + 3);
+                }
                 let y = today.getFullYear();
                 let m = String(today.getMonth() + 1).padStart(2, '0');
                 let d = String(today.getDate()).padStart(2, '0');
@@ -312,6 +315,7 @@
              hasSeenMinorAgeWarning: false,
              showDataPrivacyModal: false,
              pendingSearchUrl: '',
+             vehicleCutoffNotice: '',
              errors: {
                  operator: '',
                  origin: '',
@@ -342,6 +346,27 @@
                   this.$watch('minors', () => this.clampPassengersToMax());
                   this.$watch('infants', () => this.clampPassengersToMax());
                   this.$watch('mode', () => this.clampPassengersToMax());
+                  this.$watch('has_vehicle', (val) => {
+                      if (val) {
+                          let today = new Date();
+                          today.setDate(today.getDate() + 3);
+                          let y = today.getFullYear();
+                          let m = String(today.getMonth() + 1).padStart(2, '0');
+                          let d = String(today.getDate()).padStart(2, '0');
+                          let minVehicleDate = `${y}-${m}-${d}`;
+                          if (this.departure_date && this.departure_date < minVehicleDate) {
+                              let validDates = (this.enabledDepartureDates || []).filter(date => date >= minVehicleDate);
+                              this.departure_date = validDates.length > 0 ? validDates[0] : minVehicleDate;
+                              if (this.trip_type === 'round_trip' && this.return_date && this.return_date < this.departure_date) {
+                                  this.return_date = this.departure_date;
+                              }
+                              this.vehicleCutoffNotice = 'Notice: Vehicle bookings must be booked at least 3 days in advance. Departure date has been automatically adjusted.';
+                              setTimeout(() => { this.vehicleCutoffNotice = ''; }, 6000);
+                          }
+                      } else {
+                          this.vehicleCutoffNotice = '';
+                      }
+                  });
              },
              hasReturnRoute(origin, destination) {
                  return this.activeRoutes.some(r => 
@@ -489,6 +514,17 @@
                   if (!this.departure_date) {
                       this.errors.departure_date = 'Please select a departure date';
                       hasError = true;
+                  } else if (this.has_vehicle) {
+                      let today = new Date();
+                      today.setDate(today.getDate() + 3);
+                      let y = today.getFullYear();
+                      let m = String(today.getMonth() + 1).padStart(2, '0');
+                      let d = String(today.getDate()).padStart(2, '0');
+                      let minVehicleDate = `${y}-${m}-${d}`;
+                      if (this.departure_date < minVehicleDate) {
+                          this.errors.departure_date = 'Vehicle bookings must be booked at least 3 days in advance.';
+                          hasError = true;
+                      }
                   }
                   if (this.trip_type === 'round_trip' && !this.return_date) {
                       this.errors.return_date = 'Please select a return date';
@@ -1150,7 +1186,12 @@
                 <!-- Header / Toggle Row (Screenshot 3 Style) -->
                 <div class="flex flex-wrap items-center justify-between gap-4">
                     <div>
-                        <p class="text-slate-900 font-semibold text-base">Vehicle booking</p>
+                        <div class="flex items-center gap-2">
+                            <p class="text-slate-900 font-semibold text-base">Vehicle booking</p>
+                            <span class="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200">
+                                3 days advance notice required
+                            </span>
+                        </div>
                         <p class="mt-0.5 text-sm text-slate-600">Add a vehicle to your ferry trip (optional).</p>
                     </div>
                     <label class="relative inline-flex cursor-pointer items-center gap-3">
@@ -1158,6 +1199,12 @@
                         <span class="relative h-7 w-12 shrink-0 rounded-full bg-slate-200 transition peer-checked:bg-[#db2777] peer-focus:outline-none after:absolute after:left-0.5 after:top-0.5 after:h-6 after:w-6 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-5"></span>
                         <span class="text-sm font-semibold text-slate-700" x-text="has_vehicle ? 'Yes' : 'No'">No</span>
                     </label>
+                </div>
+
+                <!-- Dynamic Notice if auto-adjusted -->
+                <div x-show="vehicleCutoffNotice" x-cloak class="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs font-medium text-amber-800 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    <span x-text="vehicleCutoffNotice"></span>
                 </div>
 
                 <!-- Slim Vehicle Booking Form (Screenshot 2 Style made Slim) -->

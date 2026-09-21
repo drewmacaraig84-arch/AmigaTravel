@@ -268,16 +268,24 @@ class BookingReschedule extends Component
         $cancellationId = $this->booking->serviceCancellation->id;
         $depDate = $this->dep_date;
 
-        return Schedule::forRouteAndDate($this->booking->origin, $this->booking->destination, $this->dep_date)
+        $query = Schedule::forRouteAndDate($this->booking->origin, $this->booking->destination, $this->dep_date)
             ->whereIn('id', function ($query) use ($cancellationId, $depDate) {
                 $query->select('schedule_id')
                       ->from('cancellation_replacements')
                       ->where('service_cancellation_id', $cancellationId)
                       ->whereDate('replacement_date', $depDate);
             })
-            ->with(['ferryRoute', 'vehicle'])
-            ->where('departure_time', '>', now())
-            ->get();
+            ->with(['ferryRoute', 'vehicle']);
+
+        if ($this->booking->has_vehicle) {
+            $query->where('departure_time', '>=', now(\App\Services\VehicleBookingPolicyService::TIMEZONE)->addHours(\App\Services\VehicleBookingPolicyService::CUTOFF_HOURS));
+        } else {
+            $query->where('departure_time', '>', now());
+        }
+
+        return $query->get()->filter(function ($sched) {
+            return ! $this->booking->has_vehicle || app(\App\Services\VehicleBookingPolicyService::class)->isScheduleEligible($sched);
+        })->values();
     }
 
     public function getAvailableReturnSchedulesProperty()
@@ -287,16 +295,24 @@ class BookingReschedule extends Component
         $cancellationId = $this->booking->serviceCancellation->id;
         $retDate = $this->ret_date;
 
-        return Schedule::forRouteAndDate($this->booking->destination, $this->booking->origin, $this->ret_date)
+        $query = Schedule::forRouteAndDate($this->booking->destination, $this->booking->origin, $this->ret_date)
             ->whereIn('id', function ($query) use ($cancellationId, $retDate) {
                 $query->select('schedule_id')
                       ->from('cancellation_replacements')
                       ->where('service_cancellation_id', $cancellationId)
                       ->whereDate('replacement_date', $retDate);
             })
-            ->with(['ferryRoute', 'vehicle'])
-            ->where('departure_time', '>', now())
-            ->get();
+            ->with(['ferryRoute', 'vehicle']);
+
+        if ($this->booking->has_vehicle) {
+            $query->where('departure_time', '>=', now(\App\Services\VehicleBookingPolicyService::TIMEZONE)->addHours(\App\Services\VehicleBookingPolicyService::CUTOFF_HOURS));
+        } else {
+            $query->where('departure_time', '>', now());
+        }
+
+        return $query->get()->filter(function ($sched) {
+            return ! $this->booking->has_vehicle || app(\App\Services\VehicleBookingPolicyService::class)->isScheduleEligible($sched);
+        })->values();
     }
 
     public function getDepartureAccommodationsProperty()

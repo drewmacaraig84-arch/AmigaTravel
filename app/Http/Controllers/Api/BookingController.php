@@ -23,11 +23,28 @@ class BookingController extends Controller
      */
     public function store(Request $request)
     {
+        $hasVehicle = $request->boolean('has_vehicle');
         $validated = $request->validate([
-            'schedule_id'                               => 'required|integer|exists:schedules,id',
+            'schedule_id'                               => [
+                'required',
+                'integer',
+                'exists:schedules,id',
+                new \App\Rules\VehicleDepartureLeadTimeRule($hasVehicle),
+            ],
             'origin'                                    => 'required|string',
             'destination'                               => 'required|string',
-            'departure_date'                            => 'required|date',
+            'departure_date'                            => [
+                'required',
+                'date',
+                function ($attribute, $value, $fail) use ($hasVehicle) {
+                    if ($hasVehicle && ! empty($value)) {
+                        $earliest = app(\App\Services\VehicleBookingPolicyService::class)->getEarliestVehicleBookingDate();
+                        if ($value < $earliest) {
+                            $fail('Vehicle bookings require a minimum of 3 days advance notice prior to departure.');
+                        }
+                    }
+                },
+            ],
             'trip_type'                                 => 'required|string|in:one_way,round_trip',
             'return_date'                               => 'nullable|date',
             'client_name'                               => 'required|string|max:255',
@@ -58,7 +75,12 @@ class BookingController extends Controller
             'accommodation_ids'                         => 'nullable|array',
             'accommodation_ids.*'                       => 'integer|exists:accommodations,id',
             'voucher_code'                              => 'nullable|string|max:50',
-            'return_schedule_id'                        => 'nullable|integer|exists:schedules,id',
+            'return_schedule_id'                        => [
+                'nullable',
+                'integer',
+                'exists:schedules,id',
+                new \App\Rules\VehicleDepartureLeadTimeRule($hasVehicle),
+            ],
             'selected_return_schedule_accommodation_id' => 'nullable|integer|exists:schedule_accommodations,id',
             'selected_return_transport_class_id'        => 'nullable|integer|exists:transport_classes,id',
             'use_points'                                => 'nullable|boolean',

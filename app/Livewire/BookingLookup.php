@@ -987,6 +987,10 @@ class BookingLookup extends Component
             ->get()
             ->filter(fn ($sch) => $this->booking->matchesOperator($sch, false));
 
+        if ($this->booking->has_vehicle) {
+            $schedules = $schedules->filter(fn ($sch) => app(\App\Services\VehicleBookingPolicyService::class)->isScheduleEligible($sch));
+        }
+
         $isAirline = $this->booking->getMode() === 'airline';
         $this->booking->loadMissing('transportClasses');
         $origTCPerPax = (float) optional($this->booking->transportClasses->values()->get(0))->pivot?->price;
@@ -1022,6 +1026,10 @@ class BookingLookup extends Component
             ->with(['ferryRoute.operatorRecord', 'vehicle', 'scheduleAccommodations', 'transportClasses'])
             ->get()
             ->filter(fn ($sch) => $this->booking->matchesOperator($sch, true));
+
+        if ($this->booking->has_vehicle) {
+            $schedules = $schedules->filter(fn ($sch) => app(\App\Services\VehicleBookingPolicyService::class)->isScheduleEligible($sch));
+        }
 
         $isAirline = $this->booking->getMode() === 'airline';
         $this->booking->loadMissing('transportClasses');

@@ -462,6 +462,14 @@ class BookingForm extends Component
             $this->operator = normalize_operator_name($this->operator);
         }
         if ($this->has_vehicle) {
+            $earliestVehicleDate = app(\App\Services\VehicleBookingPolicyService::class)->getEarliestVehicleBookingDate();
+            if ($this->departure_date && $this->departure_date < $earliestVehicleDate) {
+                $this->departure_date = $earliestVehicleDate;
+                if ($this->trip_type === 'round_trip' && $this->return_date && $this->return_date < $this->departure_date) {
+                    $this->return_date = $this->departure_date;
+                }
+                session()->flash('warning', 'Vehicle bookings require at least 3 days advance notice. Departure date has been adjusted to ' . Carbon::parse($earliestVehicleDate)->format('M d, Y') . '.');
+            }
             if ($this->vehicle_booking_method === 'category' && $this->selected_vehicle_rate_id) {
                 $this->updatedSelectedVehicleRateId($this->selected_vehicle_rate_id);
             } elseif ($this->vehicle_booking_method === 'brand_model' && $this->selected_model_id) {
@@ -1595,6 +1603,14 @@ class BookingForm extends Component
 
     public function selectSchedule(int $scheduleId): void
     {
+        if ($this->has_vehicle) {
+            $schedule = Schedule::find($scheduleId);
+            if ($schedule && ! app(\App\Services\VehicleBookingPolicyService::class)->isScheduleEligible($schedule)) {
+                $this->addError('selected_schedule_id', 'Vehicle bookings require a minimum of 3 days (72 hours) advance notice prior to departure.');
+                return;
+            }
+        }
+
         $this->selected_schedule_id = $scheduleId;
         $this->selected_transport_class_id = null;
         $this->baggage_trip_type = $this->autoDetectBaggageScope();
@@ -1605,16 +1621,30 @@ class BookingForm extends Component
 
     public function selectReturnSchedule(int $scheduleId): void
     {
+        if ($this->has_vehicle) {
+            $schedule = Schedule::find($scheduleId);
+            if ($schedule && ! app(\App\Services\VehicleBookingPolicyService::class)->isScheduleEligible($schedule)) {
+                $this->addError('selected_return_schedule_id', 'Vehicle bookings require a minimum of 3 days (72 hours) advance notice prior to departure.');
+                return;
+            }
+        }
+
         $this->selected_return_schedule_id = $scheduleId;
         $this->saveDraft();
     }
 
     protected function getAvailableSchedules(): array
     {
-        return Schedule::query()
+        $query = Schedule::query()
             ->with(['ferryRoute', 'transportClasses', 'scheduleAccommodations'])
-            ->forRouteAndDate($this->origin, $this->destination, $this->departure_date, $this->mode, $this->operator)
-            ->get()
+            ->forRouteAndDate($this->origin, $this->destination, $this->departure_date, $this->mode, $this->operator);
+
+        if ($this->has_vehicle) {
+            $query->where('departure_time', '>=', now(\App\Services\VehicleBookingPolicyService::TIMEZONE)->addHours(\App\Services\VehicleBookingPolicyService::CUTOFF_HOURS));
+        }
+
+        return $query->get()
+            ->filter(fn (Schedule $schedule) => ! $this->has_vehicle || app(\App\Services\VehicleBookingPolicyService::class)->isScheduleEligible($schedule))
             ->map(fn (Schedule $schedule) => $schedule->toBookingArray($this->departure_date, []))
             ->values()
             ->all();
@@ -1626,11 +1656,17 @@ class BookingForm extends Component
             return [];
         }
 
-        return Schedule::query()
+        $query = Schedule::query()
             ->with(['ferryRoute', 'transportClasses', 'scheduleAccommodations'])
             // Reverse origin and destination for return trip
-            ->forRouteAndDate($this->destination, $this->origin, $this->return_date, $this->mode, $this->operator)
-            ->get()
+            ->forRouteAndDate($this->destination, $this->origin, $this->return_date, $this->mode, $this->operator);
+
+        if ($this->has_vehicle) {
+            $query->where('departure_time', '>=', now(\App\Services\VehicleBookingPolicyService::TIMEZONE)->addHours(\App\Services\VehicleBookingPolicyService::CUTOFF_HOURS));
+        }
+
+        return $query->get()
+            ->filter(fn (Schedule $schedule) => ! $this->has_vehicle || app(\App\Services\VehicleBookingPolicyService::class)->isScheduleEligible($schedule))
             ->map(fn (Schedule $schedule) => $schedule->toBookingArray($this->return_date, []))
             ->values()
             ->all();
@@ -1793,7 +1829,17 @@ class BookingForm extends Component
 
     public function updatedHasVehicle(bool $value): void
     {
-        if (! $value) {
+        if ($value) {
+            $policy = app(\App\Services\VehicleBookingPolicyService::class);
+            $earliestVehicleDate = $policy->getEarliestVehicleBookingDate();
+            if ($this->departure_date && $this->departure_date < $earliestVehicleDate) {
+                $this->departure_date = $earliestVehicleDate;
+                if ($this->trip_type === 'round_trip' && $this->return_date && $this->return_date < $this->departure_date) {
+                    $this->return_date = $this->departure_date;
+                }
+                session()->flash('warning', 'Vehicle bookings require at least 3 days advance notice. Departure date has been adjusted to ' . Carbon::parse($earliestVehicleDate)->format('M d, Y') . '.');
+            }
+        } else {
             $this->selected_vehicle_rate_id = null;
             $this->selected_brand_id = null;
             $this->selected_model_id = null;
@@ -2341,6 +2387,16 @@ class BookingForm extends Component
                     }
                 }
 
+                if ($this->has_vehicle) {
+                    $policy = app(\App\Services\VehicleBookingPolicyService::class);
+                    if ($schedule) {
+                        $policy->validateScheduleLeadTime($schedule, true, 'selected_schedule_id');
+                    }
+                    if ($returnSchedule) {
+                        $policy->validateScheduleLeadTime($returnSchedule, true, 'selected_return_schedule_id');
+                    }
+                }
+
                 $booking = Booking::create([
                     'user_id' => auth()->check() ? auth()->id() : null,
                     'transaction_number' => $this->generateTransactionNumber(),
@@ -2848,7 +2904,18 @@ class BookingForm extends Component
                 'mode' => $this->tour_id ? 'nullable' : 'required|string|in:ferry,airline',
                 'origin' => $this->tour_id ? 'nullable' : 'required|string|max:255',
                 'destination' => $this->tour_id ? 'nullable' : 'required|string|max:255',
-                'departure_date' => 'required|date',
+                'departure_date' => [
+                    'required',
+                    'date',
+                    function ($attribute, $value, $fail) {
+                        if ($this->has_vehicle && ! empty($value)) {
+                            $earliest = app(\App\Services\VehicleBookingPolicyService::class)->getEarliestVehicleBookingDate();
+                            if ($value < $earliest) {
+                                $fail('Vehicle bookings require a minimum of 3 days advance notice prior to departure.');
+                            }
+                        }
+                    },
+                ],
                 'tour_date_id' => $this->tour_id ? 'required|integer|exists:tour_dates,id' : 'nullable',
                 'return_date' => $this->trip_type === 'round_trip' ? 'required|date|after_or_equal:departure_date' : 'nullable|date|after_or_equal:departure_date',
                 'adults' => [
@@ -2909,7 +2976,18 @@ class BookingForm extends Component
                 'extra_baggage_weight' => 'nullable|numeric|min:0|max:100',
             ],
             2 => [
-                'selected_schedule_id' => $this->tour_id ? 'nullable' : 'required|integer|exists:schedules,id',
+                'selected_schedule_id' => [
+                    $this->tour_id ? 'nullable' : 'required',
+                    'integer',
+                    'exists:schedules,id',
+                    new \App\Rules\VehicleDepartureLeadTimeRule($this->has_vehicle),
+                ],
+                'selected_return_schedule_id' => [
+                    $this->trip_type === 'round_trip' ? 'required' : 'nullable',
+                    'integer',
+                    'exists:schedules,id',
+                    new \App\Rules\VehicleDepartureLeadTimeRule($this->has_vehicle),
+                ],
             ],
             3 => array_merge([
                 'passengers.*.first_name' => 'required|string|max:255',
