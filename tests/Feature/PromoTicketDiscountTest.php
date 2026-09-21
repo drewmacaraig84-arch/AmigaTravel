@@ -626,7 +626,7 @@ class PromoTicketDiscountTest extends TestCase
     public function test_temporary_promo_expiry_reverts_to_regular_in_booking_array(): void
     {
         $schedule = $this->createAirlineSchedule();
-        $tc = TransportClass::first();
+        $tc = $schedule->transportClasses->first();
 
         // Expired temporary promo
         \Illuminate\Support\Facades\DB::table('schedule_transport_class')

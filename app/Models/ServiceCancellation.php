@@ -31,6 +31,8 @@ class ServiceCancellation extends Model
         'created_by_user_id',
     ];
 
+    protected $with = ['ferryRoute', 'vehicle'];
+
     protected $casts = [
         'affected_date' => 'date',
         'start_date' => 'date',

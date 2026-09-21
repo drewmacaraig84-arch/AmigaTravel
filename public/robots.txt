@@ -1,5 +1,9 @@
 User-agent: *
-Disallow:
+Disallow: /admin/
+Disallow: /payment/
+Disallow: /ticket/
+Disallow: /storage-file/
+Disallow: /up
 
 # Allow Googlebot to crawl all image assets used for favicon / logo schema
 User-agent: Googlebot-Image

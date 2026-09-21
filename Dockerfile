@@ -43,10 +43,8 @@ RUN echo "opcache.enable=1" >> /usr/local/etc/php/conf.d/opcache.ini \
 
 WORKDIR /var/www/html
 
-# --- Copy application source ---
-COPY . .
-
-# --- Install PHP & Node dependencies, build frontend assets ---
+# --- Dependency manifests for layer caching ---
+COPY composer.json composer.lock ./
 RUN for i in 1 2 3 4 5; do \
       echo "composer install attempt $i"; \
       if composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader --no-scripts; then \
@@ -55,9 +53,16 @@ RUN for i in 1 2 3 4 5; do \
       if [ $i -eq 5 ]; then exit 1; fi; \
       echo "Composer install attempt $i failed, waiting 15s..."; \
       sleep 15; \
-    done \
-    && npm install --legacy-peer-deps \
-    && npm run build
+    done
+
+COPY package.json package-lock.json ./
+RUN npm install --legacy-peer-deps
+
+# --- Copy application source ---
+COPY . .
+
+# --- Build frontend assets ---
+RUN npm run build
 
 # --- Laravel bootstrap (clear stale caches, then discover packages) ---
 RUN php artisan clear-compiled \

@@ -9,75 +9,76 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\TourController;
 
-Route::get('/queue-status', function () {
-    try {
-        $jobs = \Illuminate\Support\Facades\DB::table('jobs')->count();
-        $failed = \Illuminate\Support\Facades\DB::table('failed_jobs')->get();
-        return response()->json([
-            'pending_jobs' => $jobs,
-            'failed_jobs_count' => count($failed),
-            'failed_jobs' => $failed,
-            'queue_connection' => config('queue.default'),
-            'mail_mailer' => config('mail.default'),
-        ]);
-    } catch (\Exception $e) {
-        return response()->json(['error' => $e->getMessage()]);
-    }
-});
-
 Route::withoutMiddleware([])->get('/up', function () {
     return response('OK', 200)->header('Content-Type', 'text/plain');
 });
 
-// ─── Diagnostic Health Check (no middleware, no session) ──────────────────────
-// Remove this route once production is stable.
-Route::withoutMiddleware([])->get('/health-check', function () {
-    $checks = [];
+// ─── Diagnostic & Queue Status Endpoints (Admin / Staff Only) ─────────────────
+Route::middleware(['auth:admin,web', 'admin'])->group(function () {
+    Route::get('/queue-status', function () {
+        try {
+            $jobs = \Illuminate\Support\Facades\DB::table('jobs')->count();
+            $failed = \Illuminate\Support\Facades\DB::table('failed_jobs')->get();
+            return response()->json([
+                'pending_jobs' => $jobs,
+                'failed_jobs_count' => count($failed),
+                'failed_jobs' => $failed,
+                'queue_connection' => config('queue.default'),
+                'mail_mailer' => config('mail.default'),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()]);
+        }
+    });
 
-    // 1. PHP / Framework boot
-    $checks['php_version'] = PHP_VERSION;
-    $checks['laravel_version'] = app()->version();
-    $checks['app_env'] = config('app.env');
-    $checks['app_key_set'] = !empty(config('app.key'));
-    $checks['app_key_length'] = strlen(config('app.key') ?? '');
+    Route::get('/health-check', function () {
+        $checks = [];
 
-    // 2. Database
-    try {
-        \Illuminate\Support\Facades\DB::connection()->getPdo();
-        $checks['database'] = 'connected';
-        $checks['db_name'] = \Illuminate\Support\Facades\DB::connection()->getDatabaseName();
-        $checks['sessions_table'] = \Illuminate\Support\Facades\DB::connection()->getSchemaBuilder()->hasTable('sessions') ? 'exists' : 'MISSING';
-        $checks['cache_table'] = \Illuminate\Support\Facades\DB::connection()->getSchemaBuilder()->hasTable('cache') ? 'exists' : 'MISSING';
-    } catch (\Throwable $e) {
-        $checks['database'] = 'ERROR: ' . $e->getMessage();
-    }
+        // 1. PHP / Framework boot
+        $checks['php_version'] = PHP_VERSION;
+        $checks['laravel_version'] = app()->version();
+        $checks['app_env'] = config('app.env');
+        $checks['app_key_set'] = !empty(config('app.key'));
+        $checks['app_key_length'] = strlen(config('app.key') ?? '');
 
-    // 3. Storage / symlink
-    $checks['storage_link'] = is_link(public_path('storage')) ? 'ok' : 'missing';
+        // 2. Database
+        try {
+            \Illuminate\Support\Facades\DB::connection()->getPdo();
+            $checks['database'] = 'connected';
+            $checks['db_name'] = \Illuminate\Support\Facades\DB::connection()->getDatabaseName();
+            $checks['sessions_table'] = \Illuminate\Support\Facades\DB::connection()->getSchemaBuilder()->hasTable('sessions') ? 'exists' : 'MISSING';
+            $checks['cache_table'] = \Illuminate\Support\Facades\DB::connection()->getSchemaBuilder()->hasTable('cache') ? 'exists' : 'MISSING';
+        } catch (\Throwable $e) {
+            $checks['database'] = 'ERROR: ' . $e->getMessage();
+        }
 
-    // 4. Cache driver
-    $checks['cache_driver'] = config('cache.default');
-    try {
-        \Illuminate\Support\Facades\Cache::put('_health_test', 1, 5);
-        $checks['cache_write'] = \Illuminate\Support\Facades\Cache::get('_health_test') === 1 ? 'ok' : 'read_failed';
-    } catch (\Throwable $e) {
-        $checks['cache_write'] = 'ERROR: ' . $e->getMessage();
-    }
+        // 3. Storage / symlink
+        $checks['storage_link'] = is_link(public_path('storage')) ? 'ok' : 'missing';
 
-    // 5. Mail config
-    $checks['mail_mailer'] = config('mail.default');
-    $checks['sendgrid_key_set'] = !empty(config('mail.mailers.sendgrid.api_key'));
+        // 4. Cache driver
+        $checks['cache_driver'] = config('cache.default');
+        try {
+            \Illuminate\Support\Facades\Cache::put('_health_test', 1, 5);
+            $checks['cache_write'] = \Illuminate\Support\Facades\Cache::get('_health_test') === 1 ? 'ok' : 'read_failed';
+        } catch (\Throwable $e) {
+            $checks['cache_write'] = 'ERROR: ' . $e->getMessage();
+        }
 
-    // 6. Firebase credentials path
-    $checks['firebase_credentials_path'] = config('firebase.credentials');
-    $checks['firebase_file_exists'] = file_exists(config('firebase.credentials') ?? '') ? 'yes' : 'no/path-missing';
+        // 5. Mail config
+        $checks['mail_mailer'] = config('mail.default');
+        $checks['sendgrid_key_set'] = !empty(config('mail.mailers.sendgrid.api_key'));
 
-    return response()->json([
-        'status' => collect($checks)->filter(fn ($v) => str_starts_with((string) $v, 'ERROR') || $v === 'MISSING')->isEmpty() ? 'healthy' : 'degraded',
-        'checks' => $checks,
-        'timestamp' => now()->toISOString(),
-    ]);
-})->name('health.check');
+        // 6. Firebase credentials path
+        $checks['firebase_credentials_path'] = config('firebase.credentials');
+        $checks['firebase_file_exists'] = file_exists(config('firebase.credentials') ?? '') ? 'yes' : 'no/path-missing';
+
+        return response()->json([
+            'status' => collect($checks)->filter(fn ($v) => str_starts_with((string) $v, 'ERROR') || $v === 'MISSING')->isEmpty() ? 'healthy' : 'degraded',
+            'checks' => $checks,
+            'timestamp' => now()->toISOString(),
+        ]);
+    })->name('health.check');
+});
 // ─────────────────────────────────────────────────────────────────────────────
 
 $renderWebsitePage = function (string $page, string $view) {
@@ -315,8 +316,20 @@ Route::get('/schedules', function (\Illuminate\Http\Request $request) {
     return view('schedules', compact('routes', 'startDate', 'endDate', 'pageSettings', 'pageContent', 'activeTab'));
 })->name('schedules');
 
-Route::get('/payment/{transaction}', function (Transaction $transaction) {
-    $transaction->load('booking');
+Route::get('/payment/{transaction}', function (Request $request, Transaction $transaction) {
+    $transaction->loadMissing(['booking.schedule', 'booking.passengers']);
+
+    // Prevent ID enumeration attacks: if accessed using numeric integer ID directly,
+    // require ownership, admin access, or valid signed URL.
+    if (is_numeric($request->route('transaction'))) {
+        $user = auth('web')->user() ?? auth('admin')->user();
+        $isOwner = $user && $transaction->booking && $user->id === $transaction->booking->user_id;
+        $isAdmin = auth('admin')->check() || ($user && method_exists($user, 'isAdmin') && $user->isAdmin()) || ($user && method_exists($user, 'isStaff') && $user->isStaff());
+
+        if (! ($isOwner || $isAdmin || $request->hasValidSignature())) {
+            abort(403, 'Unauthorized access to transaction.');
+        }
+    }
 
     return view('payment', [
         'transaction' => $transaction,
@@ -355,7 +368,7 @@ Route::get('/ticket/download/{transaction_number}', function ($transaction_numbe
         'Content-Type' => 'application/pdf',
         'Content-Disposition' => 'inline; filename="Payment_Acknowledgement.pdf"',
     ]);
-})->name('ticket.download');
+})->middleware('throttle:30,1')->name('ticket.download');
 
 // Serves the admin-uploaded confirmation PDF or official E-Ticket / Travel Itinerary (used for "Download Ticket")
 Route::get('/ticket/admin-pdf/{transaction_number}', function ($transaction_number) {
@@ -487,14 +500,22 @@ Route::get('/ticket/admin-pdf/{transaction_number}', function ($transaction_numb
         'Content-Type' => 'application/pdf',
         'Content-Disposition' => 'inline; filename="Ticket_Confirmation_' . $booking->transaction_number . '.pdf"',
     ]);
-})->name('ticket.admin-pdf');
+})->middleware('throttle:30,1')->name('ticket.admin-pdf');
 
 // Serves the official E-Refund Acknowledgement PDF for cancelled/refunded bookings
-Route::get('/ticket/refund-acknowledgement/{transaction_number}', function ($transaction_number) {
-    $booking = \App\Models\Booking::query()
-        ->where('transaction_number', $transaction_number)
-        ->orWhere('id', $transaction_number)
-        ->firstOrFail();
+Route::get('/ticket/refund-acknowledgement/{transaction_number}', function (Request $request, $transaction_number) {
+    if (is_numeric($transaction_number)) {
+        $user = auth('web')->user() ?? auth('admin')->user();
+        $booking = \App\Models\Booking::where('id', (int) $transaction_number)->firstOrFail();
+        $isOwner = $user && ($user->id === $booking->user_id || strtolower((string) $user->email) === strtolower((string) $booking->client_email));
+        $isStaff = auth('admin')->check() || ($user && method_exists($user, 'isStaff') && $user->isStaff());
+
+        if (! ($isOwner || $isStaff || $request->hasValidSignature())) {
+            abort(403, 'Unauthorized access to refund document.');
+        }
+    } else {
+        $booking = \App\Models\Booking::where('transaction_number', $transaction_number)->firstOrFail();
+    }
 
     $refundDir = storage_path('app/refunds');
     $path = $refundDir . '/refund-acknowledgement-' . $booking->transaction_number . '.pdf';
@@ -516,7 +537,7 @@ Route::get('/ticket/refund-acknowledgement/{transaction_number}', function ($tra
         'Content-Type' => 'application/pdf',
         'Content-Disposition' => 'inline; filename="Refund_Acknowledgement_' . $booking->transaction_number . '.pdf"',
     ]);
-})->name('ticket.refund-acknowledgement');
+})->middleware('throttle:30,1')->name('ticket.refund-acknowledgement');
 
 // Serves dedicated single-passenger E-ticket PDF
 Route::get('/ticket/passenger/{identifier}', function ($identifier) {
@@ -569,21 +590,58 @@ Route::get('/ticket/passenger/{identifier}', function ($identifier) {
         'Content-Type' => 'application/pdf',
         'Content-Disposition' => 'inline; filename="Ticket_' . ($passenger->ticket_number ?: $booking->transaction_number) . '.pdf"',
     ]);
-})->name('ticket.passenger-pdf');
+})->middleware('throttle:30,1')->name('ticket.passenger-pdf');
 
-// Serves any public storage file through the server (avoids Railway storage URL 404s)
+// Serves storage files through the server (avoids Railway storage URL 404s)
 // Usage: /storage-file/{path} where path is the relative storage path, e.g. proofs/AGT-xxx.jpg
-Route::get('/storage-file/{path}', function (string $path) {
+Route::get('/storage-file/{path}', function (Request $request, string $path) {
     // Strip directory traversal sequences
-    $sanitizedPath = str_replace(['../', '..\\', '..'], '', $path);
-    $disk = \Illuminate\Support\Facades\Storage::disk('public');
+    $sanitizedPath = ltrim(str_replace(['../', '..\\', '..'], '', $path), '/\\');
 
-    if (! $disk->exists($sanitizedPath)) {
+    // Sensitive document categories requiring authentication or signed URL
+    $sensitivePrefixes = [
+        'id_images/',
+        'student-discount-proofs/',
+        'proofs/',
+        'refund_docs/',
+        'refunds/',
+        'tickets/',
+        'acknowledgements/',
+    ];
+
+    $isSensitive = false;
+    foreach ($sensitivePrefixes as $prefix) {
+        if (str_starts_with($sanitizedPath, $prefix)) {
+            $isSensitive = true;
+            break;
+        }
+    }
+
+    if ($isSensitive) {
+        $isAuthenticated = auth('admin')->check()
+            || auth('web')->check()
+            || auth('sanctum')->check()
+            || auth('api')->check()
+            || $request->hasValidSignature();
+
+        if (! $isAuthenticated) {
+            abort(403, 'Unauthorized access to protected file.');
+        }
+    }
+
+    $disk = null;
+    if (\Illuminate\Support\Facades\Storage::disk('local')->exists($sanitizedPath)) {
+        $disk = \Illuminate\Support\Facades\Storage::disk('local');
+    } elseif (\Illuminate\Support\Facades\Storage::disk('public')->exists($sanitizedPath)) {
+        $disk = \Illuminate\Support\Facades\Storage::disk('public');
+    }
+
+    if (! $disk) {
         abort(404, 'File not found.');
     }
 
     $fullPath = $disk->path($sanitizedPath);
-    $mimeType = mime_content_type($fullPath) ?: 'application/octet-stream';
+    $mimeType = @mime_content_type($fullPath) ?: 'application/octet-stream';
 
     return response()->file($fullPath, ['Content-Type' => $mimeType]);
 })->where('path', '.*')->name('storage.file');

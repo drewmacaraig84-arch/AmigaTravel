@@ -35,6 +35,13 @@ class PaymentProof extends Component
         'proof' => 'required|image|max:10240',
     ];
 
+    public function boot(): void
+    {
+        if (isset($this->transaction) && $this->transaction->exists) {
+            $this->transaction->loadMissing(['booking.schedule', 'booking.passengers', 'booking.accommodations']);
+        }
+    }
+
     public function mount(): void
     {
         $this->transaction->loadMissing(['booking.schedule', 'booking.passengers', 'booking.accommodations']);

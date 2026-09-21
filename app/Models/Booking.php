@@ -138,6 +138,41 @@ class Booking extends Model
 
     public const REVIEW_CLAIM_TTL_MINUTES = 10;
 
+    protected function casts(): array
+    {
+        return [
+            'departure_date' => 'date',
+            'return_date' => 'date',
+            'rebooking_departure_date' => 'date',
+            'rebooking_return_date' => 'date',
+            'preferred_replacement_date' => 'date',
+            'driver_birthday' => 'date',
+            'schedule_departure_time' => 'datetime',
+            'schedule_arrival_time' => 'datetime',
+            'return_schedule_departure_time' => 'datetime',
+            'return_schedule_arrival_time' => 'datetime',
+            'verified_at' => 'datetime',
+            'cancellation_window_expires_at' => 'datetime',
+            'review_claimed_at' => 'datetime',
+            'rejected_at' => 'datetime',
+            'rebooking_rejected_at' => 'datetime',
+            'refund_processed_at' => 'datetime',
+            'terms_accepted_at' => 'datetime',
+            'sla_voucher_issued_at' => 'datetime',
+            'has_vehicle' => 'boolean',
+            'is_rebooked' => 'boolean',
+            'has_extra_baggage' => 'boolean',
+            'total_price' => 'decimal:2',
+            'refund_amount' => 'decimal:2',
+            'cancellation_fee' => 'decimal:2',
+            'points_discount' => 'decimal:2',
+            'voucher_discount_amount' => 'decimal:2',
+            'subtotal_before_voucher' => 'decimal:2',
+            'extra_baggage_price' => 'decimal:2',
+            'tour_inclusions' => 'array',
+        ];
+    }
+
     protected static function booted(): void
     {
         static::updated(function (Booking $booking) {

@@ -76,6 +76,11 @@ class Schedule extends Model
         return $this->hasMany(ScheduleAccommodation::class)->orderBy('sort_order');
     }
 
+    public function accommodations(): HasMany
+    {
+        return $this->scheduleAccommodations();
+    }
+
     public function activeScheduleAccommodations(): HasMany
     {
         return $this->scheduleAccommodations()->where('is_active', true);
@@ -661,12 +666,16 @@ class Schedule extends Model
         try {
             $driver = config('cache.default');
 
+            $redisUrl = config('database.redis.default.url') ?: env('REDIS_URL');
+            $redisHost = config('database.redis.default.host') ?: env('REDIS_HOST');
+            $cacheStore = config('cache.default') ?: env('CACHE_STORE');
+
             // 1. Redis Store: active if redis is the cache store or if Redis is provisioned on Railway
             $isRedisActive = ! app()->runningUnitTests() && (
                 $driver === 'redis'
-                || in_array(env('CACHE_STORE'), ['redis', 'octane'], true)
-                || filled(env('REDIS_URL'))
-                || filled(env('REDIS_HOST'))
+                || in_array($cacheStore, ['redis', 'octane'], true)
+                || filled($redisUrl)
+                || (! in_array($redisHost, [null, '', '127.0.0.1', 'localhost'], true))
             );
 
             if ($isRedisActive) {

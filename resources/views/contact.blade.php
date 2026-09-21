@@ -143,7 +143,7 @@
                         <div>
                             <h3 class="font-bold text-emerald-950">{{ data_get($pageContent, 'success_title', 'Inquiry Sent Successfully!') }}</h3>
                             <p class="text-xs text-emerald-700 mt-1">{{ data_get($pageContent, 'success_desc', 'Thank you for contacting us. One of our travel consultants will get in touch with you shortly at the email address provided.') }}</p>
-                            <button @click="submitted = false" class="mt-4 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-full transition">{{ data_get($pageContent, 'success_btn', 'Send Another Message') }}</button>
+                            <button type="button" @click="submitted = false" class="mt-4 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-full transition">{{ data_get($pageContent, 'success_btn', 'Send Another Message') }}</button>
                         </div>
                     </div>
 

@@ -234,7 +234,10 @@ class CreateBookingAction
                     }
                 }
             }
-            // --- Price calculation ---
+            // --- Price calculation with server-side validation ---
+            $data['vehicle_price'] = $this->resolveVehiclePrice($data);
+            $this->sanitizeBaggagePrices($data['passengers']);
+
             $subtotal = $this->calculatePrice(
                 $schedule,
                 $data['passengers'],
@@ -243,7 +246,7 @@ class CreateBookingAction
                 $scheduleAccommodation,
                 $data['selected_transport_class_id'] ?? null,
                 $data['has_vehicle'] ?? false,
-                $data['vehicle_price'] ?? 0,
+                $data['vehicle_price'],
                 $returnSchedule,
                 $returnScheduleAccommodation,
                 $data['selected_return_transport_class_id'] ?? null,
@@ -737,6 +740,72 @@ class CreateBookingAction
         return $ferryTotal + $transportClassTotal + $accommodationsTotal + $vehicleTotal + $baggageTotal + $serviceFee + $hotelFee + $transactionFee;
     }
 
+    /**
+     * Resolve the authentic vehicle price server-side to prevent client-side price tampering.
+     */
+    protected function resolveVehiclePrice(array $data): float
+    {
+        if (empty($data['has_vehicle'])) {
+            return 0.0;
+        }
+
+        $vehicleType = trim($data['vehicle_type'] ?? '');
+        if ($vehicleType === '') {
+            return 0.0;
+        }
+
+        // 1. Look up exact or case-insensitive match in VehicleRate
+        $rate = \App\Models\VehicleRate::where('is_active', true)
+            ->where(function ($q) use ($vehicleType) {
+                $q->where('name', $vehicleType)
+                  ->orWhereRaw('LOWER(name) = ?', [strtolower($vehicleType)]);
+            })
+            ->first();
+
+        if ($rate) {
+            return (float) $rate->price;
+        }
+
+        // 2. Look up matching active rate by price as a fallback if custom brand/model used
+        $inputPrice = floatval($data['vehicle_price'] ?? 0);
+        $rateByPrice = \App\Models\VehicleRate::where('is_active', true)
+            ->where('price', $inputPrice)
+            ->first();
+
+        if ($rateByPrice) {
+            return (float) $rateByPrice->price;
+        }
+
+        return max(0.0, $inputPrice);
+    }
+
+    /**
+     * Sanitize and validate extra baggage amounts server-side.
+     */
+    protected function sanitizeBaggagePrices(array &$passengers): float
+    {
+        $baggageTotal = 0.0;
+        foreach ($passengers as &$p) {
+            $weight = $p['extra_baggage_weight'] ?? null;
+            if (! empty($weight)) {
+                $matchedRule = \App\Models\AirlineBaggageRule::where('is_active', true)
+                    ->where('weight', $weight)
+                    ->first();
+                if ($matchedRule) {
+                    $p['extra_baggage_price'] = (float) $matchedRule->price;
+                } else {
+                    $p['extra_baggage_price'] = max(0.0, floatval($p['extra_baggage_price'] ?? 0));
+                }
+                $baggageTotal += (float) $p['extra_baggage_price'];
+            } else {
+                $p['extra_baggage_price'] = 0.0;
+            }
+        }
+        unset($p);
+
+        return $baggageTotal;
+    }
+
     protected function saveBase64Image(?string $base64String, string $directory): ?string
     {
         if (empty($base64String)) {
@@ -751,7 +820,8 @@ class CreateBookingAction
             $decoded = base64_decode($imageData);
             if ($decoded !== false) {
                 $filename = $directory . '/' . uniqid('id_', true) . '.' . $extension;
-                \Illuminate\Support\Facades\Storage::disk('public')->put($filename, $decoded);
+                // Save to private local disk for customer PII protection
+                \Illuminate\Support\Facades\Storage::disk('local')->put($filename, $decoded);
                 return $filename;
             }
         }

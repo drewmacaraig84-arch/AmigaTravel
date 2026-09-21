@@ -16,7 +16,7 @@ class GraciaPointsServiceTest extends TestCase
 
     public function test_earns_points_for_booking()
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['is_app_user' => true]);
         
         $rule = GraciaEarningRule::create([
             'name' => 'Default Rule',
@@ -57,7 +57,7 @@ class GraciaPointsServiceTest extends TestCase
 
     public function test_reversing_booking()
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['is_app_user' => true]);
         
         $rule = GraciaEarningRule::create([
             'name' => 'Default Rule',

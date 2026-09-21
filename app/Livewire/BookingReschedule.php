@@ -121,6 +121,18 @@ class BookingReschedule extends Component
         return $this->booking->getAffectedItemsLabel(empty($this->selectedPassengerItems) ? null : $this->selectedPassengerItems);
     }
 
+    public function boot(): void
+    {
+        if ($this->booking && $this->booking->exists) {
+            $this->booking->loadMissing([
+                'serviceCancellation',
+                'passengers.discount',
+                'transportClasses',
+                'accommodations',
+            ]);
+        }
+    }
+
     public function mount(string $transaction_number): void
     {
         $this->transaction_number = ltrim(trim($transaction_number), '#');

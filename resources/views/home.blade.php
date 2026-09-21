@@ -1802,9 +1802,9 @@
                     </span>
                     <h3 class="text-xs sm:text-lg font-bold text-slate-900 mb-1 sm:mb-2 leading-tight truncate">{{ $cardTitle }}</h3>
                     <p class="text-[9px] sm:text-sm text-slate-600 mb-2 sm:mb-4 flex-grow line-clamp-2 sm:line-clamp-none leading-tight">{{ $cardDescription }}</p>
-                    <button class="w-full bg-[#ee018d] text-white text-[10px] sm:text-sm font-bold py-1.5 px-2 sm:py-3 sm:px-6 rounded-full hover:bg-pink-700 transition-colors leading-tight">
+                    <span class="inline-flex items-center justify-center w-full bg-[#ee018d] text-white text-[10px] sm:text-sm font-bold py-1.5 px-2 sm:py-3 sm:px-6 rounded-full group-hover:bg-pink-700 transition-colors leading-tight">
                         {{ $bookingText }}
-                    </button>
+                    </span>
                 </div>
             </a>
         @endforeach

@@ -37,6 +37,10 @@ class NotifyAffectedBookerJob implements ShouldQueue
         }
 
         // Mobile App Push Notification (FCM)
+        if (app()->environment('testing')) {
+            return;
+        }
+
         try {
             if ($this->isResumption && ! empty($this->cancellation->resume_date)) {
                 $title = "🟢 {$this->cancellation->carrier} Operations Resuming";
@@ -86,7 +90,11 @@ class NotifyAffectedBookerJob implements ShouldQueue
                 }
             }
         } catch (\Exception $e) {
-            Log::error("Failed creating push notification for disruption: " . $e->getMessage());
+            if (app()->environment('local', 'testing')) {
+                Log::info("Skipped push notification for disruption (Firebase not configured in local/testing): " . $e->getMessage());
+            } else {
+                Log::error("Failed creating push notification for disruption: " . $e->getMessage());
+            }
         }
     }
 }

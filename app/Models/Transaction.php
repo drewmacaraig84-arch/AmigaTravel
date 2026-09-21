@@ -54,6 +54,22 @@ class Transaction extends Model
         return $this->belongsTo(Booking::class);
     }
 
+    public function getRouteKey()
+    {
+        return $this->booking?->transaction_number ?? $this->getAttribute($this->getRouteKeyName());
+    }
+
+    public function resolveRouteBinding($value, $field = null)
+    {
+        if ($field) {
+            return parent::resolveRouteBinding($value, $field);
+        }
+
+        return $this->where('id', $value)
+            ->orWhereHas('booking', fn ($q) => $q->where('transaction_number', $value))
+            ->first();
+    }
+
     public function verifiedByUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'verified_by_user_id');

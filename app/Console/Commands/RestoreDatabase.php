@@ -141,52 +141,60 @@ class RestoreDatabase extends Command
         $count = 0;
         $currentQuery = '';
 
-        if ($isGzip) {
-            $gz = gzopen($filePath, 'rb');
-            if (! $gz) {
-                throw new \RuntimeException("Could not open gzip archive: {$filePath}");
-            }
-
-            while (! gzeof($gz)) {
-                $line = gzgets($gz, 65536);
-                if ($line === false) break;
-
-                $trimmed = trim($line);
-                if ($trimmed === '' || str_starts_with($trimmed, '--') || str_starts_with($trimmed, '/*')) {
-                    continue;
+        try {
+            if ($isGzip) {
+                $gz = gzopen($filePath, 'rb');
+                if (! $gz) {
+                    throw new \RuntimeException("Could not open gzip archive: {$filePath}");
                 }
 
-                $currentQuery .= $line;
-                if (str_ends_with($trimmed, ';')) {
-                    $pdo->exec($currentQuery);
-                    $count++;
-                    $currentQuery = '';
-                }
-            }
-            gzclose($gz);
-        } else {
-            $handle = fopen($filePath, 'r');
-            if (! $handle) {
-                throw new \RuntimeException("Could not open SQL file: {$filePath}");
-            }
+                try {
+                    while (! gzeof($gz)) {
+                        $line = gzgets($gz, 65536);
+                        if ($line === false) break;
 
-            while (($line = fgets($handle, 65536)) !== false) {
-                $trimmed = trim($line);
-                if ($trimmed === '' || str_starts_with($trimmed, '--') || str_starts_with($trimmed, '/*')) {
-                    continue;
+                        $trimmed = trim($line);
+                        if ($trimmed === '' || str_starts_with($trimmed, '--') || str_starts_with($trimmed, '/*')) {
+                            continue;
+                        }
+
+                        $currentQuery .= $line;
+                        if (str_ends_with($trimmed, ';')) {
+                            $pdo->exec($currentQuery);
+                            $count++;
+                            $currentQuery = '';
+                        }
+                    }
+                } finally {
+                    gzclose($gz);
+                }
+            } else {
+                $handle = fopen($filePath, 'r');
+                if (! $handle) {
+                    throw new \RuntimeException("Could not open SQL file: {$filePath}");
                 }
 
-                $currentQuery .= $line;
-                if (str_ends_with($trimmed, ';')) {
-                    $pdo->exec($currentQuery);
-                    $count++;
-                    $currentQuery = '';
+                try {
+                    while (($line = fgets($handle, 65536)) !== false) {
+                        $trimmed = trim($line);
+                        if ($trimmed === '' || str_starts_with($trimmed, '--') || str_starts_with($trimmed, '/*')) {
+                            continue;
+                        }
+
+                        $currentQuery .= $line;
+                        if (str_ends_with($trimmed, ';')) {
+                            $pdo->exec($currentQuery);
+                            $count++;
+                            $currentQuery = '';
+                        }
+                    }
+                } finally {
+                    fclose($handle);
                 }
             }
-            fclose($handle);
+        } finally {
+            $pdo->exec('SET FOREIGN_KEY_CHECKS=1;');
         }
-
-        $pdo->exec('SET FOREIGN_KEY_CHECKS=1;');
 
         return $count;
     }

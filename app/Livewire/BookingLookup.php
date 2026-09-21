@@ -92,6 +92,13 @@ class BookingLookup extends Component
         'rebooking_return_date' => 'nullable|date|after_or_equal:rebooking_departure_date|required_if:rebooking_is_round_trip,1',
     ];
 
+    public function boot(): void
+    {
+        if ($this->booking && $this->booking->exists) {
+            $this->booking->loadMissing(['passengers.discount', 'accommodations', 'transaction']);
+        }
+    }
+
     public function mount(): void
     {
         $transactionNumber = request()->query('transaction_number');
@@ -193,7 +200,7 @@ class BookingLookup extends Component
                 $transaction->payment_deadline_at) {
                 
                 if ($transaction->payment_deadline_at->isFuture()) {
-                    $this->redirectRoute('payment.show', $transaction->id);
+                    $this->redirectRoute('payment.show', $transaction->booking?->transaction_number ?? $transaction->id);
                     return;
                 } else if ($this->booking->status !== \App\Models\Booking::STATUS_CANCELLED) {
                     // Auto-cancel if the cron job hasn't picked it up yet

@@ -136,7 +136,7 @@ class FirebasePushService
      */
     private static function getCredentials(): ?array
     {
-        $rawJson = env('FIREBASE_CREDENTIALS_JSON');
+        $rawJson = config('services.firebase.credentials_json') ?: env('FIREBASE_CREDENTIALS_JSON');
 
         if (! empty($rawJson)) {
             $rawJson = trim($rawJson);

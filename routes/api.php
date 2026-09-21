@@ -69,13 +69,13 @@ Route::middleware('throttle:60,1')->group(function () {
                 $version = trim($matches[1]);
             }
         }
-        $forceUpdate = filter_var(env('APP_FORCE_UPDATE', false), FILTER_VALIDATE_BOOLEAN);
+        $forceUpdate = (bool) config('services.app_updates.force_update', false);
         return response()->json([
             'version' => $version,
             'force_update' => $forceUpdate,
-            'play_store_url' => env('PLAY_STORE_URL', 'https://play.google.com/store/apps/details?id=com.amiga.travel.flutter_app'),
-            'app_store_url' => env('APP_STORE_URL', 'https://apps.apple.com/app/amiga-gracia/id6470000000'),
-            'app_gallery_url' => env('APP_GALLERY_URL', 'https://appgallery.huawei.com/app/C100000000'),
+            'play_store_url' => config('services.app_updates.play_store_url', 'https://play.google.com/store/apps/details?id=com.amiga.travel.flutter_app'),
+            'app_store_url' => config('services.app_updates.app_store_url', 'https://apps.apple.com/app/amiga-gracia/id6470000000'),
+            'app_gallery_url' => config('services.app_updates.app_gallery_url', 'https://appgallery.huawei.com/app/C100000000'),
         ]);
     });
 });

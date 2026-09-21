@@ -18,8 +18,8 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'phone', 'password', 'role', 'is_staff', 'is_admin', 'admin_permissions', 'api_token', 'referral_code', 'referred_by', 'referral_redeemed', 'welcome_bonus_claimed', 'deletion_scheduled_at', 'deletion_reason', 'deletion_feedback'])]
-#[Hidden(['password', 'remember_token'])]
+#[Fillable(['name', 'email', 'phone', 'password', 'role', 'is_staff', 'is_admin', 'is_app_user', 'admin_permissions', 'api_token', 'referral_code', 'referred_by', 'referral_redeemed', 'welcome_bonus_claimed', 'deletion_scheduled_at', 'deletion_reason', 'deletion_feedback'])]
+#[Hidden(['password', 'remember_token', 'api_token'])]
 class User extends Authenticatable implements FilamentUser
 {
     public const PERMISSION_GROUPS = [
@@ -118,6 +118,7 @@ class User extends Authenticatable implements FilamentUser
         'password' => 'hashed',
         'is_staff' => 'boolean',
         'is_admin' => 'boolean',
+        'is_app_user' => 'boolean',
         'admin_permissions' => 'array',
         'deletion_scheduled_at' => 'datetime',
     ];

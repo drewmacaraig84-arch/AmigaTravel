@@ -42,7 +42,7 @@ class PurgeExpiredSchedulesTest extends TestCase
 
         $this->artisan('schedules:purge-expired')->assertExitCode(0);
 
-        $this->assertDatabaseMissing('schedules', ['id' => $expired->id]);
-        $this->assertDatabaseHas('schedules', ['id' => $active->id]);
+        $this->assertDatabaseHas('schedules', ['id' => $expired->id, 'is_active' => false]);
+        $this->assertDatabaseHas('schedules', ['id' => $active->id, 'is_active' => true]);
     }
 }

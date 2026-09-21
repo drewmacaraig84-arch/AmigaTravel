@@ -61,9 +61,9 @@ class BackupDatabase extends Command
             $this->cleanupOldBackups($backupDir, $retentionDays);
 
             // 2. Optional: Email backup file
-            $backupEmail = env('BACKUP_EMAIL');
+            $backupEmail = config('mail.backup_recipient') ?: env('BACKUP_EMAIL');
             if ($this->option('email') || ! empty($backupEmail)) {
-                $recipient = $backupEmail ?: env('MAIL_FROM_ADDRESS');
+                $recipient = $backupEmail ?: (config('mail.from.address') ?: env('MAIL_FROM_ADDRESS'));
                 if ($recipient && $fileSize < 20 * 1024 * 1024) { // Only email if under 20MB
                     $this->emailBackup($filePath, $filename, $formattedSize, $recipient);
                 } elseif ($fileSize >= 20 * 1024 * 1024) {

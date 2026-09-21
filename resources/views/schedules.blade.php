@@ -157,17 +157,17 @@
 
     {{-- Mode Filter Tabs --}}
     <div class="bg-white/70 backdrop-blur-md rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-100 p-2 flex flex-wrap gap-2">
-        <button @click="activeFilter = 'all'" :class="activeFilter === 'all' ? 'bg-[#216417] text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'" class="flex-1 sm:flex-none rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-200 min-w-[100px]">
+        <button type="button" @click="activeFilter = 'all'" :class="activeFilter === 'all' ? 'bg-[#216417] text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'" class="flex-1 sm:flex-none rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-200 min-w-[100px]">
             All Routes
         </button>
         @if($ferryRoutes > 0)
-        <button @click="activeFilter = 'ferry'" :class="activeFilter === 'ferry' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'" class="flex-1 sm:flex-none rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 min-w-[100px]">
+        <button type="button" @click="activeFilter = 'ferry'" :class="activeFilter === 'ferry' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'" class="flex-1 sm:flex-none rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 min-w-[100px]">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7l6-3 6 3 6-3v13l-6 3-6-3-6 3V7z"/></svg>
             Ferry
         </button>
         @endif
         @if($airlineRoutes > 0)
-        <button @click="activeFilter = 'airline'" :class="activeFilter === 'airline' ? 'bg-amber-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'" class="flex-1 sm:flex-none rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 min-w-[100px]">
+        <button type="button" @click="activeFilter = 'airline'" :class="activeFilter === 'airline' ? 'bg-amber-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'" class="flex-1 sm:flex-none rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 min-w-[100px]">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
             Airline
         </button>
@@ -261,12 +261,12 @@
                                 </style>
                                 
                                 {{-- Prev Button --}}
-                                <button x-show="pages > 1" @click="goToPage(Math.max(0, activeSlide - 1))" class="absolute -left-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-white rounded-full shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-slate-100 flex items-center justify-center text-slate-600 hover:text-[#216417] hover:border-[#216417] transition-all opacity-0 group-hover:opacity-100 disabled:opacity-0 disabled:cursor-not-allowed" :disabled="activeSlide === 0">
+                                <button type="button" x-show="pages > 1" @click="goToPage(Math.max(0, activeSlide - 1))" class="absolute -left-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-white rounded-full shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-slate-100 flex items-center justify-center text-slate-600 hover:text-[#216417] hover:border-[#216417] transition-all opacity-0 group-hover:opacity-100 disabled:opacity-0 disabled:cursor-not-allowed" :disabled="activeSlide === 0">
                                     <svg class="w-5 h-5 pr-0.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
                                 </button>
                                 
                                 {{-- Next Button --}}
-                                <button x-show="pages > 1" @click="goToPage(Math.min(pages - 1, activeSlide + 1))" class="absolute -right-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-white rounded-full shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-slate-100 flex items-center justify-center text-slate-600 hover:text-[#216417] hover:border-[#216417] transition-all opacity-0 group-hover:opacity-100 disabled:opacity-0 disabled:cursor-not-allowed" :disabled="activeSlide === pages - 1">
+                                <button type="button" x-show="pages > 1" @click="goToPage(Math.min(pages - 1, activeSlide + 1))" class="absolute -right-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-white rounded-full shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-slate-100 flex items-center justify-center text-slate-600 hover:text-[#216417] hover:border-[#216417] transition-all opacity-0 group-hover:opacity-100 disabled:opacity-0 disabled:cursor-not-allowed" :disabled="activeSlide === pages - 1">
                                     <svg class="w-5 h-5 pl-0.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
                                 </button>
 

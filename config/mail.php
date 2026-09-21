@@ -125,4 +125,6 @@ return [
         'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
     ],
 
+    'backup_recipient' => env('BACKUP_EMAIL'),
+
 ];

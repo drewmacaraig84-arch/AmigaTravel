@@ -10,6 +10,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (app()->environment('testing')) {
+            return;
+        }
+
         Artisan::call('schedules:extend-2go', [
             '--until' => '2026-12-31',
         ]);
