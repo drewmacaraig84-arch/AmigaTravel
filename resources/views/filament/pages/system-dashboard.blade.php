@@ -201,6 +201,375 @@
         .dark .search-input-field::placeholder {
             color: #64748b !important;
         }
+
+        /* ═══ Theme-Adaptive Spec & Stat Cards ═══ */
+        .spec-stat-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.875rem;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            transition: all 0.2s ease-in-out;
+        }
+        .dark .spec-stat-card {
+            background: #090e17;
+            border: 1px solid #1e293b;
+        }
+        .spec-stat-card:hover {
+            border-color: #cbd5e1;
+        }
+        .dark .spec-stat-card:hover {
+            border-color: #334155;
+        }
+
+        .spec-stat-label {
+            font-weight: 600;
+            font-size: 0.75rem;
+            display: block;
+            margin-bottom: 0.25rem;
+            color: #64748b;
+        }
+        .dark .spec-stat-label {
+            color: #94a3b8;
+        }
+
+        .spec-stat-value {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .dark .spec-stat-value {
+            color: #f8fafc;
+        }
+        .spec-stat-cyan {
+            color: #0e7490;
+        }
+        .dark .spec-stat-cyan {
+            color: #67e8f9;
+        }
+        .spec-stat-amber {
+            color: #b45309;
+        }
+        .dark .spec-stat-amber {
+            color: #fcd34d;
+        }
+
+        .badge-dev-debug {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fcd34d;
+        }
+        .dark .badge-dev-debug {
+            background: rgba(245, 158, 11, 0.18);
+            color: #fcd34d;
+            border: 1px solid rgba(245, 158, 11, 0.35);
+        }
+
+        .badge-secure-prod {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #6ee7b7;
+        }
+        .dark .badge-secure-prod {
+            background: rgba(16, 185, 129, 0.18);
+            color: #6ee7b7;
+            border: 1px solid rgba(16, 185, 129, 0.35);
+        }
+
+        /* ═══ Theme-Adaptive Tab Buttons ═══ */
+        .tab-btn-base {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.625rem;
+            padding: 0.875rem 1rem;
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+            width: 100%;
+            text-align: center;
+        }
+
+        .tab-btn-inactive {
+            background: #ffffff !important;
+            border: 1px solid #e2e8f0 !important;
+            color: #475569 !important;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+        }
+        .dark .tab-btn-inactive {
+            background: #0f172a !important;
+            border: 1px solid #1e293b !important;
+            color: #94a3b8 !important;
+        }
+        .tab-btn-inactive:hover {
+            background: #f8fafc !important;
+            color: #0f172a !important;
+            border-color: #cbd5e1 !important;
+        }
+        .dark .tab-btn-inactive:hover {
+            background: #1e293b !important;
+            color: #ffffff !important;
+            border-color: #334155 !important;
+        }
+
+        /* ═══ Theme-Adaptive Header Buttons ═══ */
+        .header-btn-download {
+            background: #ffffff;
+            color: #334155;
+            border: 1px solid #cbd5e1;
+        }
+        .header-btn-download:hover {
+            background: #f8fafc;
+            color: #0f172a;
+        }
+        .dark .header-btn-download {
+            background: #1e293b;
+            color: #f1f5f9;
+            border: 1px solid #334155;
+        }
+        .dark .header-btn-download:hover {
+            background: #334155;
+            color: #ffffff;
+        }
+
+        /* ═══ Theme-Adaptive Log Filter Buttons ═══ */
+        .log-filter-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            transition: all 0.15s ease-in-out;
+            cursor: pointer;
+        }
+        .log-filter-all-inactive {
+            background: #f1f5f9;
+            color: #475569;
+            border: 1px solid #cbd5e1;
+        }
+        .dark .log-filter-all-inactive {
+            background: #0f172a;
+            color: #94a3b8;
+            border: 1px solid #1e293b;
+        }
+        .log-filter-all-inactive:hover {
+            background: #e2e8f0;
+        }
+        .dark .log-filter-all-inactive:hover {
+            background: #1e293b;
+            color: #ffffff;
+        }
+
+        .log-filter-critical-inactive {
+            background: #fff1f2;
+            color: #be123c;
+            border: 1px solid #fecdd3;
+        }
+        .dark .log-filter-critical-inactive {
+            background: rgba(190, 18, 60, 0.15);
+            color: #fb7185;
+            border: 1px solid rgba(244, 63, 94, 0.3);
+        }
+        .dark .log-filter-critical-inactive:hover {
+            background: rgba(190, 18, 60, 0.25);
+        }
+
+        .log-filter-error-inactive {
+            background: #fef2f2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+        }
+        .dark .log-filter-error-inactive {
+            background: rgba(185, 28, 28, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        .dark .log-filter-error-inactive:hover {
+            background: rgba(185, 28, 28, 0.25);
+        }
+
+        .log-filter-warning-inactive {
+            background: #fffbeb;
+            color: #b45309;
+            border: 1px solid #fde68a;
+        }
+        .dark .log-filter-warning-inactive {
+            background: rgba(180, 83, 9, 0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+        .dark .log-filter-warning-inactive:hover {
+            background: rgba(180, 83, 9, 0.25);
+        }
+
+        .log-filter-info-inactive {
+            background: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+        }
+        .dark .log-filter-info-inactive {
+            background: rgba(29, 78, 216, 0.15);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+        .dark .log-filter-info-inactive:hover {
+            background: rgba(29, 78, 216, 0.25);
+        }
+
+        /* ═══ Theme-Adaptive Action Buttons ═══ */
+        .btn-purge-action {
+            background: #fff1f2;
+            color: #e11d48;
+            border: 1px solid #fecdd3;
+        }
+        .btn-purge-action:hover {
+            background: #ffe4e6;
+        }
+        .dark .btn-purge-action {
+            background: rgba(225, 29, 72, 0.15);
+            color: #fb7185;
+            border: 1px solid rgba(225, 29, 72, 0.3);
+        }
+        .dark .btn-purge-action:hover {
+            background: rgba(225, 29, 72, 0.25);
+        }
+
+        .btn-view-trace {
+            color: #d97706;
+            transition: color 0.15s ease-in-out;
+        }
+        .btn-view-trace:hover {
+            color: #b45309;
+            text-decoration: underline;
+        }
+        .dark .btn-view-trace {
+            color: #fbbf24;
+        }
+        .dark .btn-view-trace:hover {
+            color: #fde68a;
+            text-decoration: underline;
+        }
+
+        .dispatcher-panel-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+        }
+        .dark .dispatcher-panel-card {
+            background: #020617;
+            border: 1px solid #1e293b;
+        }
+
+        /* ═══ Theme-Adaptive Tables ═══ */
+        .dashboard-table-container {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+        }
+        .dark .dashboard-table-container {
+            background: #0b1120;
+            border: 1px solid #1e293b;
+        }
+        .dashboard-table-head {
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            color: #475569;
+        }
+        .dark .dashboard-table-head {
+            background: #090e17;
+            border-bottom: 1px solid #1e293b;
+            color: #94a3b8;
+        }
+        .dashboard-table-row {
+            border-bottom: 1px solid #f1f5f9;
+            transition: background-color 0.15s ease-in-out;
+        }
+        .dark .dashboard-table-row {
+            border-bottom: 1px solid #1e293b;
+        }
+        .dashboard-table-row:hover {
+            background-color: #f8fafc;
+        }
+        .dark .dashboard-table-row:hover {
+            background-color: #1e293b;
+        }
+
+        /* ═══ Theme-Adaptive Inspector Modal ═══ */
+        .inspector-modal-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+        }
+        .dark .inspector-modal-card {
+            background: #0f172a;
+            border: 1px solid #1e293b;
+        }
+        .inspector-modal-header {
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .dark .inspector-modal-header {
+            background: #090e17;
+            border-bottom: 1px solid #1e293b;
+        }
+        .inspector-modal-footer {
+            background: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+        }
+        .dark .inspector-modal-footer {
+            background: #090e17;
+            border-top: 1px solid #1e293b;
+        }
+        .inspector-modal-close-btn {
+            color: #94a3b8;
+            transition: all 0.15s ease-in-out;
+        }
+        .inspector-modal-close-btn:hover {
+            color: #0f172a;
+            background-color: #f1f5f9;
+        }
+        .dark .inspector-modal-close-btn:hover {
+            color: #ffffff;
+            background-color: #1e293b;
+        }
+        .inspector-msg-box {
+            background: #f0f9ff;
+            color: #0369a1;
+            border: 1px solid #bae6fd;
+        }
+        .dark .inspector-msg-box {
+            background: #041021;
+            color: #7dd3fc;
+            border: 1px solid #075985;
+        }
+        .inspector-trace-box {
+            background: #f8fafc;
+            color: #334155;
+            border: 1px solid #e2e8f0;
+        }
+        .dark .inspector-trace-box {
+            background: #020617;
+            color: #cbd5e1;
+            border: 1px solid #1e293b;
+        }
+
+        .btn-inspector-close {
+            background: #e2e8f0;
+            color: #1e293b;
+            border: 1px solid #cbd5e1;
+        }
+        .btn-inspector-close:hover {
+            background: #cbd5e1;
+        }
+        .dark .btn-inspector-close {
+            background: #1e293b;
+            color: #f1f5f9;
+            border: 1px solid #334155;
+        }
+        .dark .btn-inspector-close:hover {
+            background: #334155;
+        }
     </style>
 
     <div class="w-full max-w-full pb-10">
@@ -242,7 +611,7 @@
                         <span>Refresh Telemetry</span>
                     </button>
 
-                    <button wire:click="downloadLog" type="button" class="inline-flex items-center justify-center gap-2.5 rounded-xl bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 dark:border-slate-700 px-6 py-2.5 text-xs font-bold transition-all shadow-sm active:scale-95 whitespace-nowrap">
+                    <button wire:click="downloadLog" type="button" class="header-btn-download inline-flex items-center justify-center gap-2.5 rounded-xl px-6 py-2.5 text-xs font-bold transition-all shadow-sm active:scale-95 whitespace-nowrap">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500 dark:text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                         </svg>
@@ -423,24 +792,24 @@
                     </div>
 
                     <div class="super-admin-specs-grid flex-1">
-                        <div class="p-4 rounded-xl bg-gray-50 dark:bg-slate-950/80 border border-gray-200 dark:border-slate-800 flex flex-col justify-center">
-                            <span class="font-semibold text-gray-500 dark:text-slate-400 text-xs block mb-1">Operating System</span>
-                            <span class="font-mono text-gray-900 dark:text-white text-xs font-bold">{{ $metrics['runtime']['os'] ?? PHP_OS_FAMILY }}</span>
+                        <div class="spec-stat-card">
+                            <span class="spec-stat-label">Operating System</span>
+                            <span class="spec-stat-value">{{ $metrics['runtime']['os'] ?? PHP_OS_FAMILY }}</span>
                         </div>
 
-                        <div class="p-4 rounded-xl bg-gray-50 dark:bg-slate-950/80 border border-gray-200 dark:border-slate-800 flex flex-col justify-center">
-                            <span class="font-semibold text-gray-500 dark:text-slate-400 text-xs block mb-1">Server Local Time</span>
-                            <span class="font-mono text-cyan-700 dark:text-cyan-300 text-xs font-bold">{{ $metrics['runtime']['current_time'] ?? now()->toDayDateTimeString() }}</span>
+                        <div class="spec-stat-card">
+                            <span class="spec-stat-label">Server Local Time</span>
+                            <span class="spec-stat-value spec-stat-cyan">{{ $metrics['runtime']['current_time'] ?? now()->toDayDateTimeString() }}</span>
                         </div>
 
-                        <div class="p-4 rounded-xl bg-gray-50 dark:bg-slate-950/80 border border-gray-200 dark:border-slate-800 flex flex-col justify-center">
-                            <span class="font-semibold text-gray-500 dark:text-slate-400 text-xs block mb-1">Queue & Cache Engine</span>
-                            <span class="font-mono text-amber-700 dark:text-amber-300 text-xs font-bold uppercase">{{ $metrics['queue']['driver'] ?? 'database' }} &bull; {{ $metrics['queue']['cache_driver'] ?? 'file' }}</span>
+                        <div class="spec-stat-card">
+                            <span class="spec-stat-label">Queue & Cache Engine</span>
+                            <span class="spec-stat-value spec-stat-amber uppercase">{{ $metrics['queue']['driver'] ?? 'database' }} &bull; {{ $metrics['queue']['cache_driver'] ?? 'file' }}</span>
                         </div>
 
-                        <div class="p-4 rounded-xl bg-gray-50 dark:bg-slate-950/80 border border-gray-200 dark:border-slate-800 flex flex-col justify-center">
-                            <span class="font-semibold text-gray-500 dark:text-slate-400 text-xs block mb-1.5">Debug Mode</span>
-                            <span class="inline-flex items-center px-2.5 py-1 rounded text-[11px] font-bold uppercase w-fit {{ !empty($metrics['runtime']['debug_mode']) ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/30' : 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/30' }}">
+                        <div class="spec-stat-card">
+                            <span class="spec-stat-label mb-1.5">Debug Mode</span>
+                            <span class="inline-flex items-center px-2.5 py-1 rounded text-[11px] font-bold uppercase w-fit {{ !empty($metrics['runtime']['debug_mode']) ? 'badge-dev-debug' : 'badge-secure-prod' }}">
                                 {{ !empty($metrics['runtime']['debug_mode']) ? 'DEV DEBUG' : 'SECURE PROD' }}
                             </span>
                         </div>
@@ -451,14 +820,14 @@
 
         {{-- ═══ Full-Width 4-Column Tab Picker Bar ═══ --}}
         <div class="super-admin-tab-grid">
-            <button wire:click="setTab('health')" type="button" class="inline-flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-2xl text-xs font-bold transition-all {{ $activeTab === 'health' ? 'tab-btn-active' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 shadow-sm dark:bg-slate-900/90 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800' }}">
+            <button wire:click="setTab('health')" type="button" class="tab-btn-base {{ $activeTab === 'health' ? 'tab-btn-active' : 'tab-btn-inactive' }}">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 {{ $activeTab === 'health' ? 'text-white' : 'text-amber-500 dark:text-amber-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
                 <span class="truncate">Database Storage Architecture</span>
             </button>
 
-            <button wire:click="setTab('logs')" type="button" class="inline-flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-2xl text-xs font-bold transition-all {{ $activeTab === 'logs' ? 'tab-btn-active' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 shadow-sm dark:bg-slate-900/90 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800' }}">
+            <button wire:click="setTab('logs')" type="button" class="tab-btn-base {{ $activeTab === 'logs' ? 'tab-btn-active' : 'tab-btn-inactive' }}">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 {{ $activeTab === 'logs' ? 'text-white' : 'text-rose-500 dark:text-rose-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
@@ -473,14 +842,14 @@
                 @endif
             </button>
 
-            <button wire:click="setTab('audits')" type="button" class="inline-flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-2xl text-xs font-bold transition-all {{ $activeTab === 'audits' ? 'tab-btn-active' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 shadow-sm dark:bg-slate-900/90 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800' }}">
+            <button wire:click="setTab('audits')" type="button" class="tab-btn-base {{ $activeTab === 'audits' ? 'tab-btn-active' : 'tab-btn-inactive' }}">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 {{ $activeTab === 'audits' ? 'text-white' : 'text-emerald-500 dark:text-emerald-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
                 <span class="truncate">Security & Login Audit Trail</span>
             </button>
 
-            <button wire:click="setTab('alerts')" type="button" class="inline-flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-2xl text-xs font-bold transition-all {{ $activeTab === 'alerts' ? 'tab-btn-active' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 shadow-sm dark:bg-slate-900/90 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800' }}">
+            <button wire:click="setTab('alerts')" type="button" class="tab-btn-base {{ $activeTab === 'alerts' ? 'tab-btn-active' : 'tab-btn-inactive' }}">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 {{ $activeTab === 'alerts' ? 'text-white' : 'text-cyan-500 dark:text-cyan-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
@@ -501,9 +870,9 @@
                     </span>
                 </div>
 
-                <div class="overflow-x-auto rounded-2xl border border-gray-200 dark:border-slate-800 bg-gray-50/40 dark:bg-slate-950/40">
+                <div class="overflow-x-auto rounded-2xl dashboard-table-container">
                     <table class="w-full text-left text-xs">
-                        <thead class="bg-gray-100/90 dark:bg-slate-950 border-b border-gray-200 dark:border-slate-800 text-gray-600 dark:text-slate-400 uppercase tracking-wider font-semibold">
+                        <thead class="dashboard-table-head uppercase tracking-wider font-semibold">
                             <tr>
                                 <th class="px-6 py-4">Table Name</th>
                                 <th class="px-6 py-4">Estimated Rows</th>
@@ -513,9 +882,9 @@
                                 <th class="px-6 py-4 text-right">Engine</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-200 dark:divide-slate-800/60">
+                        <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
                             @forelse($databaseTables as $table)
-                                <tr class="hover:bg-gray-100/60 dark:hover:bg-slate-800/40 transition-colors">
+                                <tr class="dashboard-table-row">
                                     <td class="px-6 py-4 font-mono text-cyan-700 dark:text-cyan-300 font-bold flex items-center gap-2.5">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400 dark:text-slate-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -549,19 +918,19 @@
                 <div class="dashboard-box p-6 space-y-4">
                     {{-- Row 1: Severity Filter Pills --}}
                     <div class="flex items-center gap-2 flex-wrap pb-1">
-                        <button wire:click="setLevelFilter('all')" type="button" class="px-4 py-2 rounded-xl text-xs font-bold transition-all {{ $levelFilter === 'all' ? 'bg-amber-600 text-white shadow-sm' : 'bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-800 dark:hover:bg-slate-800' }}">
+                        <button wire:click="setLevelFilter('all')" type="button" class="log-filter-btn {{ $levelFilter === 'all' ? 'bg-amber-600 text-white shadow-sm' : 'log-filter-all-inactive' }}">
                             All ({{ $logData['counts']['all'] ?? 0 }})
                         </button>
-                        <button wire:click="setLevelFilter('critical')" type="button" class="px-4 py-2 rounded-xl text-xs font-bold transition-all {{ $levelFilter === 'critical' ? 'bg-rose-600 text-white shadow-sm' : 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/30 dark:hover:bg-rose-500/20' }}">
+                        <button wire:click="setLevelFilter('critical')" type="button" class="log-filter-btn {{ $levelFilter === 'critical' ? 'bg-rose-600 text-white shadow-sm' : 'log-filter-critical-inactive' }}">
                             Critical ({{ $logData['counts']['critical'] ?? 0 }})
                         </button>
-                        <button wire:click="setLevelFilter('error')" type="button" class="px-4 py-2 rounded-xl text-xs font-bold transition-all {{ $levelFilter === 'error' ? 'bg-red-600 text-white shadow-sm' : 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/30 dark:hover:bg-red-500/20' }}">
+                        <button wire:click="setLevelFilter('error')" type="button" class="log-filter-btn {{ $levelFilter === 'error' ? 'bg-red-600 text-white shadow-sm' : 'log-filter-error-inactive' }}">
                             Error ({{ $logData['counts']['error'] ?? 0 }})
                         </button>
-                        <button wire:click="setLevelFilter('warning')" type="button" class="px-4 py-2 rounded-xl text-xs font-bold transition-all {{ $levelFilter === 'warning' ? 'bg-amber-600 text-white shadow-sm' : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/30 dark:hover:bg-amber-500/20' }}">
+                        <button wire:click="setLevelFilter('warning')" type="button" class="log-filter-btn {{ $levelFilter === 'warning' ? 'bg-amber-600 text-white shadow-sm' : 'log-filter-warning-inactive' }}">
                             Warning ({{ $logData['counts']['warning'] ?? 0 }})
                         </button>
-                        <button wire:click="setLevelFilter('info')" type="button" class="px-4 py-2 rounded-xl text-xs font-bold transition-all {{ $levelFilter === 'info' ? 'bg-blue-600 text-white shadow-sm' : 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/30 dark:hover:bg-blue-500/20' }}">
+                        <button wire:click="setLevelFilter('info')" type="button" class="log-filter-btn {{ $levelFilter === 'info' ? 'bg-blue-600 text-white shadow-sm' : 'log-filter-info-inactive' }}">
                             Info ({{ $logData['counts']['info'] ?? 0 }})
                         </button>
                     </div>
@@ -577,7 +946,7 @@
                             <input wire:model.live.debounce.300ms="searchQuery" type="text" placeholder="Search error logs by message, exception, or timestamp..." class="search-input-field" />
                         </div>
 
-                        <button wire:click="clearLogFile" wire:confirm="Are you sure you want to purge and clear the laravel.log file?" type="button" class="inline-flex items-center justify-center gap-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 dark:text-rose-400 dark:border-rose-500/30 px-5 py-2.5 text-xs font-bold transition-all shrink-0 active:scale-95 whitespace-nowrap">
+                        <button wire:click="clearLogFile" wire:confirm="Are you sure you want to purge and clear the laravel.log file?" type="button" class="btn-purge-action inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold transition-all shrink-0 active:scale-95 whitespace-nowrap">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
@@ -588,9 +957,9 @@
 
                 {{-- Table --}}
                 <div class="dashboard-box p-6 md:p-8">
-                    <div class="overflow-x-auto rounded-2xl border border-gray-200 dark:border-slate-800 bg-gray-50/40 dark:bg-slate-950/40">
+                    <div class="overflow-x-auto rounded-2xl dashboard-table-container">
                         <table class="w-full text-left text-xs">
-                            <thead class="bg-gray-100/90 dark:bg-slate-950 border-b border-gray-200 dark:border-slate-800 text-gray-600 dark:text-slate-400 uppercase tracking-wider font-semibold">
+                            <thead class="dashboard-table-head uppercase tracking-wider font-semibold">
                                 <tr>
                                     <th class="px-6 py-4 w-44">Timestamp</th>
                                     <th class="px-5 py-4 w-28">Severity</th>
@@ -599,9 +968,9 @@
                                     <th class="px-6 py-4 text-right w-36">Action</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-gray-200 dark:divide-slate-800/60">
+                            <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
                                 @forelse($logData['entries'] as $entry)
-                                    <tr class="hover:bg-gray-100/60 dark:hover:bg-slate-800/40 transition-colors">
+                                    <tr class="dashboard-table-row">
                                         <td class="px-6 py-4 font-mono text-gray-500 dark:text-slate-400 whitespace-nowrap">
                                             {{ $entry['timestamp'] }}
                                         </td>
@@ -624,11 +993,12 @@
                                         </td>
                                         <td class="px-6 py-4 text-right whitespace-nowrap">
                                             @if(!empty($entry['trace']) || strlen($entry['message']) > 100)
-                                                <button wire:click="viewLogDetails('{{ $entry['id'] }}')" type="button" class="inline-flex items-center gap-1 text-xs font-bold text-amber-600 hover:text-amber-500 dark:text-amber-400 dark:hover:text-amber-300 hover:underline">
-                                                    Inspect Trace &rarr;
+                                                <button wire:click="viewLogDetails('{{ $entry['id'] }}')" type="button" class="btn-view-trace inline-flex items-center gap-1 text-xs font-bold">
+                                                    <span>Inspect Trace</span>
+                                                    <span>&rarr;</span>
                                                 </button>
                                             @else
-                                                <span class="text-gray-400 dark:text-slate-600 text-xs">-</span>
+                                                <span class="text-gray-400 dark:text-gray-600 text-xs">-</span>
                                             @endif
                                         </td>
                                     </tr>
@@ -665,9 +1035,9 @@
                     </span>
                 </div>
 
-                <div class="overflow-x-auto rounded-2xl border border-gray-200 dark:border-slate-800 bg-gray-50/40 dark:bg-slate-950/40">
+                <div class="overflow-x-auto rounded-2xl dashboard-table-container">
                     <table class="w-full text-left text-xs">
-                        <thead class="bg-gray-100/90 dark:bg-slate-950 border-b border-gray-200 dark:border-slate-800 text-gray-600 dark:text-slate-400 uppercase tracking-wider font-semibold">
+                        <thead class="dashboard-table-head uppercase tracking-wider font-semibold">
                             <tr>
                                 <th class="px-6 py-4">User / Account</th>
                                 <th class="px-6 py-4">Role</th>
@@ -677,9 +1047,9 @@
                                 <th class="px-6 py-4 text-right">Login Time</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-200 dark:divide-slate-800/60">
+                        <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
                             @forelse($loginAudits as $audit)
-                                <tr class="hover:bg-gray-100/60 dark:hover:bg-slate-800/40 transition-colors">
+                                <tr class="dashboard-table-row">
                                     <td class="px-6 py-4">
                                         <div class="font-bold text-gray-900 dark:text-white">{{ $audit['user_name'] }}</div>
                                         <div class="text-[11px] text-gray-500 dark:text-slate-400 font-mono mt-0.5">{{ $audit['email'] }}</div>
@@ -731,7 +1101,7 @@
                     </div>
                 </div>
 
-                <div class="p-6 rounded-2xl bg-gray-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800">
+                <div class="p-6 rounded-2xl dispatcher-panel-card">
                     <label class="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-slate-300 mb-2.5">
                         Super Admin Alert Recipient Email
                     </label>
@@ -753,7 +1123,7 @@
                 </div>
 
                 <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                    <div class="p-5 rounded-xl bg-gray-50 dark:bg-slate-950/60 border border-gray-200 dark:border-slate-800">
+                    <div class="p-5 rounded-xl dispatcher-panel-card">
                         <h4 class="font-bold text-gray-900 dark:text-slate-200 mb-1.5 flex items-center gap-2">
                             <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
                             Smart Incident Throttling
@@ -763,7 +1133,7 @@
                         </p>
                     </div>
 
-                    <div class="p-5 rounded-xl bg-gray-50 dark:bg-slate-950/60 border border-gray-200 dark:border-slate-800">
+                    <div class="p-5 rounded-xl dispatcher-panel-card">
                         <h4 class="font-bold text-gray-900 dark:text-slate-200 mb-1.5 flex items-center gap-2">
                             <span class="h-2 w-2 rounded-full bg-amber-400"></span>
                             Full Trace & Context
@@ -780,18 +1150,18 @@
     {{-- ═══ Full Screen Stack Trace / Log Details Modal (Root Level) ═══ --}}
     @if($selectedLog)
         <div class="fixed inset-0 flex items-center justify-center p-4 sm:p-6" style="position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 999999 !important; background-color: rgba(15, 23, 42, 0.65) !important; backdrop-filter: blur(8px) !important;">
-            <div class="rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700">
+            <div class="inspector-modal-card rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
                 
                 {{-- Modal Header --}}
-                <div class="px-7 py-5 flex items-center justify-between bg-gray-50 dark:bg-slate-950 border-b border-gray-200 dark:border-slate-800">
+                <div class="inspector-modal-header px-7 py-5 flex items-center justify-between">
                     <div class="flex items-center gap-3">
                         <span class="inline-flex items-center px-3 py-1 rounded text-xs font-extrabold uppercase {{ $selectedLog['level'] === 'INFO' ? 'bg-blue-600' : ($selectedLog['level'] === 'WARNING' ? 'bg-amber-600' : 'bg-rose-600') }} text-white shadow-sm">
                             {{ $selectedLog['level'] }}
                         </span>
-                        <span class="text-xs font-mono text-gray-700 dark:text-slate-300">{{ $selectedLog['timestamp'] }}</span>
-                        <span class="text-xs font-mono text-gray-600 dark:text-slate-400 bg-gray-100 dark:bg-slate-800 px-2.5 py-0.5 rounded border border-gray-200 dark:border-slate-700">{{ $selectedLog['environment'] ?? 'production' }}</span>
+                        <span class="text-xs font-mono text-gray-700 dark:text-gray-300">{{ $selectedLog['timestamp'] }}</span>
+                        <span class="text-xs font-mono text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2.5 py-0.5 rounded border border-gray-200 dark:border-gray-700">{{ $selectedLog['environment'] ?? 'production' }}</span>
                     </div>
-                    <button wire:click="closeLogDetails" type="button" class="text-gray-400 hover:text-gray-700 dark:text-slate-400 dark:hover:text-white transition-colors p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800">
+                    <button wire:click="closeLogDetails" type="button" class="inspector-modal-close-btn p-1.5 rounded-lg">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -801,27 +1171,27 @@
                 {{-- Modal Body --}}
                 <div class="px-7 py-6 overflow-y-auto overflow-x-hidden space-y-5 text-xs">
                     <div>
-                        <span class="text-[11px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider block mb-2">
+                        <span class="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider block mb-2">
                             Incident Message & Log Output
                         </span>
-                        <div class="p-4 rounded-xl font-mono text-xs leading-relaxed bg-sky-50 dark:bg-slate-950 border border-sky-200 dark:border-slate-800 text-sky-800 dark:text-sky-300" style="word-break: break-word !important; overflow-wrap: anywhere !important; white-space: pre-wrap !important;">
+                        <div class="inspector-msg-box p-4 rounded-xl font-mono text-xs leading-relaxed" style="word-break: break-word !important; overflow-wrap: anywhere !important; white-space: pre-wrap !important;">
                             {{ $selectedLog['message'] }}
                         </div>
                     </div>
 
                     @if(!empty($selectedLog['trace']))
                         <div>
-                            <span class="text-[11px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider block mb-2">
+                            <span class="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider block mb-2">
                                 Stack Trace & Call Stack
                             </span>
-                            <pre class="p-4 rounded-xl font-mono text-gray-800 dark:text-slate-300 text-[11px] leading-relaxed max-h-60 overflow-y-auto bg-gray-100 dark:bg-black border border-gray-200 dark:border-slate-800" style="word-break: break-word !important; overflow-wrap: anywhere !important; white-space: pre-wrap !important;">{{ $selectedLog['trace'] }}</pre>
+                            <pre class="inspector-trace-box p-4 rounded-xl font-mono text-[11px] leading-relaxed max-h-60 overflow-y-auto" style="word-break: break-word !important; overflow-wrap: anywhere !important; white-space: pre-wrap !important;">{{ $selectedLog['trace'] }}</pre>
                         </div>
                     @endif
                 </div>
 
                 {{-- Modal Footer --}}
-                <div class="px-7 py-4 flex justify-end bg-gray-50 dark:bg-slate-950 border-t border-gray-200 dark:border-slate-800">
-                    <button wire:click="closeLogDetails" type="button" class="px-6 py-2.5 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-white font-bold text-xs transition-colors border border-gray-300 dark:border-slate-700 shadow-sm active:scale-95">
+                <div class="inspector-modal-footer px-7 py-4 flex justify-end">
+                    <button wire:click="closeLogDetails" type="button" class="btn-inspector-close px-6 py-2.5 rounded-xl font-bold text-xs transition-colors shadow-sm active:scale-95">
                         Close Inspector
                     </button>
                 </div>
