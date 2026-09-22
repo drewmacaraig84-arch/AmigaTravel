@@ -80,9 +80,9 @@ class WebsiteSetting extends Model
         return \Illuminate\Support\Facades\Cache::remember('website_vouchers_enabled', 3600, function () {
             $setting = static::where('page', 'vouchers')->first();
             if (!$setting || !is_array($setting->content)) {
-                return true;
+                return false;
             }
-            return (bool) ($setting->content['enable_website_vouchers'] ?? true);
+            return (bool) ($setting->content['enable_website_vouchers'] ?? false);
         });
     }
 

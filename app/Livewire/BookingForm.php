@@ -61,56 +61,11 @@ class BookingForm extends Component
 
     public function applyVoucher(VoucherService $voucherService): void
     {
-        $this->voucherError = null;
+        $this->voucherError = 'Vouchers cannot be entered on the website. Please use the mobile app.';
         $this->voucherSuccess = null;
-
-        if (! \App\Models\WebsiteSetting::isWebsiteVouchersEnabled()) {
-            $this->voucherError = 'Vouchers are currently disabled on the website.';
-            return;
-        }
-
-        $code = strtoupper(trim($this->voucher_code));
-        if (empty($code)) {
-            $this->voucherError = 'Please enter a voucher code.';
-
-            return;
-        }
-
-        $bookingData = [
-            'trip_type' => $this->trip_type,
-            'mode' => $this->mode,
-            'operator' => $this->operator,
-            'origin' => $this->origin,
-            'destination' => $this->destination,
-            'departure_date' => $this->departure_date,
-            'return_date' => $this->return_date,
-            'schedule_id' => $this->selected_schedule_id,
-            'return_schedule_id' => $this->selected_return_schedule_id,
-            'selected_transport_class_id' => $this->selected_transport_class_id,
-            'selected_return_transport_class_id' => $this->selected_return_transport_class_id,
-            'selected_schedule_accommodation_id' => $this->selected_schedule_accommodation_id,
-            'selected_return_schedule_accommodation_id' => $this->selected_return_schedule_accommodation_id,
-            'passengers' => $this->passengers,
-            'has_vehicle' => $this->has_vehicle,
-            'vehicle_price' => $this->vehicle_price,
-            'accommodation_ids' => $this->selected_hotel_id ? [$this->selected_hotel_id] : [],
-            'client_email' => $this->client_email,
-            'user_id' => auth()->id(),
-            'promotional_ticket_id' => ($this->mode === 'airline') ? $this->getActivePromoTicket()?->id : null,
-        ];
-
-        $result = $voucherService->validateAndCalculate($code, $bookingData);
-
-        if (! $result['valid']) {
-            $this->appliedVoucher = null;
-            $this->voucherError = $result['message'];
-
-            return;
-        }
-
-        $this->appliedVoucher = $result;
-        $this->voucherSuccess = "Voucher '{$result['voucher_code']}' applied! You save ₱".number_format($result['discount_amount'], 2).'.';
-        $this->saveDraft();
+        $this->appliedVoucher = null;
+        $this->voucher_code = '';
+        return;
     }
 
     public function removeVoucher(): void
