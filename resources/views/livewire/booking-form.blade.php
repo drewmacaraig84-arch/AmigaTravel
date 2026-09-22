@@ -1822,6 +1822,7 @@
                                 @else
                                     <p class="mt-4 text-slate-500 italic">No return schedule selected yet.</p>
                                 @endif
+                            @endif
                         </div>
 
                         {{-- Price Breakdown --}}
