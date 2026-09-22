@@ -1603,9 +1603,14 @@ class BookingForm extends Component
 
     public function selectSchedule(int $scheduleId): void
     {
-        if ($this->has_vehicle) {
-            $schedule = Schedule::find($scheduleId);
-            if ($schedule && ! app(\App\Services\VehicleBookingPolicyService::class)->isScheduleEligible($schedule)) {
+        $schedule = Schedule::with('ferryRoute')->find($scheduleId);
+        if ($this->has_vehicle && $schedule) {
+            $route = $schedule->getFerryRouteModel() ?? $schedule->ferryRoute;
+            if ($route && ! StarliteScheduleIngestionService::isVehicleSupportedForRoute($route->origin, $route->destination)) {
+                $this->has_vehicle = false;
+                $this->vehicle_price = null;
+                $this->addError('selected_schedule_id', "Vehicle rolling cargo is not available on the {$route->origin} to {$route->destination} route (passenger ferry only).");
+            } elseif (! app(\App\Services\VehicleBookingPolicyService::class)->isScheduleEligible($schedule)) {
                 $this->addError('selected_schedule_id', 'Vehicle bookings require a minimum of 3 days (72 hours) advance notice prior to departure.');
                 return;
             }
@@ -1613,6 +1618,15 @@ class BookingForm extends Component
 
         $this->selected_schedule_id = $scheduleId;
         $this->selected_transport_class_id = null;
+
+        if ($this->has_vehicle) {
+            if ($this->vehicle_booking_method === 'category' && $this->selected_vehicle_rate_id) {
+                $this->updatedSelectedVehicleRateId($this->selected_vehicle_rate_id);
+            } elseif ($this->vehicle_booking_method === 'brand_model' && $this->selected_model_id) {
+                $this->updatedSelectedModelId($this->selected_model_id);
+            }
+        }
+
         $this->baggage_trip_type = $this->autoDetectBaggageScope();
         $this->selected_baggage_airline = $this->autoDetectBaggageAirline();
         $this->updateBaggagePriceFromRates();
@@ -1621,9 +1635,14 @@ class BookingForm extends Component
 
     public function selectReturnSchedule(int $scheduleId): void
     {
-        if ($this->has_vehicle) {
-            $schedule = Schedule::find($scheduleId);
-            if ($schedule && ! app(\App\Services\VehicleBookingPolicyService::class)->isScheduleEligible($schedule)) {
+        $schedule = Schedule::with('ferryRoute')->find($scheduleId);
+        if ($this->has_vehicle && $schedule) {
+            $route = $schedule->getFerryRouteModel() ?? $schedule->ferryRoute;
+            if ($route && ! StarliteScheduleIngestionService::isVehicleSupportedForRoute($route->origin, $route->destination)) {
+                $this->has_vehicle = false;
+                $this->vehicle_price = null;
+                $this->addError('selected_return_schedule_id', "Vehicle rolling cargo is not available on the {$route->origin} to {$route->destination} route (passenger ferry only).");
+            } elseif (! app(\App\Services\VehicleBookingPolicyService::class)->isScheduleEligible($schedule)) {
                 $this->addError('selected_return_schedule_id', 'Vehicle bookings require a minimum of 3 days (72 hours) advance notice prior to departure.');
                 return;
             }
@@ -2775,16 +2794,12 @@ class BookingForm extends Component
 
         if (! empty($routeRates)) {
             foreach ($rates as $rate) {
-                foreach ($routeRates as $catName => $catPrice) {
-                    if (
-                        strcasecmp($rate->name, $catName) === 0 ||
-                        str_contains(strtolower($rate->name), strtolower($catName)) ||
-                        str_contains(strtolower($catName), strtolower($rate->name))
-                    ) {
-                        $rate->price = (float) $catPrice;
-                        break;
-                    }
-                }
+                $rate->price = StarliteScheduleIngestionService::calculateVehiclePriceForRoute(
+                    $rate->name,
+                    $origin,
+                    $destination,
+                    (float) $rate->price
+                );
             }
         }
 
@@ -2814,10 +2829,55 @@ class BookingForm extends Component
                     ->toArray();
             });
 
-            return VehicleModel::hydrate($items);
+            $models = VehicleModel::hydrate($items);
+
+            $origin = $this->origin;
+            $destination = $this->destination;
+
+            if ($this->selected_schedule_id) {
+                $sched = Schedule::with('ferryRoute')->find($this->selected_schedule_id);
+                if ($sched?->ferryRoute) {
+                    $origin = $sched->ferryRoute->origin;
+                    $destination = $sched->ferryRoute->destination;
+                }
+            }
+
+            if ($origin && $destination) {
+                foreach ($models as $model) {
+                    $model->price = StarliteScheduleIngestionService::calculateVehiclePriceForRoute(
+                        $model->name,
+                        $origin,
+                        $destination,
+                        (float) $model->price
+                    );
+                }
+            }
+
+            return $models;
         }
 
         return collect();
+    }
+
+    #[Computed]
+    public function isVehicleSupportedOnRoute(): bool
+    {
+        $origin = $this->origin;
+        $destination = $this->destination;
+
+        if ($this->selected_schedule_id) {
+            $sched = Schedule::with('ferryRoute')->find($this->selected_schedule_id);
+            if ($sched?->ferryRoute) {
+                $origin = $sched->ferryRoute->origin;
+                $destination = $sched->ferryRoute->destination;
+            }
+        }
+
+        if (blank($origin) || blank($destination)) {
+            return true;
+        }
+
+        return StarliteScheduleIngestionService::isVehicleSupportedForRoute($origin, $destination);
     }
 
     #[Computed]

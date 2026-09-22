@@ -91,6 +91,7 @@
     window.AMIGA_ACTIVE_ROUTES = @json($activeRoutes ?? []);
     window.AMIGA_VEHICLE_RATES = @json($vehicleRates ?? []);
     window.AMIGA_VEHICLE_BRANDS = @json($vehicleBrands ?? []);
+    window.AMIGA_ROUTE_VEHICLE_RATES = @json($routeVehicleRates ?? []);
 
     function amigaDatePicker(type) {
         return {
@@ -277,6 +278,8 @@
              has_vehicle: false,
              vehicleRatesList: window.AMIGA_VEHICLE_RATES || [],
              vehicleBrandsList: window.AMIGA_VEHICLE_BRANDS || [],
+             routeVehicleRates: window.AMIGA_ROUTE_VEHICLE_RATES || {},
+             vehicleUnsupportedNotice: '',
              vehicle_booking_method: 'category',
              selected_vehicle_rate_id: '',
              selected_brand_id: '',
@@ -286,16 +289,89 @@
              driver_middle_name: '',
              driver_last_name: '',
              driver_birthday: '',
+             get isVehicleSupportedOnRoute() {
+                 if (!this.origin || !this.destination) return true;
+                 let orig = (this.origin || '').trim().toLowerCase();
+                 let dest = (this.destination || '').trim().toLowerCase();
+                 for (let pair in this.routeVehicleRates) {
+                     let parts = pair.toLowerCase().split('|');
+                     let o = parts[0] || '';
+                     let d = parts[1] || '';
+                     if ((o === orig && d === dest) || (o === dest && d === orig)) {
+                         return this.routeVehicleRates[pair].supported;
+                     }
+                     if ((orig.includes(o) || o.includes(orig)) && (dest.includes(d) || d.includes(dest))) {
+                         return this.routeVehicleRates[pair].supported;
+                     }
+                 }
+                 return true;
+             },
+             getRouteTariffForVehicle(vehicleName, fallbackPrice = 0) {
+                 if (!this.origin || !this.destination || !vehicleName) return fallbackPrice;
+                 let orig = (this.origin || '').trim().toLowerCase();
+                 let dest = (this.destination || '').trim().toLowerCase();
+                 let routeRates = null;
+                 for (let pair in this.routeVehicleRates) {
+                     let parts = pair.toLowerCase().split('|');
+                     let o = parts[0] || '';
+                     let d = parts[1] || '';
+                     if ((o === orig && d === dest) || (o === dest && d === orig)) {
+                         if (this.routeVehicleRates[pair].supported) {
+                             routeRates = this.routeVehicleRates[pair].rates;
+                             break;
+                         }
+                     }
+                     if ((orig.includes(o) || o.includes(orig)) && (dest.includes(d) || d.includes(dest))) {
+                         if (this.routeVehicleRates[pair].supported) {
+                             routeRates = this.routeVehicleRates[pair].rates;
+                             break;
+                         }
+                     }
+                 }
+                 if (!routeRates || Object.keys(routeRates).length === 0) {
+                     return fallbackPrice;
+                 }
+                 let tier = this.mapVehicleNameToStarliteTier(vehicleName);
+                 if (routeRates[tier] !== undefined) {
+                     return parseFloat(routeRates[tier]);
+                 }
+                 return fallbackPrice;
+             },
+             mapVehicleNameToStarliteTier(name) {
+                 let str = (name || '').toLowerCase();
+                 if (str.includes('motorcycle') || str.includes('motor') || str.includes('bike') || str.includes('scooter') || str.includes('underbone') || /(click|beat|adv160|pcx|tmx|nmax|aerox|mio|sniper|raider|burgman|smash|barako|rouser|ninja|z400|versys|vulcan|rebel|cb500|nx500|cb650|transalp|mt-07|mt-09|r3|tmax|450nk|450sr|450mt|300nk|classic 350|hunter 350|himalayan)/i.test(str)) {
+                     return 'Motorcycle';
+                 }
+                 if (str.includes('below 3') || str.includes('tricycle') || str.includes('trike') || str.includes('sidecar') || str.includes('multicab') || str.includes('kei') || /(bajaj|re|maxima|tvs|king|duramax|ape|piaggio|carry|every|hijet|minicab|acty|gratour)/i.test(str)) {
+                     return 'Below 3 meters';
+                 }
+                 if (str.includes('small car') || str.includes('3 to 3.9') || str.includes('hatchback') || /(wigo|eon|brio|mirage hatchback|swift|s-presso|spresso|celerio|mazda 2|yaris)/i.test(str)) {
+                     return '3 to 3.9 meters (Small Car)';
+                 }
+                 return '4 to 4.9 meters (Regular Car / SUV)';
+             },
+             checkVehicleRouteEligibility() {
+                 if (!this.isVehicleSupportedOnRoute) {
+                     if (this.has_vehicle) {
+                         this.has_vehicle = false;
+                     }
+                     this.vehicleUnsupportedNotice = 'Vehicle rolling cargo is not available on this route (passenger ferry only).';
+                 } else {
+                     this.vehicleUnsupportedNotice = '';
+                 }
+             },
              get selectedCargoRate() {
                  if (this.vehicle_booking_method === 'category' && this.selected_vehicle_rate_id) {
                      let r = this.vehicleRatesList.find(x => x.id == this.selected_vehicle_rate_id);
-                     return r ? parseFloat(r.price || 0) : 0;
+                     if (!r) return 0;
+                     return this.getRouteTariffForVehicle(r.name, parseFloat(r.price || 0));
                  }
                  if (this.vehicle_booking_method === 'brand_model' && this.selected_model_id) {
                      let b = this.vehicleBrandsList.find(x => x.id == this.selected_brand_id);
                      if (b && b.models) {
                          let m = b.models.find(x => x.id == this.selected_model_id);
-                         return m ? parseFloat(m.price || 0) : 0;
+                         if (!m) return 0;
+                         return this.getRouteTariffForVehicle(m.name, parseFloat(m.price || 0));
                      }
                  }
                  return 0;
@@ -367,6 +443,8 @@
                           this.vehicleCutoffNotice = '';
                       }
                   });
+                  this.$watch('origin', () => this.checkVehicleRouteEligibility());
+                  this.$watch('destination', () => this.checkVehicleRouteEligibility());
              },
              hasReturnRoute(origin, destination) {
                  return this.activeRoutes.some(r => 
@@ -1183,8 +1261,17 @@
              class="mt-3 overflow-hidden"
              style="display: none;">
             <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-lg text-slate-900">
+                <!-- If vehicle unsupported on route -->
+                <div x-show="!isVehicleSupportedOnRoute" x-cloak class="p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs font-medium text-amber-900 flex items-start gap-3">
+                    <svg class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    <div>
+                        <span class="font-bold text-sm block">Rolling Cargo Unavailable</span>
+                        <span>Vehicle rolling cargo is not available on this route (passenger ferry service only).</span>
+                    </div>
+                </div>
+
                 <!-- Header / Toggle Row (Screenshot 3 Style) -->
-                <div class="flex flex-wrap items-center justify-between gap-4">
+                <div x-show="isVehicleSupportedOnRoute" class="flex flex-wrap items-center justify-between gap-4">
                     <div>
                         <div class="flex items-center gap-2">
                             <p class="text-slate-900 font-semibold text-base">Vehicle booking</p>
@@ -1254,7 +1341,7 @@
                                             class="w-full h-9 px-3 rounded-lg border bg-slate-50 text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-1">
                                         <option value="">Select category</option>
                                         <template x-for="rate in vehicleRatesList" :key="rate.id">
-                                            <option :value="rate.id" x-text="rate.name"></option>
+                                            <option :value="rate.id" x-text="rate.name + ' (₱' + getRouteTariffForVehicle(rate.name, rate.price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ')'"></option>
                                         </template>
                                     </select>
                                     <div x-show="errors.vehicle_category" x-transition class="mt-1">
@@ -1288,7 +1375,7 @@
                                                 class="w-full h-9 px-2 rounded-lg border bg-slate-50 text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-1 disabled:opacity-50">
                                             <option value="">Model</option>
                                             <template x-for="model in availableVehicleModels" :key="model.id">
-                                                <option :value="model.id" x-text="model.name"></option>
+                                                <option :value="model.id" x-text="model.name + ' (₱' + getRouteTariffForVehicle(model.name, model.price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ')'"></option>
                                             </template>
                                         </select>
                                         <div x-show="errors.vehicle_model" x-transition class="mt-1">

@@ -15,6 +15,7 @@ use App\Models\TransportClass;
 use App\Models\Transaction;
 use App\Models\Voucher;
 use App\Services\GraciaPointsService;
+use App\Services\StarliteScheduleIngestionService;
 use App\Services\VehicleBookingPolicyService;
 use App\Services\VoucherService;
 use Illuminate\Support\Facades\Cache;
@@ -121,6 +122,17 @@ class CreateBookingAction
             }
             $voucher            = Voucher::where('code', strtoupper($data['voucher_code']))->first();
             $voucherCalculation = $voucherResult;
+        }
+
+        // --- Vehicle policy & route support validation ---
+        if (! empty($data['has_vehicle'])) {
+            $this->vehiclePolicyService->validateScheduleLeadTime($schedule, true, 'schedule_id');
+            $this->vehiclePolicyService->validateRouteVehicleSupport($schedule, true, 'schedule_id');
+
+            if ($returnSchedule) {
+                $this->vehiclePolicyService->validateScheduleLeadTime($returnSchedule, true, 'return_schedule_id');
+                $this->vehiclePolicyService->validateRouteVehicleSupport($returnSchedule, true, 'return_schedule_id');
+            }
         }
 
         return DB::transaction(function () use (
@@ -245,7 +257,7 @@ class CreateBookingAction
                 }
             }
             // --- Price calculation with server-side validation ---
-            $data['vehicle_price'] = $this->resolveVehiclePrice($data);
+            $data['vehicle_price'] = $this->resolveVehiclePrice($data, $schedule);
             $this->sanitizeBaggagePrices($data['passengers']);
 
             $subtotal = $this->calculatePrice(
@@ -752,8 +764,9 @@ class CreateBookingAction
 
     /**
      * Resolve the authentic vehicle price server-side to prevent client-side price tampering.
+     * Enforces route-specific rolling cargo tariffs for Starlite Ferries and validates eligibility.
      */
-    protected function resolveVehiclePrice(array $data): float
+    protected function resolveVehiclePrice(array $data, ?Schedule $schedule = null): float
     {
         if (empty($data['has_vehicle'])) {
             return 0.0;
@@ -762,6 +775,25 @@ class CreateBookingAction
         $vehicleType = trim($data['vehicle_type'] ?? '');
         if ($vehicleType === '') {
             return 0.0;
+        }
+
+        $route = $schedule?->getFerryRouteModel() ?? $schedule?->ferryRoute;
+        $origin = $route?->origin;
+        $destination = $route?->destination;
+        $operator = normalize_operator_name($route?->operator ?: ($schedule?->vehicle?->operator ?? ''));
+
+        // Check if rolling cargo is supported on this route for Starlite Ferries
+        if (stripos($operator, 'Starlite') !== false && $origin && $destination) {
+            if (! StarliteScheduleIngestionService::isVehicleSupportedForRoute($origin, $destination)) {
+                throw new \InvalidArgumentException(
+                    "Vehicle rolling cargo service is not available on the {$origin} to {$destination} route (passenger ferry only)."
+                );
+            }
+
+            $routeTariff = StarliteScheduleIngestionService::calculateVehiclePriceForRoute($vehicleType, $origin, $destination, 0.0);
+            if ($routeTariff > 0) {
+                return (float) $routeTariff;
+            }
         }
 
         // 1. Look up exact or case-insensitive match in VehicleRate
@@ -776,7 +808,19 @@ class CreateBookingAction
             return (float) $rate->price;
         }
 
-        // 2. Look up matching active rate by price as a fallback if custom brand/model used
+        // 2. Look up matching active model by name
+        $model = \App\Models\VehicleModel::where('is_active', true)
+            ->where(function ($q) use ($vehicleType) {
+                $q->where('name', $vehicleType)
+                  ->orWhereRaw('LOWER(name) = ?', [strtolower($vehicleType)]);
+            })
+            ->first();
+
+        if ($model) {
+            return (float) $model->price;
+        }
+
+        // 3. Look up matching active rate by price as a fallback if custom brand/model used
         $inputPrice = floatval($data['vehicle_price'] ?? 0);
         $rateByPrice = \App\Models\VehicleRate::where('is_active', true)
             ->where('price', $inputPrice)

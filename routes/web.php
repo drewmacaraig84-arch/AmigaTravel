@@ -177,6 +177,13 @@ $renderWebsitePage = function (string $page, string $view) {
                 ])->all();
             } catch (\Throwable $e) { return []; }
         }),
+        'routeVehicleRates' => \Illuminate\Support\Facades\Cache::remember('web:routeVehicleRates', now()->addHours(6), function () {
+            try {
+                return \App\Services\StarliteScheduleIngestionService::getAllRouteVehicleRates();
+            } catch (\Throwable $e) {
+                return [];
+            }
+        }),
     ]);
 };
 

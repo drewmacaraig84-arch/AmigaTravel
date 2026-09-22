@@ -72,6 +72,35 @@ class VehicleBookingPolicyService
     }
 
     /**
+     * Validate whether rolling cargo/vehicle service is supported on the schedule's route.
+     * Throws a ValidationException if unsupported.
+     *
+     * @throws ValidationException
+     */
+    public function validateRouteVehicleSupport(Schedule $schedule, bool $hasVehicle, string $field = 'schedule_id'): void
+    {
+        if (! $hasVehicle) {
+            return;
+        }
+
+        $route = $schedule->getFerryRouteModel() ?? $schedule->ferryRoute;
+        if (! $route) {
+            return;
+        }
+
+        $operator = normalize_operator_name($route->operator ?: ($schedule->vehicle?->operator ?? ''));
+        if (stripos($operator, 'Starlite') !== false) {
+            if (! \App\Services\StarliteScheduleIngestionService::isVehicleSupportedForRoute($route->origin, $route->destination)) {
+                throw ValidationException::withMessages([
+                    $field => [
+                        "Vehicle rolling cargo service is not available on the {$route->origin} to {$route->destination} route (passenger ferry only)."
+                    ],
+                ]);
+            }
+        }
+    }
+
+    /**
      * Get the earliest valid departure date string ('Y-m-d') for vehicle bookings.
      */
     public function getEarliestVehicleBookingDate(?Carbon $asOf = null): string

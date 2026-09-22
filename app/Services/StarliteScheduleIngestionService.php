@@ -130,6 +130,22 @@ class StarliteScheduleIngestionService
                 '4 to 4.9 meters (Regular Car / SUV)' => 12310,
             ],
         ],
+        'Cebu|Nasipit' => [
+            'base_price' => 1520,
+            'accommodations' => [
+                ['name' => 'Reclining Seat', 'price' => 1520, 'has_bed' => false, 'tickets' => 80],
+                ['name' => 'Economy Bed Bunk', 'price' => 1700, 'has_bed' => true, 'tickets' => 120],
+                ['name' => 'Tourist Bed Bunk', 'price' => 2070, 'has_bed' => true, 'tickets' => 80],
+                ['name' => 'Cabin', 'price' => 2580, 'has_bed' => true, 'tickets' => 30],
+                ['name' => 'VIP Room (2-3 pax)', 'price' => 8200, 'has_bed' => true, 'tickets' => 4],
+            ],
+            'vehicle_rates' => [
+                'Motorcycle' => 4030,
+                'Below 3 meters' => 6720,
+                '3 to 3.9 meters (Small Car)' => 12210,
+                '4 to 4.9 meters (Regular Car / SUV)' => 14900,
+            ],
+        ],
         'Cebu|Dapitan' => [
             'base_price' => 1130,
             'accommodations' => [
@@ -357,6 +373,30 @@ class StarliteScheduleIngestionService
                 ['name' => 'Economy Bed Bunk', 'price' => 1200, 'has_bed' => true, 'tickets' => 80],
                 ['name' => 'Tourist Bed Bunk', 'price' => 1400, 'has_bed' => true, 'tickets' => 60],
             ],
+        ],
+        'Odiongan|Caticlan' => [
+            'base_price' => 863,
+            'vehicle_supported' => false,
+            'accommodations' => [
+                ['name' => 'Reclining Seat', 'price' => 863, 'has_bed' => false, 'tickets' => 80],
+                ['name' => 'Economy Bed Bunk', 'price' => 863, 'has_bed' => true, 'tickets' => 100],
+                ['name' => 'Tourist Bed Bunk', 'price' => 1035, 'has_bed' => true, 'tickets' => 80],
+                ['name' => 'Cabin', 'price' => 1725, 'has_bed' => true, 'tickets' => 20],
+                ['name' => 'VIP Room (2-3 pax)', 'price' => 4945, 'has_bed' => true, 'tickets' => 4],
+            ],
+            'vehicle_rates' => [],
+        ],
+        'Batangas|Odiongan' => [
+            'base_price' => 1380,
+            'vehicle_supported' => false,
+            'accommodations' => [
+                ['name' => 'Reclining Seat', 'price' => 1380, 'has_bed' => false, 'tickets' => 80],
+                ['name' => 'Economy Bed Bunk', 'price' => 1380, 'has_bed' => true, 'tickets' => 100],
+                ['name' => 'Tourist Bed Bunk', 'price' => 2070, 'has_bed' => true, 'tickets' => 80],
+                ['name' => 'Cabin', 'price' => 3105, 'has_bed' => true, 'tickets' => 20],
+                ['name' => 'VIP Room (2-3 pax)', 'price' => 9315, 'has_bed' => true, 'tickets' => 4],
+            ],
+            'vehicle_rates' => [],
         ],
     ];
 
@@ -665,10 +705,17 @@ class StarliteScheduleIngestionService
     public function syncVehicleRates(): void
     {
         $defaultRates = [
-            ['name' => 'Motorcycle', 'price' => 1440.00, 'sort_order' => 1],
-            ['name' => 'Below 3 meters', 'price' => 2160.00, 'sort_order' => 2],
-            ['name' => '3 to 3.9 meters (Small Car)', 'price' => 3100.00, 'sort_order' => 3],
-            ['name' => '4 to 4.9 meters (Regular Car / SUV)', 'price' => 3840.00, 'sort_order' => 4],
+            ['name' => 'Motorcycle (100cc to 200cc)', 'price' => 400.00, 'sort_order' => 1],
+            ['name' => 'Motorcycle (250cc & above / Big Bike)', 'price' => 500.00, 'sort_order' => 2],
+            ['name' => 'Tricycle', 'price' => 450.00, 'sort_order' => 3],
+            ['name' => 'Multicab', 'price' => 650.00, 'sort_order' => 4],
+            ['name' => 'AUV (Asian Utility Vehicle)', 'price' => 700.00, 'sort_order' => 5],
+            ['name' => 'Hatchback', 'price' => 900.00, 'sort_order' => 6],
+            ['name' => 'Owner / Light Cars', 'price' => 1100.00, 'sort_order' => 7],
+            ['name' => 'Owner Jeep', 'price' => 1200.00, 'sort_order' => 8],
+            ['name' => 'Pick-up', 'price' => 1400.00, 'sort_order' => 9],
+            ['name' => 'SUV (Sport Utility Vehicle)', 'price' => 1500.00, 'sort_order' => 10],
+            ['name' => 'Van', 'price' => 1600.00, 'sort_order' => 11],
         ];
 
         foreach ($defaultRates as $rateData) {
@@ -684,75 +731,9 @@ class StarliteScheduleIngestionService
     }
 
     /**
-     * Lookup fare matrix matching origin and destination.
+     * Lookup route configuration matching origin and destination.
      */
-    public function lookupFareMatrix(string $origin, string $destination): array
-    {
-        $directPairs = [
-            "{$origin}|{$destination}",
-            "{$destination}|{$origin}",
-        ];
-
-        foreach ($directPairs as $key) {
-            if (isset(self::STARLITE_FARE_MATRIX[$key])) {
-                return self::STARLITE_FARE_MATRIX[$key];
-            }
-        }
-
-        $origLower = strtolower($origin);
-        $destLower = strtolower($destination);
-
-        $targetHasSibuyan = str_contains($origLower, 'sibuyan') || str_contains($destLower, 'sibuyan') || str_contains($origLower, 'magdiwang') || str_contains($destLower, 'magdiwang');
-        $targetHasCajidiocan = str_contains($origLower, 'cajidiocan') || str_contains($destLower, 'cajidiocan');
-
-        $bestMatch = null;
-        $bestLength = 0;
-
-        foreach (self::STARLITE_FARE_MATRIX as $pair => $config) {
-            [$o, $d] = explode('|', $pair);
-            $oLower = strtolower($o);
-            $dLower = strtolower($d);
-
-            $matchForward = (str_contains($origLower, $oLower) && str_contains($destLower, $dLower));
-            $matchReverse = (str_contains($origLower, $dLower) && str_contains($destLower, $oLower));
-
-            if ($matchForward || $matchReverse) {
-                $pairHasSibuyan = str_contains($oLower, 'sibuyan') || str_contains($dLower, 'sibuyan') || str_contains($oLower, 'magdiwang') || str_contains($dLower, 'magdiwang');
-                if ($targetHasSibuyan && ! $pairHasSibuyan) {
-                    continue;
-                }
-
-                $pairHasCajidiocan = str_contains($oLower, 'cajidiocan') || str_contains($dLower, 'cajidiocan');
-                if ($targetHasCajidiocan && ! $pairHasCajidiocan) {
-                    continue;
-                }
-
-                if (strlen($pair) > $bestLength) {
-                    $bestMatch = $config;
-                    $bestLength = strlen($pair);
-                }
-            }
-        }
-
-        if ($bestMatch) {
-            return $bestMatch;
-        }
-
-        return [
-            'base_price' => 680,
-            'accommodations' => [
-                ['name' => 'Economy Bed Bunk', 'price' => 680, 'has_bed' => true, 'tickets' => 100],
-                ['name' => 'Tourist Bed Bunk', 'price' => 850, 'has_bed' => true, 'tickets' => 80],
-            ],
-        ];
-    }
-
-    /**
-     * Get route-specific vehicle rates for Starlite Ferries.
-     *
-     * @return array<string, float>|null
-     */
-    public static function getVehicleRatesForRoute(?string $origin, ?string $destination): ?array
+    public static function lookupRouteConfig(?string $origin, ?string $destination): ?array
     {
         if (blank($origin) || blank($destination)) {
             return null;
@@ -770,8 +751,8 @@ class StarliteScheduleIngestionService
         ];
 
         foreach ($directPairs as $key) {
-            if (isset(self::STARLITE_FARE_MATRIX[$key]['vehicle_rates'])) {
-                return self::STARLITE_FARE_MATRIX[$key]['vehicle_rates'];
+            if (isset(self::STARLITE_FARE_MATRIX[$key])) {
+                return self::STARLITE_FARE_MATRIX[$key];
             }
         }
 
@@ -787,9 +768,6 @@ class StarliteScheduleIngestionService
         $bestLength = 0;
 
         foreach (self::STARLITE_FARE_MATRIX as $pair => $config) {
-            if (! isset($config['vehicle_rates'])) {
-                continue;
-            }
             [$o, $d] = explode('|', $pair);
             $oLower = strtolower($o);
             $dLower = strtolower($d);
@@ -816,13 +794,162 @@ class StarliteScheduleIngestionService
                 }
 
                 if (strlen($pair) > $bestLength) {
-                    $bestMatch = $config['vehicle_rates'];
+                    $bestMatch = $config;
                     $bestLength = strlen($pair);
                 }
             }
         }
 
         return $bestMatch;
+    }
+
+    /**
+     * Lookup fare matrix matching origin and destination.
+     */
+    public function lookupFareMatrix(string $origin, string $destination): array
+    {
+        return self::lookupRouteConfig($origin, $destination) ?? [
+            'base_price' => 680,
+            'accommodations' => [
+                ['name' => 'Economy Bed Bunk', 'price' => 680, 'has_bed' => true, 'tickets' => 100],
+                ['name' => 'Tourist Bed Bunk', 'price' => 850, 'has_bed' => true, 'tickets' => 80],
+            ],
+        ];
+    }
+
+    /**
+     * Check if vehicle rolling cargo is supported on the route.
+     */
+    public static function isVehicleSupportedForRoute(?string $origin, ?string $destination): bool
+    {
+        $config = self::lookupRouteConfig($origin, $destination);
+        if (! $config) {
+            return true;
+        }
+
+        if (isset($config['vehicle_supported']) && $config['vehicle_supported'] === false) {
+            return false;
+        }
+
+        return ! empty($config['vehicle_rates']);
+    }
+
+    /**
+     * Get route-specific vehicle rates for Starlite Ferries.
+     *
+     * @return array<string, float>|null
+     */
+    public static function getVehicleRatesForRoute(?string $origin, ?string $destination): ?array
+    {
+        $config = self::lookupRouteConfig($origin, $destination);
+        if (! $config) {
+            return null;
+        }
+
+        if (isset($config['vehicle_supported']) && $config['vehicle_supported'] === false) {
+            return []; // explicitly unsupported
+        }
+
+        return $config['vehicle_rates'] ?? null;
+    }
+
+    /**
+     * Map any vehicle brand, model, or category name to Starlite's 4 official length/tariff tiers.
+     */
+    public static function mapVehicleToStarliteTier(string $typeOrName): string
+    {
+        $name = strtolower(trim($typeOrName));
+
+        // 1. Motorcycle tier
+        if (
+            str_contains($name, 'motorcycle') ||
+            str_contains($name, 'motor') ||
+            str_contains($name, 'bike') ||
+            str_contains($name, 'scooter') ||
+            str_contains($name, 'underbone') ||
+            preg_match('/\b(click|beat|adv160|pcx|tmx|nmax|aerox|mio|sniper|raider|burgman|smash|barako|rouser|ninja|z400|versys|vulcan|rebel|cb500|nx500|cb650|transalp|mt-07|mt-09|r3|tmax|450nk|450sr|450mt|300nk|classic 350|hunter 350|himalayan)\b/i', $name)
+        ) {
+            return 'Motorcycle';
+        }
+
+        // 2. Below 3 meters / Three-Wheelers / Micro-haulers
+        if (
+            str_contains($name, 'below 3') ||
+            str_contains($name, 'tricycle') ||
+            str_contains($name, 'trike') ||
+            str_contains($name, 'sidecar') ||
+            str_contains($name, 'multicab') ||
+            str_contains($name, 'kei') ||
+            preg_match('/\b(bajaj|re|maxima|tvs|king|duramax|ap[eé]|piaggio|carry|every|hijet|minicab|acty|gratour)\b/i', $name)
+        ) {
+            return 'Below 3 meters';
+        }
+
+        // 3. 3 to 3.9 meters (Small Car)
+        if (
+            str_contains($name, 'small car') ||
+            str_contains($name, '3 to 3.9') ||
+            str_contains($name, 'hatchback') ||
+            preg_match('/\b(wigo|eon|brio|mirage hatchback|swift|s-presso|spresso|celerio|mazda 2|yaris)\b/i', $name)
+        ) {
+            return '3 to 3.9 meters (Small Car)';
+        }
+
+        // 4. Standard / 4 to 4.9 meters (Regular Car / SUV / Sedan / Van / Pickup)
+        return '4 to 4.9 meters (Regular Car / SUV)';
+    }
+
+    /**
+     * Calculate exact vehicle price for a route using official Starlite matrix.
+     */
+    public static function calculateVehiclePriceForRoute(string $vehicleType, ?string $origin, ?string $destination, float $defaultFallback = 0.0): float
+    {
+        $rates = self::getVehicleRatesForRoute($origin, $destination);
+        if (empty($rates)) {
+            return $defaultFallback;
+        }
+
+        $tier = self::mapVehicleToStarliteTier($vehicleType);
+
+        if (isset($rates[$tier])) {
+            return (float) $rates[$tier];
+        }
+
+        foreach ($rates as $name => $price) {
+            if (strcasecmp($name, $tier) === 0 || str_contains(strtolower($name), strtolower($tier))) {
+                return (float) $price;
+            }
+        }
+
+        return $defaultFallback;
+    }
+
+    /**
+     * Get compiled map of all route pairs => vehicle availability & rates for frontend caching.
+     */
+    public static function getAllRouteVehicleRates(): array
+    {
+        $result = [];
+        foreach (self::STARLITE_FARE_MATRIX as $pair => $config) {
+            $supported = ! (isset($config['vehicle_supported']) && $config['vehicle_supported'] === false) && ! empty($config['vehicle_rates']);
+            $rates = $supported ? ($config['vehicle_rates'] ?? []) : [];
+
+            $result[$pair] = [
+                'supported' => $supported,
+                'rates' => $rates,
+            ];
+
+            [$o, $d] = explode('|', $pair);
+            $reversePair = "{$d}|{$o}";
+            if (! isset($result[$reversePair])) {
+                $result[$reversePair] = [
+                    'supported' => $supported,
+                    'rates' => $rates,
+                ];
+            }
+        }
+
+        return $result;
     }
 
     /**

@@ -490,6 +490,15 @@
                             </div>
 
                             @if($mode === 'ferry' && stripos($operator ?? '', 'Starlite') !== false)
+                                @if(! $this->isVehicleSupportedOnRoute)
+                                    <div class="rounded-xl border border-amber-200 bg-amber-50 p-5 text-amber-900 shadow-sm flex items-start gap-3">
+                                        <svg class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                                        <div>
+                                            <p class="font-bold text-sm">Rolling Cargo Unavailable</p>
+                                            <p class="mt-0.5 text-xs text-amber-700">Vehicle booking is not available on this route (passenger ferry service only).</p>
+                                        </div>
+                                    </div>
+                                @else
                                 <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
                                     <div class="flex flex-wrap items-center justify-between gap-4">
                                         <div>
@@ -555,7 +564,7 @@
                                                         <select wire:model.live="selected_model_id" class="mt-3 block w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-slate-900 shadow-sm focus:border-[#db2777] focus:outline-none focus:ring-2 focus:ring-[#db2777]/20" @if($vehicleModelCatalog->isEmpty()) disabled @endif>
                                                             <option value="">Select model</option>
                                                             @foreach($vehicleModelCatalog as $model)
-                                                                <option value="{{ $model->id }}">{{ $model->name }}</option>
+                                                                <option value="{{ $model->id }}">{{ $model->name }}{{ $model->price > 0 ? ' (₱' . number_format($model->price, 2) . ')' : '' }}</option>
                                                             @endforeach
                                                         </select>
                                                         @error('selected_model_id')<p class="mt-2 text-sm text-rose-600">{{ $message }}</p>@enderror
@@ -608,6 +617,7 @@
                                         </div>
                                     @endif
                                 </div>
+                                @endif
                             @endif
 
                             @if ($showPassengerInfoModal)
