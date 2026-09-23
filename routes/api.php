@@ -75,7 +75,7 @@ Route::middleware('throttle:60,1')->group(function () {
             'force_update' => $forceUpdate,
             'play_store_url' => config('services.app_updates.play_store_url', 'https://play.google.com/store/apps/details?id=com.amiga.travel.flutter_app'),
             'app_store_url' => config('services.app_updates.app_store_url', 'https://apps.apple.com/app/amiga-gracia/id6470000000'),
-            'app_gallery_url' => config('services.app_updates.app_gallery_url', 'https://appgallery.huawei.com/app/C100000000'),
+            'app_gallery_url' => config('services.app_updates.app_gallery_url', 'https://appgallery.huawei.com/app/C118908953'),
         ]);
     });
 });
