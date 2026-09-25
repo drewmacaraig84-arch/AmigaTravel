@@ -147,4 +147,14 @@ class ScheduleCsvImportServiceTest extends TestCase
 
         @unlink($tempFile);
     }
+
+    public function test_imports_formatted_2go_schedules(): void
+    {
+        $file = base_path('2go_schedules/2GO_Manila_Butuan_Formatted.csv');
+        $this->assertFileExists($file);
+
+        $result = $this->service->import($file);
+        $this->assertEquals(13, $result['imported']);
+        $this->assertEmpty($result['errors']);
+    }
 }

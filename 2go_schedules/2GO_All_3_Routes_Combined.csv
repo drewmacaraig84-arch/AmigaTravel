@@ -1,0 +1,131 @@
+Mode,Operator,"Vehicle Tail No","Plate No",Origin,Destination,"Departure Date","Departure Time","Arrival Date","Arrival Time","Transport Class",Rate,"Additional Price","Rate Tier","Tickets Available","Has Bed","Rate Code"
+ferry,2GO,"MV 2GO Masikap",,Manila,Cebu,29/09/2026,"09:00 AM",29/09/2026,"03:00 PM","Tourist Class",2693.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV St. Francis Xavier",,Manila,Cebu,30/09/2026,"07:00 PM",01/10/2026,"06:00 AM","Tourist Class",1943.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masagana",,Manila,Cebu,02/10/2026,"09:00 PM",03/10/2026,"07:00 PM","Tourist Class",2507.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masagana",,Manila,Cebu,04/10/2026,"09:00 PM",05/10/2026,"07:00 PM","Tourist Class",2193.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masigla",,Manila,Cebu,05/10/2026,"09:00 AM",06/10/2026,"07:00 AM","Tourist Class",1907.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masikap",,Manila,Cebu,06/10/2026,"05:00 PM",06/10/2026,"05:00 PM","Tourist Class",1893.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masagana",,Manila,Cebu,07/10/2026,"07:00 AM",08/10/2026,"06:00 AM","Tourist Class",2043.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masigla",,Manila,Cebu,09/10/2026,"07:00 AM",10/10/2026,"06:00 AM","Tourist Class",1807.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masagana",,Manila,Cebu,11/10/2026,"06:00 PM",11/10/2026,"06:00 PM","Tourist Class",2193.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masigla",,Manila,Cebu,12/10/2026,"09:00 AM",13/10/2026,"07:00 AM","Tourist Class",1907.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masikap",,Manila,Cebu,13/10/2026,"05:00 PM",13/10/2026,"05:00 PM","Tourist Class",1893.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masagana",,Manila,Cebu,14/10/2026,"09:00 PM",15/10/2026,"07:00 PM","Tourist Class",1907.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masigla",,Manila,Cebu,16/10/2026,"02:00 PM",17/10/2026,"02:00 PM","Tourist Class",1993.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masagana",,Manila,Cebu,18/10/2026,"09:00 AM",19/10/2026,"07:00 AM","Tourist Class",1807.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masigla",,Manila,Cebu,19/10/2026,"05:00 PM",20/10/2026,"05:00 PM","Tourist Class",1993.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masikap",,Manila,Cebu,20/10/2026,"07:00 AM",21/10/2026,"06:00 AM","Tourist Class",2043.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masagana",,Manila,Cebu,21/10/2026,"07:00 AM",22/10/2026,"06:00 AM","Tourist Class",1807.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masigla",,Manila,Cebu,23/10/2026,"02:00 PM",24/10/2026,"02:00 PM","Tourist Class",1893.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masagana",,Manila,Cebu,25/10/2026,"09:00 AM",26/10/2026,"07:00 AM","Tourist Class",2107.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masigla",,Manila,Cebu,26/10/2026,"05:00 PM",27/10/2026,"05:00 PM","Tourist Class",1893.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masikap",,Manila,Cebu,27/10/2026,"07:00 AM",28/10/2026,"06:00 AM","Tourist Class",1943.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masagana",,Manila,Cebu,28/10/2026,"09:00 PM",29/10/2026,"07:00 PM","Tourist Class",1907.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masigla",,Manila,Cebu,30/10/2026,"09:00 AM",31/10/2026,"03:00 PM","Tourist Class",2193.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masagana",,Manila,Cebu,01/11/2026,"09:00 AM",02/11/2026,"07:00 AM","Tourist Class",2307.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masigla",,Manila,Cebu,02/11/2026,"05:00 PM",03/11/2026,"05:00 PM","Tourist Class",2193.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masikap",,Manila,Cebu,03/11/2026,"07:00 AM",04/11/2026,"06:00 AM","Tourist Class",2043.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masagana",,Manila,Cebu,04/11/2026,"09:00 PM",05/11/2026,"07:00 PM","Tourist Class",2707.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masigla",,Manila,Cebu,06/11/2026,"02:00 PM",07/11/2026,"02:00 PM","Tourist Class",2393.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masagana",,Manila,Cebu,08/11/2026,"09:00 AM",09/11/2026,"07:00 AM","Tourist Class",2307.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masigla",,Manila,Cebu,09/11/2026,"05:00 PM",10/11/2026,"05:00 PM","Tourist Class",2193.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masikap",,Manila,Cebu,10/11/2026,"07:00 AM",11/11/2026,"06:00 AM","Tourist Class",2043.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masagana",,Manila,Cebu,11/11/2026,"07:00 AM",12/11/2026,"07:00 PM","Tourist Class",1.00,2107.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masigla",,Manila,Cebu,13/11/2026,"02:00 PM",14/11/2026,"02:00 PM","Tourist Class",2393.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masagana",,Manila,Cebu,15/11/2026,"09:00 AM",16/11/2026,"07:00 AM","Tourist Class",2507.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masigla",,Manila,Cebu,16/11/2026,"05:00 PM",17/11/2026,"05:00 PM","Tourist Class",2193.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masikap",,Manila,Cebu,17/11/2026,"07:00 AM",18/11/2026,"06:00 AM","Tourist Class",1943.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masagana",,Manila,Cebu,18/11/2026,"09:00 PM",19/11/2026,"07:00 PM","Tourist Class",2507.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masigla",,Manila,Cebu,20/11/2026,"02:00 PM",21/11/2026,"02:00 PM","Tourist Class",2393.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masagana",,Manila,Cebu,22/11/2026,"09:00 AM",23/11/2026,"07:00 AM","Tourist Class",2507.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masigla",,Manila,Cebu,23/11/2026,"05:00 PM",24/11/2026,"05:00 PM","Tourist Class",2393.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masikap",,Manila,Cebu,24/11/2026,"07:00 AM",25/11/2026,"06:00 AM","Tourist Class",1943.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masagana",,Manila,Cebu,25/11/2026,"09:00 PM",26/11/2026,"07:00 PM","Tourist Class",2507.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masigla",,Manila,Cebu,27/11/2026,"02:00 PM",28/11/2026,"02:00 PM","Tourist Class",2193.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masagana",,Manila,Cebu,29/11/2026,"09:00 AM",30/11/2026,"07:00 AM","Tourist Class",2307.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masigla",,Manila,Cebu,30/11/2026,"05:00 PM",01/12/2026,"05:00 PM","Tourist Class",2393.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masikap",,Manila,Cebu,01/12/2026,"07:00 AM",02/12/2026,"06:00 AM","Tourist Class",2243.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masagana",,Manila,Cebu,02/12/2026,"09:00 PM",03/12/2026,"07:00 PM","Tourist Class",2507.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masigla",,Manila,Cebu,04/12/2026,"02:00 PM",05/12/2026,"02:00 PM","Tourist Class",2393.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masagana",,Manila,Cebu,06/12/2026,"09:00 AM",07/12/2026,"07:00 AM","Tourist Class",2607.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masigla",,Manila,Cebu,07/12/2026,"05:00 PM",08/12/2026,"05:00 PM","Tourist Class",2393.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masikap",,Manila,Cebu,08/12/2026,"07:00 AM",09/12/2026,"06:00 AM","Tourist Class",2443.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masagana",,Manila,Cebu,09/12/2026,"02:00 PM",10/12/2026,"02:00 PM","Tourist Class",3393.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masigla",,Manila,Cebu,11/12/2026,"02:00 PM",12/12/2026,"02:00 PM","Tourist Class",3393.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masagana",,Manila,Cebu,13/12/2026,"09:00 AM",14/12/2026,"07:00 AM","Tourist Class",3207.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masigla",,Manila,Cebu,14/12/2026,"05:00 PM",15/12/2026,"05:00 PM","Tourist Class",3293.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masikap",,Manila,Cebu,15/12/2026,"07:00 AM",16/12/2026,"06:00 AM","Tourist Class",3343.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masagana",,Manila,Cebu,16/12/2026,"09:00 PM",17/12/2026,"07:00 PM","Tourist Class",3307.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masigla",,Manila,Cebu,18/12/2026,"02:00 PM",19/12/2026,"02:00 PM","Tourist Class",3822.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masagana",,Manila,Cebu,20/12/2026,"09:00 AM",21/12/2026,"07:00 PM","Tourist Class",3686.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masigla",,Manila,Cebu,21/12/2026,"05:00 PM",22/12/2026,"05:00 PM","Tourist Class",3822.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masikap",,Manila,Cebu,22/12/2026,"07:00 AM",23/12/2026,"06:00 AM","Tourist Class",3822.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masagana",,Manila,Cebu,23/12/2026,"09:00 PM",24/12/2026,"07:00 PM","Tourist Class",3686.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masagana",,Manila,Cebu,27/12/2026,"09:00 AM",28/12/2026,"07:00 AM","Tourist Class",3686.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masagana",,Manila,Cebu,30/12/2026,"09:00 PM",31/12/2026,"07:00 PM","Tourist Class",3686.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Maligaya",,Manila,Bacolod,29/09/2026,"12:30 PM",30/09/2026,"08:00 AM","Tourist Class",1825.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV St. Michael the Archangel",,Manila,Bacolod,01/10/2026,"09:30 PM",02/10/2026,"10:30 AM","Tourist Class",1997.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masikap",,Manila,Bacolod,02/10/2026,"05:00 AM",03/10/2026,"01:00 AM","Tourist Class",1911.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Maligaya",,Manila,Bacolod,03/10/2026,"07:00 PM",04/10/2026,"11:00 PM","Tourist Class",1997.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Maligaya",,Manila,Bacolod,06/10/2026,"12:30 PM",07/10/2026,"08:00 AM","Tourist Class",1725.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV St. Michael the Archangel",,Manila,Bacolod,08/10/2026,"09:30 PM",09/10/2026,"10:30 AM","Tourist Class",1997.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masikap",,Manila,Bacolod,09/10/2026,"04:30 AM",10/10/2026,"10:30 AM","Tourist Class",2886.40,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Maligaya",,Manila,Bacolod,10/10/2026,"07:00 PM",11/10/2026,"11:00 PM","Tourist Class",1997.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Maligaya",,Manila,Bacolod,13/10/2026,"12:30 PM",14/10/2026,"08:00 AM","Tourist Class",1725.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV St. Michael the Archangel",,Manila,Bacolod,15/10/2026,"09:30 PM",16/10/2026,"10:30 AM","Tourist Class",1997.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masikap",,Manila,Bacolod,16/10/2026,"05:00 AM",17/10/2026,"01:00 AM","Tourist Class",1911.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Maligaya",,Manila,Bacolod,17/10/2026,"07:00 AM",18/10/2026,"01:00 AM","Tourist Class",2797.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Maligaya",,Manila,Bacolod,20/10/2026,"12:30 PM",21/10/2026,"08:00 AM","Tourist Class",2425.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV St. Michael the Archangel",,Manila,Bacolod,22/10/2026,"09:30 PM",23/10/2026,"10:30 AM","Tourist Class",1997.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masikap",,Manila,Bacolod,23/10/2026,"05:00 AM",24/10/2026,"01:00 AM","Tourist Class",1911.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Maligaya",,Manila,Bacolod,24/10/2026,"07:00 PM",25/10/2026,"11:00 PM","Tourist Class",1997.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Maligaya",,Manila,Bacolod,27/10/2026,"12:30 PM",28/10/2026,"08:00 AM","Tourist Class",2725.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV St. Michael the Archangel",,Manila,Bacolod,29/10/2026,"09:30 PM",30/10/2026,"10:30 AM","Tourist Class",1997.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masikap",,Manila,Bacolod,30/10/2026,"05:00 AM",31/10/2026,"01:00 AM","Tourist Class",1911.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Maligaya",,Manila,Bacolod,31/10/2026,"07:00 PM",01/11/2026,"11:00 PM","Tourist Class",1997.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Maligaya",,Manila,Bacolod,03/11/2026,"12:30 PM",04/11/2026,"08:00 AM","Tourist Class",1725.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV St. Michael the Archangel",,Manila,Bacolod,05/11/2026,"09:30 PM",06/11/2026,"10:30 AM","Tourist Class",1997.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masikap",,Manila,Bacolod,06/11/2026,"07:00 PM",07/11/2026,"11:00 PM","Tourist Class",1997.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Maligaya",,Manila,Bacolod,07/11/2026,"07:00 PM",08/11/2026,"11:00 PM","Tourist Class",1997.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Maligaya",,Manila,Bacolod,10/11/2026,"12:30 PM",11/11/2026,"08:00 AM","Tourist Class",2625.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV St. Michael the Archangel",,Manila,Bacolod,12/11/2026,"09:30 PM",13/11/2026,"10:30 AM","Tourist Class",1997.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masikap",,Manila,Bacolod,13/11/2026,"05:00 AM",14/11/2026,"01:00 AM","Tourist Class",1911.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Maligaya",,Manila,Bacolod,14/11/2026,"07:00 PM",15/11/2026,"11:00 PM","Tourist Class",1997.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Maligaya",,Manila,Bacolod,17/11/2026,"12:30 PM",18/11/2026,"08:00 AM","Tourist Class",1725.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV St. Michael the Archangel",,Manila,Bacolod,19/11/2026,"12:30 PM",20/11/2026,"08:00 AM","Tourist Class",1997.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masikap",,Manila,Bacolod,20/11/2026,"05:00 AM",21/11/2026,"01:00 AM","Tourist Class",1911.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Maligaya",,Manila,Bacolod,21/11/2026,"07:00 PM",22/11/2026,"11:00 PM","Tourist Class",1997.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Maligaya",,Manila,Bacolod,24/11/2026,"12:30 PM",25/11/2026,"08:00 AM","Tourist Class",2425.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV St. Michael the Archangel",,Manila,Bacolod,26/11/2026,"09:30 PM",27/11/2026,"10:30 AM","Tourist Class",2597.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masikap",,Manila,Bacolod,27/11/2026,"05:00 AM",28/11/2026,"01:00 AM","Tourist Class",2611.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Maligaya",,Manila,Bacolod,28/11/2026,"07:00 PM",29/11/2026,"11:00 PM","Tourist Class",2897.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Maligaya",,Manila,Bacolod,01/12/2026,"12:30 PM",02/12/2026,"08:00 AM","Tourist Class",2425.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV St. Michael the Archangel",,Manila,Bacolod,03/12/2026,"09:30 PM",04/12/2026,"10:30 AM","Tourist Class",2597.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masikap",,Manila,Bacolod,04/12/2026,"05:00 AM",05/12/2026,"01:00 AM","Tourist Class",2511.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Maligaya",,Manila,Bacolod,05/12/2026,"07:00 PM",06/12/2026,"11:00 PM","Tourist Class",2597.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Maligaya",,Manila,Bacolod,08/12/2026,"12:30 PM",09/12/2026,"08:00 AM","Tourist Class",2825.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV St. Michael the Archangel",,Manila,Bacolod,10/12/2026,"09:30 PM",11/12/2026,"10:30 AM","Tourist Class",3197.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masikap",,Manila,Bacolod,11/12/2026,"05:00 AM",12/12/2026,"01:00 AM","Tourist Class",4111.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Maligaya",,Manila,Bacolod,12/12/2026,"07:00 PM",13/12/2026,"11:00 PM","Tourist Class",3197.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Maligaya",,Manila,Bacolod,15/12/2026,"12:30 PM",16/12/2026,"08:00 AM","Tourist Class",4790.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV St. Michael the Archangel",,Manila,Bacolod,17/12/2026,"09:30 PM",18/12/2026,"10:30 AM","Tourist Class",3197.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Masikap",,Manila,Bacolod,18/12/2026,"05:00 AM",19/12/2026,"01:00 AM","Tourist Class",4926.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Maligaya",,Manila,Bacolod,19/12/2026,"07:00 PM",20/12/2026,"11:00 PM","Tourist Class",5062.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Maligaya",,Manila,Bacolod,22/12/2026,"12:30 PM",23/12/2026,"08:00 AM","Tourist Class",4790.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV St. Michael the Archangel",,Manila,Bacolod,24/12/2026,"09:30 PM",25/12/2026,"10:30 AM","Tourist Class",4950.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Maligaya",,Manila,Bacolod,26/12/2026,"07:00 PM",27/12/2026,"11:00 AM","Tourist Class",5062.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV 2GO Maligaya",,Manila,Bacolod,29/12/2026,"12:30 PM",30/12/2026,"08:00 AM","Tourist Class",4790.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV St. Michael the Archangel",,Manila,Bacolod,31/12/2026,"09:30 PM",02/01/2027,"10:30 AM","Tourist Class",4602.00,425.00,regular,50,yes,REG
+ferry,2GO,"MV St. Francis Xavier",,Manila,"Butuan (nasipit)",28/09/2026,"06:30 PM",30/09/2026,"09:00 AM","Tourist Class",3720.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV St. Francis Xavier",,Manila,"Butuan (nasipit)",05/10/2026,"06:30 PM",07/10/2026,"09:00 AM","Tourist Class",2720.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV St. Francis Xavier",,Manila,"Butuan (nasipit)",12/10/2026,"06:30 PM",14/10/2026,"09:00 AM","Tourist Class",2920.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV St. Francis Xavier",,Manila,"Butuan (nasipit)",19/10/2026,"06:30 PM",21/10/2026,"09:00 AM","Tourist Class",3020.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV St. Francis Xavier",,Manila,"Butuan (nasipit)",26/10/2026,"06:30 PM",28/10/2026,"09:00 AM","Tourist Class",3020.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV St. Francis Xavier",,Manila,"Butuan (nasipit)",02/11/2026,"06:30 PM",04/11/2026,"09:00 AM","Tourist Class",2920.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV St. Francis Xavier",,Manila,"Butuan (nasipit)",09/11/2026,"06:30 PM",11/11/2026,"09:00 AM","Tourist Class",2920.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV St. Francis Xavier",,Manila,"Butuan (nasipit)",16/11/2026,"06:30 PM",18/11/2026,"09:00 AM","Tourist Class",2720.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV St. Francis Xavier",,Manila,"Butuan (nasipit)",23/11/2026,"06:30 PM",25/11/2026,"09:00 AM","Tourist Class",2720.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV St. Francis Xavier",,Manila,"Butuan (nasipit)",30/11/2026,"06:30 PM",02/12/2026,"09:00 AM","Tourist Class",2720.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV St. Francis Xavier",,Manila,"Butuan (nasipit)",07/12/2026,"06:30 PM",09/12/2026,"09:00 AM","Tourist Class",3020.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV St. Francis Xavier",,Manila,"Butuan (nasipit)",14/12/2026,"06:30 PM",16/12/2026,"09:00 AM","Tourist Class",4447.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV St. Francis Xavier",,Manila,"Butuan (nasipit)",21/12/2026,"06:30 PM",23/12/2026,"08:00 AM","Tourist Class",4790.00,0.00,regular,50,yes,REG

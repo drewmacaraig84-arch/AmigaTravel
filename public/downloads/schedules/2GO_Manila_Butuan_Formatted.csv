@@ -1,0 +1,14 @@
+Mode,Operator,"Vehicle Tail No","Plate No",Origin,Destination,"Departure Date","Departure Time","Arrival Date","Arrival Time","Transport Class",Rate,"Additional Price","Rate Tier","Tickets Available","Has Bed","Rate Code"
+ferry,2GO,"MV St. Francis Xavier",,Manila,"Butuan (nasipit)",28/09/2026,"06:30 PM",30/09/2026,"09:00 AM","Tourist Class",3720.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV St. Francis Xavier",,Manila,"Butuan (nasipit)",05/10/2026,"06:30 PM",07/10/2026,"09:00 AM","Tourist Class",2720.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV St. Francis Xavier",,Manila,"Butuan (nasipit)",12/10/2026,"06:30 PM",14/10/2026,"09:00 AM","Tourist Class",2920.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV St. Francis Xavier",,Manila,"Butuan (nasipit)",19/10/2026,"06:30 PM",21/10/2026,"09:00 AM","Tourist Class",3020.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV St. Francis Xavier",,Manila,"Butuan (nasipit)",26/10/2026,"06:30 PM",28/10/2026,"09:00 AM","Tourist Class",3020.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV St. Francis Xavier",,Manila,"Butuan (nasipit)",02/11/2026,"06:30 PM",04/11/2026,"09:00 AM","Tourist Class",2920.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV St. Francis Xavier",,Manila,"Butuan (nasipit)",09/11/2026,"06:30 PM",11/11/2026,"09:00 AM","Tourist Class",2920.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV St. Francis Xavier",,Manila,"Butuan (nasipit)",16/11/2026,"06:30 PM",18/11/2026,"09:00 AM","Tourist Class",2720.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV St. Francis Xavier",,Manila,"Butuan (nasipit)",23/11/2026,"06:30 PM",25/11/2026,"09:00 AM","Tourist Class",2720.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV St. Francis Xavier",,Manila,"Butuan (nasipit)",30/11/2026,"06:30 PM",02/12/2026,"09:00 AM","Tourist Class",2720.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV St. Francis Xavier",,Manila,"Butuan (nasipit)",07/12/2026,"06:30 PM",09/12/2026,"09:00 AM","Tourist Class",3020.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV St. Francis Xavier",,Manila,"Butuan (nasipit)",14/12/2026,"06:30 PM",16/12/2026,"09:00 AM","Tourist Class",4447.00,0.00,regular,50,yes,REG
+ferry,2GO,"MV St. Francis Xavier",,Manila,"Butuan (nasipit)",21/12/2026,"06:30 PM",23/12/2026,"08:00 AM","Tourist Class",4790.00,0.00,regular,50,yes,REG

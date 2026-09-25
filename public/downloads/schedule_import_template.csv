@@ -1,0 +1,7 @@
+Mode,Operator,Vehicle Tail No,Origin,Destination,Departure Date,Departure Time,Arrival Date,Arrival Time,Transport Class,Rate,Tickets Available,Has Bed
+ferry,2GO,MV 2GO Maligaya,Manila,Bacolod,10/10/2026,07:00 PM,11/10/2026,11:00 PM,Tourist Class,1997.00,50,yes
+ferry,2GO,MV 2GO Maligaya,Manila,Bacolod,10/10/2026,07:00 PM,11/10/2026,11:00 PM,Cabin for 4,2850.00,20,yes
+ferry,SuperCat,SuperCat 38,Batangas,Calapan,10/10/2026,09:00 AM,10/10/2026,10:15 AM,Tourist Class,550.00,150,no
+ferry,Montenegro Lines,MV Maria Helena,Batangas,Caticlan,12/10/2026,08:00 PM,13/10/2026,06:00 AM,Economy Bed,1200.00,80,yes
+airline,Philippine Airlines,PR 2811,Manila,Davao,15/10/2026,06:30 AM,15/10/2026,08:20 AM,Economy,3800.00,120,no
+airline,Cebu Pacific,5J 567,Cebu,Manila,15/10/2026,02:15 PM,15/10/2026,03:45 PM,Standard,2450.00,180,no
