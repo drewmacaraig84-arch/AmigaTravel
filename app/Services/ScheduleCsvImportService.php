@@ -334,6 +334,9 @@ class ScheduleCsvImportService
         $arrTimeStr = $this->getValue($row, [
             'arrivaltime', 'arrtime', 'arrival_time', 'eta', 'arrival', 'arr_time'
         ]);
+        $arrDateStr = $this->getValue($row, [
+            'arrivaldate', 'arrdate', 'arrival_date', 'arr_date', 'destination_date', 'reach_date'
+        ]);
         $returnDateStr = $this->getValue($row, ['returndate', 'retdate', 'return_date']);
         $transportClassStr = $this->getValue($row, [
             'transportclass', 'transport_class', 'class', 'accommodation', 'accommodation_class',
@@ -457,17 +460,27 @@ class ScheduleCsvImportService
         }
 
         // 3. Parse Departure & Arrival Datetimes
-        $depTimeStrClean = trim($depTimeStr);
+        $depTimeStrClean = $this->cleanTimeString($depTimeStr);
         $depDateStrClean = trim($depDateStr);
         $departureDateTime = $this->parseImportedDateTime($depDateStrClean, $depTimeStrClean);
 
         if (filled($arrTimeStr)) {
-            $arrivalDateTime = $this->parseImportedDateTime($depDateStrClean, trim($arrTimeStr));
-            if ($arrivalDateTime->lessThan($departureDateTime)) {
-                $arrivalDateTime->addDay();
+            $arrTimeRaw = trim($arrTimeStr);
+            if (filled($arrDateStr)) {
+                $cleanArrTime = $this->cleanTimeString($arrTimeRaw);
+                $arrivalDateTime = $this->parseImportedDateTime(trim($arrDateStr), $cleanArrTime);
+            } else {
+                $arrivalDateTime = $this->parseSmartArrivalDateTime($departureDateTime, $arrTimeRaw, $depDateStrClean);
             }
         } else {
             $arrivalDateTime = (clone $departureDateTime)->addHours(2);
+        }
+
+        // Failsafe: Arrival datetime must never be earlier than departure datetime
+        if ($arrivalDateTime->lessThan($departureDateTime)) {
+            while ($arrivalDateTime->lessThan($departureDateTime)) {
+                $arrivalDateTime->addDay();
+            }
         }
 
         // 4. Resolve or Create Schedule
@@ -713,13 +726,74 @@ class ScheduleCsvImportService
     }
 
     /**
-     * Parse imported schedule datetimes with explicit support for DD/MM/YYYY files.
+     * Clean raw time strings by removing ETD/ETA prefixes and normalization typos.
+     */
+    protected function cleanTimeString(?string $time): string
+    {
+        if (blank($time)) {
+            return '00:00';
+        }
+        $clean = trim($time);
+        $clean = preg_replace('/^(?:ETD|ETA)\s*:\s*/i', '', $clean);
+        $clean = str_ireplace('@1O:', '@10:', $clean);
+        if (preg_match('/@\s*([0-9]{1,2}(?::[0-9]{2})?\s*(?:AM|PM)?)/i', $clean, $m)) {
+            $clean = $m[1];
+        }
+        return trim($clean);
+    }
+
+    /**
+     * Smartly parse arrival datetime, extracting Month/Day embedded in ETA strings if present.
+     */
+    protected function parseSmartArrivalDateTime(Carbon $departureDateTime, string $arrTimeRaw, string $fallbackDate): Carbon
+    {
+        $cleanEta = preg_replace('/^ETA\s*:\s*/i', '', $arrTimeRaw);
+        $cleanEta = str_ireplace('@1O:', '@10:', $cleanEta);
+
+        // Detect embedded Month + Day in ETA (e.g., "OCT 04 @ 11 PM" or "SEP 30 @ 8AM" or "OCT. 02 @ 10:30 AM")
+        if (preg_match('/([A-Za-z]+)\.?\s*([0-9]{1,2})\s*@?\s*([0-9]{1,2}(?::[0-9]{2})?\s*(?:AM|PM)?)/i', $cleanEta, $m)) {
+            $monthName = $m[1];
+            $day = intval($m[2]);
+            $timePart = trim($m[3]);
+            if (! empty($timePart)) {
+                $monthNum = intval(date('n', strtotime("$monthName 1 2000")));
+                if ($monthNum > 0) {
+                    $year = $departureDateTime->year;
+                    // Year rollover (e.g., departs in Dec and arrives in Jan)
+                    if ($monthNum < $departureDateTime->month) {
+                        $year++;
+                    }
+                    try {
+                        return Carbon::parse(sprintf('%04d-%02d-%02d %s', $year, $monthNum, $day, $timePart));
+                    } catch (Throwable) {
+                        // Fallback to standard parsing
+                    }
+                }
+            }
+        }
+
+        $cleanTime = $this->cleanTimeString($cleanEta);
+        $dt = $this->parseImportedDateTime($fallbackDate, $cleanTime);
+        if ($dt->lessThan($departureDateTime)) {
+            $dt->addDay();
+        }
+
+        return $dt;
+    }
+
+    /**
+     * Parse imported schedule datetimes with explicit support for DD/MM/YYYY, M/D/YYYY and 12-hour AM/PM formats.
      */
     protected function parseImportedDateTime(string $date, string $time): Carbon
     {
-        $dateTime = trim($date) . ' ' . trim($time);
+        $cleanTime = $this->cleanTimeString($time);
+        $dateTime = trim($date) . ' ' . $cleanTime;
 
-        foreach (['d/m/Y H:i:s', 'd/m/Y H:i', 'Y-m-d H:i:s', 'Y-m-d H:i'] as $format) {
+        foreach ([
+            'd/m/Y H:i:s', 'd/m/Y H:i', 'd/m/Y h:i A', 'd/m/Y g:i A', 'd/m/Y h:iA', 'd/m/Y g:iA',
+            'm/d/Y H:i:s', 'm/d/Y H:i', 'm/d/Y h:i A', 'm/d/Y g:i A', 'm/d/Y h:iA', 'm/d/Y g:iA',
+            'Y-m-d H:i:s', 'Y-m-d H:i', 'Y-m-d h:i A', 'Y-m-d g:i A', 'Y-m-d h:iA', 'Y-m-d g:iA',
+        ] as $format) {
             try {
                 $parsed = Carbon::createFromFormat($format, $dateTime);
 
@@ -735,7 +809,7 @@ class ScheduleCsvImportService
             return Carbon::parse($dateTime);
         } catch (Throwable $e) {
             throw new \InvalidArgumentException(
-                "Could not parse '{$dateTime}'. Expected DD/MM/YYYY with time like HH:MM or HH:MM:SS.",
+                "Could not parse '{$dateTime}'. Expected DD/MM/YYYY or YYYY-MM-DD with time like HH:MM or HH:MM AM/PM.",
                 previous: $e,
             );
         }

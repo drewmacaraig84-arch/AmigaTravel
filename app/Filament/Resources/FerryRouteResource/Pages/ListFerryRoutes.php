@@ -34,7 +34,7 @@ class ListFerryRoutes extends ListRecords
                         ->disk('local')
                         ->directory('temp-csv-imports')
                         ->required()
-                        ->helperText('Upload a CSV or Excel (.xlsx) file with columns: Mode, Operator, Vehicle Tail No., Origin, Destination, Departure Date, Departure Time, Arrival Time, Return Date, Transport Class, Rate. Use DD/MM/YYYY for Departure Date and Return Date.'),
+                        ->helperText('Upload a CSV or Excel (.xlsx) file with columns: Mode, Operator, Vehicle Tail No., Origin, Destination, Departure Date, Departure Time, Arrival Date, Arrival Time, Return Date, Transport Class, Rate. Use DD/MM/YYYY for dates.'),
                 ])
                 ->action(function (array $data, ScheduleCsvImportService $importService): void {
                     try {
