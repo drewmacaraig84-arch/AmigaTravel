@@ -1,0 +1,19 @@
+{
+  "app": {
+    "bundleName": "com.amiga.travel.flutter_app",
+    "vendor": "amigagracia",
+    "versionCode": 154,
+    "versionName": "1.0.142",
+    "icon": "$media:app_icon",
+    "label": "$string:app_name",
+    "description": "$string:app_desc",
+    "minAPIVersion": 12,
+    "targetAPIVersion": 12,
+    "car": {
+      "minAPIVersion": 12
+    },
+    "phone": {
+      "minAPIVersion": 12
+    }
+  }
+}

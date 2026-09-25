@@ -1,0 +1,5 @@
+{
+  "buildMode": "release",
+  "enableImpeller": true,
+  "impellerBackend": "vulkan"
+}

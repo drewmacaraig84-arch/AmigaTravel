@@ -29,6 +29,51 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+
+# ─── HarmonyOS (OHOS) dependency overrides ──────────────────────────────────
+# Uncomment these overrides when building specifically with flutter-ohos for HarmonyOS.
+# For Android/iOS builds, keep them commented to use official pub.dev packages.
+# dependency_overrides:
+#   shared_preferences:
+#     git:
+#       url: https://gitee.com/openharmony-sig/flutter_packages.git
+#       path: packages/shared_preferences/shared_preferences
+#       ref: master
+#   shared_preferences_android:
+#     git:
+#       url: https://gitee.com/openharmony-sig/flutter_packages.git
+#       path: packages/shared_preferences/shared_preferences_android
+#       ref: master
+#   path_provider:
+#     git:
+#       url: https://gitee.com/openharmony-sig/flutter_packages.git
+#       path: packages/path_provider/path_provider
+#       ref: master
+#   path_provider_android:
+#     git:
+#       url: https://gitee.com/openharmony-sig/flutter_packages.git
+#       path: packages/path_provider/path_provider_android
+#       ref: master
+#   url_launcher:
+#     git:
+#       url: https://gitee.com/openharmony-sig/flutter_packages.git
+#       path: packages/url_launcher/url_launcher
+#       ref: master
+#   image_picker:
+#     git:
+#       url: https://gitee.com/openharmony-sig/flutter_packages.git
+#       path: packages/image_picker/image_picker
+#       ref: master
+#   package_info_plus:
+#     git:
+#       url: https://gitee.com/openharmony-sig/flutter_plus_plugins.git
+#       path: packages/package_info_plus/package_info_plus
+#       ref: master
+#   video_player:
+#     git:
+#       url: https://gitee.com/openharmony-sig/flutter_packages.git
+#       path: packages/video_player/video_player
+#       ref: master
   flutter_launcher_icons: ^0.14.4
 
 flutter_launcher_icons:

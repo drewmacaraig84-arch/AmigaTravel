@@ -1,0 +1,11 @@
+{
+  "name": "entry",
+  "version": "1.0.142",
+  "description": "Amiga Gracia Travel Services entry module",
+  "main": "ets/entryability/EntryAbility.ets",
+  "author": "AMIGA GRACIA TRAVEL SERVICES",
+  "license": "ISC",
+  "dependencies": {
+    "@ohos/flutter_ohos": "file:../har/flutter.har"
+  }
+}

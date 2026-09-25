@@ -413,6 +413,10 @@ class BookingForm extends Component
                 }
             }
         }
+        if ($this->mode === 'airline') {
+            $this->mode = 'ferry';
+            $this->isModePreselected = false;
+        }
         if ($this->operator) {
             $this->operator = normalize_operator_name($this->operator);
         }
@@ -928,7 +932,7 @@ class BookingForm extends Component
 
     public function selectMode(string $mode): void
     {
-        if (! array_key_exists($mode, $this->getModeOptions())) {
+        if ($mode === 'airline' || ! array_key_exists($mode, $this->getModeOptions())) {
             return;
         }
 

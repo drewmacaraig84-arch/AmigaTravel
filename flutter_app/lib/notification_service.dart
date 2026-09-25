@@ -1,9 +1,22 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_app_badger/flutter_app_badger.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'dart:convert';
+import 'notification_service_hms.dart';
+
+// Detect HarmonyOS/OpenHarmony at runtime.
+// The platform string reported by the OHOS Flutter engine is 'ohos'.
+bool get _isOhos {
+  if (kIsWeb) return false;
+  try {
+    return Platform.operatingSystem == 'ohos';
+  } catch (_) {
+    return false;
+  }
+}
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -37,6 +50,13 @@ class NotificationService {
     Function(Map<String, dynamic>)? onNotificationTap,
   }) async {
     if (kIsWeb) return;
+
+    // ── HarmonyOS: delegate entirely to HMS Push Kit ─────────────────────
+    if (_isOhos) {
+      await HmsNotificationService.initialize(
+          onNotificationTap: onNotificationTap);
+      return;
+    }
 
     try {
       // 1. Initialize Firebase
@@ -142,6 +162,7 @@ class NotificationService {
 
   static Future<void> requestPermission() async {
     if (kIsWeb) return;
+    if (_isOhos) { await HmsNotificationService.requestPermission(); return; }
 
     try {
       // Android 13+ runtime permission
@@ -173,6 +194,11 @@ class NotificationService {
     String? payload,
   }) async {
     if (kIsWeb) return;
+    if (_isOhos) {
+      await HmsNotificationService.showNotification(
+          id: id, title: title, body: body, payload: payload);
+      return;
+    }
 
     try {
       const androidDetails = AndroidNotificationDetails(
@@ -209,6 +235,7 @@ class NotificationService {
 
   static Future<void> setBadge(int count) async {
     if (kIsWeb) return;
+    if (_isOhos) { await HmsNotificationService.setBadge(count); return; }
     try {
       final isSupported = await FlutterAppBadger.isAppBadgeSupported();
       if (isSupported) {
@@ -229,6 +256,10 @@ class NotificationService {
 
   static Future<void> subscribeToUserTopic(dynamic userIdOrEmail) async {
     if (kIsWeb) return;
+    if (_isOhos) {
+      await HmsNotificationService.subscribeToUserTopic(userIdOrEmail);
+      return;
+    }
     try {
       final topic = _sanitizeTopic(userIdOrEmail.toString());
       if (topic.isNotEmpty) {
@@ -242,6 +273,10 @@ class NotificationService {
 
   static Future<void> unsubscribeFromUserTopic(dynamic userIdOrEmail) async {
     if (kIsWeb) return;
+    if (_isOhos) {
+      await HmsNotificationService.unsubscribeFromUserTopic(userIdOrEmail);
+      return;
+    }
     try {
       final topic = _sanitizeTopic(userIdOrEmail.toString());
       if (topic.isNotEmpty) {

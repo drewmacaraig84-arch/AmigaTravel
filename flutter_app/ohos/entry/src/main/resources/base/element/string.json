@@ -1,0 +1,13 @@
+{
+  "string": [
+    { "name": "module_desc", "value": "Amiga Gracia Travel entry module" },
+    { "name": "start_ability_default_label", "value": "Amiga Gracia" },
+    { "name": "permission_internet_reason", "value": "Required to connect to booking and travel services." },
+    { "name": "permission_network_reason", "value": "Required to check network connectivity." },
+    { "name": "permission_push_reason", "value": "Required to receive booking status notifications." },
+    { "name": "permission_media_reason", "value": "Required to view and attach travel documents and images." },
+    { "name": "permission_media_write_reason", "value": "Required to save downloaded documents to your device." },
+    { "name": "permission_camera_reason", "value": "Required to take photos for profile and document upload." },
+    { "name": "permission_vibrate_reason", "value": "Required for notification vibration alerts." }
+  ]
+}

@@ -763,20 +763,20 @@
                          x-transition:enter-start="opacity-0 scale-95"
                          x-transition:enter-end="opacity-100 scale-100"
                          x-transition:leave="transition ease-in duration-75"
-                         class="absolute left-0 top-full mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50"
+                         class="absolute left-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50"
                          style="display: none;">
                         <button type="button" @click="mode = 'ferry'; if(operator && !filteredOperatorsList.some(o => o.value === operator)) operator = ''; showModeDropdown = false;"
-                                class="w-full text-left px-4 py-2.5 text-sm font-semibold flex items-center justify-between hover:bg-slate-50 transition"
-                                :class="mode === 'ferry' ? 'text-[#216417] bg-emerald-50/50' : 'text-slate-700'">
+                                class="w-full text-left px-4 py-2.5 text-sm font-semibold flex items-center justify-between hover:bg-slate-50 transition text-[#216417] bg-emerald-50/50">
                             <span>Ferry</span>
-                            <svg x-show="mode === 'ferry'" class="w-4 h-4 text-[#216417]" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                            <svg class="w-4 h-4 text-[#216417]" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                         </button>
-                        <button type="button" @click="mode = 'airline'; if(operator && !filteredOperatorsList.some(o => o.value === operator)) operator = ''; showModeDropdown = false;"
-                                class="w-full text-left px-4 py-2.5 text-sm font-semibold flex items-center justify-between hover:bg-slate-50 transition"
-                                :class="mode === 'airline' ? 'text-[#216417] bg-emerald-50/50' : 'text-slate-700'">
-                            <span>Airline</span>
-                            <svg x-show="mode === 'airline'" class="w-4 h-4 text-[#216417]" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                        </button>
+                        <div class="w-full text-left px-4 py-2.5 text-sm font-medium flex items-center justify-between text-slate-400 cursor-not-allowed select-none opacity-60"
+                             title="Airline ticketing is coming soon">
+                            <div class="flex items-center gap-2">
+                                <span>Airline</span>
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-200">Coming Soon</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

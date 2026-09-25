@@ -4041,21 +4041,9 @@ class _TravelScreenState extends State<TravelScreen>
               _ModeTab(
                   label: 'Airline',
                   icon: Icons.flight,
-                  selected: _mode == 'airline',
-                  onTap: () {
-                    if (_mode != 'airline') {
-                      setState(() {
-                        _mode = 'airline';
-                        _operator = null;
-                        _operators = [];
-                        _origin = null;
-                        _destination = null;
-                        _origins = [];
-                        _destinations = [];
-                      });
-                      _fetchOperators();
-                    }
-                  }),
+                  selected: false,
+                  isComingSoon: true,
+                  onTap: () {}),
             ],
           ),
         ),
@@ -4801,22 +4789,24 @@ class _ModeTab extends StatelessWidget {
   final IconData icon;
   final bool selected;
   final VoidCallback onTap;
+  final bool isComingSoon;
 
   const _ModeTab(
       {required this.label,
       required this.icon,
       required this.selected,
-      required this.onTap});
+      required this.onTap,
+      this.isComingSoon = false});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: isComingSoon ? null : onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
         decoration: BoxDecoration(
-          color: selected ? kGreen : kSlate100,
+          color: selected ? kGreen : (isComingSoon ? Colors.grey.shade100 : kSlate100),
           borderRadius: BorderRadius.circular(30),
           boxShadow: selected
               ? [
@@ -4829,13 +4819,32 @@ class _ModeTab extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(icon, size: 16, color: selected ? Colors.white : kSlate600),
+            Icon(icon, size: 16, color: selected ? Colors.white : (isComingSoon ? Colors.grey.shade400 : kSlate600)),
             const SizedBox(width: 6),
             Text(label,
                 style: TextStyle(
-                    color: selected ? Colors.white : kSlate600,
+                    color: selected ? Colors.white : (isComingSoon ? Colors.grey.shade500 : kSlate600),
                     fontWeight: FontWeight.bold,
                     fontSize: 13)),
+            if (isComingSoon) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFFDE68A), width: 0.8),
+                ),
+                child: const Text(
+                  'Coming Soon',
+                  style: TextStyle(
+                    color: Color(0xFF92400E),
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
