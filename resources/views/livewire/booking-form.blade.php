@@ -552,7 +552,7 @@
                                                         <select wire:model.live="selected_vehicle_rate_id" class="mt-3 block w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-slate-900 shadow-sm focus:border-[#db2777] focus:outline-none focus:ring-2 focus:ring-[#db2777]/20">
                                                             <option value="">Select category</option>
                                                             @foreach($vehicleRateCatalog as $rate)
-                                                                <option value="{{ $rate->id }}">{{ $rate->name }}{{ $rate->price > 0 ? ' (₱' . number_format($rate->price, 2) . ')' : '' }}</option>
+                                                                <option value="{{ $rate->id }}">{{ $rate->name }}</option>
                                                             @endforeach
                                                         </select>
                                                         @error('selected_vehicle_rate_id')<p class="mt-2 text-sm text-rose-600">{{ $message }}</p>@enderror
@@ -574,7 +574,7 @@
                                                         <select wire:model.live="selected_model_id" class="mt-3 block w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-slate-900 shadow-sm focus:border-[#db2777] focus:outline-none focus:ring-2 focus:ring-[#db2777]/20" @if($vehicleModelCatalog->isEmpty()) disabled @endif>
                                                             <option value="">Select model</option>
                                                             @foreach($vehicleModelCatalog as $model)
-                                                                <option value="{{ $model->id }}">{{ $model->name }}{{ $model->price > 0 ? ' (₱' . number_format($model->price, 2) . ')' : '' }}</option>
+                                                                <option value="{{ $model->id }}">{{ $model->name }}</option>
                                                             @endforeach
                                                         </select>
                                                         @error('selected_model_id')<p class="mt-2 text-sm text-rose-600">{{ $message }}</p>@enderror

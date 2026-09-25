@@ -360,10 +360,36 @@
                      this.vehicleUnsupportedNotice = '';
                  }
              },
+             findDirectRouteRate(rateMap) {
+                 if (!rateMap || !this.origin || !this.destination) return null;
+                 let orig = (this.origin || '').trim();
+                 let dest = (this.destination || '').trim();
+                 let pair1 = orig + '|' + dest;
+                 let pair2 = dest + '|' + orig;
+                 if (rateMap[pair1] !== undefined) return parseFloat(rateMap[pair1]);
+                 if (rateMap[pair2] !== undefined) return parseFloat(rateMap[pair2]);
+
+                 let origLower = orig.toLowerCase();
+                 let destLower = dest.toLowerCase();
+                 for (let k in rateMap) {
+                     let parts = k.toLowerCase().split('|');
+                     let o = parts[0] || '';
+                     let d = parts[1] || '';
+                     if ((o === origLower && d === destLower) || (o === destLower && d === origLower)) {
+                         return parseFloat(rateMap[k]);
+                     }
+                     if ((origLower.includes(o) || o.includes(origLower)) && (destLower.includes(d) || d.includes(destLower))) {
+                         return parseFloat(rateMap[k]);
+                     }
+                 }
+                 return null;
+             },
              get selectedCargoRate() {
                  if (this.vehicle_booking_method === 'category' && this.selected_vehicle_rate_id) {
                      let r = this.vehicleRatesList.find(x => x.id == this.selected_vehicle_rate_id);
                      if (!r) return 0;
+                     let directRate = this.findDirectRouteRate(r.route_rates);
+                     if (directRate !== null) return directRate;
                      return this.getRouteTariffForVehicle(r.name, parseFloat(r.price || 0));
                  }
                  if (this.vehicle_booking_method === 'brand_model' && this.selected_model_id) {
@@ -371,6 +397,8 @@
                      if (b && b.models) {
                          let m = b.models.find(x => x.id == this.selected_model_id);
                          if (!m) return 0;
+                         let directRate = this.findDirectRouteRate(m.route_rates);
+                         if (directRate !== null) return directRate;
                          return this.getRouteTariffForVehicle(m.name, parseFloat(m.price || 0));
                      }
                  }
@@ -1341,7 +1369,7 @@
                                             class="w-full h-9 px-3 rounded-lg border bg-slate-50 text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-1">
                                         <option value="">Select category</option>
                                         <template x-for="rate in vehicleRatesList" :key="rate.id">
-                                            <option :value="rate.id" x-text="rate.name + ' (₱' + getRouteTariffForVehicle(rate.name, rate.price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ')'"></option>
+                                            <option :value="rate.id" x-text="rate.name"></option>
                                         </template>
                                     </select>
                                     <div x-show="errors.vehicle_category" x-transition class="mt-1">
@@ -1375,7 +1403,7 @@
                                                 class="w-full h-9 px-2 rounded-lg border bg-slate-50 text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-1 disabled:opacity-50">
                                             <option value="">Model</option>
                                             <template x-for="model in availableVehicleModels" :key="model.id">
-                                                <option :value="model.id" x-text="model.name + ' (₱' + getRouteTariffForVehicle(model.name, model.price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ')'"></option>
+                                                <option :value="model.id" x-text="model.name"></option>
                                             </template>
                                         </select>
                                         <div x-show="errors.vehicle_model" x-transition class="mt-1">

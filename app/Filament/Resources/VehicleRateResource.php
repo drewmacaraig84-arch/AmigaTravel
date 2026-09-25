@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\VehicleRateResource\Pages;
 use App\Models\User;
 use App\Models\VehicleRate;
+use App\Models\VehicleRouteRate;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
@@ -64,11 +65,12 @@ class VehicleRateResource extends Resource
                     ->columnSpanFull(),
 
                 TextInput::make('price')
-                    ->label('Rate (₱)')
+                    ->label('Default Price – ₱ (fallback for non-Starlite routes)')
                     ->numeric()
                     ->prefix('₱')
                     ->minValue(0)
-                    ->required(),
+                    ->required()
+                    ->helperText('This price applies to routes that do not have a specific Starlite route price set.'),
 
                 TextInput::make('sort_order')
                     ->label('Sort order')
@@ -90,26 +92,42 @@ class VehicleRateResource extends Resource
                 TextColumn::make('sort_order')
                     ->label('Order')
                     ->sortable(),
+
                 TextColumn::make('name')
                     ->label('Vehicle type')
                     ->searchable()
+                    ->sortable()
+                    ->description('Click row to manage route prices'),
+
+                // Route prices count badge
+                TextColumn::make('route_rates_count')
+                    ->counts('routeRates')
+                    ->label('Routes Set')
+                    ->badge()
+                    ->color('primary')
                     ->sortable(),
-                TextColumn::make('price')
-                    ->money('PHP')
-                    ->sortable(),
+
                 ToggleColumn::make('is_active')
                     ->label('Active'),
+
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->defaultSort('sort_order', 'asc')
+            ->recordUrl(fn (VehicleRate $record): string => static::getUrl('routes', ['record' => $record->id]))
             ->filters([
                 //
             ])
             ->actionsColumnLabel('Action')
             ->actions([
+                Tables\Actions\Action::make('manage_routes')
+                    ->label('Route Prices')
+                    ->icon('heroicon-o-map')
+                    ->url(fn (VehicleRate $record) => static::getUrl('routes', ['record' => $record->id]))
+                    ->color('primary'),
+
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])
@@ -130,9 +148,10 @@ class VehicleRateResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListVehicleRates::route('/'),
+            'index'  => Pages\ListVehicleRates::route('/'),
             'create' => Pages\CreateVehicleRate::route('/create'),
-            'edit' => Pages\EditVehicleRate::route('/{record}/edit'),
+            'edit'   => Pages\EditVehicleRate::route('/{record}/edit'),
+            'routes' => Pages\ManageVehicleRateRoutes::route('/{record}/routes'),
         ];
     }
 }

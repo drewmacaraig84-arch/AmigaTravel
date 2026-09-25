@@ -8,7 +8,6 @@ use App\Models\User;
 use App\Models\VehicleBrand;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Forms\Components\Section;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -85,16 +84,22 @@ class VehicleBrandResource extends Resource
                 TextColumn::make('sort_order')
                     ->label('Order')
                     ->sortable(),
+
                 TextColumn::make('name')
                     ->label('Brand')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->description('Click row to view & manage models'),
+
                 TextColumn::make('models_count')
                     ->counts('models')
                     ->label('Models')
+                    ->badge()
                     ->sortable(),
+
                 ToggleColumn::make('is_active')
                     ->label('Active'),
+
                 TextColumn::make('created_at')
                     ->label('Created')
                     ->dateTime()
@@ -102,9 +107,12 @@ class VehicleBrandResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->defaultSort('sort_order', 'asc')
+            ->recordUrl(fn (VehicleBrand $record): string => static::getUrl('edit', ['record' => $record->id]))
             ->actionsColumnLabel('Action')
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\EditAction::make()
+                    ->label('View Models / Edit'),
+
                 Tables\Actions\DeleteAction::make(),
             ])
             ->filters([
@@ -127,9 +135,10 @@ class VehicleBrandResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListVehicleBrands::route('/brands'),
-            'create' => Pages\CreateVehicleBrand::route('/brands/create'),
-            'edit' => Pages\EditVehicleBrand::route('/brands/{record}/edit'),
+            'index'        => Pages\ListVehicleBrands::route('/brands'),
+            'create'       => Pages\CreateVehicleBrand::route('/brands/create'),
+            'edit'         => Pages\EditVehicleBrand::route('/brands/{record}/edit'),
+            'model-routes' => Pages\ManageVehicleModelRoutes::route('/brands/models/{record}/routes'),
         ];
     }
 }

@@ -900,10 +900,57 @@ class StarliteScheduleIngestionService
     }
 
     /**
-     * Calculate exact vehicle price for a route using official Starlite matrix.
+     * Calculate exact vehicle price for a route.
+     *
+     * Priority:
+     *   1. DB vehicle_route_rates table – exact VehicleRate name match (admin-managed prices)
+     *   2. Hardcoded STARLITE_FARE_MATRIX (legacy fallback)
+     *   3. $defaultFallback
      */
     public static function calculateVehiclePriceForRoute(string $vehicleType, ?string $origin, ?string $destination, float $defaultFallback = 0.0): float
     {
+        // 1. DB-first: look up admin-configured price for this model, brand, or category + route
+        if (filled($origin) && filled($destination)) {
+            $routeKey    = "{$origin}|{$destination}";
+            $reverseKey  = "{$destination}|{$origin}";
+
+            // 1a. Model-specific override
+            $dbModelRate = \App\Models\VehicleRouteRate::query()
+                ->whereHas('vehicleModel', fn ($q) => $q->where('name', $vehicleType)->where('is_active', true))
+                ->whereIn('route_key', [$routeKey, $reverseKey])
+                ->where('is_active', true)
+                ->first();
+
+            if ($dbModelRate !== null) {
+                return (float) $dbModelRate->price;
+            }
+
+            // 1b. Brand match (either vehicleType is brand name OR model belongs to this brand)
+            $dbBrandRate = \App\Models\VehicleRouteRate::query()
+                ->whereHas('vehicleBrand', fn ($q) => $q->where('name', $vehicleType)
+                    ->orWhereHas('models', fn ($m) => $m->where('name', $vehicleType))
+                )
+                ->whereIn('route_key', [$routeKey, $reverseKey])
+                ->where('is_active', true)
+                ->first();
+
+            if ($dbBrandRate !== null) {
+                return (float) $dbBrandRate->price;
+            }
+
+            // 1c. Category match
+            $dbCategoryRate = \App\Models\VehicleRouteRate::query()
+                ->whereHas('vehicleRate', fn ($q) => $q->where('name', $vehicleType)->where('is_active', true))
+                ->whereIn('route_key', [$routeKey, $reverseKey])
+                ->where('is_active', true)
+                ->first();
+
+            if ($dbCategoryRate !== null) {
+                return (float) $dbCategoryRate->price;
+            }
+        }
+
+        // 2. Fallback: hardcoded Starlite fare matrix
         $rates = self::getVehicleRatesForRoute($origin, $destination);
         if (empty($rates)) {
             return $defaultFallback;

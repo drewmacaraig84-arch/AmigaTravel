@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class VehicleModel extends Model
 {
@@ -23,6 +24,11 @@ class VehicleModel extends Model
     public function brand(): BelongsTo
     {
         return $this->belongsTo(VehicleBrand::class, 'vehicle_brand_id');
+    }
+
+    public function routeRates(): HasMany
+    {
+        return $this->hasMany(VehicleRouteRate::class);
     }
 
     protected static function booted(): void

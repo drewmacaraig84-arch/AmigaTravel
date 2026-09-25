@@ -157,22 +157,24 @@ $renderWebsitePage = function (string $page, string $view) {
         }),
         'vehicleRates' => \Illuminate\Support\Facades\Cache::remember('web:vehicleRates', now()->addMinutes(30), function () {
             try {
-                return \App\Models\VehicleRate::query()->where('is_active', true)->orderBy('sort_order')->get()->map(fn ($r) => [
+                return \App\Models\VehicleRate::query()->where('is_active', true)->with('routeRates')->orderBy('sort_order')->get()->map(fn ($r) => [
                     'id' => $r->id,
                     'name' => $r->name,
                     'price' => (float) $r->price,
+                    'route_rates' => $r->routeRates->where('is_active', true)->mapWithKeys(fn ($rr) => [$rr->route_key => (float) $rr->price])->all(),
                 ])->all();
             } catch (\Throwable $e) { return []; }
         }),
         'vehicleBrands' => \Illuminate\Support\Facades\Cache::remember('web:vehicleBrands', now()->addMinutes(30), function () {
             try {
-                return \App\Models\VehicleBrand::query()->where('is_active', true)->orderBy('sort_order')->with('models')->get()->map(fn ($b) => [
+                return \App\Models\VehicleBrand::query()->where('is_active', true)->orderBy('sort_order')->with(['models' => fn ($q) => $q->where('is_active', true)->with('routeRates')])->get()->map(fn ($b) => [
                     'id' => $b->id,
                     'name' => $b->name,
-                    'models' => $b->models->where('is_active', true)->sortBy('sort_order')->map(fn ($m) => [
+                    'models' => $b->models->sortBy('sort_order')->map(fn ($m) => [
                         'id' => $m->id,
                         'name' => $m->name,
                         'price' => (float) $m->price,
+                        'route_rates' => $m->routeRates->where('is_active', true)->mapWithKeys(fn ($rr) => [$rr->route_key => (float) $rr->price])->all(),
                     ])->values()->all(),
                 ])->all();
             } catch (\Throwable $e) { return []; }

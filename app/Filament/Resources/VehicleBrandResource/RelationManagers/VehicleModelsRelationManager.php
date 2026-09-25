@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\VehicleBrandResource\RelationManagers;
 
+use App\Filament\Resources\VehicleBrandResource;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
@@ -28,11 +29,12 @@ class VehicleModelsRelationManager extends RelationManager
                     ->columnSpanFull(),
 
                 TextInput::make('price')
-                    ->label('Price (₱)')
+                    ->label('Default / Fallback Price (₱)')
                     ->numeric()
                     ->prefix('₱')
                     ->minValue(0)
-                    ->required(),
+                    ->required()
+                    ->helperText('Default price used as fallback for non-Starlite routes. Use Route Prices to configure per-route pricing.'),
 
                 TextInput::make('sort_order')
                     ->label('Sort order')
@@ -54,25 +56,39 @@ class VehicleModelsRelationManager extends RelationManager
                 TextColumn::make('sort_order')
                     ->label('Order')
                     ->sortable(),
+
                 TextColumn::make('name')
                     ->label('Model')
                     ->searchable()
-                    ->sortable(),
-                TextColumn::make('price')
-                    ->label('Price')
-                    ->money('PHP')
-                    ->sortable(),
+                    ->sortable()
+                    ->description('Click row or Route Prices to set prices per route'),
+
+                TextColumn::make('route_rates_count')
+                    ->counts('routeRates')
+                    ->label('Routes Set')
+                    ->badge()
+                    ->color(fn (int $state): string => $state > 0 ? 'success' : 'gray'),
+
                 ToggleColumn::make('is_active')
                     ->label('Active'),
             ])
             ->defaultSort('sort_order', 'asc')
+            ->recordUrl(fn ($record) => VehicleBrandResource::getUrl('model-routes', ['record' => $record->id]))
             ->filters([
                 //
             ])
             ->headerActions([
                 Tables\Actions\CreateAction::make(),
             ])
+            ->actionsColumnLabel('Action')
             ->actions([
+                Tables\Actions\Action::make('route_prices')
+                    ->label('Route Prices')
+                    ->icon('heroicon-o-map')
+                    ->url(fn ($record) => VehicleBrandResource::getUrl('model-routes', ['record' => $record->id]))
+                    ->color('primary')
+                    ->openUrlInNewTab(false),
+
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])

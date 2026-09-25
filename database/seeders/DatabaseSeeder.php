@@ -75,6 +75,7 @@ class DatabaseSeeder extends Seeder
             DiscountSeeder::class,
             VehicleBrandModelSeeder::class,
             VehicleRateSeeder::class,
+            VehicleRouteRateSeeder::class,
             VehicleSeeder::class,
             WebsiteSettingSeeder::class,
             GraciaEarningRuleSeeder::class,

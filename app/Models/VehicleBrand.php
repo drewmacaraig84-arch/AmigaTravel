@@ -22,6 +22,11 @@ class VehicleBrand extends Model
         return $this->hasMany(VehicleModel::class)->orderBy('sort_order');
     }
 
+    public function routeRates(): HasMany
+    {
+        return $this->hasMany(VehicleRouteRate::class);
+    }
+
     protected static function booted(): void
     {
         $bust = fn() => static::bust();
