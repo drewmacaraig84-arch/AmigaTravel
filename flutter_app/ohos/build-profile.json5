@@ -1,38 +1,50 @@
 {
-  "app": {
-    "signingConfigs": [],
-    "compileSdkVersion": 12,
-    "compatibleSdkVersion": 12,
-    "products": [
-      {
-        "name": "default",
-        "signingConfig": "default",
-        "compileSdkVersion": 12,
-        "compatibleSdkVersion": 12,
-        "runtimeOS": "HarmonyOS"
-      }
-    ],
-    "buildModeSet": [
-      {
-        "name": "debug"
-      },
-      {
-        "name": "release"
-      }
-    ]
-  },
-  "modules": [
-    {
-      "name": "entry",
-      "srcPath": "./entry",
-      "targets": [
+    "app": {
+        "signingConfigs": [
+            {
+                "name": "default",
+                "type": "HarmonyOS",
+                "material": {
+                    "storeFile": "C:/Users/macar/keys/amiga_travel.p12",
+                    "storePassword": "00000020CCB96336E23506694725A5E29673562EA6A77826A9C5C6D2D1A3FA5A23D3D2540055631F0901E3A02E0B3C5F",
+                    "keyAlias": "amiga_travel",
+                    "keyPassword": "00000020D2BD185A3016151562AD6C4325A363BEA53A34ECE852D17645628CB428043E1F9D01F3285296146E14459229",
+                    "signAlg": "SHA256withECDSA",
+                    "profile": "C:/Users/macar/keys/AmigaTravelReleaseProfileRelease.p7b",
+                    "certpath": "C:/Users/macar/keys/AmigaTravelReleaseCert.cer"
+                }
+            }
+        ],
+        "products": [
+            {
+                "name": "default",
+                "signingConfig": "default",
+                "compileSdkVersion": "5.0.0(12)",
+                "compatibleSdkVersion": "5.0.0(12)",
+                "runtimeOS": "HarmonyOS"
+            }
+        ],
+        "buildModeSet": [
+            {
+                "name": "debug"
+            },
+            {
+                "name": "release"
+            }
+        ]
+    },
+    "modules": [
         {
-          "name": "default",
-          "applyToProducts": [
-            "default"
-          ]
+            "name": "entry",
+            "srcPath": "./entry",
+            "targets": [
+                {
+                    "name": "default",
+                    "applyToProducts": [
+                        "default"
+                    ]
+                }
+            ]
         }
-      ]
-    }
-  ]
+    ]
 }

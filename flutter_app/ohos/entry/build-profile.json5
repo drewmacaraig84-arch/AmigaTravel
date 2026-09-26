@@ -1,11 +1,6 @@
 {
   "apiType": "stageMode",
-  "buildOption": {
-    "strictMode": {
-      "caseSensitiveCheck": true,
-      "useNormalizedOHMUrl": true
-    }
-  },
+  "buildOption": {},
   "buildOptionSet": [
     {
       "name": "release",
@@ -20,7 +15,6 @@
     }
   ],
   "targets": [
-    { "name": "default" },
-    { "name": "ohosTest", "testRunner": { "name": "OpenHarmonyTestRunner", "srcPath": "TestRunner" } }
+    { "name": "default" }
   ]
 }

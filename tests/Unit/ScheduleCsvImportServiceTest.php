@@ -157,4 +157,22 @@ class ScheduleCsvImportServiceTest extends TestCase
         $this->assertEquals(13, $result['imported']);
         $this->assertEmpty($result['errors']);
     }
+
+    public function test_imports_csv_with_bare_carriage_returns_and_typos_in_dates_and_headers(): void
+    {
+        // Tests bare \r line breaks, 'Arival Date' header typo, '22026' year typo, and '14/ 11/ 2026' spaced dates
+        $csvContent = "Mode,Operator,Vehicle Tail No,Plate No,Origin,Destination,Departure Date,Departure Time,Arival Date,Arrival Time,Transport Class,Rate,Additional Price,Rate Tier,Tickets Available,Has Bed,Rate Code\r"
+            . "ferry,2GO,MV 2GO Masikap,,Bacolod,Cagayan De Oro,26/09/2026,5:00 AM,26/09/22026,8:00 PM,Tourist Class,0,\"3,252.26\",Regular,50,Yes,REG\r"
+            . "ferry,2GO,MV 2GO Maligaya,,Bacolod,Cagayan De Oro,14/ 11/ 2026,5:00 AM,14/ 11/ 2026,8:00 PM,Tourist Class,0,\"3,252.26\",Regular,50,Yes,REG\r";
+
+        $tempFile = tempnam(sys_get_temp_dir(), 'test_cr_') . '.csv';
+        file_put_contents($tempFile, $csvContent);
+
+        $result = $this->service->import($tempFile);
+
+        $this->assertEquals(2, $result['imported']);
+        $this->assertEmpty($result['errors']);
+
+        @unlink($tempFile);
+    }
 }

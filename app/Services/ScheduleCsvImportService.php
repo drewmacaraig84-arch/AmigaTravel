@@ -16,6 +16,8 @@ use ZipArchive;
 
 class ScheduleCsvImportService
 {
+    protected ?Carbon $lastDepartureDateTime = null;
+
     public function __construct(
         protected LocationCodeResolver $locationResolver = new LocationCodeResolver(),
         protected ?StarliteScheduleIngestionService $starliteService = null,
@@ -43,6 +45,7 @@ class ScheduleCsvImportService
         $importedCount = 0;
         $skippedCount = 0;
         $errors = [];
+        $this->lastDepartureDateTime = null;
 
         if (! file_exists($filePath) || ! is_readable($filePath)) {
             return [
@@ -186,26 +189,33 @@ class ScheduleCsvImportService
 
     /**
      * Parse rows from CSV file.
+     * Handles UTF-8 BOM, standard CRLF (\r\n), LF (\n), and classic Mac standalone CR (\r) line breaks.
      */
     protected function parseCsvRows(string $filePath): array
     {
-        $handle = fopen($filePath, 'r');
-        if (! $handle) {
+        $content = file_get_contents($filePath);
+        if ($content === false) {
             throw new \RuntimeException('Could not open CSV file.');
         }
 
         // Remove UTF-8 BOM if present
-        $bom = fread($handle, 3);
-        if ($bom !== "\xEF\xBB\xBF") {
-            rewind($handle);
+        if (str_starts_with($content, "\xEF\xBB\xBF")) {
+            $content = substr($content, 3);
         }
 
+        // Normalize carriage returns (\r\n and bare \r to \n) so classic Mac CR exports parse correctly
+        $content = str_replace(["\r\n", "\r"], "\n", $content);
+
+        $stream = fopen('php://temp', 'r+');
+        fwrite($stream, $content);
+        rewind($stream);
+
         $rows = [];
-        while (($row = fgetcsv($handle)) !== false) {
+        while (($row = fgetcsv($stream)) !== false) {
             $rows[] = $row;
         }
 
-        fclose($handle);
+        fclose($stream);
 
         return $rows;
     }
@@ -335,7 +345,7 @@ class ScheduleCsvImportService
             'arrivaltime', 'arrtime', 'arrival_time', 'eta', 'arrival', 'arr_time'
         ]);
         $arrDateStr = $this->getValue($row, [
-            'arrivaldate', 'arrdate', 'arrival_date', 'arr_date', 'destination_date', 'reach_date'
+            'arrivaldate', 'arivaldate', 'arrdate', 'ardate', 'arrival_date', 'arival_date', 'arr_date', 'destination_date', 'reach_date'
         ]);
         $returnDateStr = $this->getValue($row, ['returndate', 'retdate', 'return_date']);
         $transportClassStr = $this->getValue($row, [
@@ -462,13 +472,14 @@ class ScheduleCsvImportService
         // 3. Parse Departure & Arrival Datetimes
         $depTimeStrClean = $this->cleanTimeString($depTimeStr);
         $depDateStrClean = trim($depDateStr);
-        $departureDateTime = $this->parseImportedDateTime($depDateStrClean, $depTimeStrClean);
+        $departureDateTime = $this->parseSmartDepartureDateTime($depDateStrClean, $depTimeStrClean);
+        $this->lastDepartureDateTime = $departureDateTime;
 
         if (filled($arrTimeStr)) {
             $arrTimeRaw = trim($arrTimeStr);
             if (filled($arrDateStr)) {
                 $cleanArrTime = $this->cleanTimeString($arrTimeRaw);
-                $arrivalDateTime = $this->parseImportedDateTime(trim($arrDateStr), $cleanArrTime);
+                $arrivalDateTime = $this->parseSmartArrivalDateTimeWithAnchor(trim($arrDateStr), $cleanArrTime, $departureDateTime);
             } else {
                 $arrivalDateTime = $this->parseSmartArrivalDateTime($departureDateTime, $arrTimeRaw, $depDateStrClean);
             }
@@ -782,12 +793,132 @@ class ScheduleCsvImportService
     }
 
     /**
+     * Sanitize date string: strip whitespace around slashes/dashes and fix 5-digit typo years (e.g. 22026 -> 2026).
+     */
+    protected function sanitizeDateString(string $date): string
+    {
+        $clean = trim($date);
+        // Remove whitespace around slashes or dashes (e.g. "14/ 11/ 2026" -> "14/11/2026")
+        $clean = preg_replace('/\s*([\/\-])\s*/', '$1', $clean);
+        // Fix typo 5-digit years where 2 was repeated (e.g. "26/09/22026" -> "26/09/2026")
+        $clean = preg_replace('/(\b\d{1,2}[\/\-]\d{1,2}[\/\-])2+(\d{4})\b/', '$1$2', $clean);
+        $clean = preg_replace('/(\b\d{1,2}[\/\-]\d{1,2}[\/\-])(202\d)\d\b/', '$1$2', $clean);
+
+        return $clean;
+    }
+
+    /**
+     * Try creating a Carbon instance using candidate formats for a given prefix.
+     */
+    protected function tryCreateDateTime(string $dateTime, string $datePrefixFormat): ?Carbon
+    {
+        foreach ([
+            "{$datePrefixFormat} H:i:s",
+            "{$datePrefixFormat} H:i",
+            "{$datePrefixFormat} h:i A",
+            "{$datePrefixFormat} g:i A",
+            "{$datePrefixFormat} h:iA",
+            "{$datePrefixFormat} g:iA",
+        ] as $format) {
+            try {
+                $parsed = Carbon::createFromFormat($format, $dateTime);
+                if ($parsed !== false) {
+                    return $parsed;
+                }
+            } catch (Throwable) {
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Smartly parse departure datetime, disambiguating DMY vs MDY when Excel switches formats.
+     */
+    protected function parseSmartDepartureDateTime(string $date, string $time): Carbon
+    {
+        $cleanDate = $this->sanitizeDateString($date);
+        $cleanTime = $this->cleanTimeString($time);
+
+        if (preg_match('/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/', $cleanDate, $m)) {
+            $p1 = (int) $m[1];
+            $p2 = (int) $m[2];
+            $year = (int) $m[3];
+
+            $canDmy = ($p2 >= 1 && $p2 <= 12 && $p1 >= 1 && $p1 <= 31);
+            $canMdy = ($p1 >= 1 && $p1 <= 12 && $p2 >= 1 && $p2 <= 31);
+
+            if ($canDmy && $canMdy && $this->lastDepartureDateTime !== null) {
+                $dmyCandidate = $this->tryCreateDateTime("{$p1}/{$p2}/{$year} {$cleanTime}", 'd/m/Y');
+                $mdyCandidate = $this->tryCreateDateTime("{$p1}/{$p2}/{$year} {$cleanTime}", 'm/d/Y');
+
+                if ($dmyCandidate && $mdyCandidate) {
+                    $dmyDiff = $this->lastDepartureDateTime->diffInDays($dmyCandidate, false);
+                    $mdyDiff = $this->lastDepartureDateTime->diffInDays($mdyCandidate, false);
+
+                    // If DMY jumped backwards drastically (e.g. > 15 days in past), but MDY is within [-2, 14] days:
+                    if ($dmyDiff < -15 && $mdyDiff >= -2 && $mdyDiff <= 14) {
+                        return $mdyCandidate;
+                    }
+                    if ($mdyDiff < -15 && $dmyDiff >= -2 && $dmyDiff <= 14) {
+                        return $dmyCandidate;
+                    }
+                }
+            }
+        }
+
+        return $this->parseImportedDateTime($cleanDate, $cleanTime);
+    }
+
+    /**
+     * Smartly parse arrival datetime with anchor to departure datetime (e.g. resolving ambiguous DMY/MDY).
+     */
+    protected function parseSmartArrivalDateTimeWithAnchor(string $date, string $time, Carbon $departureDateTime): Carbon
+    {
+        $cleanDate = $this->sanitizeDateString($date);
+        $cleanTime = $this->cleanTimeString($time);
+
+        if (preg_match('/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/', $cleanDate, $m)) {
+            $p1 = (int) $m[1];
+            $p2 = (int) $m[2];
+            $year = (int) $m[3];
+
+            $canDmy = ($p2 >= 1 && $p2 <= 12 && $p1 >= 1 && $p1 <= 31);
+            $canMdy = ($p1 >= 1 && $p1 <= 12 && $p2 >= 1 && $p2 <= 31);
+
+            if ($canDmy && $canMdy) {
+                $dmyCandidate = $this->tryCreateDateTime("{$p1}/{$p2}/{$year} {$cleanTime}", 'd/m/Y');
+                $mdyCandidate = $this->tryCreateDateTime("{$p1}/{$p2}/{$year} {$cleanTime}", 'm/d/Y');
+
+                if ($dmyCandidate && $mdyCandidate) {
+                    $dmyDiffHours = $departureDateTime->diffInHours($dmyCandidate, false);
+                    $mdyDiffHours = $departureDateTime->diffInHours($mdyCandidate, false);
+
+                    // A realistic ferry arrives within 0 to 72 hours of departure
+                    $dmyRealistic = ($dmyDiffHours >= 0 && $dmyDiffHours <= 72);
+                    $mdyRealistic = ($mdyDiffHours >= 0 && $mdyDiffHours <= 72);
+
+                    if ($mdyRealistic && ! $dmyRealistic) {
+                        return $mdyCandidate;
+                    }
+                    if ($dmyRealistic && ! $mdyRealistic) {
+                        return $dmyCandidate;
+                    }
+                }
+            }
+        }
+
+        return $this->parseImportedDateTime($cleanDate, $cleanTime);
+    }
+
+    /**
      * Parse imported schedule datetimes with explicit support for DD/MM/YYYY, M/D/YYYY and 12-hour AM/PM formats.
      */
     protected function parseImportedDateTime(string $date, string $time): Carbon
     {
+        $cleanDate = $this->sanitizeDateString($date);
         $cleanTime = $this->cleanTimeString($time);
-        $dateTime = trim($date) . ' ' . $cleanTime;
+        $dateTime = $cleanDate . ' ' . $cleanTime;
 
         foreach ([
             'd/m/Y H:i:s', 'd/m/Y H:i', 'd/m/Y h:i A', 'd/m/Y g:i A', 'd/m/Y h:iA', 'd/m/Y g:iA',
