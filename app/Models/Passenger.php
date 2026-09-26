@@ -119,6 +119,19 @@ class Passenger extends Model
         'item_number'               => 'integer',
     ];
 
+    protected static function booted(): void
+    {
+        static::saved(function (Passenger $passenger) {
+            if ($passenger->wasRecentlyCreated || $passenger->wasChanged(['status', 'rebooking_status', 'refund_status', 'refund_amount'])) {
+                \App\Support\AdminNotificationFeed::clearAllCache();
+            }
+        });
+
+        static::deleted(function () {
+            \App\Support\AdminNotificationFeed::clearAllCache();
+        });
+    }
+
     // ─── Accessors ────────────────────────────────────────────────────────────
 
     public function isAdult(): bool

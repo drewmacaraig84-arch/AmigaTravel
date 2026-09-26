@@ -40,7 +40,7 @@ class ManageRebookings extends Page implements HasTable
     {
         $user = Auth::user();
 
-        return $user instanceof User && $user->hasAdminPermission('bookings');
+        return $user instanceof User && ($user->hasAdminPermission('bookings') || $user->hasAdminPermission('transactions'));
     }
 
     public function table(Table $table): Table

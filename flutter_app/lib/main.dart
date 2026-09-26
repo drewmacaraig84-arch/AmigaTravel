@@ -12629,6 +12629,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                       }
 
                       double passengerDiscount = 0.0;
+                      final Map<String, double> groupedPassengerDiscounts = {};
                       if (!isSuperPromo && !isPromo) {
                         for (var p in widget.booking.passengers) {
                           final pType = (p['type'] ?? '').toString().toLowerCase();
@@ -12640,7 +12641,8 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                                 ? (widget.booking.selectedSchedule!['promotional_ticket']['promo_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0)
                                 : (widget.booking.selectedSchedule!['adult_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0);
                             final ap = (rawAp is num ? rawAp.toDouble() : (double.tryParse(rawAp.toString()) ?? 0.0)) + depTc;
-                            passengerDiscount += _computePassengerDiscount(ap, p['discount_id']);
+                            final depDisc = _computePassengerDiscount(ap, p['discount_id']);
+                            double retDisc = 0.0;
                             if (widget.booking.tripType == 'round_trip' &&
                                 widget.booking.selectedReturnSchedule != null) {
                               final rp = widget.booking
@@ -12649,7 +12651,17 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                                       .selectedReturnSchedule!['price'] ??
                                   0;
                               final retAp = (rp is num ? rp.toDouble() : (double.tryParse(rp.toString()) ?? 0.0)) + retTc;
-                              passengerDiscount += _computePassengerDiscount(retAp, p['discount_id']);
+                              retDisc = _computePassengerDiscount(retAp, p['discount_id']);
+                            }
+                            final totalPaxDisc = depDisc + retDisc;
+                            if (totalPaxDisc > 0) {
+                              passengerDiscount += totalPaxDisc;
+                              final disc = _discountsList.firstWhere(
+                                (d) => d['id'] == p['discount_id'] || d['id'].toString() == p['discount_id'].toString(),
+                                orElse: () => {},
+                              );
+                              final String discName = (disc['name'] ?? 'Discount').toString();
+                              groupedPassengerDiscounts[discName] = (groupedPassengerDiscounts[discName] ?? 0.0) + totalPaxDisc;
                             }
                           }
                         }
@@ -12750,9 +12762,14 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                             if (scheduleAccommodationCost > 0)
                               _SummaryRow('Accommodation',
                                   '₱${scheduleAccommodationCost.toStringAsFixed(2)}'),
-                            if (passengerDiscount > 0)
+                            if (groupedPassengerDiscounts.isNotEmpty) ...[
+                              for (final entry in groupedPassengerDiscounts.entries)
+                                _SummaryRow('Discount (${entry.key})',
+                                    '-₱${entry.value.toStringAsFixed(2)}'),
+                            ] else if (passengerDiscount > 0) ...[
                               _SummaryRow('Passenger Discount',
                                   '-₱${passengerDiscount.toStringAsFixed(2)}'),
+                            ],
                             if (vehicleCost > 0)
                               _SummaryRow('Vehicle Freight',
                                   '₱${vehicleCost.toStringAsFixed(2)}'),

@@ -3467,6 +3467,8 @@ class BookingForm extends Component
         $totalReturnAccommodation = 0;
         $isFerry = (strtolower($this->mode ?? '') !== 'airline');
 
+        $discountGroups = [];
+
         foreach ($this->passengers as $passenger) {
             if ($passenger['type'] === 'driver') {
                 continue; // Driver ticket and accommodation are free
@@ -3508,8 +3510,13 @@ class BookingForm extends Component
             if ($hasDiscount) {
                 $discount = $discountsById->get($passenger['discount_id']);
                 if ($discount) {
-                    $depTicket = max(0.0, $depTicket - $discount->computeDiscountAmount($depTicket));
-                    $retTicket = max(0.0, $retTicket - $discount->computeDiscountAmount($retTicket));
+                    $depDiscAmt = $discount->computeDiscountAmount($depTicket);
+                    $retDiscAmt = ($this->trip_type === 'round_trip') ? $discount->computeDiscountAmount($retTicket) : 0.0;
+                    $paxDiscAmt = $depDiscAmt + $retDiscAmt;
+                    if ($paxDiscAmt > 0) {
+                        $discName = $discount->name ?? 'Discount';
+                        $discountGroups[$discName] = ($discountGroups[$discName] ?? 0) + $paxDiscAmt;
+                    }
                 }
             }
 
@@ -3518,6 +3525,20 @@ class BookingForm extends Component
             $totalDepartureAccommodation += $departureAccommodationPrice;
             $totalReturnAccommodation += $returnAccommodationPrice;
         }
+
+        $discountsList = [];
+        $totalPassengerDiscount = 0.0;
+        foreach ($discountGroups as $discName => $discAmt) {
+            $discountsList[] = [
+                'label'  => 'Discount (' . $discName . ')',
+                'name'   => $discName,
+                'amount' => round($discAmt, 2),
+            ];
+            $totalPassengerDiscount += round($discAmt, 2);
+        }
+
+        $breakdown['discounts'] = $discountsList;
+        $breakdown['passenger_discount'] = $totalPassengerDiscount;
 
         $breakdown['departure_ticket'] = $totalDepartureTicket;
         $breakdown['return_ticket'] = $totalReturnTicket;
@@ -3545,7 +3566,7 @@ class BookingForm extends Component
 
         $breakdown['transaction_fee'] = $settings->getTransactionFee($isShortHaul) * $multiplier;
 
-        // Calculate subtotal (sum of all items before voucher)
+        // Calculate subtotal (sum of all gross items before discount deductions)
         $subtotal =
             $breakdown['departure_ticket'] +
             $breakdown['return_ticket'] +
@@ -3559,7 +3580,7 @@ class BookingForm extends Component
             $breakdown['transaction_fee'];
 
         $breakdown['subtotal'] = $subtotal;
-        $breakdown['total'] = max(0, $subtotal - $breakdown['voucher_discount']);
+        $breakdown['total'] = max(0, $subtotal - $totalPassengerDiscount - $breakdown['voucher_discount']);
 
         return $breakdown;
     }

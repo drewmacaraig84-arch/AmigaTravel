@@ -1,5 +1,5 @@
 <div x-data="adminNotificationBell({ initialNotifications: [], initialTotalCount: 0, initialUnreadCount: 0 })"
-     x-init="fetchDropdown()"
+     x-init="fetchDropdown(); setInterval(() => { if (!dropdownOpen) fetchDropdown(); }, 25000);"
      @keydown.escape.window="actionMenuOpen = false; itemMenuOpen = null"
      class="relative">
 

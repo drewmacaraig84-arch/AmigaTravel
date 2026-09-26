@@ -56,7 +56,7 @@ class ManageRefunds extends Page implements HasTable, HasInfolists
     {
         $user = Auth::user();
 
-        return $user instanceof User && $user->hasAdminPermission('bookings');
+        return $user instanceof User && ($user->hasAdminPermission('bookings') || $user->hasAdminPermission('transactions'));
     }
 
     public function table(Table $table): Table

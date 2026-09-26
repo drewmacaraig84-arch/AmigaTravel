@@ -1778,6 +1778,8 @@ class Booking extends Model
 
         return [
             'base_ticket' => $totalPaid,
+            'total_paid' => $totalPaid,
+            'ticket_base' => $ticketBase,
             'surcharge_pct' => $surchargePct,
             'surcharge_amount' => $surcharge,
             'non_refundable_fees' => $totalNonRefundableFees,
@@ -2002,6 +2004,8 @@ class Booking extends Model
 
         return [
             'base_ticket'         => $selectedItemTotal,
+            'total_paid'          => $selectedItemTotal,
+            'ticket_base'         => $ticketBase,
             'surcharge_pct'       => $surchargePct,
             'surcharge_amount'    => $surcharge,
             'non_refundable_fees' => $nonRefundableFees,

@@ -1934,6 +1934,19 @@
                                     </div>
                                 @endif
 
+                                {{-- Passenger Mandated Discounts (Student, Senior, PWD, etc.) --}}
+                                @if (!empty($breakdown['discounts']))
+                                    @foreach ($breakdown['discounts'] as $discountItem)
+                                        <div class="flex justify-between items-center rounded-lg bg-emerald-50 p-4 border border-emerald-200">
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-emerald-900 font-bold text-sm">{{ $discountItem['label'] }}</span>
+                                                <span class="text-[11px] px-2 py-0.5 bg-emerald-200 text-emerald-900 rounded-full font-bold">Applied</span>
+                                            </div>
+                                            <span class="text-emerald-700 font-extrabold text-base">-&#8369;{{ number_format($discountItem['amount'], 2) }}</span>
+                                        </div>
+                                    @endforeach
+                                @endif
+
                                 {{-- Voucher Discount --}}
                                 @if (isset($breakdown['voucher_discount']) && $breakdown['voucher_discount'] > 0)
                                     <div class="flex justify-between items-center rounded-lg bg-emerald-50 p-4 border border-emerald-200">

@@ -871,12 +871,16 @@
                                                     <span class="font-semibold text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-900">{{ $selectedRefundLabel }}</span>
                                                 </div>
                                                 <div class="flex justify-between">
-                                                    <span>Selected Items Base Total:</span>
-                                                    <span>₱{{ number_format($refundBreakdown['base_ticket'], 2) }}</span>
+                                                    <span class="font-medium text-slate-800">Total Amount Paid:</span>
+                                                    <span class="font-semibold text-slate-900">₱{{ number_format($refundBreakdown['total_paid'] ?? $refundBreakdown['base_ticket'], 2) }}</span>
+                                                </div>
+                                                <div class="flex justify-between text-xs text-amber-800/80 pl-2">
+                                                    <span>• Net Ticket Fare (Subject to Surcharge):</span>
+                                                    <span>₱{{ number_format($refundBreakdown['ticket_base'] ?? ($refundBreakdown['base_ticket'] - $refundBreakdown['non_refundable_fees']), 2) }}</span>
                                                 </div>
                                                 <div class="flex justify-between">
-                                                    <span>Surcharge ({{ $refundBreakdown['surcharge_pct'] }}%):</span>
-                                                    <span>-₱{{ number_format($refundBreakdown['surcharge_amount'], 2) }}</span>
+                                                    <span>Surcharge ({{ $refundBreakdown['surcharge_pct'] }}% of Net Fare):</span>
+                                                    <span class="font-medium text-amber-900">-₱{{ number_format($refundBreakdown['surcharge_amount'], 2) }}</span>
                                                 </div>
                                                 <div class="flex justify-between">
                                                     <span class="font-semibold text-slate-800">Non-Refundable Fees</span>
