@@ -171,9 +171,16 @@ class ScheduleCsvImportService
             $rowData = array_combine(array_slice($headers, 0, count($row)), array_slice($row, 0, count($headers)));
 
             try {
-                $result = DB::transaction(function () use ($rowData, $forcedOperator) {
-                    return $this->processRow($rowData, $forcedOperator);
-                });
+                $result = retry(2, function () use ($rowData, $forcedOperator) {
+                    try {
+                        DB::connection()->getPdo();
+                    } catch (\Throwable) {
+                        DB::reconnect();
+                    }
+                    return DB::transaction(function () use ($rowData, $forcedOperator) {
+                        return $this->processRow($rowData, $forcedOperator);
+                    });
+                }, 200);
 
                 if ($result === 'imported') {
                     $importedCount++;
@@ -561,12 +568,36 @@ class ScheduleCsvImportService
 
         // 4. Resolve or Create Schedule
         $scheduleCreated = false;
-        $schedule = Schedule::where('ferry_route_id', $route->id)
-            ->whereBetween('departure_time', [
-                (clone $departureDateTime)->subMinute(),
-                (clone $departureDateTime)->addMinute(),
-            ])
-            ->first();
+        $scheduleUpdated = false;
+
+        // First attempt: match on route, departure time, AND vehicle (so different vehicles on the same route at the same departure time don't overwrite each other)
+        $schedule = null;
+        if (filled($vehicleTailNo)) {
+            $schedule = Schedule::where('ferry_route_id', $route->id)
+                ->whereBetween('departure_time', [
+                    (clone $departureDateTime)->subMinute(),
+                    (clone $departureDateTime)->addMinute(),
+                ])
+                ->where(function ($q) use ($vehicleTailNo) {
+                    $q->where('vehicle_name', $vehicleTailNo)
+                      ->orWhere('service_name', $vehicleTailNo);
+                })
+                ->first();
+        }
+
+        // Second attempt: if not found with vehicle, check if an unassigned schedule (empty vehicle) exists
+        if (! $schedule) {
+            $schedule = Schedule::where('ferry_route_id', $route->id)
+                ->whereBetween('departure_time', [
+                    (clone $departureDateTime)->subMinute(),
+                    (clone $departureDateTime)->addMinute(),
+                ])
+                ->where(function ($q) {
+                    $q->whereNull('vehicle_name')
+                      ->orWhere('vehicle_name', '');
+                })
+                ->first();
+        }
 
         // 5. Resolve or Attach Transport Class / Accommodation
         $status = 'imported';
@@ -575,12 +606,13 @@ class ScheduleCsvImportService
         // For airline transport classes, additional_price is strictly the class add-on (0 if blank/zero).
         $accommodationPrice = $additionalPrice > 0 ? $additionalPrice : $rate;
         $transportClassPrice = $additionalPrice > 0 ? $additionalPrice : ($mode === 'ferry' ? $rate : 0.0);
+        $scheduleBasePrice = ($mode === 'ferry' && $additionalPrice > 0) ? 0.0 : $rate;
 
         if (! $schedule) {
-            $scheduleBasePrice = ($mode === 'ferry' && $additionalPrice <= 0) ? 0.0 : $rate;
             $schedule = Schedule::create([
                 'ferry_route_id' => $route->id,
                 'vehicle_name' => $vehicleTailNo,
+                'service_name' => $vehicleTailNo,
                 'plate_no' => $plateNo,
                 'departure_time' => $departureDateTime,
                 'arrival_time' => $arrivalDateTime,
@@ -588,6 +620,30 @@ class ScheduleCsvImportService
                 'is_active' => true,
             ]);
             $scheduleCreated = true;
+        } else {
+            $schedUpdates = [];
+            if (empty($schedule->service_name) || $schedule->service_name !== $vehicleTailNo) {
+                $schedUpdates['service_name'] = $vehicleTailNo;
+            }
+            if (empty($schedule->vehicle_name) || $schedule->vehicle_name !== $vehicleTailNo) {
+                $schedUpdates['vehicle_name'] = $vehicleTailNo;
+            }
+            if (filled($plateNo) && empty($schedule->plate_no)) {
+                $schedUpdates['plate_no'] = $plateNo;
+            }
+            if (abs((float) $schedule->price - (float) $scheduleBasePrice) > 0.01) {
+                $schedUpdates['price'] = $scheduleBasePrice;
+            }
+            if ($arrivalDateTime && abs(\Carbon\Carbon::parse($schedule->arrival_time)->diffInMinutes($arrivalDateTime)) > 1) {
+                $schedUpdates['arrival_time'] = $arrivalDateTime;
+            }
+            if (! $schedule->is_active) {
+                $schedUpdates['is_active'] = true;
+            }
+            if (! empty($schedUpdates)) {
+                $schedule->update($schedUpdates);
+                $scheduleUpdated = true;
+            }
         }
 
         // Ensure TransportClass exists in catalog with smart canonical resolution
@@ -599,12 +655,14 @@ class ScheduleCsvImportService
             $transportClassPrice
         );
 
-        // Attach to schedule_transport_class pivot
-        $alreadyAttachedTc = $schedule->transportClasses()
-            ->where('transport_classes.id', $transportClass->id)
-            ->exists();
+        // Attach or update schedule_transport_class pivot
+        $pivotRow = \Illuminate\Support\Facades\DB::table('schedule_transport_class')
+            ->where('schedule_id', $schedule->id)
+            ->where('transport_class_id', $transportClass->id)
+            ->first();
 
-        if (! $alreadyAttachedTc) {
+        $tcPivotUpdated = false;
+        if (! $pivotRow) {
             $schedule->transportClasses()->attach($transportClass->id, [
                 'additional_price' => $transportClassPrice,
                 'tickets_available' => $ticketsAvailable,
@@ -614,17 +672,44 @@ class ScheduleCsvImportService
                 'has_bed' => $hasBed,
                 'is_active' => true,
             ]);
+            $tcPivotUpdated = true;
+        } else {
+            $schedule->transportClasses()->updateExistingPivot($transportClass->id, [
+                'additional_price' => $transportClassPrice,
+                'tickets_available' => $ticketsAvailable,
+                'rate_type' => $rateType,
+                'is_promo' => $isPromo,
+                'rate_code' => $rateCode,
+                'has_bed' => $hasBed,
+                'is_active' => true,
+            ]);
+            $tcPivotUpdated = true;
         }
 
         $accommodationCreated = false;
+        $accommodationUpdated = false;
         // For Ferry mode, also maintain schedule_accommodations compatibility
         if ($mode === 'ferry') {
-            $accommodationExists = $schedule->scheduleAccommodations()
+            $acc = $schedule->scheduleAccommodations()
                 ->where('name', $transportClass->name)
-                ->where('rate_code', $rateCode)
-                ->exists();
+                ->first();
 
-            if (! $accommodationExists) {
+            if ($acc) {
+                $acc->update([
+                    'rate_code' => $rateCode,
+                    'price' => $accommodationPrice,
+                    'tickets_available' => $ticketsAvailable,
+                    'has_bed' => $hasBed,
+                    'is_active' => true,
+                ]);
+                $accommodationUpdated = true;
+
+                // Clean up any duplicate records for this accommodation name on this schedule
+                $schedule->scheduleAccommodations()
+                    ->where('name', $transportClass->name)
+                    ->where('id', '!=', $acc->id)
+                    ->delete();
+            } else {
                 ScheduleAccommodation::create([
                     'schedule_id' => $schedule->id,
                     'name' => $transportClass->name,
@@ -638,7 +723,9 @@ class ScheduleCsvImportService
             }
         }
 
-        if ($alreadyAttachedTc && ! $scheduleCreated && ! $accommodationCreated) {
+        if ($scheduleCreated || $scheduleUpdated || $tcPivotUpdated || $accommodationCreated || $accommodationUpdated) {
+            $status = 'imported';
+        } else {
             $status = 'skipped';
         }
 
@@ -719,24 +806,67 @@ class ScheduleCsvImportService
             $arrivalDateTime = (clone $departureDateTime)->addHours(2);
         }
 
-        $schedule = Schedule::where('ferry_route_id', $returnRoute->id)
-            ->whereBetween('departure_time', [
-                (clone $departureDateTime)->subMinute(),
-                (clone $departureDateTime)->addMinute(),
-            ])
-            ->first();
+        // Match return schedule: first with vehicle, then without vehicle
+        $schedule = null;
+        if (filled($vehicleTailNo)) {
+            $schedule = Schedule::where('ferry_route_id', $returnRoute->id)
+                ->whereBetween('departure_time', [
+                    (clone $departureDateTime)->subMinute(),
+                    (clone $departureDateTime)->addMinute(),
+                ])
+                ->where(function ($q) use ($vehicleTailNo) {
+                    $q->where('vehicle_name', $vehicleTailNo)
+                      ->orWhere('service_name', $vehicleTailNo);
+                })
+                ->first();
+        }
 
         if (! $schedule) {
-            $returnScheduleBasePrice = ($mode === 'ferry' && $additionalPrice <= 0) ? 0.0 : $rate;
+            $schedule = Schedule::where('ferry_route_id', $returnRoute->id)
+                ->whereBetween('departure_time', [
+                    (clone $departureDateTime)->subMinute(),
+                    (clone $departureDateTime)->addMinute(),
+                ])
+                ->where(function ($q) {
+                    $q->whereNull('vehicle_name')
+                      ->orWhere('vehicle_name', '');
+                })
+                ->first();
+        }
+
+        $returnScheduleBasePrice = ($mode === 'ferry' && $additionalPrice > 0) ? 0.0 : $rate;
+
+        if (! $schedule) {
             $schedule = Schedule::create([
                 'ferry_route_id' => $returnRoute->id,
                 'vehicle_name' => $vehicleTailNo,
+                'service_name' => $vehicleTailNo,
                 'plate_no' => $plateNo,
                 'departure_time' => $departureDateTime,
                 'arrival_time' => $arrivalDateTime,
                 'price' => $returnScheduleBasePrice,
                 'is_active' => true,
             ]);
+        } else {
+            $returnUpdates = [];
+            if (empty($schedule->service_name) || $schedule->service_name !== $vehicleTailNo) {
+                $returnUpdates['service_name'] = $vehicleTailNo;
+            }
+            if (empty($schedule->vehicle_name) || $schedule->vehicle_name !== $vehicleTailNo) {
+                $returnUpdates['vehicle_name'] = $vehicleTailNo;
+            }
+            if (abs((float) $schedule->price - (float) $returnScheduleBasePrice) > 0.01) {
+                $returnUpdates['price'] = $returnScheduleBasePrice;
+            }
+            if ($arrivalDateTime && abs(\Carbon\Carbon::parse($schedule->arrival_time)->diffInMinutes($arrivalDateTime)) > 1) {
+                $returnUpdates['arrival_time'] = $arrivalDateTime;
+            }
+            if (! $schedule->is_active) {
+                $returnUpdates['is_active'] = true;
+            }
+            if (! empty($returnUpdates)) {
+                $schedule->update($returnUpdates);
+            }
         }
 
         $transportClass = $this->resolveTransportClass(
@@ -747,8 +877,23 @@ class ScheduleCsvImportService
             $transportClassPrice
         );
 
-        if (! $schedule->transportClasses()->where('transport_classes.id', $transportClass->id)->exists()) {
+        $returnPivotRow = \Illuminate\Support\Facades\DB::table('schedule_transport_class')
+            ->where('schedule_id', $schedule->id)
+            ->where('transport_class_id', $transportClass->id)
+            ->first();
+
+        if (! $returnPivotRow) {
             $schedule->transportClasses()->attach($transportClass->id, [
+                'additional_price' => $transportClassPrice,
+                'tickets_available' => $ticketsAvailable,
+                'rate_type' => $rateType,
+                'is_promo' => $isPromo,
+                'rate_code' => $rateCode,
+                'has_bed' => $hasBed,
+                'is_active' => true,
+            ]);
+        } else {
+            $schedule->transportClasses()->updateExistingPivot($transportClass->id, [
                 'additional_price' => $transportClassPrice,
                 'tickets_available' => $ticketsAvailable,
                 'rate_type' => $rateType,
@@ -760,7 +905,24 @@ class ScheduleCsvImportService
         }
 
         if ($mode === 'ferry') {
-            if (! $schedule->scheduleAccommodations()->where('name', $transportClass->name)->where('rate_code', $rateCode)->exists()) {
+            $returnAcc = $schedule->scheduleAccommodations()
+                ->where('name', $transportClass->name)
+                ->first();
+
+            if ($returnAcc) {
+                $returnAcc->update([
+                    'rate_code' => $rateCode,
+                    'price' => $accommodationPrice,
+                    'tickets_available' => $ticketsAvailable,
+                    'has_bed' => $hasBed,
+                    'is_active' => true,
+                ]);
+
+                $schedule->scheduleAccommodations()
+                    ->where('name', $transportClass->name)
+                    ->where('id', '!=', $returnAcc->id)
+                    ->delete();
+            } else {
                 ScheduleAccommodation::create([
                     'schedule_id' => $schedule->id,
                     'name' => $transportClass->name,

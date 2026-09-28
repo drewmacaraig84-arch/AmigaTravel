@@ -58,7 +58,7 @@
     </div>
 
     <h3 class="text-sm sm:text-base font-bold leading-tight line-clamp-1 {{ $isPast ? 'line-through' : '' }}">
-        {{ $schedule['service'] ?? '' }}
+        {{ !empty($schedule['service']) ? $schedule['service'] : (!empty($schedule['vehicle_name']) ? $schedule['vehicle_name'] : ($schedule['operator'] ?? 'Scheduled Trip')) }}
     </h3>
     @if (!empty($schedule['operator']))
         <p class="mt-0.5 text-[10px] sm:text-xs font-medium truncate {{ $isSelected && !$isPast ? 'text-white/80' : 'text-slate-500' }}">

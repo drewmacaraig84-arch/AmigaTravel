@@ -307,7 +307,7 @@
                                                             </div>
                                                         @endif
                                                         <div>
-                                                            <h3 class="font-bold text-slate-900 text-sm leading-tight">{{ $schedule->service_name }}</h3>
+                                                            <h3 class="font-bold text-slate-900 text-sm leading-tight">{{ $schedule->service_name ?: ($schedule->vehicle_name ?: ($route->vehicle?->name ?? 'Scheduled Service')) }}</h3>
                                                             @if($opName)
                                                                 <p class="text-xs text-slate-500 mt-0.5">{{ $opName }}</p>
                                                             @endif

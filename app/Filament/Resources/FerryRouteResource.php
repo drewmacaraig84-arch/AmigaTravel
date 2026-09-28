@@ -70,7 +70,7 @@ class FerryRouteResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->with(['operatorRecord', 'vehicle.operatorRecord']);
+            ->with(['operatorRecord', 'vehicle.operatorRecord', 'schedules' => fn ($q) => $q->select('id', 'ferry_route_id', 'vehicle_name')]);
     }
 
     public static function form(Form $form): Form
@@ -164,9 +164,29 @@ class FerryRouteResource extends Resource
                     ->sortable(),
                 TextColumn::make('destination')
                     ->sortable(),
-                TextColumn::make('vehicle.full_name')
-                    ->label('Vehicle')
-                    ->sortable(['name', 'vehicle_id']),
+                TextColumn::make('vehicles_list')
+                    ->label('Vessel / Vehicle')
+                    ->getStateUsing(function (FerryRoute $record) {
+                        $schedVehicles = $record->schedules
+                            ->pluck('vehicle_name')
+                            ->filter()
+                            ->unique()
+                            ->values();
+
+                        if ($schedVehicles->isNotEmpty()) {
+                            return $schedVehicles->all();
+                        }
+
+                        $defaultVehicle = optional($record->vehicle)->full_name;
+                        return $defaultVehicle ? [$defaultVehicle] : ['—'];
+                    })
+                    ->badge()
+                    ->color('info')
+                    ->separator(', ')
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        return $query->whereHas('vehicle', fn ($vq) => $vq->where('name', 'like', "%{$search}%")->orWhere('vehicle_id', 'like', "%{$search}%"))
+                            ->orWhereHas('schedules', fn ($sq) => $sq->where('vehicle_name', 'like', "%{$search}%"));
+                    }),
                 TextColumn::make('operator_display')
                     ->label('Operator')
                     ->getStateUsing(fn (FerryRoute $record) => $record->operator_display_name)

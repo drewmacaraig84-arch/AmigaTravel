@@ -475,86 +475,118 @@
                   this.$watch('destination', () => this.checkVehicleRouteEligibility());
              },
              hasReturnRoute(origin, destination) {
-                 return this.activeRoutes.some(r => 
-                     (!this.mode || r.mode === this.mode) && 
-                     (!this.operator || r.operator === this.operator) && 
-                     r.origin === destination && 
-                     r.destination === origin &&
-                     (!r.dates || r.dates.length > 0)
-                 );
-             },
-             activeRoutes: window.AMIGA_ACTIVE_ROUTES || [],
-             popularPorts: ['Batangas', 'Calapan', 'Caticlan', 'Odiongan', 'Manila', 'Cebu', 'Puerto Princesa', 'Roxas'],
-             operatorsList: window.AMIGA_OPERATORS_LIST || [],
-             get filteredOperatorsList() {
-                 if (!this.mode) return this.operatorsList;
-                 return this.operatorsList.filter(o => o.mode === 'all' || o.mode === this.mode);
-             },
-             get operatorLabel() {
-                 let op = this.operatorsList.find(o => o.value === this.operator);
-                 return op ? op.name : 'Select Operator';
-             },
-             get modeLabel() {
-                 if (this.mode === 'airline') return 'Airline';
-                 return 'Ferry';
-             },
-             get availableOrigins() {
-                 if (!this.operator) return [];
-                 let origins = [];
-                 this.activeRoutes.forEach(r => {
-                     if ((!this.mode || r.mode === this.mode) && r.operator === this.operator) {
-                         if (this.trip_type === 'round_trip' && !this.hasReturnRoute(r.origin, r.destination)) {
-                             return;
-                         }
-                         if (!origins.includes(r.origin)) origins.push(r.origin);
-                     }
-                 });
-                 return origins.sort();
-             },
-             get availableDestinations() {
-                 if (!this.operator || !this.origin) return [];
-                 let destinations = [];
-                 this.activeRoutes.forEach(r => {
-                     if ((!this.mode || r.mode === this.mode) && r.operator === this.operator && r.origin === this.origin) {
-                         if (this.trip_type === 'round_trip' && !this.hasReturnRoute(this.origin, r.destination)) {
-                             return;
-                         }
-                         if (!destinations.includes(r.destination)) destinations.push(r.destination);
-                     }
-                 });
-                 return destinations.sort();
-             },
-              get enabledDepartureDates() {
-                  if (!this.origin || !this.destination) return [];
-                  let dates = [];
+                  if (!origin || !destination) return false;
+                  let o = origin.trim().toLowerCase();
+                  let d = destination.trim().toLowerCase();
+                  return this.activeRoutes.some(r => 
+                      (!this.mode || r.mode === this.mode) && 
+                      (!this.operator || r.operator === this.operator) && 
+                      (r.origin || '').trim().toLowerCase() === d && 
+                      (r.destination || '').trim().toLowerCase() === o &&
+                      (!r.dates || r.dates.length > 0)
+                  );
+              },
+              activeRoutes: window.AMIGA_ACTIVE_ROUTES || [],
+              popularPorts: ['Batangas', 'Calapan', 'Caticlan', 'Odiongan', 'Manila', 'Cebu', 'Puerto Princesa', 'Roxas'],
+              operatorsList: window.AMIGA_OPERATORS_LIST || [],
+              get filteredOperatorsList() {
+                  if (!this.mode) return this.operatorsList;
+                  return this.operatorsList.filter(o => o.mode === 'all' || o.mode === this.mode);
+              },
+              get operatorLabel() {
+                  let op = this.operatorsList.find(o => o.value === this.operator);
+                  return op ? op.name : 'Select Operator';
+              },
+              get modeLabel() {
+                  if (this.mode === 'airline') return 'Airline';
+                  return 'Ferry';
+              },
+              get availableOrigins() {
+                  if (!this.operator) return [];
+                  let origins = [];
                   this.activeRoutes.forEach(r => {
-                      if ((!this.mode || r.mode === this.mode) && 
-                          (!this.operator || r.operator === this.operator) && 
-                          r.origin === this.origin && 
-                          r.destination === this.destination) {
-                          if (r.dates && Array.isArray(r.dates)) {
-                              r.dates.forEach(d => {
-                                  if (!dates.includes(d)) dates.push(d);
-                              });
+                      if ((!this.mode || r.mode === this.mode) && r.operator === this.operator) {
+                          let origTrim = (r.origin || '').trim();
+                          if (origTrim && !origins.some(o => o.toLowerCase() === origTrim.toLowerCase())) {
+                              origins.push(origTrim);
                           }
                       }
+                  });
+                  return origins.sort();
+              },
+              get availableDestinations() {
+                  if (!this.operator || !this.origin) return [];
+                  let origLower = (this.origin || '').trim().toLowerCase();
+                  let destinations = [];
+                  this.activeRoutes.forEach(r => {
+                      if ((!this.mode || r.mode === this.mode) && 
+                          r.operator === this.operator && 
+                          (r.origin || '').trim().toLowerCase() === origLower) {
+                          let destTrim = (r.destination || '').trim();
+                          if (destTrim && !destinations.some(d => d.toLowerCase() === destTrim.toLowerCase())) {
+                              destinations.push(destTrim);
+                          }
+                      }
+                  });
+                  return destinations.sort();
+              },
+              selectOrigin(port) {
+                  this.origin = port;
+                  this.showOriginSuggestions = false;
+                  this.errors.origin = '';
+                  this.$nextTick(() => {
+                      let validDests = this.availableDestinations.map(d => d.trim().toLowerCase());
+                      if (this.destination && !validDests.includes(this.destination.trim().toLowerCase())) {
+                          this.destination = '';
+                      }
+                  });
+              },
+              selectDestination(port) {
+                  this.destination = port;
+                  this.showDestinationSuggestions = false;
+                  this.errors.destination = '';
+                  if (this.trip_type === 'round_trip' && !this.hasReturnRoute(this.origin, port)) {
+                      this.trip_type = 'one_way';
+                      this.return_date = '';
+                      this.vehicleCutoffNotice = 'Notice: ' + port + ' only operates as One Way (no return sailing scheduled). Switched to One Way trip.';
+                      setTimeout(() => { this.vehicleCutoffNotice = ''; }, 7000);
+                  }
+              },
+              get enabledDepartureDates() {
+                  if (!this.origin || !this.destination) return [];
+                  let origLower = (this.origin || '').trim().toLowerCase();
+                  let destLower = (this.destination || '').trim().toLowerCase();
+                  let dates = [];
+                  this.activeRoutes.forEach(r => {
+                       if ((!this.mode || r.mode === this.mode) && 
+                           (!this.operator || r.operator === this.operator) && 
+                           (r.origin || '').trim().toLowerCase() === origLower && 
+                           (r.destination || '').trim().toLowerCase() === destLower) {
+                           if (r.dates && Array.isArray(r.dates)) {
+                               r.dates.forEach(d => {
+                                   if (!dates.includes(d)) dates.push(d);
+                               });
+                           }
+                       }
                   });
                   return dates.sort();
               },
               get enabledReturnDates() {
                   if (!this.origin || !this.destination) return [];
+                  let origLower = (this.origin || '').trim().toLowerCase();
+                  let destLower = (this.destination || '').trim().toLowerCase();
                   let dates = [];
                   this.activeRoutes.forEach(r => {
-                      if ((!this.mode || r.mode === this.mode) && 
-                          (!this.operator || r.operator === this.operator) && 
-                          r.origin === this.destination && 
-                          r.destination === this.origin) {
-                          if (r.dates && Array.isArray(r.dates)) {
-                              r.dates.forEach(d => {
-                                  if (!dates.includes(d)) dates.push(d);
-                              });
-                          }
-                      }
+                       if ((!this.mode || r.mode === this.mode) && 
+                           (!this.operator || r.operator === this.operator) && 
+                           (r.origin || '').trim().toLowerCase() === destLower && 
+                           (r.destination || '').trim().toLowerCase() === origLower) {
+                           if (r.dates && Array.isArray(r.dates)) {
+                               r.dates.forEach(d => {
+                                   if (!dates.includes(d)) dates.push(d);
+                               });
+                           }
+                       }
                   });
                   return dates.sort();
               },
@@ -1070,7 +1102,7 @@
                             <div class="px-4 py-2 text-xs font-semibold text-gray-500">No schedules found for this operator</div>
                         </template>
                         <template x-for="port in availableOrigins" :key="port">
-                            <button type="button" @click="origin = port; showOriginSuggestions = false; errors.origin = '';"
+                            <button type="button" @click="selectOrigin(port)"
                                     class="w-full text-left px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-emerald-50 hover:text-[#216417] transition flex items-center justify-between">
                                 <span x-text="port"></span>
                             </button>
@@ -1123,9 +1155,12 @@
                             <div class="px-4 py-2 text-xs font-semibold text-gray-500">No destinations available from <span x-text="origin"></span></div>
                         </template>
                         <template x-for="port in availableDestinations" :key="port">
-                            <button type="button" @click="destination = port; showDestinationSuggestions = false; errors.destination = '';"
+                            <button type="button" @click="selectDestination(port)"
                                     class="w-full text-left px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-emerald-50 hover:text-[#216417] transition flex items-center justify-between">
                                 <span x-text="port"></span>
+                                <template x-if="trip_type === 'round_trip' && !hasReturnRoute(origin, port)">
+                                    <span class="text-[10px] uppercase font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">One Way only</span>
+                                </template>
                             </button>
                         </template>
                     </div>

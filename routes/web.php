@@ -134,16 +134,18 @@ $renderWebsitePage = function (string $page, string $view) {
                     ->get()
                     ->map(function ($route) {
                         $operator = normalize_operator_name($route->operator ?: ($route->vehicle?->operator ?? '')) ?: '';
+                        $origin = app(\App\Services\LocationCodeResolver::class)->resolve($route->origin, $route->mode);
+                        $destination = app(\App\Services\LocationCodeResolver::class)->resolve($route->destination, $route->mode);
 
                         return [
-                            'origin' => $route->origin,
-                            'destination' => $route->destination,
+                            'origin' => $origin,
+                            'destination' => $destination,
                             'mode' => $route->mode,
                             'operator' => $operator,
                             'dates' => $route->schedules->pluck('departure_time')->map(fn ($dt) => \Carbon\Carbon::parse($dt)->format('Y-m-d'))->unique()->values()->all(),
                         ];
                     })
-                    ->groupBy(fn ($item) => implode('|', [$item['origin'], $item['destination'], $item['mode'], $item['operator']]))
+                    ->groupBy(fn ($item) => implode('|', [mb_strtolower(trim($item['origin'])), mb_strtolower(trim($item['destination'])), strtolower(trim($item['mode'])), strtolower(trim($item['operator']))]))
                     ->map(function ($group) {
                         $first = $group->first();
                         $first['dates'] = $group->pluck('dates')->flatten()->unique()->sort()->values()->all();
