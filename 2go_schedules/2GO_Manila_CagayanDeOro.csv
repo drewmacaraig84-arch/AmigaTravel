@@ -1,0 +1,54 @@
+Mode,Operator,Vehicle Tail No,Plate No,Origin,Destination,Departure Date,Departure Time,Arrival Date,Arrival Time,Transport Class,Rate,Additional Price,Rate Tier,Tickets Available,Has Bed,Rate Code
+ferry,2GO,MV 2GO Maligaya,,Manila,Cagayan De Oro,29/09/2026,12:30:00 PM,01/10/2026,8:30:00 AM,Tourist Class,0,4207.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masagana,,Manila,Cagayan De Oro,30/09/2026,9:00:00 PM,02/10/2026,7:00:00 AM,Tourist Class,0,3804.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masikap,,Manila,Cagayan De Oro,02/10/2026,5:00:00 AM,03/10/2026,8:00:00 PM,Tourist Class,0,3613.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masagana,,Manila,Cagayan De Oro,04/10/2026,9:00:00 AM,05/10/2026,7:00:00 PM,Tourist Class,0,3440.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Maligaya,,Manila,Cagayan De Oro,06/10/2026,12:30:00 PM,08/10/2026,8:30:00 AM,Tourist Class,0,3627.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masagana,,Manila,Cagayan De Oro,07/10/2026,9:00PM,09/10/2026,7:00:AM,Tourist Class,0,3004.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masikap,,Manila,Cagayan De Oro,09/10/2026,5:00AM,10/10/2026,8:00PM,Tourist Class,0,2413.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masagana,,Manila,Cagayan De Oro,11/10/2026,9:00AM,12/10/2026,7:00PM,Tourist Class,0,2940.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Maligaya,,Manila,Cagayan De Oro,13/10/2026,12:30PM,15/10/2026,8:30AM,Tourist Class,0,2427.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masagana,,Manila,Cagayan De Oro,14/10/2026,9:00PM,16/10/2026,7:00AM,Tourist Class,0,2804.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masikap,,Manila,Cagayan De Oro,16/10/2026,9:00AM,17/10/2026,7:00PM,Tourist Class,0,2940.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masagana,,Manila,Cagayan De Oro,18/10/2026,9:00PM,19/10/2026,7:00PM,Tourist Class,0,2940.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Maligaya,,Manila,Cagayan De Oro,20/10/2026,12:30:00 PM,22/10/2026,8:30:00 AM,Tourist Class,0,2427.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masagana,,Manila,Cagayan De Oro,21/10/2026,9:00:00 PM,23/10/2026,7:00:00 AM,Tourist Class,0,2804.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masikap,,Manila,Cagayan De Oro,23/10/2026,5:00:00 AM,24/10/2026, 8:00:00 PM,Tourist Class,0,2413.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masagana,,Manila,Cagayan De Oro,25/10/2026,9:00:00 AM,26/10/2026,7:00:00 PM,Tourist Class,0,2940.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Maligaya,,Manila,Cagayan De Oro,27/10/2026,12:30:00 PM,29/10/2026,8:30:00 AM,Tourist Class,0,3027.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masagana,,Manila,Cagayan De Oro,28/10/2026,9:00:00 PM,30/10/2026,7:00:00 AM,Tourist Class,0,2904.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masikap,,Manila,Cagayan De Oro,30/10/2026,5:00:00 AM,31/10/2026,8:00:00 PM,Tourist Class,0,2513.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masagana,,Manila,Cagayan De Oro,01/11/2026,9:00:00 AM,02/11/2026,7:00:00 PM,Tourist Class,0,2940.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Maligaya,,Manila,Cagayan De Oro,03/11/2026,12:30:00 PM,05/11/2026,8:30:00 AM,Tourist Class,0,3027.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masagana,,Manila,Cagayan De Oro,04/11/2026,9:00:00 PM,06/11/2026,7:00:00 AM,Tourist Class,0,2804.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masikap,,Manila,Cagayan De Oro,06/11/2026,5:00:00 AM,07/11/2026,8:00:00 PM,Tourist Class,0,3213.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masagana,,Manila,Cagayan De Oro,08/11/2026,9:00:00 AM,09/11/2026,7:00:00 PM,Tourist Class,0,3440.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Maligaya,,Manila,Cagayan De Oro,10/11/2026,12:30:00 PM,12/11/2026,8:30:00 AM,Tourist Class,0,3217.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masagana,,Manila,Cagayan De Oro,11/11/2026,9:00:00 PM,13/11/2026,7:00:00 AM,Tourist Class,0,3004.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masikap,,Manila,Cagayan De Oro,13/11/2026,5:00:00 AM,14/11/2026, 8:00:00 PM,Tourist Class,0,3213.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masagana,,Manila,Cagayan De Oro,15/11/2026,9:00:00 AM,16/11/2026, 7:00:00 PM,Tourist Class,0,2940.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Maligaya,,Manila,Cagayan De Oro,17/11/2026,12:30:00 PM,19/11/2026,8:30:00 AM,Tourist Class,0,3027.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masagana,,Manila,Cagayan De Oro,18/11/2026,9:00:00 PM,20/11/2026,7:00:00 AM,Tourist Class,0,2804.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masikap,,Manila,Cagayan De Oro,20/11/2026,5:00:00 AM,21/11/2026, 8:00:00 PM,Tourist Class,0,3313.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masagana,,Manila,Cagayan De Oro,22/11/2026,9:00:00 AM,23/11/2026,7:00:00 PM,Tourist Class,0,2540.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Maligaya,,Manila,Cagayan De Oro,24/11/2026,12:30:00 PM,26/11/2026,8:30:00 AM,Tourist Class,0,3027.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masagana,,Manila,Cagayan De Oro,25/11/2026,9:00:00 PM,27/11/2026,7:00:00 AM,Tourist Class,0,2504.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masikap,,Manila,Cagayan De Oro,27/11/2026,5:00:00 AM,28/11/2026,8:00:00 PM,Tourist Class,0,3213.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masagana,,Manila,Cagayan De Oro,29/11/2026,9:00:00 AM,30/11/2026,7:00:00 PM,Tourist Class,0,3040.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Maligaya,,Manila,Cagayan De Oro,01/12/2026,12:30:00 PM,03/12/2026,8:30:00 AM,Tourist Class,0,3027.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masagana,,Manila,Cagayan De Oro,02/12/2026,9:00:00 PM,04/12/2026,7:00:00 AM,Tourist Class,0,2804.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masikap,,Manila,Cagayan De Oro,04/12/2026,5:00:00 AM,05/12/2026,8:00:00 PM,Tourist Class,0,3413.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masagana,,Manila,Cagayan De Oro,06/12/2026,9:00:00 AM,07/12/2026,7:00:00 PM,Tourist Class,0,3140.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Maligaya,,Manila,Cagayan De Oro,08/12/2026,12:30:00 PM,10/12/2026,8:30:00 AM,Tourist Class,0,3227.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masagana,,Manila,Cagayan De Oro,09/12/2026,9:00:00 PM,11/12/2026, 7:00:00 AM,Tourist Class,0,3204.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masikap,,Manila,Cagayan De Oro,11/12/2026,5:00:00 AM,12/12/2026,8:00:00 PM,Tourist Class,0,4113.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masagana,,Manila,Cagayan De Oro,13/12/2026,9:00:00 AM,14/12/2026,7:00:00 PM,Tourist Class,0,3940.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Maligaya,,Manila,Cagayan De Oro,15/12/2026,12:30:00 PM,17/12/2026,8:30:00 AM,Tourist Class,0,4027.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masagana,,Manila,Cagayan De Oro,16/12/2026,9:00:00 PM,18/12/2026,7:00:00 AM,Tourist Class,0,3804.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masikap,,Manila,Cagayan De Oro,18/12/2026,5:00:00 AM,19/12/2026,8:00:00 PM,Tourist Class,0,4765.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masagana,,Manila,Cagayan De Oro,20/12/2026,9:00:00 AM,21/12/2026,7:00:00 PM,Tourist Class,0,4492.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Maligaya,,Manila,Cagayan De Oro,22/12/2026,12:30:00 PM,24/12/2026,8:30:00 AM,Tourist Class,0,4629.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masagana,,Manila,Cagayan De Oro,23/12/2026,9:00:00 PM,25/12/2026,7:00:00 AM,Tourist Class,0,4356.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masagana,,Manila,Cagayan De Oro,27/12/2026,9:00:00 AM,28/12/2026,7:00:00 PM,Tourist Class,0,4492.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Maligaya,,Manila,Cagayan De Oro,29/12/2026,12:30:00 PM,31/12/2026,8:30:00 AM,Tourist Class,0,4629.00,promotional,50,yes,PROMO
+ferry,2GO,MV 2GO Masagana,,Manila,Cagayan De Oro,30/12/2026,9:00:00 PM,01/01/2027, 7:00:00 AM,Tourist Class,0,4356.00,promotional,50,yes,PROMO

@@ -218,6 +218,13 @@ class ScheduleCsvImportService
         // Normalize carriage returns (\r\n and bare \r to \n) so classic Mac CR exports parse correctly
         $content = str_replace(["\r\n", "\r"], "\n", $content);
 
+        // Auto-heal missing line breaks where rows got concatenated (e.g. Rate Codeferry or PROMOferry)
+        $content = preg_replace('/(Rate\s*Code|RateCode|Rate_Code)(ferry|airline)/i', "$1\n$2", $content);
+        $content = preg_replace('/(PROMO|REG|REGULAR|PROMOTIONAL|SUPER_PROMOTIONAL)(ferry|airline)/i', "$1\n$2", $content);
+
+        // Clean invisible non-printable Unicode replacement characters (\uFFFD)
+        $content = str_replace("\xEF\xBF\xBD", '', $content);
+
         // Auto-detect delimiter (, or ;) from first line
         $firstLine = strtok($content, "\n");
         $delimiter = ',';
@@ -804,6 +811,11 @@ class ScheduleCsvImportService
             return '00:00';
         }
         $clean = trim((string) $time);
+
+        // Strip non-printable / corrupted replacement characters (like \uFFFD or ?)
+        $clean = preg_replace('/[^\x20-\x7E]/', '', $clean);
+        $clean = ltrim($clean, '? ');
+        $clean = trim($clean);
 
         // Convert Excel fractional time (e.g. 0.3958333333333333 -> 09:30:00)
         if (is_numeric($clean) && (float) $clean < 1.0 && (float) $clean >= 0.0) {
