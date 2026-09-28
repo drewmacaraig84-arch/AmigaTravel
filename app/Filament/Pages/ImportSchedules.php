@@ -129,8 +129,10 @@ class ImportSchedules extends Page
         }
 
         try {
+            $uploadedExt = $this->uploadedFile ? strtolower(pathinfo($this->uploadedFile->getClientOriginalName(), PATHINFO_EXTENSION)) : null;
+
             // Case 1: Starlite Timetable & Rate Matrix
-            if ($operatorName === 'Starlite' && ($this->importPreset === 'starlite_timetable' || ! $this->uploadedFile)) {
+            if ($operatorName === 'Starlite' && ($this->importPreset === 'starlite_timetable' || ! $this->uploadedFile) && $uploadedExt !== 'csv') {
                 $defaultPath = file_exists(base_path('starlite_example_schedule/VESSEL ROUTE.xlsx'))
                     ? base_path('starlite_example_schedule/VESSEL ROUTE.xlsx')
                     : base_path('starlite_schedules/VESSEL ROUTE.xlsx');
@@ -173,7 +175,7 @@ class ImportSchedules extends Page
             }
 
             // Case 2: 2GO Travel Timetable & Rate Matrix
-            if ($operatorName === '2GO' && ($this->importPreset === 'twogo_timetable' || ! $this->uploadedFile)) {
+            if ($operatorName === '2GO' && ($this->importPreset === 'twogo_timetable' || ! $this->uploadedFile) && $uploadedExt !== 'csv') {
                 $defaultPath = base_path('2go_schedules/2GO_TIMETABLE.xlsx');
 
                 $filePath = $this->uploadedFile

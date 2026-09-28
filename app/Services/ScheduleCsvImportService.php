@@ -56,28 +56,35 @@ class ScheduleCsvImportService
         }
 
         $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        $fileHeader = @file_get_contents($filePath, false, null, 0, 4);
+        $isXlsx = ($extension === 'xlsx' || $fileHeader === "PK\x03\x04");
 
         // Detect 2GO Timetable format
-        if ($extension === 'xlsx') {
+        if ($isXlsx) {
             try {
                 $rawRows = $this->parseXlsxRows($filePath);
-                $isTwoGoTimetable = false;
-                foreach (array_slice($rawRows, 0, 8) as $r) {
-                    $rowStr = strtoupper(implode(' ', (array) $r));
-                    if (str_contains($rowStr, '2GO') || (str_contains($rowStr, 'ORIGIN') && str_contains($rowStr, 'DESTINATION') && str_contains($rowStr, 'VESSEL') && str_contains($rowStr, 'DAY & TIME'))) {
-                        $isTwoGoTimetable = true;
-                        break;
-                    }
-                }
+                $firstRowStr = strtoupper(implode(' ', (array) ($rawRows[0] ?? [])));
+                $isStandardFormat = str_contains($firstRowStr, 'MODE') || str_contains($firstRowStr, 'DEPARTURE DATE');
 
-                if ($isTwoGoTimetable || strtolower($forcedOperator ?? '') === '2go') {
-                    $result = $this->twoGoService->ingest($filePath, $startDate, $endDate);
-                    return [
-                        'imported' => $result['schedules_count'] ?? 0,
-                        'skipped' => 0,
-                        'errors' => $result['success'] ? [] : [$result['message']],
-                        'twogo_result' => $result,
-                    ];
+                if (! $isStandardFormat) {
+                    $isTwoGoTimetable = false;
+                    foreach (array_slice($rawRows, 0, 8) as $r) {
+                        $rowStr = strtoupper(implode(' ', (array) $r));
+                        if (str_contains($rowStr, '2GO') || (str_contains($rowStr, 'ORIGIN') && str_contains($rowStr, 'DESTINATION') && str_contains($rowStr, 'VESSEL') && str_contains($rowStr, 'DAY & TIME'))) {
+                            $isTwoGoTimetable = true;
+                            break;
+                        }
+                    }
+
+                    if ($isTwoGoTimetable || strtolower($forcedOperator ?? '') === '2go') {
+                        $result = $this->twoGoService->ingest($filePath, $startDate, $endDate);
+                        return [
+                            'imported' => $result['schedules_count'] ?? 0,
+                            'skipped' => 0,
+                            'errors' => $result['success'] ? [] : [$result['message']],
+                            'twogo_result' => $result,
+                        ];
+                    }
                 }
             } catch (Throwable $e) {
                 // Fall back to standard parser if error
@@ -85,26 +92,31 @@ class ScheduleCsvImportService
         }
 
         // Detect Starlite Timetable format
-        if ($extension === 'xlsx') {
+        if ($isXlsx) {
             try {
                 $rawRows = $this->parseXlsxRows($filePath);
-                $isStarliteTimetable = false;
-                foreach (array_slice($rawRows, 0, 5) as $r) {
-                    $rowStr = strtoupper(implode(' ', (array) $r));
-                    if (str_contains($rowStr, 'STARLITE FERRIES') || (str_contains($rowStr, 'ROUTE') && str_contains($rowStr, 'DAYS') && str_contains($rowStr, 'DEPARTURE TIME'))) {
-                        $isStarliteTimetable = true;
-                        break;
-                    }
-                }
+                $firstRowStr = strtoupper(implode(' ', (array) ($rawRows[0] ?? [])));
+                $isStandardFormat = str_contains($firstRowStr, 'MODE') || str_contains($firstRowStr, 'DEPARTURE DATE');
 
-                if ($isStarliteTimetable || strtolower($forcedOperator ?? '') === 'starlite') {
-                    $result = $this->starliteService->ingest($filePath, $startDate, $endDate);
-                    return [
-                        'imported' => $result['schedules_count'] ?? 0,
-                        'skipped' => 0,
-                        'errors' => $result['success'] ? [] : [$result['message']],
-                        'starlite_result' => $result,
-                    ];
+                if (! $isStandardFormat) {
+                    $isStarliteTimetable = false;
+                    foreach (array_slice($rawRows, 0, 5) as $r) {
+                        $rowStr = strtoupper(implode(' ', (array) $r));
+                        if (str_contains($rowStr, 'STARLITE FERRIES') || (str_contains($rowStr, 'ROUTE') && str_contains($rowStr, 'DAYS') && str_contains($rowStr, 'DEPARTURE TIME'))) {
+                            $isStarliteTimetable = true;
+                            break;
+                        }
+                    }
+
+                    if ($isStarliteTimetable || strtolower($forcedOperator ?? '') === 'starlite') {
+                        $result = $this->starliteService->ingest($filePath, $startDate, $endDate);
+                        return [
+                            'imported' => $result['schedules_count'] ?? 0,
+                            'skipped' => 0,
+                            'errors' => $result['success'] ? [] : [$result['message']],
+                            'starlite_result' => $result,
+                        ];
+                    }
                 }
             } catch (Throwable $e) {
                 // Fall back to standard parser if error
@@ -112,7 +124,7 @@ class ScheduleCsvImportService
         }
 
         try {
-            if ($extension === 'xlsx') {
+            if ($isXlsx) {
                 $allRows = $this->parseXlsxRows($filePath);
             } else {
                 $allRows = $this->parseCsvRows($filePath);
@@ -189,7 +201,7 @@ class ScheduleCsvImportService
 
     /**
      * Parse rows from CSV file.
-     * Handles UTF-8 BOM, standard CRLF (\r\n), LF (\n), and classic Mac standalone CR (\r) line breaks.
+     * Handles UTF-8 BOM, comma/semicolon delimiters, CRLF (\r\n), LF (\n), and classic Mac standalone CR (\r).
      */
     protected function parseCsvRows(string $filePath): array
     {
@@ -206,12 +218,19 @@ class ScheduleCsvImportService
         // Normalize carriage returns (\r\n and bare \r to \n) so classic Mac CR exports parse correctly
         $content = str_replace(["\r\n", "\r"], "\n", $content);
 
+        // Auto-detect delimiter (, or ;) from first line
+        $firstLine = strtok($content, "\n");
+        $delimiter = ',';
+        if ($firstLine !== false && substr_count($firstLine, ';') > substr_count($firstLine, ',')) {
+            $delimiter = ';';
+        }
+
         $stream = fopen('php://temp', 'r+');
         fwrite($stream, $content);
         rewind($stream);
 
         $rows = [];
-        while (($row = fgetcsv($stream)) !== false) {
+        while (($row = fgetcsv($stream, 0, $delimiter)) !== false) {
             $rows[] = $row;
         }
 
@@ -222,6 +241,7 @@ class ScheduleCsvImportService
 
     /**
      * Parse rows from an .xlsx file using ZipArchive & SimpleXML natively.
+     * Supports shared strings, inline strings, and dynamic worksheet discovery.
      */
     protected function parseXlsxRows(string $filePath): array
     {
@@ -253,6 +273,17 @@ class ScheduleCsvImportService
 
         $sheetIndex = $zip->locateName('xl/worksheets/sheet1.xml');
         if ($sheetIndex === false) {
+            // Find any sheet in xl/worksheets/
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $name = $zip->getNameIndex($i);
+                if (preg_match('#^xl/worksheets/sheet[0-9]+\.xml$#i', $name)) {
+                    $sheetIndex = $i;
+                    break;
+                }
+            }
+        }
+
+        if ($sheetIndex === false) {
             $zip->close();
             throw new \RuntimeException('No worksheet XML found in XLSX file.');
         }
@@ -278,6 +309,8 @@ class ScheduleCsvImportService
 
                 if ($type === 's' && isset($sharedStrings[(int) $val])) {
                     $cellValue = $sharedStrings[(int) $val];
+                } elseif (($type === 'inlineStr' || ! isset($cellNode->v)) && isset($cellNode->is->t)) {
+                    $cellValue = (string) $cellNode->is->t;
                 } else {
                     $cellValue = $val;
                 }
@@ -336,7 +369,8 @@ class ScheduleCsvImportService
         ]);
         $depDateStr = $this->getValue($row, [
             'departuredate', 'depdate', 'departure_date', 'date', 'flight_date', 'flightdate',
-            'sail_date', 'saildate', 'voyage_date', 'travel_date', 'traveldate'
+            'sail_date', 'saildate', 'voyage_date', 'travel_date', 'traveldate',
+            'daymonthyear', 'dmy', 'day_month_year', 'dep_dmy'
         ]);
         $depTimeStr = $this->getValue($row, [
             'departuretime', 'deptime', 'departure_time', 'time', 'etd', 'departure', 'dep_time', 'flight_time'
@@ -345,9 +379,33 @@ class ScheduleCsvImportService
             'arrivaltime', 'arrtime', 'arrival_time', 'eta', 'arrival', 'arr_time'
         ]);
         $arrDateStr = $this->getValue($row, [
-            'arrivaldate', 'arivaldate', 'arrdate', 'ardate', 'arrival_date', 'arival_date', 'arr_date', 'destination_date', 'reach_date'
+            'arrivaldate', 'arivaldate', 'arrdate', 'ardate', 'arrival_date', 'arival_date', 'arr_date', 'destination_date', 'reach_date',
+            'arrivaldaymonthyear', 'arrival_dmy', 'arr_dmy'
         ]);
-        $returnDateStr = $this->getValue($row, ['returndate', 'retdate', 'return_date']);
+        $returnDateStr = $this->getValue($row, ['returndate', 'retdate', 'return_date', 'return_dmy']);
+
+        // Auto-extract time component if embedded in departure date (e.g. "02-10-2026 09:30 AM" or Excel decimal 46297.3958)
+        if (blank($depTimeStr) && filled($depDateStr)) {
+            if (preg_match('/(?:^|\s+)([0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?(?:\s*[AaPp][Mm])?)$/', trim($depDateStr), $tm)) {
+                $depTimeStr = $tm[1];
+                $depDateStr = trim(str_replace($tm[0], '', $depDateStr));
+            } elseif (is_numeric(trim($depDateStr)) && str_contains(trim($depDateStr), '.')) {
+                $frac = (float) trim($depDateStr) - floor((float) trim($depDateStr));
+                $depTimeStr = (string) $frac;
+            }
+        }
+
+        // Auto-extract time component if embedded in arrival date
+        if (blank($arrTimeStr) && filled($arrDateStr)) {
+            if (preg_match('/(?:^|\s+)([0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?(?:\s*[AaPp][Mm])?)$/', trim($arrDateStr), $atm)) {
+                $arrTimeStr = $atm[1];
+                $arrDateStr = trim(str_replace($atm[0], '', $arrDateStr));
+            } elseif (is_numeric(trim($arrDateStr)) && str_contains(trim($arrDateStr), '.')) {
+                $frac = (float) trim($arrDateStr) - floor((float) trim($arrDateStr));
+                $arrTimeStr = (string) $frac;
+            }
+        }
+
         $transportClassStr = $this->getValue($row, [
             'transportclass', 'transport_class', 'class', 'accommodation', 'accommodation_class',
             'seat_class', 'seatclass', 'cabin', 'cabin_type', 'cabinclass', 'tier', 'service_class'
@@ -737,14 +795,25 @@ class ScheduleCsvImportService
     }
 
     /**
-     * Clean raw time strings by removing ETD/ETA prefixes and normalization typos.
+     * Clean raw time strings by removing ETD/ETA prefixes and normalization typos,
+     * or converting Excel numeric day fractions (e.g. 0.395833 -> 09:30:00).
      */
     protected function cleanTimeString(?string $time): string
     {
         if (blank($time)) {
             return '00:00';
         }
-        $clean = trim($time);
+        $clean = trim((string) $time);
+
+        // Convert Excel fractional time (e.g. 0.3958333333333333 -> 09:30:00)
+        if (is_numeric($clean) && (float) $clean < 1.0 && (float) $clean >= 0.0) {
+            $totalSeconds = (int) round((float) $clean * 86400);
+            $hours = intdiv($totalSeconds, 3600);
+            $minutes = intdiv($totalSeconds % 3600, 60);
+            $seconds = $totalSeconds % 60;
+            return sprintf('%02d:%02d:%02d', $hours, $minutes, $seconds);
+        }
+
         $clean = preg_replace('/^(?:ETD|ETA)\s*:\s*/i', '', $clean);
         $clean = str_ireplace('@1O:', '@10:', $clean);
         if (preg_match('/@\s*([0-9]{1,2}(?::[0-9]{2})?\s*(?:AM|PM)?)/i', $clean, $m)) {
@@ -793,18 +862,87 @@ class ScheduleCsvImportService
     }
 
     /**
-     * Sanitize date string: strip whitespace around slashes/dashes and fix 5-digit typo years (e.g. 22026 -> 2026).
+     * Normalize any imported date strictly to DAY-MONTH-YEAR (DD-MM-YYYY).
+     * Handles Excel numeric serial numbers (e.g. 46297 -> 02-10-2026),
+     * slash formats (02/10/2026), dash formats (02-10-2026), dot formats (02.10.2026),
+     * named months (02-Oct-2026), and ISO (2026-10-02).
+     */
+    protected function normalizeToDayMonthYear(string $date): string
+    {
+        $clean = trim($date);
+
+        if (blank($clean)) {
+            return Carbon::today()->format('d-m-Y');
+        }
+
+        // 1. Handle Excel numeric date serials (e.g. 46297 or 46297.3958)
+        if (is_numeric($clean) && (float) $clean > 25000 && (float) $clean < 80000) {
+            $serialDays = floor((float) $clean);
+            $unixTimestamp = (int) round(($serialDays - 25569) * 86400);
+            return gmdate('d-m-Y', $unixTimestamp);
+        }
+
+        // Remove whitespace around slashes, dashes, or dots (e.g. "14 / 11 / 2026" -> "14/11/2026")
+        $clean = preg_replace('/\s*([\/\-\.])\s*/', '$1', $clean);
+
+        // Fix typo 5-digit years where 2 was repeated (e.g. "26/09/22026" -> "26/09/2026")
+        $clean = preg_replace('/(\b\d{1,2}[\/\-\.]\d{1,2}[\/\-\.])2+(\d{4})\b/', '$1$2', $clean);
+        $clean = preg_replace('/(\b\d{1,2}[\/\-\.]\d{1,2}[\/\-\.])(202\d)\d\b/', '$1$2', $clean);
+
+        // 2. Strict DAY-MONTH-YEAR with delimiter: DD-MM-YYYY or DD/MM/YYYY or DD.MM.YYYY
+        if (preg_match('/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/', $clean, $m)) {
+            $day = (int) $m[1];
+            $month = (int) $m[2];
+            $year = (int) $m[3];
+
+            if ($year < 100) {
+                $year += ($year < 50 ? 2000 : 1900);
+            }
+
+            if ($day >= 1 && $day <= 31 && $month >= 1 && $month <= 12) {
+                return sprintf('%02d-%02d-%04d', $day, $month, $year);
+            }
+        }
+
+        // 3. DAY - Named Month - YEAR: e.g. "02-Oct-2026", "2 October 2026", "02/Oct/2026"
+        if (preg_match('/^(\d{1,2})[\s\/\-\.]([A-Za-z]+)[\s\/\-\.](\d{2,4})$/', $clean, $m)) {
+            $day = (int) $m[1];
+            $monthStr = $m[2];
+            $year = (int) $m[3];
+
+            if ($year < 100) {
+                $year += ($year < 50 ? 2000 : 1900);
+            }
+
+            $monthTime = strtotime("1 {$monthStr} 2000");
+            if ($monthTime !== false) {
+                $month = (int) date('n', $monthTime);
+                if ($day >= 1 && $day <= 31 && $month >= 1 && $month <= 12) {
+                    return sprintf('%02d-%02d-%04d', $day, $month, $year);
+                }
+            }
+        }
+
+        // 4. ISO format: YYYY-MM-DD
+        if (preg_match('/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/', $clean, $m)) {
+            $year = (int) $m[1];
+            $month = (int) $m[2];
+            $day = (int) $m[3];
+
+            if ($day >= 1 && $day <= 31 && $month >= 1 && $month <= 12) {
+                return sprintf('%02d-%02d-%04d', $day, $month, $year);
+            }
+        }
+
+        return $clean;
+    }
+
+    /**
+     * Sanitize date string: returns strict DAY-MONTH-YEAR.
      */
     protected function sanitizeDateString(string $date): string
     {
-        $clean = trim($date);
-        // Remove whitespace around slashes or dashes (e.g. "14/ 11/ 2026" -> "14/11/2026")
-        $clean = preg_replace('/\s*([\/\-])\s*/', '$1', $clean);
-        // Fix typo 5-digit years where 2 was repeated (e.g. "26/09/22026" -> "26/09/2026")
-        $clean = preg_replace('/(\b\d{1,2}[\/\-]\d{1,2}[\/\-])2+(\d{4})\b/', '$1$2', $clean);
-        $clean = preg_replace('/(\b\d{1,2}[\/\-]\d{1,2}[\/\-])(202\d)\d\b/', '$1$2', $clean);
-
-        return $clean;
+        return $this->normalizeToDayMonthYear($date);
     }
 
     /**
@@ -833,97 +971,50 @@ class ScheduleCsvImportService
     }
 
     /**
-     * Smartly parse departure datetime, disambiguating DMY vs MDY when Excel switches formats.
+     * Smartly parse departure datetime, strictly enforcing DAY-MONTH-YEAR.
      */
     protected function parseSmartDepartureDateTime(string $date, string $time): Carbon
     {
-        $cleanDate = $this->sanitizeDateString($date);
+        $dmyDate = $this->normalizeToDayMonthYear($date);
         $cleanTime = $this->cleanTimeString($time);
 
-        if (preg_match('/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/', $cleanDate, $m)) {
-            $p1 = (int) $m[1];
-            $p2 = (int) $m[2];
-            $year = (int) $m[3];
-
-            $canDmy = ($p2 >= 1 && $p2 <= 12 && $p1 >= 1 && $p1 <= 31);
-            $canMdy = ($p1 >= 1 && $p1 <= 12 && $p2 >= 1 && $p2 <= 31);
-
-            if ($canDmy && $canMdy && $this->lastDepartureDateTime !== null) {
-                $dmyCandidate = $this->tryCreateDateTime("{$p1}/{$p2}/{$year} {$cleanTime}", 'd/m/Y');
-                $mdyCandidate = $this->tryCreateDateTime("{$p1}/{$p2}/{$year} {$cleanTime}", 'm/d/Y');
-
-                if ($dmyCandidate && $mdyCandidate) {
-                    $dmyDiff = $this->lastDepartureDateTime->diffInDays($dmyCandidate, false);
-                    $mdyDiff = $this->lastDepartureDateTime->diffInDays($mdyCandidate, false);
-
-                    // If DMY jumped backwards drastically (e.g. > 15 days in past), but MDY is within [-2, 14] days:
-                    if ($dmyDiff < -15 && $mdyDiff >= -2 && $mdyDiff <= 14) {
-                        return $mdyCandidate;
-                    }
-                    if ($mdyDiff < -15 && $dmyDiff >= -2 && $dmyDiff <= 14) {
-                        return $dmyCandidate;
-                    }
-                }
-            }
-        }
-
-        return $this->parseImportedDateTime($cleanDate, $cleanTime);
+        return $this->parseImportedDateTime($dmyDate, $cleanTime);
     }
 
     /**
-     * Smartly parse arrival datetime with anchor to departure datetime (e.g. resolving ambiguous DMY/MDY).
+     * Smartly parse arrival datetime with anchor to departure datetime, strictly enforcing DAY-MONTH-YEAR.
      */
     protected function parseSmartArrivalDateTimeWithAnchor(string $date, string $time, Carbon $departureDateTime): Carbon
     {
-        $cleanDate = $this->sanitizeDateString($date);
+        $dmyDate = $this->normalizeToDayMonthYear($date);
         $cleanTime = $this->cleanTimeString($time);
 
-        if (preg_match('/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/', $cleanDate, $m)) {
-            $p1 = (int) $m[1];
-            $p2 = (int) $m[2];
-            $year = (int) $m[3];
+        $arrivalDateTime = $this->parseImportedDateTime($dmyDate, $cleanTime);
 
-            $canDmy = ($p2 >= 1 && $p2 <= 12 && $p1 >= 1 && $p1 <= 31);
-            $canMdy = ($p1 >= 1 && $p1 <= 12 && $p2 >= 1 && $p2 <= 31);
-
-            if ($canDmy && $canMdy) {
-                $dmyCandidate = $this->tryCreateDateTime("{$p1}/{$p2}/{$year} {$cleanTime}", 'd/m/Y');
-                $mdyCandidate = $this->tryCreateDateTime("{$p1}/{$p2}/{$year} {$cleanTime}", 'm/d/Y');
-
-                if ($dmyCandidate && $mdyCandidate) {
-                    $dmyDiffHours = $departureDateTime->diffInHours($dmyCandidate, false);
-                    $mdyDiffHours = $departureDateTime->diffInHours($mdyCandidate, false);
-
-                    // A realistic ferry arrives within 0 to 72 hours of departure
-                    $dmyRealistic = ($dmyDiffHours >= 0 && $dmyDiffHours <= 72);
-                    $mdyRealistic = ($mdyDiffHours >= 0 && $mdyDiffHours <= 72);
-
-                    if ($mdyRealistic && ! $dmyRealistic) {
-                        return $mdyCandidate;
-                    }
-                    if ($dmyRealistic && ! $mdyRealistic) {
-                        return $dmyCandidate;
-                    }
-                }
+        // Failsafe: Arrival datetime must never be earlier than departure datetime
+        if ($arrivalDateTime->lessThan($departureDateTime)) {
+            while ($arrivalDateTime->lessThan($departureDateTime)) {
+                $arrivalDateTime->addDay();
             }
         }
 
-        return $this->parseImportedDateTime($cleanDate, $cleanTime);
+        return $arrivalDateTime;
     }
 
     /**
-     * Parse imported schedule datetimes with explicit support for DD/MM/YYYY, M/D/YYYY and 12-hour AM/PM formats.
+     * Parse imported schedule datetimes strictly in DAY-MONTH-YEAR priority.
      */
     protected function parseImportedDateTime(string $date, string $time): Carbon
     {
-        $cleanDate = $this->sanitizeDateString($date);
+        $dmyDate = $this->normalizeToDayMonthYear($date);
         $cleanTime = $this->cleanTimeString($time);
-        $dateTime = $cleanDate . ' ' . $cleanTime;
+        $dateTime = $dmyDate . ' ' . $cleanTime;
 
         foreach ([
+            'd-m-Y H:i:s', 'd-m-Y H:i', 'd-m-Y h:i A', 'd-m-Y g:i A', 'd-m-Y h:iA', 'd-m-Y g:iA',
             'd/m/Y H:i:s', 'd/m/Y H:i', 'd/m/Y h:i A', 'd/m/Y g:i A', 'd/m/Y h:iA', 'd/m/Y g:iA',
-            'm/d/Y H:i:s', 'm/d/Y H:i', 'm/d/Y h:i A', 'm/d/Y g:i A', 'm/d/Y h:iA', 'm/d/Y g:iA',
             'Y-m-d H:i:s', 'Y-m-d H:i', 'Y-m-d h:i A', 'Y-m-d g:i A', 'Y-m-d h:iA', 'Y-m-d g:iA',
+            'd-m-Y', 'd/m/Y', 'Y-m-d',
         ] as $format) {
             try {
                 $parsed = Carbon::createFromFormat($format, $dateTime);
@@ -932,15 +1023,30 @@ class ScheduleCsvImportService
                     return $parsed;
                 }
             } catch (Throwable) {
-                // Try the next supported format.
+                // Try next supported format.
             }
+        }
+
+        try {
+            $parsedDateOnly = Carbon::createFromFormat('d-m-Y', $dmyDate);
+            if ($parsedDateOnly !== false) {
+                if (filled($cleanTime) && $cleanTime !== '00:00') {
+                    try {
+                        $parsedTime = Carbon::parse($cleanTime);
+                        return $parsedDateOnly->setTime($parsedTime->hour, $parsedTime->minute, $parsedTime->second);
+                    } catch (Throwable) {
+                    }
+                }
+                return $parsedDateOnly->startOfDay();
+            }
+        } catch (Throwable) {
         }
 
         try {
             return Carbon::parse($dateTime);
         } catch (Throwable $e) {
             throw new \InvalidArgumentException(
-                "Could not parse '{$dateTime}'. Expected DD/MM/YYYY or YYYY-MM-DD with time like HH:MM or HH:MM AM/PM.",
+                "Could not parse '{$dateTime}'. Expected DAY-MONTH-YEAR (DD-MM-YYYY or DD/MM/YYYY) with time like HH:MM or HH:MM AM/PM.",
                 previous: $e,
             );
         }
