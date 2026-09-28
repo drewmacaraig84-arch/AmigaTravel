@@ -18,4 +18,9 @@ class CreateFerryRoute extends CreateRecord
 
         return $data;
     }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('edit', ['record' => $this->getRecord()]);
+    }
 }

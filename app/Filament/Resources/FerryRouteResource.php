@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\FerryRouteResource\Pages;
+use App\Filament\Resources\FerryRouteResource\RelationManagers\SchedulesRelationManager;
 use App\Models\FerryRoute;
 use App\Models\User;
 use App\Models\Vehicle;
@@ -69,10 +70,7 @@ class FerryRouteResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->with(['operatorRecord', 'vehicle.operatorRecord', 'schedules' => function ($query) {
-                $query->select(['id', 'ferry_route_id', 'vehicle_name', 'departure_time', 'arrival_time', 'price', 'is_active'])
-                    ->orderBy('departure_time');
-            }]);
+            ->with(['operatorRecord', 'vehicle.operatorRecord']);
     }
 
     public static function form(Form $form): Form
@@ -128,35 +126,14 @@ class FerryRouteResource extends Resource
                     ->nullable()
                     ->reactive()
                     ->searchable()
-                    ->afterStateHydrated(function ($state, callable $set, callable $get) {
+                    ->afterStateHydrated(function ($state, callable $set) {
                         if ($state) {
                             $set('operator_id', optional(Vehicle::find($state))->operator_id);
-
-                            $schedules = $get('schedules') ?? [];
-                            $vehicleName = optional(Vehicle::find($state))->name;
-                            foreach ($schedules as $index => $schedule) {
-                                $schedules[$index]['vehicle_name'] = $vehicleName;
-                            }
-                            $set('schedules', $schedules);
                         }
                     })
-                    ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                    ->afterStateUpdated(function ($state, callable $set) {
                         if ($state) {
                             $set('operator_id', optional(Vehicle::find($state))->operator_id);
-
-                            $schedules = $get('schedules') ?? [];
-                            $vehicleName = optional(Vehicle::find($state))->name;
-                            foreach ($schedules as $index => $schedule) {
-                                $schedules[$index]['vehicle_name'] = $vehicleName;
-                            }
-                            $set('schedules', $schedules);
-                        } else {
-
-                            $schedules = $get('schedules') ?? [];
-                            foreach ($schedules as $index => $schedule) {
-                                $schedules[$index]['vehicle_name'] = null;
-                            }
-                            $set('schedules', $schedules);
                         }
                     })
                     ->hint('Select a vehicle from the ferry/airline list'),
@@ -175,279 +152,8 @@ class FerryRouteResource extends Resource
                 Toggle::make('is_active')
                     ->label('Available for booking')
                     ->default(true),
-
-                Section::make('Schedules for this Route')
-                    ->description('Manage the schedules that belong to this route here. Changes are saved with the route.')
-                    ->headerActions([
-                        Action::make('add_schedule')
-                            ->label('Add schedule')
-                            ->icon('heroicon-m-plus')
-                            ->button()
-                            ->action(function (callable $get, callable $set) {
-                                $schedules = $get('schedules') ?? [];
-                                $vehicleId = $get('vehicle_id');
-                                $vehicleName = $vehicleId ? optional(Vehicle::find($vehicleId))->name : null;
-                                $key = \Illuminate\Support\Str::uuid()->toString();
-                                $schedules[$key] = [
-                                    'vehicle_name' => $vehicleName,
-                                    'is_active' => true,
-                                ];
-                                $set('schedules', $schedules);
-                            }),
-                    ])
-                    ->schema([
-                        Repeater::make('schedules')
-                            ->relationship('schedules')
-                            ->label('')
-                            ->schema(static::scheduleFormSchema())
-                            ->defaultItems(0)
-                            ->cloneable()
-                            ->deletable()
-                            ->addable(false)
-                            ->collapsible()
-                            ->collapsed()
-                            ->extraItemActions([
-                                Action::make('add_transport_class')
-                                    ->icon('heroicon-m-plus-circle')
-                                    ->label('Add transport class')
-                                    ->tooltip('Add transport class')
-                                    ->action(function (array $arguments, Repeater $component, callable $get): void {
-                                        $itemKey = $arguments['item'];
-                                        $state = $component->getState();
-
-                                        $classes = $state[$itemKey]['scheduleTransportClasses'] ?? [];
-                                        $classes[\Illuminate\Support\Str::uuid()->toString()] = [
-                                            'additional_price' => 0,
-                                            'tickets_available' => 50,
-                                            'is_active' => true,
-                                            'has_bed' => false,
-                                        ];
-                                        $state[$itemKey]['scheduleTransportClasses'] = $classes;
-
-                                        $component->state($state);
-                                        $component->collapsed(false, shouldMakeComponentCollapsible: false);
-                                    })
-                                    ->visible(fn (callable $get): bool => in_array($get('../../mode'), ['airline', 'ferry'], true)),
-                                // Only use transport classes directly now; accommodations are handled through transport classes.
-                            ])
-                            ->itemLabel(function (array $state): ?string {
-                                $parts = [];
-                                $parts[] = $state['vehicle_name'] ?? 'New schedule';
-
-                                if (!empty($state['departure_time']) && !empty($state['arrival_time'])) {
-                                    $dep = \Carbon\Carbon::parse($state['departure_time'])->format('M j, Y g:i A');
-                                    $arr = \Carbon\Carbon::parse($state['arrival_time'])->format('M j, Y g:i A');
-                                    $parts[] = "{$dep} – {$arr}";
-                                } elseif (!empty($state['departure_time'])) {
-                                    $dep = \Carbon\Carbon::parse($state['departure_time'])->format('M j, Y g:i A');
-                                    $parts[] = "Dep: {$dep}";
-                                }
-
-                                if (isset($state['price']) && $state['price'] !== '') {
-                                    $price = number_format((float) $state['price'], 2);
-                                    $parts[] = "₱{$price}";
-                                }
-
-                                $classCount = is_array($state['scheduleTransportClasses'] ?? null) ? count($state['scheduleTransportClasses']) : 0;
-
-                                if ($classCount > 0) {
-                                    $parts[] = "{$classCount} " . ($classCount === 1 ? 'Class' : 'Classes');
-                                }
-
-                                return implode('  •  ', $parts);
-                            })
-                            ->mutateRelationshipDataBeforeFillUsing(function (array $data, callable $get): array {
-                                if ($vehicleId = $get('../../vehicle_id')) {
-                                    $vehicleName = optional(Vehicle::find($vehicleId))->name;
-                                    $data['vehicle_name'] = $vehicleName;
-                                    $data['service_name'] = $data['service_name'] ?? $vehicleName;
-                                }
-
-                                return $data;
-                            })
-                            ->mutateRelationshipDataBeforeCreateUsing(function (array $data, callable $get): array {
-                                if ($vehicleId = $get('../../vehicle_id')) {
-                                    $vehicleName = optional(Vehicle::find($vehicleId))->name;
-                                    $data['vehicle_name'] = $vehicleName;
-                                    $data['service_name'] = $data['service_name'] ?? $vehicleName;
-                                }
-
-                                return $data;
-                            })
-                            ->mutateRelationshipDataBeforeSaveUsing(function (array $data, callable $get): array {
-                                if ($vehicleId = $get('../../vehicle_id')) {
-                                    $vehicleName = optional(Vehicle::find($vehicleId))->name;
-                                    $data['vehicle_name'] = $vehicleName;
-                                    $data['service_name'] = $data['service_name'] ?? $vehicleName;
-                                }
-
-                                return $data;
-                            })
-                            ->columnSpanFull(),
-                    ])
-                    ->columnSpanFull(),
             ])
             ->columns(2);
-    }
-
-    protected static function scheduleFormSchema(): array
-    {
-        return [
-            TextInput::make('vehicle_name')
-                ->label('Vehicle')
-                ->disabled()
-                ->reactive()
-                ->afterStateHydrated(function ($state, callable $set, callable $get) {
-                    $vehicleId = $get('../../vehicle_id');
-
-                    if ($vehicleId) {
-                        $set('vehicle_name', optional(Vehicle::find($vehicleId))->name);
-                    }
-                })
-                ->visible(fn (callable $get) => filled($get('../../vehicle_id')))
-                ->nullable()
-                ->maxLength(255),
-                
-            TextInput::make('plate_no')
-                ->label('Plate No.')
-                ->nullable()
-                ->maxLength(255),
-
-            DateTimePicker::make('departure_time')
-                ->label('Departure time')
-                ->seconds(false)
-                ->required(),
-
-            DateTimePicker::make('arrival_time')
-                ->label('Arrival time')
-                ->seconds(false)
-                ->required(),
-
-            TextInput::make('duration_minutes')
-                ->label('Duration (minutes)')
-                ->helperText('Optional — calculated from times if left blank.')
-                ->numeric()
-                ->minValue(1),
-
-            TextInput::make('price')
-                ->label('Reseller price per passenger (₱)')
-                ->numeric()
-                ->prefix('₱')
-                ->minValue(0)
-                ->required(),
-
-
-            TextInput::make('availability_label')
-                ->label('Availability note')
-                ->placeholder('e.g. Available, Limited availability')
-                ->maxLength(255),
-
-            Toggle::make('is_active')
-                ->label('Visible to clients when booking')
-                ->default(true),
-                
-            Repeater::make('scheduleTransportClasses')
-                ->relationship('scheduleTransportClasses')
-                ->label('Transport Classes')
-                ->schema([
-                    Select::make('transport_class_id')
-                        ->label('Transport Class')
-                        ->options(fn (callable $get) => \App\Models\TransportClass::query()
-                            ->when($get('../../../../operator_id'), fn ($query, $operatorId) => $query->where('operator_id', $operatorId))
-                            // Intentionally skipping mode filter because the DB has ferry classes seeded as 'airline'
-                            ->where('is_active', true)
-                            ->orderBy('name')
-                            ->get()
-                            ->mapWithKeys(fn ($item) => [$item->id => $item->operator_record ? "{$item->operator_record->name} - {$item->name}" : $item->name])
-                            ->toArray())
-                        ->required()
-                        ->reactive()
-                        ->afterStateUpdated(function ($state, callable $set) {
-                            if ($state) {
-                                $tc = \App\Models\TransportClass::find($state);
-                                if ($tc) {
-                                    $set('transport_class_name', $tc->name);
-                                    $price = ($tc->is_on_sale && $tc->sale_price !== null && $tc->sale_price > 0) ? $tc->sale_price : $tc->price;
-                                    $set('additional_price', $price ?? 0);
-                                    if ($tc->description) {
-                                        $set('description', $tc->description);
-                                    }
-                                }
-                            }
-                        })
-                        ->columnSpanFull(),
-
-                    \Filament\Forms\Components\Textarea::make('description')
-                        ->placeholder('Details about this transport class option')
-                        ->rows(2)
-                        ->columnSpanFull(),
-
-                    TextInput::make('additional_price')
-                        ->label('Additional Price (₱)')
-                        ->numeric()
-                        ->prefix('₱')
-                        ->default(0)
-                        ->minValue(0),
-
-                    TextInput::make('rate_code')
-                        ->label('Promo Rate Code')
-                        ->placeholder('e.g. PROMO, EARLYBIRD')
-                        ->maxLength(255),
-
-                    TextInput::make('tickets_available')
-                        ->label('Tickets Available')
-                        ->numeric()
-                        ->minValue(0)
-                        ->default(50)
-                        ->required(),
-
-                    \Filament\Forms\Components\Select::make('rate_type')
-                        ->label('Rate Tier & Fare Policy')
-                        ->options([
-                            'regular'           => '🔵 Regular Fare (Standard - 100% Rate)',
-                            'promotional'       => '🟠 Promotional Fare (Promo - Non-refundable)',
-                            'super_promotional' => '🟣 Super Promotional (Super Promo - No Discounts/Vouchers/Points)',
-                        ])
-                        ->default('regular')
-                        ->required()
-                        ->live()
-                        ->afterStateUpdated(function ($state, callable $set) {
-                            $set('is_promo', in_array($state, ['promotional', 'super_promotional']));
-                        }),
-
-                    Toggle::make('is_promo')
-                        ->label('Promotional Ticket (Non-refundable)')
-                        ->helperText('Tickets in this class will not be eligible for standard refunds.')
-                        ->live()
-                        ->hidden(),
-
-                    \Filament\Forms\Components\DateTimePicker::make('promo_duration_start')
-                        ->label('Promo Start Date & Time')
-                        ->visible(fn (callable $get) => in_array($get('rate_type'), ['promotional', 'super_promotional']) || $get('is_promo') === true)
-                        ->required(fn (callable $get) => in_array($get('rate_type'), ['promotional', 'super_promotional'])),
-
-                    \Filament\Forms\Components\DateTimePicker::make('promo_duration_end')
-                        ->label('Promo End Date & Time')
-                        ->visible(fn (callable $get) => in_array($get('rate_type'), ['promotional', 'super_promotional']) || $get('is_promo') === true)
-                        ->required(fn (callable $get) => in_array($get('rate_type'), ['promotional', 'super_promotional']))
-                        ->after('promo_duration_start'),
-
-                    Toggle::make('has_bed')
-                        ->label('Includes bed / berth')
-                        ->helperText('Enable for transport classes that include sleeping berths.'),
-
-                    Toggle::make('is_active')
-                        ->label('Visible to clients when booking')
-                        ->default(true),
-
-                    TextInput::make('transport_class_name')->hidden(),
-                ])
-                ->columns(2)
-                ->collapsible()
-                ->columnSpanFull()
-                ->itemLabel(fn (array $state): ?string => $state['transport_class_name'] ?? null)
-                ->visible(fn (callable $get): bool => in_array($get('../../mode'), ['airline', 'ferry'], true)),
-        ];
     }
 
     public static function table(Table $table): Table
@@ -583,7 +289,7 @@ class FerryRouteResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            SchedulesRelationManager::class,
         ];
     }
 
