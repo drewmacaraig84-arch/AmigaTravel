@@ -1038,8 +1038,8 @@ class StarliteScheduleIngestionService
             $destination = $parsedRoute['destination'];
             $vesselType = $parsedRoute['type']; // ROPAX, LCT, FASTCRAFT
 
-            // Assign Vessel Name based on Route/Type
-            $vesselName = $this->resolveVesselNameForRoute($origin, $destination, $vesselType, $vesselMap);
+            // Assign Vessel Names based on Route/Type (supports multi-vessel fleet from VESSEL ROUTE.xlsx)
+            $vesselNames = $this->resolveVesselNamesForRoute($origin, $destination, $vesselType, $vesselMap);
 
             // Parse Departure Times
             $depTimes = $this->parseDepartureTimes($depTimeRaw);
@@ -1053,17 +1053,19 @@ class StarliteScheduleIngestionService
             // Parse Days of Week
             $activeDays = $this->parseDaysOfWeek($daysRaw);
 
-            $rules[] = [
-                'origin' => $origin,
-                'destination' => $destination,
-                'vessel_name' => $vesselName,
-                'vessel_type' => $vesselType,
-                'departure_times' => $depTimes,
-                'duration_minutes' => $durationMinutes,
-                'active_days' => $activeDays,
-                'raw_route' => $routeRaw,
-                'raw_days' => $daysRaw,
-            ];
+            foreach ($vesselNames as $vesselName) {
+                $rules[] = [
+                    'origin' => $origin,
+                    'destination' => $destination,
+                    'vessel_name' => $vesselName,
+                    'vessel_type' => $vesselType,
+                    'departure_times' => $depTimes,
+                    'duration_minutes' => $durationMinutes,
+                    'active_days' => $activeDays,
+                    'raw_route' => $routeRaw,
+                    'raw_days' => $daysRaw,
+                ];
+            }
         }
 
         return $rules;
@@ -1117,67 +1119,95 @@ class StarliteScheduleIngestionService
     }
 
     /**
-     * Resolve appropriate vessel name for the route and vessel type.
+     * Resolve all vessels deployed on the route and vessel type according to VESSEL ROUTE.xlsx master fleet.
+     *
+     * @return string[]
      */
-    protected function resolveVesselNameForRoute(string $origin, string $destination, string $type, array $vesselMap): string
+    public function resolveVesselNamesForRoute(string $origin, string $destination, string $type, array $vesselMap = []): array
     {
+        // 1. Check if excel vessel map has direct entries for this route
+        foreach ($vesselMap as $mapKey => $vessels) {
+            if ((str_contains($mapKey, $origin) && str_contains($mapKey, $destination)) && ! empty($vessels)) {
+                return array_unique($vessels);
+            }
+        }
+
+        // 2. Specific routes mapping from VESSEL ROUTE.xlsx master fleet
+        if ((str_contains($origin, 'Batangas') && str_contains($destination, 'Caticlan')) ||
+            (str_contains($origin, 'Caticlan') && str_contains($destination, 'Batangas'))) {
+            return [
+                'MV Starlite Pioneer',
+                'MV Starlite Reliance',
+                'MV Starlite Archer',
+                'MV Starlite Venus',
+                'MV Trans - Asia 20 (Cargo-pax)',
+            ];
+        }
+
+        if ((str_contains($origin, 'Batangas') && str_contains($destination, 'Calapan')) ||
+            (str_contains($origin, 'Calapan') && str_contains($destination, 'Batangas'))) {
+            if ($type === 'FASTCRAFT') {
+                return ['MV Starlite Archer'];
+            }
+            if ($type === 'LCT') {
+                return ['MV Starlite Sprint 1'];
+            }
+
+            return [
+                'MV Starlite Annapolis',
+                'MV Starlite Saga',
+                'MV Starlite Jupiter',
+                'MV Starlite Eagle',
+                'MV Starlite Archer',
+            ];
+        }
+
+        if ((str_contains($origin, 'Batangas') && str_contains($destination, 'Roxas')) ||
+            (str_contains($origin, 'Roxas') && str_contains($destination, 'Batangas'))) {
+            return ['MV Starlite Resilience'];
+        }
+
+        if (str_contains($origin, 'Cebu') || str_contains($destination, 'Cebu')) {
+            return ['MV Starlite Saturn'];
+        }
+
+        if ((str_contains($origin, 'Roxas') && str_contains($destination, 'Caticlan')) ||
+            (str_contains($origin, 'Caticlan') && str_contains($destination, 'Roxas'))) {
+            return ['MV Starlite Pacific'];
+        }
+
+        if ((str_contains($origin, 'Odiongan') && str_contains($destination, 'Caticlan')) ||
+            (str_contains($origin, 'Caticlan') && str_contains($destination, 'Odiongan'))) {
+            return ['MV Starlite Pacific'];
+        }
+
+        if (str_contains($origin, 'Romblon') || str_contains($destination, 'Romblon') ||
+            str_contains($origin, 'Sibuyan') || str_contains($destination, 'Sibuyan') ||
+            str_contains($origin, 'Magdiwang') || str_contains($destination, 'Magdiwang') ||
+            str_contains($origin, 'Cajidiocan') || str_contains($destination, 'Cajidiocan') ||
+            str_contains($origin, 'Odiongan') || str_contains($destination, 'Odiongan')) {
+            return ['MV Starlite Saturn'];
+        }
+
         if ($type === 'FASTCRAFT') {
-            return 'ARCHER';
+            return ['MV Starlite Archer'];
         }
 
         if ($type === 'LCT') {
-            return ($origin === 'Calapan' || $destination === 'Calapan') ? 'SPRINT 1' : 'PACIFIC';
+            return ['MV Starlite Pacific'];
         }
 
-        // Special routes mapping
-        if (str_contains($origin, 'Cebu') || str_contains($destination, 'Cebu')) {
-            if (str_contains($origin, 'Dapitan') || str_contains($destination, 'Dapitan')) {
-                return 'SATURN';
-            }
+        return ['MV Starlite Saga'];
+    }
 
-            return 'SATURN';
-        }
+    /**
+     * Resolve single vessel name for backward compatibility.
+     */
+    protected function resolveVesselNameForRoute(string $origin, string $destination, string $type, array $vesselMap = []): string
+    {
+        $vessels = $this->resolveVesselNamesForRoute($origin, $destination, $type, $vesselMap);
 
-        if (str_contains($origin, 'Caticlan') || str_contains($destination, 'Caticlan')) {
-            if (str_contains($origin, 'Batangas') || str_contains($destination, 'Batangas')) {
-                return 'PIONEER';
-            }
-            if (str_contains($origin, 'Roxas') || str_contains($destination, 'Roxas')) {
-                return 'RESILIENCE';
-            }
-
-            return 'RELIANCE';
-        }
-
-        if (str_contains($origin, 'Roxas Capiz') || str_contains($destination, 'Roxas Capiz')) {
-            return 'STELLA MARIS';
-        }
-
-        if (str_contains($origin, 'Romblon') || str_contains($destination, 'Romblon')) {
-            return 'VENUS';
-        }
-
-        if (str_contains($origin, 'Sibuyan') || str_contains($destination, 'Sibuyan')) {
-            return 'GRATITUDE';
-        }
-
-        if (str_contains($origin, 'Cajidiocan') || str_contains($destination, 'Cajidiocan')) {
-            return 'PROMETHEUS 54';
-        }
-
-        if (str_contains($origin, 'Odiongan') || str_contains($destination, 'Odiongan')) {
-            return 'EAGLE';
-        }
-
-        if ($origin === 'Batangas' && $destination === 'Calapan') {
-            return 'ANNAPOLIS';
-        }
-
-        if ($origin === 'Calapan' && $destination === 'Batangas') {
-            return 'JUPITER';
-        }
-
-        return 'SAGA';
+        return $vessels[0] ?? 'MV Starlite Saga';
     }
 
     /**
