@@ -829,17 +829,10 @@ class BookingController extends Controller
             ], 400);
         }
 
-        if ($booking->hasBeenRebooked()) {
+        if ($booking->rebooking_status === 'pending') {
             return response()->json([
                 'status' => 'error',
-                'message' => 'This booking has already been rebooked once.',
-            ], 400);
-        }
-
-        if (!empty($booking->rebooking_status)) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'A rebooking request is already in progress or completed.',
+                'message' => 'A rebooking request is already in progress.',
             ], 400);
         }
 
@@ -901,7 +894,7 @@ class BookingController extends Controller
         $rebookingFee = (float) ($serverCalc['total_rebooking_fee'] ?? $request->input('total_paid'));
 
         $transaction->update([
-            'rebooking_fee' => $rebookingFee,
+            'rebooking_fee' => $transaction->rebooking_fee + $rebookingFee,
             'rebooking_proof_of_payment' => $proofPath,
             'payment_status' => 'pending',
             'proof_submitted_at' => now(),

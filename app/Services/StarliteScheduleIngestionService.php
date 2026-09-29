@@ -1053,19 +1053,18 @@ class StarliteScheduleIngestionService
             // Parse Days of Week
             $activeDays = $this->parseDaysOfWeek($daysRaw);
 
-            foreach ($vesselNames as $vesselName) {
-                $rules[] = [
-                    'origin' => $origin,
-                    'destination' => $destination,
-                    'vessel_name' => $vesselName,
-                    'vessel_type' => $vesselType,
-                    'departure_times' => $depTimes,
-                    'duration_minutes' => $durationMinutes,
-                    'active_days' => $activeDays,
-                    'raw_route' => $routeRaw,
-                    'raw_days' => $daysRaw,
-                ];
-            }
+            $primaryVessel = !empty($vesselNames) ? $vesselNames[0] : 'Starlite Vessel';
+            $rules[] = [
+                'origin' => $origin,
+                'destination' => $destination,
+                'vessel_name' => $primaryVessel,
+                'vessel_type' => $vesselType,
+                'departure_times' => $depTimes,
+                'duration_minutes' => $durationMinutes,
+                'active_days' => $activeDays,
+                'raw_route' => $routeRaw,
+                'raw_days' => $daysRaw,
+            ];
         }
 
         return $rules;

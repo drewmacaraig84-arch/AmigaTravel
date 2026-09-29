@@ -1014,7 +1014,7 @@ class Booking extends Model
             return false;
         }
 
-        if ($this->is_rebooked || $this->hasBeenRebooked() || !empty($this->rebooking_status) || $this->status === self::STATUS_PENDING_REBOOKING) {
+        if ($this->rebooking_status === 'pending' || $this->status === self::STATUS_PENDING_REBOOKING) {
             return false;
         }
 

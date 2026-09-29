@@ -101,7 +101,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.142+154';
+  static const String appVersion = '1.0.143+155';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -1951,6 +1951,15 @@ class _MainScreenState extends State<MainScreen> {
             'Authorization': 'Bearer ${UserSession.token}',
           },
         );
+        if (res.statusCode == 401) {
+          debugPrint('Session expired during global data fetch, logging out...');
+          await UserSession.clear();
+          if (mounted) {
+            Navigator.pushReplacement(
+                context, MaterialPageRoute(builder: (_) => const MainScreen()));
+          }
+          return;
+        }
         final data = jsonDecode(res.body);
         if (res.statusCode == 200 && data['status'] == 'success') {
           setState(() {
@@ -5275,6 +5284,16 @@ class _ActivityScreenState extends State<ActivityScreen> {
             '$baseUrl/api/bookings?email=${Uri.encodeComponent(UserSession.email)}&lookup_token=${Uri.encodeComponent(UserSession.lookupToken)}'),
         headers: headers,
       );
+      if (response.statusCode == 401) {
+        debugPrint('Session expired, logging out...');
+        UserSession.clear();
+        if (mounted) {
+          Navigator.pushReplacement(
+              context, MaterialPageRoute(builder: (_) => const MainScreen()));
+        }
+        return;
+      }
+      
       final data = jsonDecode(response.body);
       if (response.statusCode == 200 && data['status'] == 'success') {
         setState(() {
