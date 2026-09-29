@@ -101,7 +101,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.143+155';
+  static const String appVersion = '1.0.144+156';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -7708,97 +7708,94 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             !_cancellationStarted &&
             _booking['status'] != 'pending_rebooking' &&
             _booking['rebooking_status'] != 'pending') ...[
-          if (_booking['is_rebooked'] != true &&
-              _booking['rebooking_status'] != 'verified') ...[
-            // Rebook is only allowed when the booking payment has been verified
-            if (_paymentStatus != 'paid') ...[
-              Container(
-                margin: const EdgeInsets.only(bottom: 4),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF7ED),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFFED7AA)),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.lock_clock_outlined,
-                        color: Color(0xFFEA580C), size: 15),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Rebooking is available once your payment has been verified.',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF9A3412),
-                          fontWeight: FontWeight.w500,
-                        ),
+          // Rebook is only allowed when the booking payment has been verified
+          if (_paymentStatus != 'paid') ...[
+            Container(
+              margin: const EdgeInsets.only(bottom: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF7ED),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFFED7AA)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.lock_clock_outlined,
+                      color: Color(0xFFEA580C), size: 15),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Rebooking is available once your payment has been verified.',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF9A3412),
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ],
-            OutlinedButton.icon(
-              onPressed: (_busy || _paymentStatus != 'paid')
-                  ? null
-                  : () {
-                      if (_booking['can_rebook'] != true) {
-                        showDialog(
-                          context: context,
-                          builder: (ctx) => AlertDialog(
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16)),
-                            icon: const Icon(Icons.info_outline,
-                                color: Color(0xFFF59E0B), size: 40),
-                            title: const Text('Rebooking Notice',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18)),
-                            content: const Text(
-                              'Refund and rebooking requests received within 24 hours of departure may no longer be accommodated.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 14),
-                            ),
-                            actionsAlignment: MainAxisAlignment.center,
-                            actions: [
-                              ElevatedButton(
-                                onPressed: () => Navigator.pop(ctx),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF2563EB),
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8)),
-                                ),
-                                child: const Text('OK',
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.bold)),
-                              ),
-                            ],
-                          ),
-                        );
-                        return;
-                      }
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => RebookScreen(booking: _booking),
-                        ),
-                      ).then((res) {
-                        if (res == true) _refreshBooking();
-                      });
-                    },
-              icon: Icon(_paymentStatus != 'paid'
-                  ? Icons.lock_outlined
-                  : Icons.calendar_month),
-              label: const Text('Request rebooking'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: (_paymentStatus == 'paid' && _booking['can_rebook'] == true)
-                    ? const Color(0xFF2563EB)
-                    : Colors.grey.shade400,
+                  ),
+                ],
               ),
             ),
           ],
+          OutlinedButton.icon(
+            onPressed: (_busy || _paymentStatus != 'paid')
+                ? null
+                : () {
+                    if (_booking['can_rebook'] != true) {
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16)),
+                          icon: const Icon(Icons.info_outline,
+                              color: Color(0xFFF59E0B), size: 40),
+                          title: const Text('Rebooking Notice',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18)),
+                          content: const Text(
+                            'Refund and rebooking requests received within 24 hours of departure may no longer be accommodated.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 14),
+                          ),
+                          actionsAlignment: MainAxisAlignment.center,
+                          actions: [
+                            ElevatedButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF2563EB),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
+                              ),
+                              child: const Text('OK',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold)),
+                            ),
+                          ],
+                        ),
+                      );
+                      return;
+                    }
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => RebookScreen(booking: _booking),
+                      ),
+                    ).then((res) {
+                      if (res == true) _refreshBooking();
+                    });
+                  },
+            icon: Icon(_paymentStatus != 'paid'
+                ? Icons.lock_outlined
+                : Icons.calendar_month),
+            label: const Text('Request rebooking'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: (_paymentStatus == 'paid' && _booking['can_rebook'] == true)
+                  ? const Color(0xFF2563EB)
+                  : Colors.grey.shade400,
+            ),
+          ),
           if (_booking['can_cancel'] == true ||
               ['unpaid', 'pending', 'paid'].contains(_paymentStatus))
             OutlinedButton.icon(
@@ -21136,11 +21133,13 @@ class _RebookScreenState extends State<RebookScreen> {
               : _depDate!.toIso8601String().split('T')[0]),
           trailing: const Icon(Icons.calendar_today),
           onTap: () async {
+            final now = DateTime.now();
+            final today = DateTime(now.year, now.month, now.day);
             final d = await showDatePicker(
                 context: context,
-                initialDate: DateTime.now().add(const Duration(days: 1)),
-                firstDate: DateTime.now().add(const Duration(days: 1)),
-                lastDate: DateTime.now().add(const Duration(days: 365)));
+                initialDate: _depDate != null && !_depDate!.isBefore(today) ? _depDate! : today,
+                firstDate: today,
+                lastDate: today.add(const Duration(days: 365)));
             if (d != null)
               setState(() {
                 _depDate = d;
@@ -21160,11 +21159,14 @@ class _RebookScreenState extends State<RebookScreen> {
                 showTopSnack(context, const SnackBar(content: Text('Please select a departure date first.')));
                 return;
               }
+              final now = DateTime.now();
+              final today = DateTime(now.year, now.month, now.day);
+              final minDate = _depDate!.isAfter(today) ? _depDate! : today;
               final d = await showDatePicker(
                   context: context,
-                  initialDate: _retDate != null && !_retDate!.isBefore(_depDate!) ? _retDate! : _depDate!.add(const Duration(days: 1)),
-                  firstDate: _depDate!,
-                  lastDate: DateTime.now().add(const Duration(days: 365)));
+                  initialDate: _retDate != null && !_retDate!.isBefore(minDate) ? _retDate! : minDate,
+                  firstDate: minDate,
+                  lastDate: today.add(const Duration(days: 365)));
               if (d != null) setState(() => _retDate = d);
             },
           ),

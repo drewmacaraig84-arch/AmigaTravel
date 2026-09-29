@@ -606,7 +606,7 @@ class ScheduleCsvImportService
         // For airline transport classes, additional_price is strictly the class add-on (0 if blank/zero).
         $accommodationPrice = $additionalPrice > 0 ? $additionalPrice : $rate;
         $transportClassPrice = $additionalPrice > 0 ? $additionalPrice : ($mode === 'ferry' ? $rate : 0.0);
-        $scheduleBasePrice = ($mode === 'ferry' && $additionalPrice > 0) ? 0.0 : $rate;
+        $scheduleBasePrice = ($mode === 'ferry' && $additionalPrice <= 0) ? 0.0 : $rate;
 
         if (! $schedule) {
             $schedule = Schedule::create([
@@ -742,6 +742,7 @@ class ScheduleCsvImportService
                 $arrTimeStr,
                 $transportClassStr,
                 $rate,
+                $additionalPrice,
                 $accommodationPrice,
                 $transportClassPrice,
                 $rateType,
@@ -769,6 +770,7 @@ class ScheduleCsvImportService
         ?string $arrTimeStr,
         string $transportClassStr,
         float $rate,
+        float $additionalPrice,
         float $accommodationPrice,
         float $transportClassPrice,
         string $rateType,
@@ -834,7 +836,7 @@ class ScheduleCsvImportService
                 ->first();
         }
 
-        $returnScheduleBasePrice = ($mode === 'ferry' && $additionalPrice > 0) ? 0.0 : $rate;
+        $returnScheduleBasePrice = ($mode === 'ferry' && $additionalPrice <= 0) ? 0.0 : $rate;
 
         if (! $schedule) {
             $schedule = Schedule::create([
