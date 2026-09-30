@@ -384,6 +384,9 @@
                 <td><strong>{{ $passenger->name }}</strong></td>
                 <td>
                     <span style="text-transform: capitalize;">{{ $passenger->type ?: 'Adult' }}</span>
+                    @if($passenger->gender)
+                        <br><span style="font-size: 8px; color: #64748b;">{{ match($passenger->gender) { 'male' => 'Male', 'female' => 'Female', 'prefer_not_to_say' => 'Prefer not to say', default => ucfirst($passenger->gender) } }}</span>
+                    @endif
                 </td>
                 <td>
                     @if($passenger->discount)

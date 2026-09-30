@@ -1252,6 +1252,55 @@
                                         </div>
                                     </label>
 
+                                    {{-- Gender --}}
+                                    <label class="block min-w-0">
+                                        <span class="text-slate-900 font-bold text-sm">Gender</span>
+                                        <div class="mt-3 flex gap-2 sm:gap-3">
+                                            <label class="flex-1 cursor-pointer">
+                                                <input type="radio"
+                                                       wire:model.live="passengers.{{ $index }}.gender"
+                                                       value="male"
+                                                       class="sr-only peer"
+                                                       id="gender_male_{{ $index }}" />
+                                                <div class="peer-checked:bg-[#db2777] peer-checked:text-white peer-checked:border-[#db2777]
+                                                            flex items-center justify-center gap-1 sm:gap-2 rounded-xl border border-slate-300
+                                                            px-2 sm:px-4 py-3 text-sm font-medium text-slate-600 transition-all duration-150
+                                                            hover:border-[#db2777]/50 hover:bg-[#db2777]/5 select-none text-center">
+                                                    ♂ Male
+                                                </div>
+                                            </label>
+                                            <label class="flex-1 cursor-pointer">
+                                                <input type="radio"
+                                                       wire:model.live="passengers.{{ $index }}.gender"
+                                                       value="female"
+                                                       class="sr-only peer"
+                                                       id="gender_female_{{ $index }}" />
+                                                <div class="peer-checked:bg-[#db2777] peer-checked:text-white peer-checked:border-[#db2777]
+                                                            flex items-center justify-center gap-1 sm:gap-2 rounded-xl border border-slate-300
+                                                            px-2 sm:px-4 py-3 text-sm font-medium text-slate-600 transition-all duration-150
+                                                            hover:border-[#db2777]/50 hover:bg-[#db2777]/5 select-none text-center">
+                                                    ♀ Female
+                                                </div>
+                                            </label>
+                                            <label class="flex-1 cursor-pointer">
+                                                <input type="radio"
+                                                       wire:model.live="passengers.{{ $index }}.gender"
+                                                       value="prefer_not_to_say"
+                                                       class="sr-only peer"
+                                                       id="gender_prefer_not_to_say_{{ $index }}" />
+                                                <div class="peer-checked:bg-[#db2777] peer-checked:text-white peer-checked:border-[#db2777]
+                                                            flex items-center justify-center gap-1 sm:gap-2 rounded-xl border border-slate-300
+                                                            px-2 sm:px-4 py-3 text-xs sm:text-sm font-medium text-slate-600 transition-all duration-150
+                                                            hover:border-[#db2777]/50 hover:bg-[#db2777]/5 select-none text-center">
+                                                    Prefer not to say
+                                                </div>
+                                            </label>
+                                        </div>
+                                        @error('passengers.' . $index . '.gender')
+                                            <p class="mt-2 text-xs text-rose-600">{{ $message }}</p>
+                                        @enderror
+                                    </label>
+
                                     <label class="block min-w-0">
                                         @php
                                             $today = now();

@@ -217,7 +217,12 @@
             </td>
             <td style="width: 20%;">
                 <div class="field-label">Passenger Type</div>
-                <div class="field-value">{{ ucfirst($passenger->type ?? 'adult') }}</div>
+                <div class="field-value">
+                    {{ ucfirst($passenger->type ?? 'adult') }}
+                    @if($passenger->gender)
+                        <br><span style="font-size: 8.5px; color: #475569;">{{ match($passenger->gender) { 'male' => 'Male', 'female' => 'Female', 'prefer_not_to_say' => 'Prefer not to say', default => ucfirst($passenger->gender) } }}</span>
+                    @endif
+                </div>
             </td>
             <td style="width: 25%;">
                 <div class="field-label">Birthdate / ID</div>

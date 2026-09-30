@@ -29,8 +29,18 @@ class PassengersRelationManager extends RelationManager
                         'driver' => 'Driver',
                     ])
                     ->required(),
+                Forms\Components\Select::make('gender')
+                    ->label('Gender')
+                    ->options([
+                        'male' => 'Male',
+                        'female' => 'Female',
+                        'prefer_not_to_say' => 'Prefer not to say',
+                    ])
+                    ->placeholder('Select gender (optional)')
+                    ->nullable()
+                    ->native(false),
             ])
-            ->columns(2);
+            ->columns(3);
     }
 
     public function table(Table $table): Table
@@ -48,6 +58,22 @@ class PassengersRelationManager extends RelationManager
                     ->label('Passenger Name')
                     ->searchable()
                     ->description(fn (Passenger $record): string => $record->ticket_number ?? ''),
+                Tables\Columns\TextColumn::make('gender')
+                    ->label('Gender')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): string => match ($state) {
+                        'male' => '♂ Male',
+                        'female' => '♀ Female',
+                        'prefer_not_to_say' => 'Prefer not to say',
+                        default => '—',
+                    })
+                    ->color(fn (?string $state): string => match ($state) {
+                        'male' => 'info',
+                        'female' => 'primary',
+                        'prefer_not_to_say' => 'gray',
+                        default => 'gray',
+                    })
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('type')
                     ->badge()
                     ->formatStateUsing(fn ($state) => ucfirst($state ?? 'adult')),

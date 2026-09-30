@@ -29,6 +29,7 @@ class Passenger extends Model
         // Passenger details
         'type',
         'name',
+        'gender',
         'birthdate',
         'discount_id',
         'school_name',
@@ -96,6 +97,7 @@ class Passenger extends Model
     protected $casts = [
         'is_promo'                  => 'boolean',
         'rate_type'                 => 'string',
+        'gender'                    => 'string',
         'is_rebooked'               => 'boolean',
         'promo_price'               => 'decimal:2',
         'extra_baggage_price'       => 'decimal:2',
@@ -529,6 +531,16 @@ class Passenger extends Model
     }
 
     // ─── Relationships ────────────────────────────────────────────────────────
+
+    public function getGenderLabel(): ?string
+    {
+        return match ($this->gender) {
+            'male' => 'Male',
+            'female' => 'Female',
+            'prefer_not_to_say' => 'Prefer not to say',
+            default => null,
+        };
+    }
 
     public function booking(): BelongsTo
     {

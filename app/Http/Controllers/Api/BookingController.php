@@ -63,6 +63,7 @@ class BookingController extends Controller
             'passengers.*.name'                         => 'required|string|max:255',
             'passengers.*.type'                         => 'required|string|in:adult,child,minor,infant,driver',
             'passengers.*.birthdate'                    => 'nullable|date',
+            'passengers.*.gender'                       => 'nullable|in:male,female,prefer_not_to_say',
             'passengers.*.discount_id'                  => 'nullable|integer|exists:discounts,id',
             'passengers.*.school_name'                  => 'nullable|string|max:255',
             'passengers.*.id_number'                    => 'nullable|string|max:255',

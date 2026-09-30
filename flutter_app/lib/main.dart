@@ -359,6 +359,7 @@ class BookingData {
         'type': 'driver',
         'name': vehicleDriverName,
         'birthdate': vehicleDriverBirthday,
+        'gender': '',
         'discount_id': null,
         'extra_baggage_weight': null,
         'extra_baggage_price': 0.0,
@@ -370,6 +371,7 @@ class BookingData {
         'type': 'adult',
         'name': '',
         'birthdate': '',
+        'gender': '',
         'discount_id': null,
         'extra_baggage_weight': null,
         'extra_baggage_price': 0.0,
@@ -382,6 +384,7 @@ class BookingData {
           'type': 'minor',
           'name': '',
           'birthdate': '',
+          'gender': '',
           'discount_id': null,
           'extra_baggage_weight': null,
           'extra_baggage_price': 0.0,
@@ -392,6 +395,7 @@ class BookingData {
           'type': 'child',
           'name': '',
           'birthdate': '',
+          'gender': '',
           'discount_id': null,
           'extra_baggage_weight': null,
           'extra_baggage_price': 0.0,
@@ -402,6 +406,7 @@ class BookingData {
           'type': 'infant',
           'name': '',
           'birthdate': '',
+          'gender': '',
           'discount_id': null,
           'extra_baggage_weight': null,
           'extra_baggage_price': 0.0,
@@ -413,6 +418,7 @@ class BookingData {
           'type': 'child',
           'name': '',
           'birthdate': '',
+          'gender': '',
           'discount_id': null,
           'extra_baggage_weight': null,
           'extra_baggage_price': 0.0,
@@ -10578,6 +10584,7 @@ class _DiscountScreenState extends State<DiscountScreen> {
       widget.booking.passengers[i]['name'] = _nameControllers[i].text.trim();
       widget.booking.passengers[i]['birthdate'] =
           _birthdateControllers[i].text.trim();
+      // gender is already written directly into pax[i] via setState in the toggle
 
       final pType = (widget.booking.passengers[i]['type'] ?? '').toString().toLowerCase();
       final isRegularMinor = !widget.booking.isPromo &&
@@ -10782,6 +10789,138 @@ class _DiscountScreenState extends State<DiscountScreen> {
                                   : null,
                             ),
                             const SizedBox(height: 10),
+
+                            // ── Gender toggle ─────────────────────────────
+                            if (type != 'driver') ...[
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Gender',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: Colors.grey[800],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: GestureDetector(
+                                          onTap: () => setState(() {
+                                            pax[i]['gender'] = 'male';
+                                          }),
+                                          child: AnimatedContainer(
+                                            duration: const Duration(milliseconds: 150),
+                                            padding: const EdgeInsets.symmetric(vertical: 11),
+                                            decoration: BoxDecoration(
+                                              color: pax[i]['gender'] == 'male'
+                                                  ? const Color(0xFFDB2777)
+                                                  : Colors.white,
+                                              border: Border.all(
+                                                color: pax[i]['gender'] == 'male'
+                                                    ? const Color(0xFFDB2777)
+                                                    : Colors.grey.shade300,
+                                              ),
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+                                            child: Center(
+                                              child: Text(
+                                                '♂ Male',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 13,
+                                                  color: pax[i]['gender'] == 'male'
+                                                      ? Colors.white
+                                                      : Colors.grey[700],
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: GestureDetector(
+                                          onTap: () => setState(() {
+                                            pax[i]['gender'] = 'female';
+                                          }),
+                                          child: AnimatedContainer(
+                                            duration: const Duration(milliseconds: 150),
+                                            padding: const EdgeInsets.symmetric(vertical: 11),
+                                            decoration: BoxDecoration(
+                                              color: pax[i]['gender'] == 'female'
+                                                  ? const Color(0xFFDB2777)
+                                                  : Colors.white,
+                                              border: Border.all(
+                                                color: pax[i]['gender'] == 'female'
+                                                    ? const Color(0xFFDB2777)
+                                                    : Colors.grey.shade300,
+                                              ),
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+                                            child: Center(
+                                              child: Text(
+                                                '♀ Female',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 13,
+                                                  color: pax[i]['gender'] == 'female'
+                                                      ? Colors.white
+                                                      : Colors.grey[700],
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: GestureDetector(
+                                          onTap: () => setState(() {
+                                            pax[i]['gender'] = 'prefer_not_to_say';
+                                          }),
+                                          child: AnimatedContainer(
+                                            duration: const Duration(milliseconds: 150),
+                                            padding: const EdgeInsets.symmetric(vertical: 11),
+                                            decoration: BoxDecoration(
+                                              color: pax[i]['gender'] == 'prefer_not_to_say'
+                                                  ? const Color(0xFFDB2777)
+                                                  : Colors.white,
+                                              border: Border.all(
+                                                color: pax[i]['gender'] == 'prefer_not_to_say'
+                                                    ? const Color(0xFFDB2777)
+                                                    : Colors.grey.shade300,
+                                              ),
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+                                            child: Center(
+                                              child: Text(
+                                                'Prefer not to say',
+                                                textAlign: TextAlign.center,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 11,
+                                                  color: pax[i]['gender'] == 'prefer_not_to_say'
+                                                      ? Colors.white
+                                                      : Colors.grey[700],
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                            ],
+                            // ── End gender toggle ─────────────────────────
+
                             Builder(builder: (context) {
                               // Age range boundaries per passenger type
                               final now = DateTime.now();

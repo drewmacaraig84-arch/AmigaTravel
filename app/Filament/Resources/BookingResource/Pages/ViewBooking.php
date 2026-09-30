@@ -171,6 +171,13 @@ class ViewBooking extends ViewRecord
             $itemNum = $p->item_number ?? 1;
             $name = htmlspecialchars($p->name ?? 'Passenger');
             $type = htmlspecialchars(ucfirst($p->type ?? 'adult'));
+            $genderLabel = match($p->gender) {
+                'male' => 'Male',
+                'female' => 'Female',
+                'prefer_not_to_say' => 'Prefer not to say',
+                default => null,
+            };
+            $typeAndGender = $genderLabel ? "{$type} &bull; {$genderLabel}" : $type;
             $ticket = $p->ticket_number ? '<div class="text-xs text-gray-400 font-mono">' . htmlspecialchars($p->ticket_number) . '</div>' : '';
             $statusLabel = htmlspecialchars($p->getStatusLabel());
             $statusColor = $p->getStatusColor();
@@ -207,7 +214,7 @@ class ViewBooking extends ViewRecord
 
             $row  = '<tr class="hover:bg-gray-50/50 dark:hover:bg-gray-700/20 ' . $rowOpacity . '">';
             $row .= '<td class="py-2.5 px-3 font-bold text-gray-900 dark:text-white">Item ' . $itemNum . '</td>';
-            $row .= '<td class="py-2.5 px-3"><span class="font-medium text-gray-900 dark:text-white">' . $name . '</span> <span class="text-xs text-gray-500">(' . $type . ')</span>' . $ticket . '</td>';
+            $row .= '<td class="py-2.5 px-3"><span class="font-medium text-gray-900 dark:text-white">' . $name . '</span> <span class="text-xs text-gray-500">(' . $typeAndGender . ')</span>' . $ticket . '</td>';
             $row .= '<td class="py-2.5 px-3"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ' . $badgeColorClass . '">' . $statusLabel . '</span></td>';
             $row .= '<td class="py-2.5 px-3 text-right font-medium">' . $fareDisplay . '</td>';
             $row .= '<td class="py-2.5 px-3 text-right">' . $discCell . '</td>';
@@ -490,6 +497,7 @@ class ViewBooking extends ViewRecord
                                     <th class="py-2.5 px-3">Status</th>
                                     <th class="py-2.5 px-3">Passenger</th>
                                     <th class="py-2.5 px-3">Type</th>
+                                    <th class="py-2.5 px-3">Gender</th>
                                     <th class="py-2.5 px-3">Birthdate</th>
                                     <th class="py-2.5 px-3">Discount</th>
                                     <th class="py-2.5 px-3 text-right">Fare & Class</th>
@@ -511,6 +519,12 @@ class ViewBooking extends ViewRecord
                                     $colorClass = $statusColors[$status] ?? 'bg-gray-100 text-gray-700';
                                     $name       = e($p->name ?? 'N/A');
                                     $type       = e(strtoupper($p->type ?? 'adult'));
+                                    $genderBadge = match ($p->gender) {
+                                        'male' => '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">♂ Male</span>',
+                                        'female' => '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-pink-100 text-pink-800 dark:bg-pink-900/40 dark:text-pink-300">♀ Female</span>',
+                                        'prefer_not_to_say' => '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">Prefer not to say</span>',
+                                        default => '<span class="text-gray-400 text-xs">—</span>',
+                                    };
                                     $bday       = $p->birthdate ? $p->birthdate->format('Y-m-d') : 'N/A';
                                     $discount   = e($p->discount?->name ?: 'None');
                                     $fareAmt = $p->getEffectiveFareAmount();
@@ -549,8 +563,8 @@ class ViewBooking extends ViewRecord
 
                                     $html .= "<tr class=\"hover:bg-gray-50/50 dark:hover:bg-gray-700/20\">
                                         <td class=\"py-2.5 px-3 font-semibold text-gray-900 dark:text-white whitespace-nowrap\">
-                                            <div class=\"text-xs font-bold\">#{$itemNum}</div>
-                                            <div class=\"text-xs text-gray-400 font-mono\">{$ticketNum}</div>
+                                             <div class=\"text-xs font-bold\">#{$itemNum}</div>
+                                             <div class=\"text-xs text-gray-400 font-mono\">{$ticketNum}</div>
                                         </td>
                                         <td class=\"py-2.5 px-3\"><span class=\"inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {$colorClass}\">{$statusLabel}</span></td>
                                         <td class=\"py-2.5 px-3 font-medium\">
@@ -559,6 +573,7 @@ class ViewBooking extends ViewRecord
                                             {$baggageBadge}
                                         </td>
                                         <td class=\"py-2.5 px-3 text-xs\">{$type}</td>
+                                        <td class=\"py-2.5 px-3 text-xs whitespace-nowrap\">{$genderBadge}</td>
                                         <td class=\"py-2.5 px-3 text-xs\">{$bday}</td>
                                         <td class=\"py-2.5 px-3 text-xs\">{$discount}</td>
                                         <td class=\"py-2.5 px-3 text-right text-xs font-medium\">{$fareAndClassAmt}</td>
