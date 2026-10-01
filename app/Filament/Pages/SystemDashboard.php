@@ -130,23 +130,56 @@ class SystemDashboard extends Page
         $this->selectedLog = null;
     }
 
-    public function downloadLog(): StreamedResponse
+    public function downloadLog(): ?StreamedResponse
     {
         $logPath = storage_path('logs/laravel.log');
 
-        if (! file_exists($logPath)) {
+        if (! file_exists($logPath) || filesize($logPath) === 0) {
             Notification::make()
-                ->title('Log File Missing')
-                ->body('No laravel.log file was found on the server.')
+                ->title('Log File Empty or Missing')
+                ->body('No laravel.log file was found on the server or the file is empty.')
                 ->warning()
                 ->send();
+
+            return null;
         }
 
         $filename = 'amiga_system_log_' . now()->format('Y-m-d_His') . '.log';
 
         return response()->streamDownload(function () use ($logPath) {
-            $stream = fopen($logPath, 'r');
-            fpassthru($stream);
+            // Discard any active PHP/Laravel output buffers to prevent accumulating gigabytes in RAM
+            while (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+
+            $stream = fopen($logPath, 'rb');
+            if ($stream === false) {
+                return;
+            }
+
+            $fileSize = filesize($logPath);
+            $maxBytes = 50 * 1024 * 1024; // 50 MB safe window
+
+            // If the log file exceeds 50MB (e.g. 2GB+), seek to the last 50MB to prevent browser lockup
+            if ($fileSize > $maxBytes) {
+                fseek($stream, $fileSize - $maxBytes);
+                fgets($stream); // skip partial cut-off line
+
+                $formattedSize = round($fileSize / (1024 * 1024), 1) . ' MB';
+                echo "================================================================================\n";
+                echo " [AMIGA SYSTEM MONITOR] NOTICE: Total server log size is {$formattedSize}.\n";
+                echo " To prevent browser hang and memory exhaustion, streaming the latest 50 MB.\n";
+                echo " To reclaim server disk space, use the 'Clear Log' button in System Dashboard.\n";
+                echo "================================================================================\n\n";
+                flush();
+            }
+
+            // Stream in 1MB chunks with active flush (memory usage stays <= 1MB)
+            while (! feof($stream)) {
+                echo fread($stream, 1024 * 1024);
+                flush();
+            }
+
             fclose($stream);
         }, $filename, [
             'Content-Type' => 'text/plain',

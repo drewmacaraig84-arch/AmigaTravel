@@ -153,6 +153,21 @@ mkdir -p /var/www/html/storage/framework/cache
 mkdir -p /var/www/html/storage/framework/sessions
 mkdir -p /var/www/html/storage/framework/views
 mkdir -p /var/www/html/storage/logs
+
+# Guard against Railway persistent volume disk exhaustion from bloated laravel.log (> 100MB)
+if [ -f /var/www/html/storage/logs/laravel.log ]; then
+  LOG_SIZE=$(stat -c%s /var/www/html/storage/logs/laravel.log 2>/dev/null || stat -f%z /var/www/html/storage/logs/laravel.log 2>/dev/null || echo 0)
+  if [ "${LOG_SIZE:-0}" -gt 104857600 ]; then
+    echo "=== Truncating bloated laravel.log ($((LOG_SIZE / 1048576)) MB) down to latest 10 MB ==="
+    tail -c 10485760 /var/www/html/storage/logs/laravel.log > /var/www/html/storage/logs/laravel.log.tmp 2>/dev/null || true
+    if [ -s /var/www/html/storage/logs/laravel.log.tmp ]; then
+      mv -f /var/www/html/storage/logs/laravel.log.tmp /var/www/html/storage/logs/laravel.log
+    else
+      rm -f /var/www/html/storage/logs/laravel.log.tmp
+    fi
+  fi
+fi
+
 chown -R www-data:www-data /var/www/html/storage || true
 chmod -R 775 /var/www/html/storage || true
 
