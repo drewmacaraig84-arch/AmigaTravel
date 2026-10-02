@@ -300,7 +300,27 @@
                                     </form>
                                 </div>
                             </div>
-                            <a href="{{ url('/download') }}" class="py-1 text-white transition-all duration-200 {{ request()->is('download') ? 'border-b-2 border-white font-semibold' : 'border-b-2 border-transparent hover:border-white/70' }}">Download App</a>
+                            <a href="{{ url('/download') }}" 
+                               class="group relative inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs lg:text-sm font-bold tracking-wide transition-all duration-300 shadow-md hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 select-none {{ request()->is('download') ? 'bg-white text-[#216417] ring-2 ring-white/90 ring-offset-2 ring-offset-[#008000] shadow-emerald-950/20' : 'bg-gradient-to-r from-[#ee018d] via-[#f7259c] to-[#ee018d] text-white border border-white/20 hover:border-white/40 shadow-pink-950/30 hover:shadow-pink-500/30' }}"
+                               title="Download Amiga Gracia Mobile App">
+                                {{-- Pulsing live beacon dot --}}
+                                <span class="relative flex h-2 w-2 shrink-0">
+                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full {{ request()->is('download') ? 'bg-emerald-500' : 'bg-white' }} opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-2 w-2 {{ request()->is('download') ? 'bg-emerald-600' : 'bg-white' }}"></span>
+                                </span>
+
+                                {{-- Smartphone icon --}}
+                                <svg class="w-3.5 h-3.5 shrink-0 transition-transform duration-300 group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.3">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                </svg>
+
+                                <span>Download App</span>
+
+                                {{-- Subtle 'Free' chip --}}
+                                <span class="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full {{ request()->is('download') ? 'bg-emerald-100 text-emerald-800' : 'bg-white/20 text-white' }}">
+                                    Free
+                                </span>
+                            </a>
                         </div>
                         <div class="hidden xl:flex items-center gap-6 text-sm text-white/90">
                             @if(!empty($headerData['phone']))
@@ -367,7 +387,19 @@
                             </form>
                         </div>
                     </div>
-                    <a href="{{ url('/download') }}" class="block rounded-xl px-4 py-3 {{ request()->is('download') ? 'bg-white/15 text-white' : 'text-white hover:bg-white/15 hover:text-white' }}">Download App</a>
+                    <a href="{{ url('/download') }}" class="flex items-center justify-between rounded-xl px-4 py-3 {{ request()->is('download') ? 'bg-white text-[#216417] shadow-lg ring-2 ring-white/60 font-bold' : 'bg-gradient-to-r from-[#ee018d] to-[#c70073] text-white font-bold shadow-md shadow-pink-950/20 hover:from-[#ff1a9e] hover:to-[#ee018d]' }} transition-all">
+                        <span class="flex items-center gap-2.5">
+                            <span class="relative flex h-2 w-2 shrink-0">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full {{ request()->is('download') ? 'bg-emerald-500' : 'bg-white' }} opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-2 w-2 {{ request()->is('download') ? 'bg-emerald-600' : 'bg-white' }}"></span>
+                            </span>
+                            <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            </svg>
+                            <span>Download App</span>
+                        </span>
+                        <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded-full {{ request()->is('download') ? 'bg-emerald-100 text-emerald-800' : 'bg-white/20 text-white' }} tracking-wider">Free APK</span>
+                    </a>
                     <div class="border-t border-white/10 pt-3">
                         @if(!empty($headerData['phone']))
                             <a href="tel:{{ $headerData['phone'] }}" class="block text-sm text-white/90 hover:text-white">Call us: {{ $headerData['phone'] }}</a>
