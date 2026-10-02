@@ -206,11 +206,12 @@
                                target="_blank" rel="noopener noreferrer"
                                class="group relative inline-flex items-center gap-3 px-4 py-2.5 bg-black hover:bg-zinc-900 text-white rounded-xl border border-white/10 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 min-w-[155px]"
                                title="Get it on Google Play">
-                                <svg class="h-7 w-7 shrink-0" viewBox="0 0 24 24" fill="none">
-                                    <path d="M3.18 23.76c.32.18.68.22 1.04.12L15.3 12 11.94 8.64 3.18 23.76z" fill="#EA4335"/>
-                                    <path d="M20.54 10.27l-2.62-1.49-3.26 3.07 3.26 3.08 2.65-1.51a1.5 1.5 0 000-2.62 1.5 1.5 0 00-.03-.13z" fill="#FBBC04"/>
-                                    <path d="M4.22.12A1.5 1.5 0 002 1.5v21a1.5 1.5 0 002.22 1.26L15.3 12 4.22.12z" fill="#4285F4"/>
-                                    <path d="M4.22.12L15.3 12l2.62-2.74L4.26.1a1.5 1.5 0 00-.04.02z" fill="#34A853"/>
+                                {{-- Official Google Play icon --}}
+                                <svg class="h-7 w-7 shrink-0" viewBox="0 0 512 512" fill="none">
+                                    <path d="M48.08 28.14c-6.37 3.54-10.58 10.37-10.58 18.94v417.83c0 8.57 4.21 15.41 10.58 18.95l1.1.64 234.05-234.05v-5.52L49.18 27.5l-1.1.64z" fill="#4285F4"/>
+                                    <path d="M360.4 340.71l-78.17-78.17v-5.52l78.18-78.18 1.77 1.01 92.59 52.61c26.44 15.02 26.44 39.63 0 54.65L362.17 339.7l-1.77 1.01z" fill="#FBBC04"/>
+                                    <path d="M362.17 339.7L282.23 259.76 48.08 493.86c8.71 9.22 23.1 10.36 39.34 1.16L362.17 339.7z" fill="#EA4335"/>
+                                    <path d="M362.17 172.3L87.42 17.03C71.18 7.83 56.79 8.97 48.08 18.19l234.15 234.14L362.17 172.3z" fill="#34A853"/>
                                 </svg>
                                 <div class="flex flex-col leading-tight">
                                     <span class="text-[9px] font-medium text-white/60 uppercase tracking-wide">GET IT ON</span>
@@ -221,7 +222,8 @@
                             {{-- 2. App Store (COMING SOON) --}}
                             <div class="group relative inline-flex items-center gap-3 px-4 py-2.5 bg-black/70 text-white/40 rounded-xl border border-white/10 shadow-lg cursor-not-allowed min-w-[155px] select-none"
                                  title="Coming Soon">
-                                <svg class="h-7 w-7 shrink-0 opacity-40" viewBox="0 0 814 1000" fill="white">
+                                {{-- Official Apple logo --}}
+                                <svg class="h-7 w-7 shrink-0 opacity-50" viewBox="0 0 814 1000" fill="white">
                                     <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 790.7 0 663 0 541.8c0-207.8 135.4-317.7 268.9-317.7 99.7 0 182.7 66.3 244.7 66.3 59.1 0 152.8-70.5 263.1-70.5zm-17.6-172.5c59.2-71.4 102.1-170.5 102.1-269.6 0-14.4-1.3-28.8-3.8-41.9-97.5 3.8-213 65.3-281.2 145.3-54.5 62.9-103.9 162-103.9 262.8 0 16.5 2.6 33 3.9 38.4 6.5 1.3 17 2.6 27.5 2.6 86.5 0 193.5-57.2 255.4-137.6z"/>
                                 </svg>
                                 <div class="flex flex-col leading-tight">
@@ -236,11 +238,13 @@
                                target="_blank" rel="noopener noreferrer"
                                class="group relative inline-flex items-center gap-3 px-4 py-2.5 bg-black hover:bg-zinc-900 text-white rounded-xl border border-white/10 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 min-w-[155px]"
                                title="Explore It On App Gallery">
-                                <div class="h-7 w-7 shrink-0 rounded-lg bg-[#CF0A2C] flex items-center justify-center">
-                                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="white">
-                                        <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 4a6 6 0 110 12A6 6 0 0112 6zm0 2a4 4 0 100 8 4 4 0 000-8zm0 1.5a2.5 2.5 0 110 5 2.5 2.5 0 010-5z"/>
-                                    </svg>
-                                </div>
+                                {{-- Official Huawei AppGallery icon --}}
+                                <svg class="h-7 w-7 shrink-0" viewBox="0 0 200 200" fill="none">
+                                    <circle cx="100" cy="100" r="100" fill="#CF0A2C"/>
+                                    <path d="M100 36c-35.3 0-64 28.7-64 64s28.7 64 64 64 64-28.7 64-64-28.7-64-64-64zm0 16c13.3 0 25.5 4.6 35 12.2L67.2 140.2A47.8 47.8 0 0152 100c0-26.5 21.5-48 48-48zm0 96c-13.3 0-25.5-4.6-35-12.2L132.8 59.8A47.8 47.8 0 01148 100c0 26.5-21.5 48-48 48z" fill="white"/>
+                                    <circle cx="100" cy="100" r="17" fill="white"/>
+                                    <circle cx="100" cy="100" r="9" fill="#CF0A2C"/>
+                                </svg>
                                 <div class="flex flex-col leading-tight">
                                     <span class="text-[9px] font-medium text-white/60 uppercase tracking-wide">EXPLORE IT ON</span>
                                     <span class="text-sm font-bold text-white">App Gallery</span>
@@ -252,8 +256,24 @@
                                download
                                class="group relative inline-flex items-center gap-3 px-4 py-2.5 bg-black hover:bg-zinc-900 text-white rounded-xl border border-white/10 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 min-w-[155px]"
                                title="Download Android APK">
-                                <svg class="h-7 w-7 shrink-0" viewBox="0 0 24 24" fill="#3DDC84">
-                                    <path d="M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h2v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h1c.55 0 1-.45 1-1V8H6v10zM11.1 5.6a.49.49 0 00-.23-.65l-1.3-.75a.51.51 0 00-.69.18.49.49 0 00.18.69l1.3.75c.08.05.17.08.26.08.17 0 .34-.09.43-.25zM12.9 5.6a.49.49 0 00.43.25c.09 0 .18-.03.26-.08l1.3-.75a.49.49 0 00.18-.69.51.51 0 00-.69-.18l-1.3.75a.49.49 0 00-.23.65zM12 5a3 3 0 013 3H9a3 3 0 013-3zM19.5 8c-.83 0-1.5.67-1.5 1.5v6c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-6c0-.83-.67-1.5-1.5-1.5zM4.5 8C3.67 8 3 8.67 3 9.5v6c0 .83.67 1.5 1.5 1.5S6 16.33 6 15.5v-6C6 8.67 5.33 8 4.5 8z"/>
+                                {{-- Official Android robot head --}}
+                                <svg class="h-7 w-7 shrink-0" viewBox="0 0 32 32" fill="none">
+                                    {{-- antennae --}}
+                                    <line x1="11" y1="3" x2="8.5" y2="7" stroke="#3DDC84" stroke-width="2" stroke-linecap="round"/>
+                                    <line x1="21" y1="3" x2="23.5" y2="7" stroke="#3DDC84" stroke-width="2" stroke-linecap="round"/>
+                                    {{-- head --}}
+                                    <path d="M6 14C6 10.13 10.48 7 16 7s10 3.13 10 7v1H6v-1z" fill="#3DDC84"/>
+                                    {{-- eyes --}}
+                                    <circle cx="12" cy="11.5" r="1.3" fill="#0d2b0e"/>
+                                    <circle cx="20" cy="11.5" r="1.3" fill="#0d2b0e"/>
+                                    {{-- body --}}
+                                    <rect x="6" y="15" width="20" height="11" rx="2" fill="#3DDC84"/>
+                                    {{-- arms --}}
+                                    <rect x="1.5" y="15" width="3.5" height="8" rx="1.75" fill="#3DDC84"/>
+                                    <rect x="27" y="15" width="3.5" height="8" rx="1.75" fill="#3DDC84"/>
+                                    {{-- legs --}}
+                                    <rect x="9" y="26" width="4" height="5" rx="2" fill="#3DDC84"/>
+                                    <rect x="19" y="26" width="4" height="5" rx="2" fill="#3DDC84"/>
                                 </svg>
                                 <div class="flex flex-col leading-tight">
                                     <span class="text-[9px] font-medium text-white/60 uppercase tracking-wide">ANDROID</span>
@@ -264,6 +284,7 @@
                             {{-- 5. Download Here - iOS (COMING SOON) --}}
                             <div class="group relative inline-flex items-center gap-3 px-4 py-2.5 bg-black/70 text-white/40 rounded-xl border border-white/10 shadow-lg cursor-not-allowed min-w-[155px] select-none"
                                  title="Coming Soon for iOS">
+                                {{-- Apple logo (dimmed) --}}
                                 <svg class="h-7 w-7 shrink-0 opacity-40" viewBox="0 0 814 1000" fill="white">
                                     <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 790.7 0 663 0 541.8c0-207.8 135.4-317.7 268.9-317.7 99.7 0 182.7 66.3 244.7 66.3 59.1 0 152.8-70.5 263.1-70.5zm-17.6-172.5c59.2-71.4 102.1-170.5 102.1-269.6 0-14.4-1.3-28.8-3.8-41.9-97.5 3.8-213 65.3-281.2 145.3-54.5 62.9-103.9 162-103.9 262.8 0 16.5 2.6 33 3.9 38.4 6.5 1.3 17 2.6 27.5 2.6 86.5 0 193.5-57.2 255.4-137.6z"/>
                                 </svg>
