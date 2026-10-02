@@ -380,7 +380,7 @@
                                                     class="inline-flex items-center gap-2 rounded-xl {{ $isConfirmed ? 'bg-[#216417] hover:bg-[#14400e] text-white shadow-md shadow-emerald-950/20' : ($isPending ? 'bg-slate-900 hover:bg-slate-800 text-white shadow-md' : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300') }} px-4 py-2.5 text-xs sm:text-sm font-bold transition active:scale-95 cursor-pointer disabled:opacity-50"
                                                 >
                                                     <span wire:loading.remove wire:target="viewBooking('{{ $b->transaction_number }}')" class="flex items-center gap-1.5">
-                                                        <span>{{ $isConfirmed ? 'View E-Ticket & Details' : ($isPending ? 'Complete Payment & View' : 'View Details') }}</span>
+                                                        <span>{{ $isPending ? 'Complete Payment & View' : 'View Details' }}</span>
                                                         <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                                             <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                                                         </svg>
