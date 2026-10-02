@@ -1,82 +1,397 @@
-<div class="min-h-screen bg-transparent py-8 px-4 sm:px-6 lg:px-8">
-    <div class="mx-auto max-w-3xl">
-        <div class="rounded-[2rem] bg-white/85 backdrop-blur-md shadow-xl ring-1 ring-slate-200 overflow-hidden">
-            <div class="px-6 py-8 sm:px-10" style="background: linear-gradient(135deg, #ee018d 0%, #b1015d 100%);">
-                <a href="{{ url('/') }}" class="text-white/80 text-sm hover:text-white">← Back to Home</a>
-                <h1 class="mt-2 text-2xl sm:text-3xl font-semibold text-white">Check My Booking</h1>
+<div class="min-h-screen bg-transparent py-6 sm:py-10 px-4 sm:px-6 lg:px-8">
+    <div class="mx-auto max-w-5xl">
+        <div class="rounded-3xl bg-white/95 backdrop-blur-xl shadow-2xl shadow-emerald-950/10 ring-1 ring-slate-200/80 overflow-hidden transition-all duration-300">
+            <!-- Brand Gradient Hero Header -->
+            <div class="relative px-6 py-8 sm:px-10 sm:py-9 text-white overflow-hidden" style="background: linear-gradient(135deg, #134e19 0%, #1e5c25 50%, #0d3812 100%);">
+                <!-- Ambient Glow Accents -->
+                <div class="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-emerald-400/10 blur-3xl"></div>
+                <div class="pointer-events-none absolute -left-20 -bottom-20 h-64 w-64 rounded-full bg-[#ee018d]/15 blur-3xl"></div>
+
+                <div class="relative z-10">
+                    <!-- Top Bar: Navigation & Live Portal Badge -->
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <a href="{{ url('/') }}" class="inline-flex items-center gap-2 text-xs font-semibold text-emerald-100 hover:text-white transition bg-white/10 hover:bg-white/20 backdrop-blur-md px-3.5 py-1.5 rounded-full ring-1 ring-white/15">
+                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                            </svg>
+                            <span>Back to Home</span>
+                        </a>
+                        <div class="inline-flex items-center gap-2 rounded-full bg-emerald-950/50 px-3 py-1 text-xs font-medium text-emerald-200 ring-1 ring-emerald-400/30">
+                            <span class="relative flex h-2 w-2">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+                            </span>
+                            <span>Self-Service Reservation Portal</span>
+                        </div>
+                    </div>
+
+                    <!-- Header Title & Subtitle -->
+                    <div class="mt-5">
+                        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-3">
+                            <span>My Bookings & Reservations</span>
+                        </h1>
+                        <p class="mt-1.5 text-xs sm:text-sm text-emerald-100/85 max-w-2xl leading-relaxed">
+                            Look up your ferry booking, view boarding status, download official e-tickets, or request schedule rebooking in real-time.
+                        </p>
+                    </div>
+
+                    <!-- Modern Search Console Form -->
+                    <form wire:submit.prevent="search" class="mt-6">
+                        <div class="rounded-2xl bg-black/25 p-2 sm:p-2.5 backdrop-blur-md ring-1 ring-white/20 shadow-inner">
+                            <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                                <!-- Transaction Number Field -->
+                                <div class="sm:col-span-5 relative">
+                                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-emerald-200/70">
+                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                                        </svg>
+                                    </div>
+                                    <input 
+                                        type="text" 
+                                        wire:model.defer="transaction_number" 
+                                        placeholder="Transaction No. (e.g. AGT-2026...)" 
+                                        class="w-full rounded-xl bg-white/10 pl-10 pr-3 py-2.5 text-sm text-white placeholder-emerald-100/60 ring-1 ring-white/15 focus:bg-white focus:text-slate-900 focus:placeholder-slate-400 focus:ring-2 focus:ring-[#ee018d] focus:outline-none transition shadow-sm"
+                                    />
+                                </div>
+
+                                <!-- Email Address Field -->
+                                <div class="sm:col-span-4 relative">
+                                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-emerald-200/70">
+                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                        </svg>
+                                    </div>
+                                    <input 
+                                        type="email" 
+                                        wire:model.defer="email" 
+                                        placeholder="Booking Email Address" 
+                                        class="w-full rounded-xl bg-white/10 pl-10 pr-3 py-2.5 text-sm text-white placeholder-emerald-100/60 ring-1 ring-white/15 focus:bg-white focus:text-slate-900 focus:placeholder-slate-400 focus:ring-2 focus:ring-[#ee018d] focus:outline-none transition shadow-sm"
+                                    />
+                                </div>
+
+                                <!-- Submit Button & Reset -->
+                                <div class="sm:col-span-3 flex gap-1.5">
+                                    <button 
+                                        type="submit" 
+                                        wire:loading.attr="disabled"
+                                        wire:target="search"
+                                        class="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-[#ee018d] hover:bg-[#d8007d] active:scale-[0.98] text-white font-semibold text-sm py-2.5 px-4 shadow-lg shadow-pink-900/30 transition cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
+                                    >
+                                        <span wire:loading.remove wire:target="search" class="flex items-center gap-1.5">
+                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                            </svg>
+                                            <span>Find Booking</span>
+                                        </span>
+                                        <span wire:loading wire:target="search" class="flex items-center gap-1.5">
+                                            <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            <span>Searching...</span>
+                                        </span>
+                                    </button>
+                                    @if($searched)
+                                    <button 
+                                        type="button" 
+                                        wire:click="clearSearch"
+                                        title="Clear search results"
+                                        class="inline-flex items-center justify-center rounded-xl bg-white/15 hover:bg-white/25 text-white/90 px-3 py-2.5 transition active:scale-95 cursor-pointer"
+                                    >
+                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
             </div>
 
             <div class="p-6 sm:p-10 space-y-6">
 
                 @if(! $searched)
-                    <div class="text-center py-10">
+                    <div class="py-6 sm:py-8 space-y-8">
                         @if($errors->any())
-                            <div class="inline-flex h-16 w-16 items-center justify-center rounded-full bg-rose-100 mb-4">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                </svg>
+                            <div class="rounded-2xl border border-rose-200 bg-rose-50/80 p-5 shadow-sm">
+                                <div class="flex items-start gap-3">
+                                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-600">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                        </svg>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <h3 class="text-sm font-bold text-rose-900">Please check the details entered</h3>
+                                        <ul class="text-xs text-rose-700 list-disc pl-4 space-y-0.5">
+                                            @foreach($errors->all() as $error)
+                                                <li>{{ $error }}</li>
+                                            @endforeach
+                                        </ul>
+                                    </div>
+                                </div>
                             </div>
-                            <h2 class="text-xl font-bold text-slate-900 mb-2">Invalid Details</h2>
-                            <ul class="text-rose-600 text-sm mb-2 list-disc pl-5 max-w-sm mx-auto text-left">
-                                @foreach($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                            <p class="text-slate-500 text-sm mt-1">Please check your details and try again from the My Booking menu.</p>
                         @else
-                            <div class="inline-flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 mb-4">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
+                            <!-- Welcome Hub Banner -->
+                            <div class="text-center max-w-xl mx-auto space-y-3">
+                                <div class="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 border border-emerald-200/80 shadow-sm">
+                                    <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                                    </svg>
+                                </div>
+                                <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight">Track & Manage Your Voyage</h2>
+                                <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                                    Enter your <strong>Transaction Number</strong> or <strong>Email Address</strong> in the search bar above to look up your booking instantly.
+                                </p>
                             </div>
-                            <h2 class="text-xl font-bold text-slate-900 mb-2">Check My Booking</h2>
-                            <p class="text-slate-600">Please use the "My Booking" menu in the top navigation bar to check your booking status.</p>
+
+                            <!-- 3 Hub Feature Highlights -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                                <div class="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-5 space-y-2.5 transition hover:shadow-md hover:border-emerald-300">
+                                    <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800">
+                                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                    </div>
+                                    <h3 class="text-sm font-bold text-slate-900">Official E-Tickets</h3>
+                                    <p class="text-xs text-slate-600 leading-relaxed">
+                                        Instant access to official boarding passes, barcode verification, and itemized travel receipts.
+                                    </p>
+                                </div>
+
+                                <div class="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-5 space-y-2.5 transition hover:shadow-md hover:border-amber-300">
+                                    <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-800">
+                                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        </svg>
+                                    </div>
+                                    <h3 class="text-sm font-bold text-slate-900">Trip Rebooking</h3>
+                                    <p class="text-xs text-slate-600 leading-relaxed">
+                                        Easily reschedule departure dates or change vessel accommodation online with automated price recalculation.
+                                    </p>
+                                </div>
+
+                                <div class="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-5 space-y-2.5 transition hover:shadow-md hover:border-pink-300">
+                                    <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-pink-100 text-pink-800">
+                                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </div>
+                                    <h3 class="text-sm font-bold text-slate-900">Real-Time Status</h3>
+                                    <p class="text-xs text-slate-600 leading-relaxed">
+                                        Track payment approval, departure schedules, and cancellation refund disbursement in one transparent view.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- Helpful Tip Bar -->
+                            <div class="rounded-2xl bg-emerald-50/70 border border-emerald-200/80 p-4 text-xs text-emerald-900 flex items-start gap-3">
+                                <span class="text-base leading-none">💡</span>
+                                <div>
+                                    <strong class="font-bold text-emerald-950">Where do I find my Transaction Number?</strong>
+                                    <p class="mt-0.5 text-emerald-800">Your transaction number starts with <code class="font-mono bg-white px-1.5 py-0.5 rounded border border-emerald-300 font-bold">AGT-</code> and was sent to your email and mobile number upon booking.</p>
+                                </div>
+                            </div>
                         @endif
                     </div>
                 @else
                     @if($bookings && $bookings->count() > 1)
-                        <div class="space-y-6">
-                            <div>
-                                <h2 class="text-xl font-bold text-slate-900">Multiple Bookings Found</h2>
-                                <p class="text-sm text-slate-600 mt-1">We found {{ $bookings->count() }} bookings matching your email. Select one to view details.</p>
+                        <div x-data="{ filter: 'all' }" class="space-y-6">
+                            <!-- Header & Summary -->
+                            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200/80 pb-5">
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <h2 class="text-xl sm:text-2xl font-bold text-slate-900">Reservations Found</h2>
+                                        <span class="inline-flex items-center rounded-full bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 text-xs">
+                                            {{ $bookings->count() }} Trips
+                                        </span>
+                                    </div>
+                                    <p class="text-xs sm:text-sm text-slate-600 mt-1">
+                                        Showing bookings registered under <strong class="text-slate-900">{{ $email ?: $searchedEmail }}</strong>. Select any reservation to manage.
+                                    </p>
+                                </div>
+
+                                <!-- Interactive Tab Filter Pills -->
+                                <div class="inline-flex p-1 rounded-2xl bg-slate-100 border border-slate-200/80 self-start sm:self-auto overflow-x-auto">
+                                    <button 
+                                        type="button" 
+                                        @click="filter = 'all'" 
+                                        :class="filter === 'all' ? 'bg-white text-slate-900 shadow-sm font-bold' : 'text-slate-600 hover:text-slate-900 font-medium'"
+                                        class="rounded-xl px-3 py-1.5 text-xs transition cursor-pointer"
+                                    >
+                                        All ({{ $bookings->count() }})
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        @click="filter = 'confirmed'" 
+                                        :class="filter === 'confirmed' ? 'bg-white text-emerald-700 shadow-sm font-bold' : 'text-slate-600 hover:text-emerald-700 font-medium'"
+                                        class="rounded-xl px-3 py-1.5 text-xs transition cursor-pointer"
+                                    >
+                                        Confirmed ({{ $bookings->where('status', 'confirmed')->count() }})
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        @click="filter = 'pending'" 
+                                        :class="filter === 'pending' ? 'bg-white text-amber-700 shadow-sm font-bold' : 'text-slate-600 hover:text-amber-700 font-medium'"
+                                        class="rounded-xl px-3 py-1.5 text-xs transition cursor-pointer"
+                                    >
+                                        Pending ({{ $bookings->where('status', 'pending')->count() }})
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        @click="filter = 'cancelled'" 
+                                        :class="filter === 'cancelled' ? 'bg-white text-rose-700 shadow-sm font-bold' : 'text-slate-600 hover:text-rose-700 font-medium'"
+                                        class="rounded-xl px-3 py-1.5 text-xs transition cursor-pointer"
+                                    >
+                                        Cancelled ({{ $bookings->whereIn('status', ['cancelled', 'operator_cancelled', 'rejected'])->count() }})
+                                    </button>
+                                </div>
                             </div>
-                            
+
+                            <!-- Bookings List Cards -->
                             <div class="grid gap-4">
                                 @foreach($bookings as $b)
-                                    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md hover:border-[#ee018d]">
-                                        <div class="flex items-start justify-between flex-wrap gap-4">
-                                            <div>
-                                                <p class="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-1">Transaction Number</p>
-                                                <p class="text-lg font-bold text-slate-900">{{ $b->transaction_number }}</p>
-                                                
-                                                <div class="mt-3 space-y-1">
-                                                    @if($b->accommodations->first())
-                                                        @php
-                                                            $sched = $b->accommodations->first()->schedule;
-                                                        @endphp
-                                                        @if($sched)
-                                                            <p class="text-sm text-slate-700"><strong>Route:</strong> {{ $sched->ferryRoute->origin }} → {{ $sched->ferryRoute->destination }}</p>
-                                                            <p class="text-sm text-slate-700"><strong>Travel Date:</strong> {{ Carbon\Carbon::parse($sched->departure_time)->format('M d, Y') }}</p>
-                                                        @endif
+                                    @php
+                                        $firstAccom = $b->accommodations->first();
+                                        $sched = $firstAccom?->schedule;
+                                        $route = $sched?->ferryRoute;
+                                        $vessel = $sched?->vessel;
+                                        $passengerCount = $b->passengers->count();
+                                        $totalFare = $b->total_amount ?? ($b->transaction?->total_amount ?? 0);
+                                        $isConfirmed = $b->status === 'confirmed';
+                                        $isPending = $b->status === 'pending';
+                                        $isCancelled = in_array($b->status, ['cancelled', 'operator_cancelled', 'rejected']);
+
+                                        $filterCategory = $isConfirmed ? 'confirmed' : ($isPending ? 'pending' : 'cancelled');
+                                    @endphp
+
+                                    <div 
+                                        x-show="filter === 'all' || filter === '{{ $filterCategory }}'"
+                                        x-transition:enter="transition ease-out duration-200"
+                                        x-transition:enter-start="opacity-0 translate-y-1"
+                                        x-transition:enter-end="opacity-100 translate-y-0"
+                                        class="group relative rounded-2xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-sm hover:shadow-md transition-all duration-200 hover:border-emerald-500/50 overflow-hidden"
+                                    >
+                                        <!-- Left Accent Indicator Bar -->
+                                        <div class="absolute left-0 top-0 bottom-0 w-1.5 {{ $isConfirmed ? 'bg-emerald-500' : ($isPending ? 'bg-amber-500' : 'bg-rose-500') }}"></div>
+
+                                        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-5 pl-2 sm:pl-3">
+                                            <!-- Left Column: Transaction ID & Route -->
+                                            <div class="space-y-3.5 flex-1">
+                                                <div class="flex flex-wrap items-center gap-2.5">
+                                                    <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Transaction ID</span>
+                                                    <span class="font-mono text-sm font-bold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
+                                                        {{ $b->transaction_number }}
+                                                    </span>
+                                                    <span class="text-xs text-slate-400">
+                                                        • Booked {{ $b->created_at->format('M d, Y') }}
+                                                    </span>
+                                                    @if($b->hasPromoTicket())
+                                                        <span class="rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide">
+                                                            Promo Ticket
+                                                        </span>
                                                     @endif
                                                 </div>
+
+                                                <!-- Voyage Route Visualization -->
+                                                @if($route)
+                                                    <div class="flex items-center gap-3">
+                                                        <div class="flex-1">
+                                                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Departure Port</p>
+                                                            <p class="text-base sm:text-lg font-extrabold text-slate-900">{{ $route->origin }}</p>
+                                                        </div>
+
+                                                        <div class="flex flex-col items-center px-2">
+                                                            <div class="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
+                                                                <span>⛴</span>
+                                                                <span>Ferry Voyage</span>
+                                                            </div>
+                                                            <div class="w-20 sm:w-28 h-0.5 bg-slate-200 my-1 relative">
+                                                                <div class="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-emerald-600"></div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="flex-1 text-right sm:text-left">
+                                                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Destination Port</p>
+                                                            <p class="text-base sm:text-lg font-extrabold text-slate-900">{{ $route->destination }}</p>
+                                                        </div>
+                                                    </div>
+                                                @endif
+
+                                                <!-- Meta Row: Schedule, Vessel, Passengers -->
+                                                <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-600 pt-1 border-t border-slate-100">
+                                                    @if($sched)
+                                                        <div class="flex items-center gap-1.5 font-medium text-slate-700">
+                                                            <svg class="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                            </svg>
+                                                            <span>{{ Carbon\Carbon::parse($sched->departure_time)->format('D, M d, Y • h:i A') }}</span>
+                                                        </div>
+                                                        @if($vessel)
+                                                            <div class="flex items-center gap-1.5 text-slate-600">
+                                                                <span class="text-slate-400">🚢</span>
+                                                                <span>{{ $vessel->name }}</span>
+                                                            </div>
+                                                        @endif
+                                                    @endif
+                                                    <div class="flex items-center gap-1.5 text-slate-600">
+                                                        <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                                        </svg>
+                                                        <span>{{ $passengerCount }} {{ Str::plural('Passenger', $passengerCount) }}</span>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div class="flex flex-col items-end gap-3">
-                                                @php
-                                                    $statusColors = [
-                                                        'pending' => ['bg' => '#fef3c7', 'text' => '#92400e'],
-                                                        'confirmed' => ['bg' => '#dcfce7', 'text' => '#166534'],
-                                                        'cancelled' => ['bg' => '#fee2e2', 'text' => '#991b1b'],
-                                                        'operator_cancelled' => ['bg' => '#fee2e2', 'text' => '#991b1b'],
-                                                        'rejected' => ['bg' => '#fee2e2', 'text' => '#991b1b'],
-                                                    ];
-                                                    $sStyle = $statusColors[$b->status] ?? $statusColors['pending'];
-                                                @endphp
-                                                <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold" style="background: {{ $sStyle['bg'] }}; color: {{ $sStyle['text'] }};">
-                                                    {{ ucfirst(str_replace('_', ' ', $b->status)) }}
-                                                </span>
-                                                <button wire:click="viewBooking('{{ $b->transaction_number }}')" class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800">
-                                                    View Details
+
+                                            <!-- Right Column: Status, Fare, & CTA Button -->
+                                            <div class="flex lg:flex-col items-center lg:items-end justify-between gap-3 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-100 shrink-0">
+                                                <!-- Status Pill -->
+                                                <div>
+                                                    @if($isConfirmed)
+                                                        <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 text-emerald-800 px-3 py-1 text-xs font-bold border border-emerald-200">
+                                                            <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                                            Confirmed
+                                                        </span>
+                                                    @elseif($isPending)
+                                                        <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-100 text-amber-800 px-3 py-1 text-xs font-bold border border-amber-200">
+                                                            <span class="h-2 w-2 rounded-full bg-amber-500 animate-pulse"></span>
+                                                            Awaiting Payment
+                                                        </span>
+                                                    @else
+                                                        <span class="inline-flex items-center gap-1.5 rounded-full bg-rose-100 text-rose-800 px-3 py-1 text-xs font-bold border border-rose-200">
+                                                            <span class="h-2 w-2 rounded-full bg-rose-500"></span>
+                                                            {{ ucfirst(str_replace('_', ' ', $b->status)) }}
+                                                        </span>
+                                                    @endif
+                                                </div>
+
+                                                <!-- Fare Amount -->
+                                                <div class="text-right">
+                                                    <p class="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Total Fare</p>
+                                                    <p class="text-lg font-black text-slate-900">₱{{ number_format((float) $totalFare, 2) }}</p>
+                                                </div>
+
+                                                <!-- Action Button with Loading Spinner -->
+                                                <button 
+                                                    wire:click="viewBooking('{{ $b->transaction_number }}')" 
+                                                    wire:loading.attr="disabled"
+                                                    wire:target="viewBooking('{{ $b->transaction_number }}')"
+                                                    class="inline-flex items-center gap-2 rounded-xl {{ $isConfirmed ? 'bg-[#216417] hover:bg-[#14400e] text-white shadow-md shadow-emerald-950/20' : ($isPending ? 'bg-slate-900 hover:bg-slate-800 text-white shadow-md' : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300') }} px-4 py-2.5 text-xs sm:text-sm font-bold transition active:scale-95 cursor-pointer disabled:opacity-50"
+                                                >
+                                                    <span wire:loading.remove wire:target="viewBooking('{{ $b->transaction_number }}')" class="flex items-center gap-1.5">
+                                                        <span>{{ $isConfirmed ? 'View E-Ticket & Details' : ($isPending ? 'Complete Payment & View' : 'View Details') }}</span>
+                                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                                        </svg>
+                                                    </span>
+                                                    <span wire:loading wire:target="viewBooking('{{ $b->transaction_number }}')" class="flex items-center gap-1.5">
+                                                        <svg class="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
+                                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                        </svg>
+                                                        <span>Loading...</span>
+                                                    </span>
                                                 </button>
                                             </div>
                                         </div>
@@ -85,6 +400,31 @@
                             </div>
                         </div>
                     @elseif($booking)
+                        @if(filled($searchedEmail))
+                            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 pb-4 mb-2">
+                                <button 
+                                    type="button" 
+                                    wire:click="backToMultipleBookings" 
+                                    class="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-emerald-800 hover:text-emerald-950 transition bg-emerald-50 hover:bg-emerald-100 px-3.5 py-2 rounded-xl border border-emerald-200 shadow-sm cursor-pointer"
+                                >
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                    </svg>
+                                    <span>Back to All Trips ({{ $searchedEmail }})</span>
+                                </button>
+
+                                <button 
+                                    type="button" 
+                                    wire:click="clearSearch" 
+                                    class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition cursor-pointer"
+                                >
+                                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                    <span>Search Another Booking</span>
+                                </button>
+                            </div>
+                        @endif
                         @php
                             $statusColors = [
                                 'pending' => ['bg' => '#fef3c7', 'text' => '#92400e'],
@@ -1674,15 +2014,69 @@
                                 @endif
                         </div>
                     @else
-                        <div class="text-center py-10">
-                            <div class="inline-flex h-16 w-16 items-center justify-center rounded-full bg-rose-100 mb-4">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                </svg>
+                        <div class="py-10 px-4 text-center max-w-xl mx-auto">
+                            <!-- Dual Ring Radar / Ticket Illustration -->
+                            <div class="relative mx-auto mb-6 flex h-20 w-20 items-center justify-center">
+                                <div class="absolute inset-0 rounded-full bg-rose-100 animate-ping opacity-25"></div>
+                                <div class="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-rose-50 border border-rose-200 shadow-sm text-rose-600">
+                                    <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </div>
                             </div>
-                            <h2 class="text-xl font-bold text-slate-900 mb-2">Booking Not Found</h2>
-                            <p class="text-slate-600">We couldn't find a booking matching the provided details.</p>
-                            <p class="text-slate-500 text-sm mt-1">Please check your details and try again from the My Booking menu.</p>
+
+                            <h2 class="text-2xl font-bold text-slate-900 tracking-tight">No Reservation Found</h2>
+                            <p class="text-sm text-slate-600 mt-2 leading-relaxed">
+                                @if(filled($transaction_number))
+                                    We couldn't locate any active booking matching transaction code <strong class="text-slate-900 font-mono">"{{ $transaction_number }}"</strong>.
+                                @elseif(filled($email))
+                                    We couldn't locate any active reservations associated with <strong class="text-slate-900">"{{ $email }}"</strong>.
+                                @else
+                                    We couldn't find a booking matching the provided information.
+                                @endif
+                            </p>
+
+                            <!-- Helpful Self-Check Checklist -->
+                            <div class="mt-6 rounded-2xl bg-slate-50 border border-slate-200/80 p-5 text-left text-xs sm:text-sm text-slate-600 space-y-2.5">
+                                <p class="font-bold text-slate-900 flex items-center gap-1.5 text-xs uppercase tracking-wider">
+                                    <span>💡</span> Helpful Checklist:
+                                </p>
+                                <div class="flex items-start gap-2.5">
+                                    <span class="text-emerald-600 font-bold">✓</span>
+                                    <span>Verify your <strong>Transaction Number</strong> format (e.g. <code class="bg-white px-1.5 py-0.5 rounded border border-slate-200 font-mono text-xs">AGT-20261001-2074</code>).</span>
+                                </div>
+                                <div class="flex items-start gap-2.5">
+                                    <span class="text-emerald-600 font-bold">✓</span>
+                                    <span>Ensure your <strong>Email Address</strong> exactly matches what was entered during checkout.</span>
+                                </div>
+                                <div class="flex items-start gap-2.5">
+                                    <span class="text-emerald-600 font-bold">✓</span>
+                                    <span>For recent bank transfers or e-wallet payments, system processing may take up to <strong>10 minutes</strong>.</span>
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="mt-7 flex flex-wrap items-center justify-center gap-3">
+                                <button 
+                                    type="button" 
+                                    wire:click="clearSearch"
+                                    class="rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm px-5 py-2.5 transition active:scale-95 shadow-sm cursor-pointer"
+                                >
+                                    Try Another Search
+                                </button>
+                                <a 
+                                    href="{{ route('schedules') }}" 
+                                    class="rounded-xl bg-[#216417] hover:bg-[#14400e] text-white font-semibold text-xs sm:text-sm px-5 py-2.5 transition active:scale-95 shadow-sm"
+                                >
+                                    View Trip Schedules
+                                </a>
+                                <a 
+                                    href="{{ url('/#contact') }}" 
+                                    class="rounded-xl bg-white hover:bg-slate-100 text-slate-700 font-semibold text-xs sm:text-sm px-5 py-2.5 transition active:scale-95 border border-slate-200 shadow-sm"
+                                >
+                                    Contact Support
+                                </a>
+                            </div>
                         </div>
                     @endif
                 @endif

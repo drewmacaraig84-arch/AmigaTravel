@@ -160,6 +160,8 @@
                 $bgImage = $bgMap[$currentPath];
             } elseif (request()->is('about*')) {
                 $bgImage = 'bg-2.jpg';
+            } elseif (request()->is('book/status*')) {
+                $bgImage = 'bg-3.jpg';
             } elseif (request()->is('book*')) {
                 $bgImage = null;
             } elseif (request()->is('schedules*')) {

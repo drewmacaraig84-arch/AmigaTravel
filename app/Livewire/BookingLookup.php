@@ -20,6 +20,7 @@ class BookingLookup extends Component
     use WithFileUploads;
     public string $transaction_number = '';
     public string $email = '';
+    public string $searchedEmail = '';
     public ?Booking $booking = null;
     public $bookings = null; // Collection of bookings
     public bool $searched = false;
@@ -107,6 +108,9 @@ class BookingLookup extends Component
         if (filled($transactionNumber) || filled($email)) {
             $this->transaction_number = trim((string) $transactionNumber);
             $this->email = trim((string) $email);
+            if (filled($this->email)) {
+                $this->searchedEmail = $this->email;
+            }
             $this->search();
             // If the link included start_cancellation=1, begin the cancellation flow and start the window.
             if (request()->query('start_cancellation')) {
@@ -138,6 +142,9 @@ class BookingLookup extends Component
 
         $transactionNumber = trim($this->transaction_number);
         $email = trim($this->email);
+        if (filled($email)) {
+            $this->searchedEmail = $email;
+        }
 
         $query = Booking::with(['passengers.discount', 'accommodations', 'transaction']);
         
@@ -309,6 +316,28 @@ class BookingLookup extends Component
         $this->transaction_number = $transactionNumber;
         $this->email = ''; // clear email so it strictly searches by transaction number
         $this->search();
+    }
+
+    public function backToMultipleBookings(): void
+    {
+        if (filled($this->searchedEmail)) {
+            $this->transaction_number = '';
+            $this->email = $this->searchedEmail;
+            $this->search();
+        }
+    }
+
+    public function clearSearch(): void
+    {
+        $this->transaction_number = '';
+        $this->email = '';
+        $this->searchedEmail = '';
+        $this->booking = null;
+        $this->bookings = null;
+        $this->searched = false;
+        $this->feedback = null;
+        $this->resetCancellationState();
+        $this->resetRebookingState();
     }
 
     public function requestCancellation(): void
