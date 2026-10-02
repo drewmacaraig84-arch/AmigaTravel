@@ -185,7 +185,7 @@
                         <div class="flex flex-col items-center lg:items-start">
                             <span class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-400 bg-white/10 backdrop-blur-sm px-4 py-1.5 rounded-full border border-white/20 mb-3">
                                 <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838l-3.598 1.543A3.002 3.002 0 007 13a3 3 0 00-2 5.236V18a1 1 0 001 1h8a1 1 0 001-1v-.764A3.001 3.001 0 0013 13a3.002 3.002 0 00-.244-1.18l2.85-1.22a1 1 0 000-1.84l-5.212-2.68zM7 14a1 1 0 100 2 1 1 0 000-2zm6 0a1 1 0 100 2 1 1 0 000-2z"/></svg>
-                                {{ data_get($pageContent, 'badge', 'Android APK') }}
+                                {{ data_get($pageContent, 'badge', 'Now Available') }}
                             </span>
                             <h1 class="text-4xl sm:text-5xl font-black text-white tracking-tight leading-tight">
                                 {!! data_get($pageContent, 'title', 'Get the <span class="text-emerald-400">Amiga Gracia</span> App') !!}
@@ -193,31 +193,92 @@
                         </div>
                     </div>
                     <p class="mt-6 text-base sm:text-lg text-white/80 max-w-lg mx-auto lg:mx-0 leading-relaxed">
-                        {{ data_get($pageContent, 'description', 'Book ferry tickets, flights, and tour packages right from your phone. Download our compiled Android APK for a fast, hassle-free booking experience.') }}
+                        {{ data_get($pageContent, 'description', 'Book ferry tickets, flights, and tour packages right from your phone. Available on Google Play, Huawei AppGallery, and as a direct Android APK — with iOS support coming soon.') }}
                     </p>
 
-                    <!-- Install Button (PWA) & APK Download -->
-                    <div class="mt-8 flex flex-col sm:flex-row items-center gap-4 lg:justify-start justify-center">
-                        <!-- Direct Flutter APK Download Link -->
-                        <a href="{{ asset('downloads/amiga-travel.apk') }}"
-                           class="group inline-flex items-center gap-3 px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-base rounded-2xl shadow-lg shadow-emerald-900/30 hover:shadow-xl hover:shadow-emerald-900/40 transition-all duration-300 hover:-translate-y-0.5 border border-transparent"
-                           download
-                        >
-                            <svg class="h-6 w-6 group-hover:scale-110 transition-transform fill-current text-white" viewBox="0 0 24 24">
-                                <path d="M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h2v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h1c.55 0 1-.45 1-1V8H6v10zM11.1 5.6a.49.49 0 00-.23-.65l-1.3-.75a.51.51 0 00-.69.18.49.49 0 00.18.69l1.3.75c.08.05.17.08.26.08.17 0 .34-.09.43-.25zM12.9 5.6a.49.49 0 00.43.25c.09 0 .18-.03.26-.08l1.3-.75a.49.49 0 00.18-.69.51.51 0 00-.69-.18l-1.3.75a.49.49 0 00-.23.65zM12 5a3 3 0 013 3H9a3 3 0 013-3zM19.5 8c-.83 0-1.5.67-1.5 1.5v6c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-6c0-.83-.67-1.5-1.5-1.5zM4.5 8C3.67 8 3 8.67 3 9.5v6c0 .83.67 1.5 1.5 1.5S6 16.33 6 15.5v-6C6 8.67 5.33 8 4.5 8z"/>
-                            </svg>
-                            {{ data_get($pageContent, 'btn_android', 'Download Android APK') }}
-                        </a>
+                    <!-- Download Badges (5 Store Buttons) -->
+                    <div class="mt-8 lg:justify-start justify-center">
+                        <p class="text-xs font-semibold uppercase tracking-widest text-white/50 mb-4 lg:text-left text-center">Available on</p>
+                        <div class="flex flex-wrap gap-3 lg:justify-start justify-center">
 
-                        <!-- iOS Add to Home Screen Button / Instructions -->
-                        <button type="button" onclick="document.getElementById('ios-modal').classList.remove('hidden')"
-                           class="group inline-flex items-center gap-3 px-8 py-4 bg-white/10 hover:bg-white/20 text-white font-bold text-base rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:-translate-y-0.5"
-                        >
-                            <svg class="h-6 w-6 group-hover:scale-110 transition-transform fill-current text-white" viewBox="0 0 24 24">
-                                <path d="M16.5 13.9c-.04-2.58 2.1-3.83 2.19-3.88-1.2-1.76-3.07-2-3.7-2.04-1.57-.16-3.06.92-3.86.92-.81 0-2.03-.9-3.32-.88-1.7.02-3.26.99-4.14 2.52-1.79 3.09-.46 7.68 1.28 10.19.85 1.22 1.86 2.59 3.2 2.54 1.29-.05 1.79-.83 3.35-.83 1.55 0 2.04.83 3.37.8 1.37-.03 2.23-1.25 3.07-2.48 1-1.46 1.4-2.87 1.42-2.94-.03-.01-2.73-1.04-2.78-4.04zM14.54 5.92c.7-.85 1.18-2.03 1.05-3.21-1.01.04-2.26.67-2.98 1.54-.64.77-1.2 1.97-1.05 3.12 1.14.09 2.28-.6 2.98-1.45z"/>
-                            </svg>
-                            {{ data_get($pageContent, 'btn_ios', 'Get for iOS') }}
-                        </button>
+                            {{-- 1. Google Play (ACTIVE) --}}
+                            <a href="https://play.google.com/store/apps/details?id=com.amiga.travel.flutter_app"
+                               target="_blank" rel="noopener noreferrer"
+                               class="group relative inline-flex items-center gap-3 px-4 py-2.5 bg-black hover:bg-zinc-900 text-white rounded-xl border border-white/10 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 min-w-[155px]"
+                               title="Get it on Google Play">
+                                <svg class="h-7 w-7 shrink-0" viewBox="0 0 24 24" fill="none">
+                                    <path d="M3.18 23.76c.32.18.68.22 1.04.12L15.3 12 11.94 8.64 3.18 23.76z" fill="#EA4335"/>
+                                    <path d="M20.54 10.27l-2.62-1.49-3.26 3.07 3.26 3.08 2.65-1.51a1.5 1.5 0 000-2.62 1.5 1.5 0 00-.03-.13z" fill="#FBBC04"/>
+                                    <path d="M4.22.12A1.5 1.5 0 002 1.5v21a1.5 1.5 0 002.22 1.26L15.3 12 4.22.12z" fill="#4285F4"/>
+                                    <path d="M4.22.12L15.3 12l2.62-2.74L4.26.1a1.5 1.5 0 00-.04.02z" fill="#34A853"/>
+                                </svg>
+                                <div class="flex flex-col leading-tight">
+                                    <span class="text-[9px] font-medium text-white/60 uppercase tracking-wide">GET IT ON</span>
+                                    <span class="text-sm font-bold text-white">Google Play</span>
+                                </div>
+                            </a>
+
+                            {{-- 2. App Store (COMING SOON) --}}
+                            <div class="group relative inline-flex items-center gap-3 px-4 py-2.5 bg-black/70 text-white/40 rounded-xl border border-white/10 shadow-lg cursor-not-allowed min-w-[155px] select-none"
+                                 title="Coming Soon">
+                                <svg class="h-7 w-7 shrink-0 opacity-40" viewBox="0 0 814 1000" fill="white">
+                                    <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 790.7 0 663 0 541.8c0-207.8 135.4-317.7 268.9-317.7 99.7 0 182.7 66.3 244.7 66.3 59.1 0 152.8-70.5 263.1-70.5zm-17.6-172.5c59.2-71.4 102.1-170.5 102.1-269.6 0-14.4-1.3-28.8-3.8-41.9-97.5 3.8-213 65.3-281.2 145.3-54.5 62.9-103.9 162-103.9 262.8 0 16.5 2.6 33 3.9 38.4 6.5 1.3 17 2.6 27.5 2.6 86.5 0 193.5-57.2 255.4-137.6z"/>
+                                </svg>
+                                <div class="flex flex-col leading-tight">
+                                    <span class="text-[9px] font-medium text-white/30 uppercase tracking-wide">DOWNLOAD ON THE</span>
+                                    <span class="text-sm font-bold text-white/40">App Store</span>
+                                </div>
+                                <span class="absolute -top-2 -right-2 bg-amber-400 text-black text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wide shadow">Soon</span>
+                            </div>
+
+                            {{-- 3. App Gallery (ACTIVE) --}}
+                            <a href="https://appgallery.cloud.huawei.com/ag/n/app/C118908953?locale=en_US&source=appshare&subsource=C118908953&shareTo=cn.wps.moffice_eng&shareFrom=appmarket&shareIds=09edb7c78c444967817cddaacd713db8_cn.wps.moffice_eng&callType=SHARE"
+                               target="_blank" rel="noopener noreferrer"
+                               class="group relative inline-flex items-center gap-3 px-4 py-2.5 bg-black hover:bg-zinc-900 text-white rounded-xl border border-white/10 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 min-w-[155px]"
+                               title="Explore It On App Gallery">
+                                <div class="h-7 w-7 shrink-0 rounded-lg bg-[#CF0A2C] flex items-center justify-center">
+                                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="white">
+                                        <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 4a6 6 0 110 12A6 6 0 0112 6zm0 2a4 4 0 100 8 4 4 0 000-8zm0 1.5a2.5 2.5 0 110 5 2.5 2.5 0 010-5z"/>
+                                    </svg>
+                                </div>
+                                <div class="flex flex-col leading-tight">
+                                    <span class="text-[9px] font-medium text-white/60 uppercase tracking-wide">EXPLORE IT ON</span>
+                                    <span class="text-sm font-bold text-white">App Gallery</span>
+                                </div>
+                            </a>
+
+                            {{-- 4. Download Here - Android (ACTIVE) --}}
+                            <a href="{{ asset('downloads/amiga-travel.apk') }}"
+                               download
+                               class="group relative inline-flex items-center gap-3 px-4 py-2.5 bg-black hover:bg-zinc-900 text-white rounded-xl border border-white/10 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 min-w-[155px]"
+                               title="Download Android APK">
+                                <svg class="h-7 w-7 shrink-0" viewBox="0 0 24 24" fill="#3DDC84">
+                                    <path d="M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h2v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h1c.55 0 1-.45 1-1V8H6v10zM11.1 5.6a.49.49 0 00-.23-.65l-1.3-.75a.51.51 0 00-.69.18.49.49 0 00.18.69l1.3.75c.08.05.17.08.26.08.17 0 .34-.09.43-.25zM12.9 5.6a.49.49 0 00.43.25c.09 0 .18-.03.26-.08l1.3-.75a.49.49 0 00.18-.69.51.51 0 00-.69-.18l-1.3.75a.49.49 0 00-.23.65zM12 5a3 3 0 013 3H9a3 3 0 013-3zM19.5 8c-.83 0-1.5.67-1.5 1.5v6c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-6c0-.83-.67-1.5-1.5-1.5zM4.5 8C3.67 8 3 8.67 3 9.5v6c0 .83.67 1.5 1.5 1.5S6 16.33 6 15.5v-6C6 8.67 5.33 8 4.5 8z"/>
+                                </svg>
+                                <div class="flex flex-col leading-tight">
+                                    <span class="text-[9px] font-medium text-white/60 uppercase tracking-wide">ANDROID</span>
+                                    <span class="text-sm font-bold text-white">Download Here</span>
+                                </div>
+                            </a>
+
+                            {{-- 5. Download Here - iOS (COMING SOON) --}}
+                            <div class="group relative inline-flex items-center gap-3 px-4 py-2.5 bg-black/70 text-white/40 rounded-xl border border-white/10 shadow-lg cursor-not-allowed min-w-[155px] select-none"
+                                 title="Coming Soon for iOS">
+                                <svg class="h-7 w-7 shrink-0 opacity-40" viewBox="0 0 814 1000" fill="white">
+                                    <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 790.7 0 663 0 541.8c0-207.8 135.4-317.7 268.9-317.7 99.7 0 182.7 66.3 244.7 66.3 59.1 0 152.8-70.5 263.1-70.5zm-17.6-172.5c59.2-71.4 102.1-170.5 102.1-269.6 0-14.4-1.3-28.8-3.8-41.9-97.5 3.8-213 65.3-281.2 145.3-54.5 62.9-103.9 162-103.9 262.8 0 16.5 2.6 33 3.9 38.4 6.5 1.3 17 2.6 27.5 2.6 86.5 0 193.5-57.2 255.4-137.6z"/>
+                                </svg>
+                                <div class="flex flex-col leading-tight">
+                                    <span class="text-[9px] font-medium text-white/30 uppercase tracking-wide">iOS</span>
+                                    <span class="text-sm font-bold text-white/40">Download Here</span>
+                                </div>
+                                <span class="absolute -top-2 -right-2 bg-amber-400 text-black text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wide shadow">Soon</span>
+                            </div>
+
+                        </div>
+                        <p class="mt-3 flex items-center gap-1.5 text-[11px] text-white/30 lg:justify-start justify-center">
+                            <svg class="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            App Store &amp; iOS download coming soon.
+                        </p>
                     </div>
 
                     <!-- App Info Grid -->
@@ -231,8 +292,8 @@
                             <p class="text-sm font-semibold text-white mt-0.5">{{ $size }}</p>
                         </div>
                         <div>
-                            <p class="text-[10px] uppercase font-bold tracking-wider text-emerald-400">Requires</p>
-                            <p class="text-sm font-semibold text-white mt-0.5">Android 8.0+</p>
+                            <p class="text-[10px] uppercase font-bold tracking-wider text-emerald-400">Platform</p>
+                            <p class="text-sm font-semibold text-white mt-0.5">iOS &amp; Android</p>
                         </div>
                         <div>
                             <p class="text-[10px] uppercase font-bold tracking-wider text-emerald-400">Verified</p>
@@ -243,20 +304,7 @@
                         </div>
                     </div>
 
-                    <div class="mt-5 flex items-center gap-6 text-white/50 text-xs font-medium lg:justify-start justify-center">
-                        <span class="flex items-center gap-1.5">
-                            <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg>
-                            Secure
-                        </span>
-                        <span class="flex items-center gap-1.5">
-                            <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2h-2.22l.123.489.804.805A1 1 0 0113 18H7a1 1 0 01-.707-1.707l.804-.804L7.22 15H5a2 2 0 01-2-2V5zm5.771 7H5V5h10v7H8.771z" clip-rule="evenodd"/></svg>
-                            Works Offline
-                        </span>
-                        <span class="flex items-center gap-1.5">
-                            <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M13 7H7v6h6V7z"/><path fill-rule="evenodd" d="M7 2a1 1 0 012 0v1h2V2a1 1 0 112 0v1h2a2 2 0 012 2v2h1a1 1 0 110 2h-1v2h1a1 1 0 110 2h-1v2a2 2 0 01-2 2h-2v1a1 1 0 11-2 0v-1H9v1a1 1 0 11-2 0v-1H5a2 2 0 01-2-2v-2H2a1 1 0 110-2h1V9H2a1 1 0 010-2h1V5a2 2 0 012-2h2V2zM5 5h10v10H5V5z" clip-rule="evenodd"/></svg>
-                            Lightweight
-                        </span>
-                    </div>
+
                 </div>
 
                 <!-- Right: Phone Mockup -->
@@ -341,70 +389,142 @@
     </div>
     @endif
 
-    <!-- How to Install Section -->
+    <!-- How to Install Section — Platform Tabs -->
     <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div class="text-center mb-12 amiga-animate-on-scroll amiga-transition">
-            <span class="text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-full" style="color: #216417; background: #eaf5e8;">{{ data_get($pageContent, 'how_it_works_label', 'Installation Guide') }}</span>
-            <h2 class="mt-4 text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">{{ data_get($pageContent, 'how_it_works_title', 'Install in 3 Easy Steps') }}</h2>
-            <p class="mt-3 text-slate-500 max-w-lg mx-auto">{{ data_get($pageContent, 'how_it_works_description', 'Follow these simple steps to install the APK on your Android device.') }}</p>
+        <div class="text-center mb-10 amiga-animate-on-scroll amiga-transition">
+            <span class="text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-full" style="color: #216417; background: #eaf5e8;">Installation Guide</span>
+            <h2 class="mt-4 text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">Get Started on Any Device</h2>
+            <p class="mt-3 text-slate-500 max-w-xl mx-auto">Choose your platform below and follow the steps to install the Amiga Gracia app.</p>
         </div>
 
-        <div x-data="{ currentStep: 0, stepsCount: {{ count($downloadSteps) }} }" class="relative mt-6">
-            <!-- Mobile Carousel View -->
-            <div class="sm:hidden relative overflow-hidden px-1">
-                <div class="flex transition-transform duration-500 ease-in-out" :style="'transform: translateX(-' + (currentStep * 100) + '%)'">
-                    @foreach($downloadSteps as $step)
-                        <div class="w-full shrink-0 px-3 pt-4 pb-4">
-                            <div class="relative bg-white/85 backdrop-blur-md rounded-[2rem] p-8 shadow-md ring-1 ring-slate-100 text-center h-full">
-                                <div class="absolute -top-4 left-1/2 -translate-x-1/2 h-8 w-8 rounded-full font-black text-sm flex items-center justify-center text-white shadow-md" style="background: {{ data_get($step, 'icon_color') }};">{{ data_get($step, 'number') }}</div>
-                                <div class="h-16 w-16 mx-auto rounded-2xl flex items-center justify-center mb-5" style="background: {{ data_get($step, 'bg_color') }};">
-                                    <svg class="h-8 w-8" style="color: {{ data_get($step, 'icon_color') }};" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="{{ data_get($step, 'icon') }}" />
-                                    </svg>
-                                </div>
-                                <h3 class="font-bold text-slate-900 text-lg">{{ data_get($step, 'title') }}</h3>
-                                <p class="text-sm text-slate-500 mt-2 leading-relaxed">{{ data_get($step, 'description') }}</p>
+        {{-- Platform Tab Switcher --}}
+        <div x-data="{ tab: 'android' }" class="amiga-animate-on-scroll amiga-transition">
+
+            {{-- Tab Pills --}}
+            <div class="flex flex-wrap justify-center gap-2 mb-10">
+                <button @click="tab = 'android'"
+                    :class="tab === 'android' ? 'bg-[#216417] text-white shadow-lg' : 'bg-white text-slate-600 border border-slate-200 hover:border-[#216417] hover:text-[#216417]'"
+                    class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-sm transition-all duration-200">
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h2v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h1c.55 0 1-.45 1-1V8H6v10zM12 5a3 3 0 013 3H9a3 3 0 013-3zM19.5 8c-.83 0-1.5.67-1.5 1.5v6c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-6c0-.83-.67-1.5-1.5-1.5zM4.5 8C3.67 8 3 8.67 3 9.5v6c0 .83.67 1.5 1.5 1.5S6 16.33 6 15.5v-6C6 8.67 5.33 8 4.5 8z"/></svg>
+                    Android APK
+                </button>
+                <button @click="tab = 'stores'"
+                    :class="tab === 'stores' ? 'bg-[#216417] text-white shadow-lg' : 'bg-white text-slate-600 border border-slate-200 hover:border-[#216417] hover:text-[#216417]'"
+                    class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-sm transition-all duration-200">
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+                    App Stores
+                </button>
+                <button @click="tab = 'ios'"
+                    :class="tab === 'ios' ? 'bg-[#216417] text-white shadow-lg' : 'bg-white text-slate-600 border border-slate-200 hover:border-[#216417] hover:text-[#216417]'"
+                    class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-sm transition-all duration-200">
+                    <svg class="h-4 w-4" viewBox="0 0 814 1000" fill="currentColor"><path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 790.7 0 663 0 541.8c0-207.8 135.4-317.7 268.9-317.7 99.7 0 182.7 66.3 244.7 66.3 59.1 0 152.8-70.5 263.1-70.5zm-17.6-172.5c59.2-71.4 102.1-170.5 102.1-269.6 0-14.4-1.3-28.8-3.8-41.9-97.5 3.8-213 65.3-281.2 145.3-54.5 62.9-103.9 162-103.9 262.8 0 16.5 2.6 33 3.9 38.4 6.5 1.3 17 2.6 27.5 2.6 86.5 0 193.5-57.2 255.4-137.6z"/></svg>
+                    iOS
+                    <span class="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-amber-400 text-black uppercase">Soon</span>
+                </button>
+            </div>
+
+            {{-- Android APK Tab --}}
+            <div x-show="tab === 'android'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0">
+                <div class="grid sm:grid-cols-3 gap-8 pt-4">
+
+                    {{-- Step 1 --}}
+                    <div class="relative bg-white/85 backdrop-blur-md rounded-[2rem] p-8 shadow-md ring-1 ring-slate-100 text-center group hover:shadow-lg transition amiga-animate-on-scroll amiga-transition">
+                        <div class="absolute -top-4 left-1/2 -translate-x-1/2 h-8 w-8 rounded-full font-black text-sm flex items-center justify-center text-white shadow-md bg-[#216417]">1</div>
+                        <div class="h-16 w-16 mx-auto rounded-2xl flex items-center justify-center mb-5 group-hover:scale-105 transition bg-[#eaf5e8]">
+                            <svg class="h-8 w-8 text-[#216417]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                        </div>
+                        <h3 class="font-bold text-slate-900 text-lg">Download APK</h3>
+                        <p class="text-sm text-slate-500 mt-2 leading-relaxed">Tap the <strong>"Android — Download Here"</strong> button above to save the APK file to your device.</p>
+                    </div>
+
+                    {{-- Step 2 --}}
+                    <div class="relative bg-white/85 backdrop-blur-md rounded-[2rem] p-8 shadow-md ring-1 ring-slate-100 text-center group hover:shadow-lg transition amiga-animate-on-scroll amiga-transition" style="transition-delay: 100ms;">
+                        <div class="absolute -top-4 left-1/2 -translate-x-1/2 h-8 w-8 rounded-full font-black text-sm flex items-center justify-center text-white shadow-md bg-[#ee018d]">2</div>
+                        <div class="h-16 w-16 mx-auto rounded-2xl flex items-center justify-center mb-5 group-hover:scale-105 transition bg-[#fce7f3]">
+                            <svg class="h-8 w-8 text-[#ee018d]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        </div>
+                        <h3 class="font-bold text-slate-900 text-lg">Allow Install</h3>
+                        <p class="text-sm text-slate-500 mt-2 leading-relaxed">Open the downloaded file. If prompted, allow installation from <strong>unknown sources</strong> in your Android settings.</p>
+                    </div>
+
+                    {{-- Step 3 --}}
+                    <div class="relative bg-white/85 backdrop-blur-md rounded-[2rem] p-8 shadow-md ring-1 ring-slate-100 text-center group hover:shadow-lg transition amiga-animate-on-scroll amiga-transition" style="transition-delay: 200ms;">
+                        <div class="absolute -top-4 left-1/2 -translate-x-1/2 h-8 w-8 rounded-full font-black text-sm flex items-center justify-center text-white shadow-md bg-[#216417]">3</div>
+                        <div class="h-16 w-16 mx-auto rounded-2xl flex items-center justify-center mb-5 group-hover:scale-105 transition bg-[#eaf5e8]">
+                            <svg class="h-8 w-8 text-[#216417]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                        </div>
+                        <h3 class="font-bold text-slate-900 text-lg">You're All Set!</h3>
+                        <p class="text-sm text-slate-500 mt-2 leading-relaxed">The app icon appears on your home screen. Open it and start booking trips and earning Gracia Points!</p>
+                    </div>
+
+                </div>
+                <p class="mt-6 text-center text-xs text-slate-400">Requires Android 8.0 or higher · APK version {{ $version }} · {{ $size }}</p>
+            </div>
+
+            {{-- App Stores Tab --}}
+            <div x-show="tab === 'stores'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0">
+                <div class="grid sm:grid-cols-2 gap-8 pt-4 max-w-2xl mx-auto">
+
+                    {{-- Google Play --}}
+                    <a href="https://play.google.com/store/apps/details?id=com.amiga.travel.flutter_app" target="_blank" rel="noopener noreferrer"
+                       class="group relative bg-white/85 backdrop-blur-md rounded-[2rem] p-8 shadow-md ring-1 ring-slate-100 text-center hover:shadow-xl transition amiga-animate-on-scroll amiga-transition flex flex-col items-center">
+                        <div class="h-16 w-16 rounded-2xl flex items-center justify-center mb-5 group-hover:scale-105 transition bg-[#eaf5e8]">
+                            <svg class="h-9 w-9" viewBox="0 0 24 24" fill="none">
+                                <path d="M3.18 23.76c.32.18.68.22 1.04.12L15.3 12 11.94 8.64 3.18 23.76z" fill="#EA4335"/>
+                                <path d="M20.54 10.27l-2.62-1.49-3.26 3.07 3.26 3.08 2.65-1.51a1.5 1.5 0 000-2.62 1.5 1.5 0 00-.03-.13z" fill="#FBBC04"/>
+                                <path d="M4.22.12A1.5 1.5 0 002 1.5v21a1.5 1.5 0 002.22 1.26L15.3 12 4.22.12z" fill="#4285F4"/>
+                                <path d="M4.22.12L15.3 12l2.62-2.74L4.26.1a1.5 1.5 0 00-.04.02z" fill="#34A853"/>
+                            </svg>
+                        </div>
+                        <h3 class="font-bold text-slate-900 text-lg">Google Play</h3>
+                        <p class="text-sm text-slate-500 mt-2 leading-relaxed">Search for <strong>Amiga Gracia</strong> on the Play Store or tap below to go directly to our listing.</p>
+                        <span class="mt-4 inline-flex items-center gap-1.5 text-xs font-bold text-[#216417] group-hover:underline">
+                            Open in Play Store
+                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                        </span>
+                    </a>
+
+                    {{-- Huawei AppGallery --}}
+                    <a href="https://appgallery.cloud.huawei.com/ag/n/app/C118908953?locale=en_US&source=appshare&subsource=C118908953&shareTo=cn.wps.moffice_eng&shareFrom=appmarket&shareIds=09edb7c78c444967817cddaacd713db8_cn.wps.moffice_eng&callType=SHARE" target="_blank" rel="noopener noreferrer"
+                       class="group relative bg-white/85 backdrop-blur-md rounded-[2rem] p-8 shadow-md ring-1 ring-slate-100 text-center hover:shadow-xl transition amiga-animate-on-scroll amiga-transition flex flex-col items-center" style="transition-delay: 100ms;">
+                        <div class="h-16 w-16 rounded-2xl flex items-center justify-center mb-5 group-hover:scale-105 transition bg-red-50">
+                            <div class="h-10 w-10 rounded-xl bg-[#CF0A2C] flex items-center justify-center">
+                                <svg class="h-7 w-7" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 4a6 6 0 110 12A6 6 0 0112 6zm0 2a4 4 0 100 8 4 4 0 000-8zm0 1.5a2.5 2.5 0 110 5 2.5 2.5 0 010-5z"/></svg>
                             </div>
                         </div>
-                    @endforeach
+                        <h3 class="font-bold text-slate-900 text-lg">Huawei AppGallery</h3>
+                        <p class="text-sm text-slate-500 mt-2 leading-relaxed">For Huawei device owners — find <strong>Amiga Gracia</strong> on AppGallery and install it directly.</p>
+                        <span class="mt-4 inline-flex items-center gap-1.5 text-xs font-bold text-[#CF0A2C] group-hover:underline">
+                            Open in AppGallery
+                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                        </span>
+                    </a>
+
                 </div>
-                <!-- Prev/Next Controls -->
-                <div class="flex items-center justify-center gap-5 mt-2 mb-4">
-                    <button @click="if(currentStep > 0) currentStep--" 
-                            :disabled="currentStep === 0"
-                            class="w-10 h-10 rounded-full flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-white shadow-md border border-slate-200 text-slate-700 hover:bg-slate-50 focus:outline-none">
-                        <svg class="w-5 h-5 pr-0.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
-                    </button>
-                    <!-- Indicators -->
-                    <div class="flex gap-2">
-                        <template x-for="i in stepsCount" :key="i">
-                            <div class="h-2 rounded-full transition-all duration-300" 
-                                 :class="currentStep === (i-1) ? 'w-6 bg-[#216417]' : 'w-2 bg-slate-300'"></div>
-                        </template>
+                <p class="mt-6 text-center text-xs text-slate-400">Tap the badge on your device to open the respective store listing.</p>
+            </div>
+
+            {{-- iOS Tab --}}
+            <div x-show="tab === 'ios'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0">
+                <div class="max-w-lg mx-auto">
+                    <div class="bg-white/85 backdrop-blur-md rounded-[2rem] p-10 shadow-md ring-1 ring-slate-100 text-center">
+                        <div class="h-20 w-20 mx-auto rounded-3xl flex items-center justify-center mb-6 bg-slate-100">
+                            <svg class="h-11 w-11 text-slate-400" viewBox="0 0 814 1000" fill="currentColor"><path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 790.7 0 663 0 541.8c0-207.8 135.4-317.7 268.9-317.7 99.7 0 182.7 66.3 244.7 66.3 59.1 0 152.8-70.5 263.1-70.5zm-17.6-172.5c59.2-71.4 102.1-170.5 102.1-269.6 0-14.4-1.3-28.8-3.8-41.9-97.5 3.8-213 65.3-281.2 145.3-54.5 62.9-103.9 162-103.9 262.8 0 16.5 2.6 33 3.9 38.4 6.5 1.3 17 2.6 27.5 2.6 86.5 0 193.5-57.2 255.4-137.6z"/></svg>
+                        </div>
+                        <span class="inline-block bg-amber-100 text-amber-700 text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full mb-4">Coming Soon</span>
+                        <h3 class="font-black text-slate-900 text-2xl">iOS App Store</h3>
+                        <p class="text-slate-500 mt-3 leading-relaxed">We're actively working on the iOS version of Amiga Gracia. It will be available on the <strong>Apple App Store</strong> soon — stay tuned!</p>
+                        <div class="mt-8 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">In the meantime, iPhone &amp; iPad users can:</p>
+                            <ul class="text-sm text-slate-600 space-y-2 text-left">
+                                <li class="flex items-start gap-2"><svg class="h-4 w-4 text-[#216417] mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg> Visit <a href="{{ url('/') }}" class="font-semibold text-[#216417] hover:underline">amigagracia.com</a> from Safari to book online.</li>
+                                <li class="flex items-start gap-2"><svg class="h-4 w-4 text-[#216417] mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg> Tap <strong>Share → Add to Home Screen</strong> in Safari for a shortcut icon.</li>
+                            </ul>
+                        </div>
                     </div>
-                    <button @click="if(currentStep < stepsCount - 1) currentStep++" 
-                            :disabled="currentStep === stepsCount - 1"
-                            class="w-10 h-10 rounded-full flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-white shadow-md border border-slate-200 text-slate-700 hover:bg-slate-50 focus:outline-none">
-                        <svg class="w-5 h-5 pl-0.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
-                    </button>
                 </div>
             </div>
 
-            <!-- Desktop Grid View -->
-            <div class="hidden sm:grid sm:grid-cols-3 gap-8 pt-4">
-                @foreach($downloadSteps as $step)
-                    <div class="relative bg-white/85 backdrop-blur-md rounded-[2rem] p-8 shadow-md ring-1 ring-slate-100 text-center group hover:shadow-lg transition amiga-animate-on-scroll amiga-transition" style="transition-delay: {{ $loop->index * 100 }}ms;">
-                        <div class="absolute -top-4 left-1/2 -translate-x-1/2 h-8 w-8 rounded-full font-black text-sm flex items-center justify-center text-white shadow-md" style="background: {{ data_get($step, 'icon_color') }};">{{ data_get($step, 'number') }}</div>
-                        <div class="h-16 w-16 mx-auto rounded-2xl flex items-center justify-center mb-5 group-hover:scale-105 transition" style="background: {{ data_get($step, 'bg_color') }};">
-                            <svg class="h-8 w-8" style="color: {{ data_get($step, 'icon_color') }};" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="{{ data_get($step, 'icon') }}" />
-                            </svg>
-                        </div>
-                        <h3 class="font-bold text-slate-900 text-lg">{{ data_get($step, 'title') }}</h3>
-                        <p class="text-sm text-slate-500 mt-2 leading-relaxed">{{ data_get($step, 'description') }}</p>
-                    </div>
-                @endforeach
-            </div>
         </div>
     </div>
 
