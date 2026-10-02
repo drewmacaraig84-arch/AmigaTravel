@@ -506,7 +506,7 @@
                 <div class="pt-12 pb-10 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-slate-400 relative z-10">
                     <div class="space-y-1 text-center md:text-left">
                         <p>&copy; 2017 – {{ date('Y') }} {{ $headerData['company_name'] ?? 'Amiga Gracia Travel Services' }}. All rights reserved.</p>
-                        <p class="text-slate-500">Developed by Aries King N. Nieto and Drew M. Macaraig</p>
+                        <p class="text-slate-500">Developed by <a href="https://portfolio-king-1.onrender.com/" target="_blank" rel="noopener noreferrer" class="text-slate-400 hover:text-emerald-300 transition underline underline-offset-2">Aries King N. Nieto</a> and Drew M. Macaraig</p>
                     </div>
                     <div class="flex flex-wrap gap-6 items-center justify-center md:justify-end">
                         <a href="{{ url('/download') }}" class="hover:text-emerald-300 transition">Download App</a>
