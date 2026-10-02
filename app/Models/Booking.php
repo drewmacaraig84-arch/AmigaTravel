@@ -314,6 +314,44 @@ class Booking extends Model
         return $this->isRefundCompleted() ? 'Refunded & Disbursed' : 'Refund Processing';
     }
 
+    public function getCustomerStatusLabel(): string
+    {
+        if (in_array($this->status, [self::STATUS_CANCELLED, self::STATUS_OPERATOR_CANCELLED]) && (float) $this->refund_amount > 0) {
+            return $this->getRefundStatusLabel();
+        }
+
+        if ($this->status === self::STATUS_OPERATOR_CANCELLED) {
+            return 'Cancelled by Operator';
+        }
+
+        if ($this->status === self::STATUS_CANCELLED) {
+            return 'Cancelled';
+        }
+
+        if ($this->status === self::STATUS_REJECTED) {
+            return 'Rejected';
+        }
+
+        if ($this->status === self::STATUS_CONFIRMED) {
+            return 'Confirmed';
+        }
+
+        if ($this->status === self::STATUS_PENDING) {
+            $tx = $this->relationLoaded('transaction') ? $this->transaction : $this->transaction()->first();
+            $hasProof = $tx && filled($tx->proof_of_payment);
+            $isUnpaid = $tx && $tx->payment_status === 'unpaid';
+            $deadline = $tx?->payment_deadline_at ?? ($this->created_at ? $this->created_at->copy()->addHour() : null);
+
+            if ($isUnpaid && ! $hasProof && $deadline && $deadline->isFuture()) {
+                return 'Awaiting Payment';
+            }
+
+            return 'Pending Confirmation';
+        }
+
+        return ucfirst(str_replace('_', ' ', $this->status));
+    }
+
     public function getRefundMessage(): ?string
     {
         if (! in_array($this->status, [self::STATUS_CANCELLED, self::STATUS_OPERATOR_CANCELLED]) || (float) $this->refund_amount <= 0) {

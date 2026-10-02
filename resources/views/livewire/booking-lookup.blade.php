@@ -197,7 +197,7 @@
                     </div>
                 @else
                     @if($bookings && $bookings->count() > 1)
-                        <div x-data="{ filter: 'all' }" class="space-y-6">
+                        <div wire:key="multiple-bookings-list-{{ $bookings->count() }}" x-data="{ filter: 'all' }" class="space-y-6">
                             <!-- Header & Summary -->
                             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200/80 pb-5">
                                 <div>
@@ -258,15 +258,16 @@
                                         $route = $sched?->ferryRoute;
                                         $vessel = $sched?->vessel;
                                         $passengerCount = $b->passengers->count();
-                                        $totalFare = $b->total_amount ?? ($b->transaction?->total_amount ?? 0);
-                                        $isConfirmed = $b->status === 'confirmed';
-                                        $isPending = $b->status === 'pending';
-                                        $isCancelled = in_array($b->status, ['cancelled', 'operator_cancelled', 'rejected']);
-
+                                        $totalFare = (float) ($b->total_price > 0 ? $b->total_price : ($b->accommodations->sum(fn($a) => $a->pivot->price ?? 0) ?: 0));
+                                        $statusLabel = $b->getCustomerStatusLabel();
+                                        $isConfirmed = $statusLabel === 'Confirmed';
+                                        $isPending = in_array($statusLabel, ['Pending Confirmation', 'Awaiting Payment']);
+                                        $isCancelled = ! $isConfirmed && ! $isPending;
                                         $filterCategory = $isConfirmed ? 'confirmed' : ($isPending ? 'pending' : 'cancelled');
                                     @endphp
 
                                     <div 
+                                        wire:key="booking-card-{{ $b->id }}-{{ $b->transaction_number }}"
                                         x-show="filter === 'all' || filter === '{{ $filterCategory }}'"
                                         x-transition:enter="transition ease-out duration-200"
                                         x-transition:enter-start="opacity-0 translate-y-1"
@@ -284,8 +285,8 @@
                                                     <span class="font-mono text-sm font-bold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
                                                         {{ $b->transaction_number }}
                                                     </span>
-                                                    <span class="text-xs text-slate-400">
-                                                        • Booked {{ $b->created_at->format('M d, Y') }}
+                                                    <span class="text-xs text-slate-500">
+                                                        • Booked {{ $b->created_at->format('M d, Y \a\t g:i A') }}
                                                     </span>
                                                     @if($b->hasPromoTicket())
                                                         <span class="rounded-full bg-amber-100 text-amber-800 border border-amber-200 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide">
@@ -344,7 +345,7 @@
                                                 </div>
                                             </div>
 
-                                            <!-- Right Column: Status, Fare, & CTA Button -->
+                                            <!-- Right Column: Status, Fare, & Action Button -->
                                             <div class="flex lg:flex-col items-center lg:items-end justify-between gap-3 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-100 shrink-0">
                                                 <!-- Status Pill -->
                                                 <div>
@@ -353,7 +354,12 @@
                                                             <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
                                                             Confirmed
                                                         </span>
-                                                    @elseif($isPending)
+                                                    @elseif($statusLabel === 'Pending Confirmation')
+                                                        <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-100 text-amber-800 px-3 py-1 text-xs font-bold border border-amber-200">
+                                                            <span class="h-2 w-2 rounded-full bg-amber-500 animate-pulse"></span>
+                                                            Pending Confirmation
+                                                        </span>
+                                                    @elseif($statusLabel === 'Awaiting Payment')
                                                         <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-100 text-amber-800 px-3 py-1 text-xs font-bold border border-amber-200">
                                                             <span class="h-2 w-2 rounded-full bg-amber-500 animate-pulse"></span>
                                                             Awaiting Payment
@@ -361,7 +367,7 @@
                                                     @else
                                                         <span class="inline-flex items-center gap-1.5 rounded-full bg-rose-100 text-rose-800 px-3 py-1 text-xs font-bold border border-rose-200">
                                                             <span class="h-2 w-2 rounded-full bg-rose-500"></span>
-                                                            {{ ucfirst(str_replace('_', ' ', $b->status)) }}
+                                                            {{ $statusLabel }}
                                                         </span>
                                                     @endif
                                                 </div>
@@ -372,27 +378,16 @@
                                                     <p class="text-lg font-black text-slate-900">₱{{ number_format((float) $totalFare, 2) }}</p>
                                                 </div>
 
-                                                <!-- Action Button with Loading Spinner -->
-                                                <button 
-                                                    wire:click="viewBooking('{{ $b->transaction_number }}')" 
-                                                    wire:loading.attr="disabled"
-                                                    wire:target="viewBooking('{{ $b->transaction_number }}')"
-                                                    class="inline-flex items-center gap-2 rounded-xl {{ $isConfirmed ? 'bg-[#216417] hover:bg-[#14400e] text-white shadow-md shadow-emerald-950/20' : ($isPending ? 'bg-slate-900 hover:bg-slate-800 text-white shadow-md' : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300') }} px-4 py-2.5 text-xs sm:text-sm font-bold transition active:scale-95 cursor-pointer disabled:opacity-50"
+                                                <!-- Action Button with Direct Reliable Link -->
+                                                <a 
+                                                    href="{{ url('/book/status?transaction_number=' . urlencode($b->transaction_number) . (filled($searchedEmail) ? '&email=' . urlencode($searchedEmail) : '')) }}" 
+                                                    class="inline-flex items-center gap-2 rounded-xl {{ $isConfirmed ? 'bg-[#216417] hover:bg-[#14400e] text-white shadow-md shadow-emerald-950/20' : ($statusLabel === 'Awaiting Payment' ? 'bg-slate-900 hover:bg-slate-800 text-white shadow-md' : ($statusLabel === 'Pending Confirmation' ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-md' : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300')) }} px-4 py-2.5 text-xs sm:text-sm font-bold transition active:scale-95 cursor-pointer"
                                                 >
-                                                    <span wire:loading.remove wire:target="viewBooking('{{ $b->transaction_number }}')" class="flex items-center gap-1.5">
-                                                        <span>{{ $isPending ? 'Complete Payment & View' : 'View Details' }}</span>
-                                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                                                        </svg>
-                                                    </span>
-                                                    <span wire:loading wire:target="viewBooking('{{ $b->transaction_number }}')" class="flex items-center gap-1.5">
-                                                        <svg class="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
-                                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                        </svg>
-                                                        <span>Loading...</span>
-                                                    </span>
-                                                </button>
+                                                    <span>{{ $statusLabel === 'Awaiting Payment' ? 'Complete Payment & View' : 'View Details' }}</span>
+                                                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                                    </svg>
+                                                </a>
                                             </div>
                                         </div>
                                     </div>
@@ -400,40 +395,46 @@
                             </div>
                         </div>
                     @elseif($booking)
-                        @if(filled($searchedEmail))
-                            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 pb-4 mb-2">
-                                <button 
-                                    type="button" 
-                                    wire:click="backToMultipleBookings" 
-                                    class="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-emerald-800 hover:text-emerald-950 transition bg-emerald-50 hover:bg-emerald-100 px-3.5 py-2 rounded-xl border border-emerald-200 shadow-sm cursor-pointer"
-                                >
-                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                                    </svg>
-                                    <span>Back to All Trips ({{ $searchedEmail }})</span>
-                                </button>
+                        <div wire:key="single-booking-detail-{{ $booking->id }}" class="space-y-6">
+                            @if(filled($searchedEmail))
+                                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 pb-4 mb-2">
+                                    <a 
+                                        href="{{ url('/book/status?email=' . urlencode($searchedEmail)) }}" 
+                                        class="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-emerald-800 hover:text-emerald-950 transition bg-emerald-50 hover:bg-emerald-100 px-3.5 py-2 rounded-xl border border-emerald-200 shadow-sm cursor-pointer"
+                                    >
+                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                        </svg>
+                                        <span>Back to All Trips ({{ $searchedEmail }})</span>
+                                    </a>
 
-                                <button 
-                                    type="button" 
-                                    wire:click="clearSearch" 
-                                    class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition cursor-pointer"
-                                >
-                                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                    </svg>
-                                    <span>Search Another Booking</span>
-                                </button>
-                            </div>
-                        @endif
+                                    <button 
+                                        type="button" 
+                                        wire:click="clearSearch" 
+                                        class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition cursor-pointer"
+                                    >
+                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                        </svg>
+                                        <span>Search Another Booking</span>
+                                    </button>
+                                </div>
+                            @endif
                         @php
-                            $statusColors = [
-                                'pending' => ['bg' => '#fef3c7', 'text' => '#92400e'],
-                                'confirmed' => ['bg' => '#dcfce7', 'text' => '#166534'],
-                                'cancelled' => ['bg' => '#fee2e2', 'text' => '#991b1b'],
-                                'operator_cancelled' => ['bg' => '#fee2e2', 'text' => '#991b1b'],
-                                'rejected' => ['bg' => '#fee2e2', 'text' => '#991b1b'],
-                            ];
-                            $statusStyle = $statusColors[$booking->status] ?? $statusColors['pending'];
+                            $detailStatusLabel = $booking->getCustomerStatusLabel();
+                            $statusBadgeClasses = match($detailStatusLabel) {
+                                'Confirmed' => 'bg-emerald-100 text-emerald-800 border border-emerald-300',
+                                'Pending Confirmation' => 'bg-amber-100 text-amber-900 border border-amber-300',
+                                'Awaiting Payment' => 'bg-amber-100 text-amber-900 border border-amber-300',
+                                'Cancelled', 'Cancelled by Operator', 'Rejected' => 'bg-rose-100 text-rose-800 border border-rose-300',
+                                default => 'bg-slate-100 text-slate-800 border border-slate-300',
+                            };
+                            $statusDotClass = match($detailStatusLabel) {
+                                'Confirmed' => 'bg-emerald-500',
+                                'Pending Confirmation', 'Awaiting Payment' => 'bg-amber-500',
+                                'Cancelled', 'Cancelled by Operator', 'Rejected' => 'bg-rose-500',
+                                default => 'bg-slate-400',
+                            };
                         @endphp
                         @if($feedback)
                             <div class="rounded-3xl border border-pink-200 bg-pink-50 p-4 text-sm text-pink-700">
@@ -587,6 +588,9 @@
                                 <div>
                                     <p class="text-sm text-slate-500">Transaction Number</p>
                                     <p class="text-lg font-semibold text-slate-900">{{ $booking->transaction_number }}</p>
+                                    @if($booking->created_at)
+                                        <p class="text-xs text-slate-500 mt-0.5">• Booked {{ $booking->created_at->format('M d, Y \a\t g:i A') }}</p>
+                                    @endif
                                 </div>
                                 <div class="flex gap-2 items-center flex-wrap justify-end">
                                     @if($booking->hasPromoTicket())
@@ -594,12 +598,13 @@
                                             PROMO TICKET
                                         </span>
                                     @endif
-                                    <span class="rounded-full px-4 py-1.5 text-sm font-semibold" @style(['background' => $statusStyle['bg'], 'color' => $statusStyle['text']])>
-                                        {{ in_array($booking->status, ['cancelled', 'operator_cancelled']) && (float) $booking->refund_amount > 0 ? $booking->getRefundStatusLabel() : ($booking->status === 'operator_cancelled' ? 'Cancelled by Operator' : ($booking->status === 'cancelled' ? 'Cancelled' : ($booking->status === 'rejected' ? 'Rejected' : ucfirst($booking->status)))) }}
+                                    <span class="inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs sm:text-sm font-bold shadow-sm {{ $statusBadgeClasses }}">
+                                        <span class="h-2 w-2 rounded-full {{ $statusDotClass }}"></span>
+                                        <span>{{ $detailStatusLabel }}</span>
                                         @if($booking->rebooking_status === 'pending')
-                                            (Rebooking Pending)
+                                            <span class="font-normal opacity-90">(Rebooking Pending)</span>
                                         @elseif($booking->rebooking_status === 'rejected')
-                                            (Rebooking Rejected)
+                                            <span class="font-normal opacity-90">(Rebooking Rejected)</span>
                                         @endif
                                     </span>
                                 </div>

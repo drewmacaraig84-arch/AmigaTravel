@@ -157,6 +157,25 @@ class BookingLookup extends Component
 
         $bookings = $query->latest()->get();
 
+        // Check for unpaid bookings whose 1-hour payment window expired without proof of payment -> auto-cancel them
+        $now = \Illuminate\Support\Carbon::now();
+        foreach ($bookings as $b) {
+            if ($b->status === Booking::STATUS_PENDING && $b->transaction) {
+                $tx = $b->transaction;
+                $hasProof = filled($tx->proof_of_payment);
+                $deadline = $tx->payment_deadline_at ?? ($b->created_at ? $b->created_at->copy()->addHour() : null);
+
+                if (! $hasProof && $tx->payment_status === 'unpaid' && $deadline && $deadline->isPast()) {
+                    $b->update(['status' => Booking::STATUS_CANCELLED]);
+                    $tx->update(['payment_status' => 'cancelled']);
+                    $b->status = Booking::STATUS_CANCELLED;
+                    if ($b->relationLoaded('transaction') && $b->transaction) {
+                        $b->transaction->payment_status = 'cancelled';
+                    }
+                }
+            }
+        }
+
         if ($bookings->count() === 1) {
             $this->booking = $bookings->first();
             $this->bookings = null;
@@ -203,15 +222,15 @@ class BookingLookup extends Component
 
         if ($this->booking && $this->booking->transaction) {
             $transaction = $this->booking->transaction;
-            if ($transaction->payment_status === 'unpaid' &&
-                $transaction->payment_deadline_at) {
-                
-                if ($transaction->payment_deadline_at->isFuture()) {
+            $hasProof = filled($transaction->proof_of_payment);
+            $deadline = $transaction->payment_deadline_at ?? ($this->booking->created_at ? $this->booking->created_at->copy()->addHour() : null);
+
+            if (! $hasProof && $transaction->payment_status === 'unpaid' && $deadline) {
+                if ($deadline->isFuture()) {
                     $this->redirectRoute('payment.show', $transaction->booking?->transaction_number ?? $transaction->id);
                     return;
-                } else if ($this->booking->status !== \App\Models\Booking::STATUS_CANCELLED) {
-                    // Auto-cancel if the cron job hasn't picked it up yet
-                    $this->booking->update(['status' => \App\Models\Booking::STATUS_CANCELLED]);
+                } else if ($this->booking->status !== Booking::STATUS_CANCELLED) {
+                    $this->booking->update(['status' => Booking::STATUS_CANCELLED]);
                     $transaction->update(['payment_status' => 'cancelled']);
                     $this->booking->refresh();
                 }
@@ -313,17 +332,13 @@ class BookingLookup extends Component
 
     public function viewBooking(string $transactionNumber): void
     {
-        $this->transaction_number = $transactionNumber;
-        $this->email = ''; // clear email so it strictly searches by transaction number
-        $this->search();
+        $this->redirect(url('/book/status?transaction_number=' . urlencode(trim($transactionNumber))), navigate: false);
     }
 
     public function backToMultipleBookings(): void
     {
         if (filled($this->searchedEmail)) {
-            $this->transaction_number = '';
-            $this->email = $this->searchedEmail;
-            $this->search();
+            $this->redirect(url('/book/status?email=' . urlencode(trim($this->searchedEmail))), navigate: false);
         }
     }
 
