@@ -222,10 +222,10 @@
                             {{-- 2. App Store (COMING SOON) --}}
                             <div class="group relative inline-flex items-center gap-3 px-4 py-2.5 bg-black/70 text-white/40 rounded-xl border border-white/10 shadow-lg cursor-not-allowed min-w-[155px] select-none"
                                  title="Coming Soon">
-                                {{-- Official Apple logo --}}
-                                <svg class="h-7 w-7 shrink-0 opacity-50" viewBox="0 0 814 1000" fill="white">
-                                    <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 790.7 0 663 0 541.8c0-207.8 135.4-317.7 268.9-317.7 99.7 0 182.7 66.3 244.7 66.3 59.1 0 152.8-70.5 263.1-70.5zm-17.6-172.5c59.2-71.4 102.1-170.5 102.1-269.6 0-14.4-1.3-28.8-3.8-41.9-97.5 3.8-213 65.3-281.2 145.3-54.5 62.9-103.9 162-103.9 262.8 0 16.5 2.6 33 3.9 38.4 6.5 1.3 17 2.6 27.5 2.6 86.5 0 193.5-57.2 255.4-137.6z"/>
-                                </svg>
+                                {{-- Official App Store icon (exact match to Image 2) --}}
+                                <img src="{{ asset('images/badges/appstore-icon.png') }}"
+                                     alt="Apple App Store"
+                                     class="h-7 w-7 rounded-lg shrink-0 opacity-50 object-contain shadow-sm">
                                 <div class="flex flex-col leading-tight">
                                     <span class="text-[9px] font-medium text-white/30 uppercase tracking-wide">DOWNLOAD ON THE</span>
                                     <span class="text-sm font-bold text-white/40">App Store</span>
@@ -238,13 +238,10 @@
                                target="_blank" rel="noopener noreferrer"
                                class="group relative inline-flex items-center gap-3 px-4 py-2.5 bg-black hover:bg-zinc-900 text-white rounded-xl border border-white/10 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 min-w-[155px]"
                                title="Explore It On App Gallery">
-                                {{-- Official Huawei AppGallery icon --}}
-                                <svg class="h-7 w-7 shrink-0" viewBox="0 0 200 200" fill="none">
-                                    <circle cx="100" cy="100" r="100" fill="#CF0A2C"/>
-                                    <path d="M100 36c-35.3 0-64 28.7-64 64s28.7 64 64 64 64-28.7 64-64-28.7-64-64-64zm0 16c13.3 0 25.5 4.6 35 12.2L67.2 140.2A47.8 47.8 0 0152 100c0-26.5 21.5-48 48-48zm0 96c-13.3 0-25.5-4.6-35-12.2L132.8 59.8A47.8 47.8 0 01148 100c0 26.5-21.5 48-48 48z" fill="white"/>
-                                    <circle cx="100" cy="100" r="17" fill="white"/>
-                                    <circle cx="100" cy="100" r="9" fill="#CF0A2C"/>
-                                </svg>
+                                {{-- Official Huawei AppGallery icon (exact match to Image 1) --}}
+                                <img src="{{ asset('images/badges/appgallery-icon.png') }}"
+                                     alt="Huawei AppGallery"
+                                     class="h-7 w-7 rounded-md shrink-0 object-contain shadow-sm">
                                 <div class="flex flex-col leading-tight">
                                     <span class="text-[9px] font-medium text-white/60 uppercase tracking-wide">EXPLORE IT ON</span>
                                     <span class="text-sm font-bold text-white">App Gallery</span>
@@ -284,10 +281,10 @@
                             {{-- 5. Download Here - iOS (COMING SOON) --}}
                             <div class="group relative inline-flex items-center gap-3 px-4 py-2.5 bg-black/70 text-white/40 rounded-xl border border-white/10 shadow-lg cursor-not-allowed min-w-[155px] select-none"
                                  title="Coming Soon for iOS">
-                                {{-- Apple logo (dimmed) --}}
-                                <svg class="h-7 w-7 shrink-0 opacity-40" viewBox="0 0 814 1000" fill="white">
-                                    <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 790.7 0 663 0 541.8c0-207.8 135.4-317.7 268.9-317.7 99.7 0 182.7 66.3 244.7 66.3 59.1 0 152.8-70.5 263.1-70.5zm-17.6-172.5c59.2-71.4 102.1-170.5 102.1-269.6 0-14.4-1.3-28.8-3.8-41.9-97.5 3.8-213 65.3-281.2 145.3-54.5 62.9-103.9 162-103.9 262.8 0 16.5 2.6 33 3.9 38.4 6.5 1.3 17 2.6 27.5 2.6 86.5 0 193.5-57.2 255.4-137.6z"/>
-                                </svg>
+                                {{-- Official Apple logo (exact match to Image 3) --}}
+                                <img src="{{ asset('images/badges/apple-icon.png') }}"
+                                     alt="Apple iOS"
+                                     class="h-7 w-7 shrink-0 opacity-45 object-contain">
                                 <div class="flex flex-col leading-tight">
                                     <span class="text-[9px] font-medium text-white/30 uppercase tracking-wide">iOS</span>
                                     <span class="text-sm font-bold text-white/40">Download Here</span>
@@ -509,9 +506,7 @@
                     <a href="https://appgallery.cloud.huawei.com/ag/n/app/C118908953?locale=en_US&source=appshare&subsource=C118908953&shareTo=cn.wps.moffice_eng&shareFrom=appmarket&shareIds=09edb7c78c444967817cddaacd713db8_cn.wps.moffice_eng&callType=SHARE" target="_blank" rel="noopener noreferrer"
                        class="group relative bg-white/85 backdrop-blur-md rounded-[2rem] p-8 shadow-md ring-1 ring-slate-100 text-center hover:shadow-xl transition amiga-animate-on-scroll amiga-transition flex flex-col items-center" style="transition-delay: 100ms;">
                         <div class="h-16 w-16 rounded-2xl flex items-center justify-center mb-5 group-hover:scale-105 transition bg-red-50">
-                            <div class="h-10 w-10 rounded-xl bg-[#CF0A2C] flex items-center justify-center">
-                                <svg class="h-7 w-7" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 4a6 6 0 110 12A6 6 0 0112 6zm0 2a4 4 0 100 8 4 4 0 000-8zm0 1.5a2.5 2.5 0 110 5 2.5 2.5 0 010-5z"/></svg>
-                            </div>
+                            <img src="{{ asset('images/badges/appgallery-icon.png') }}" alt="Huawei AppGallery" class="h-11 w-11 rounded-xl object-contain shadow-sm">
                         </div>
                         <h3 class="font-bold text-slate-900 text-lg">Huawei AppGallery</h3>
                         <p class="text-sm text-slate-500 mt-2 leading-relaxed">For Huawei device owners — find <strong>Amiga Gracia</strong> on AppGallery and install it directly.</p>
@@ -529,8 +524,8 @@
             <div x-show="tab === 'ios'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0">
                 <div class="max-w-lg mx-auto">
                     <div class="bg-white/85 backdrop-blur-md rounded-[2rem] p-10 shadow-md ring-1 ring-slate-100 text-center">
-                        <div class="h-20 w-20 mx-auto rounded-3xl flex items-center justify-center mb-6 bg-slate-100">
-                            <svg class="h-11 w-11 text-slate-400" viewBox="0 0 814 1000" fill="currentColor"><path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 790.7 0 663 0 541.8c0-207.8 135.4-317.7 268.9-317.7 99.7 0 182.7 66.3 244.7 66.3 59.1 0 152.8-70.5 263.1-70.5zm-17.6-172.5c59.2-71.4 102.1-170.5 102.1-269.6 0-14.4-1.3-28.8-3.8-41.9-97.5 3.8-213 65.3-281.2 145.3-54.5 62.9-103.9 162-103.9 262.8 0 16.5 2.6 33 3.9 38.4 6.5 1.3 17 2.6 27.5 2.6 86.5 0 193.5-57.2 255.4-137.6z"/></svg>
+                        <div class="h-20 w-20 mx-auto rounded-3xl flex items-center justify-center mb-6 bg-slate-50">
+                            <img src="{{ asset('images/badges/appstore-icon.png') }}" alt="Apple App Store" class="h-16 w-16 rounded-2xl object-contain shadow-sm">
                         </div>
                         <span class="inline-block bg-amber-100 text-amber-700 text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full mb-4">Coming Soon</span>
                         <h3 class="font-black text-slate-900 text-2xl">iOS App Store</h3>
