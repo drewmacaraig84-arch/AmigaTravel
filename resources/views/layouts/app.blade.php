@@ -178,6 +178,16 @@
                 $bgImage = 'bg-2.jpg';
             }
         @endphp
+
+        {{-- Critical Static Asset Preloading for Instant Display --}}
+        <link rel="preload" as="image" href="{{ asset('images/amiga_logo_white_outline.png') }}">
+        @if(!empty($bgImage))
+        <link rel="preload" as="image" href="{{ asset('images/amiga-backgrounds/' . $bgImage) }}">
+        @endif
+        @if(request()->is('/'))
+        <link rel="preload" as="video" type="video/mp4" href="{{ asset('video/animation1.mp4') }}">
+        @endif
+
         @if($bgImage)
         <style>
             /* Dynamic page background image with opacity */
@@ -650,6 +660,77 @@
                     });
                 });
             }
+        </script>
+
+        {{-- High-Performance Instant Static Asset & Media Preloader --}}
+        <script>
+            (function () {
+                var staticAssets = [
+                    // All background designs for every tab/page
+                    "{{ asset('images/amiga-backgrounds/bg-1.jpg') }}",
+                    "{{ asset('images/amiga-backgrounds/bg-2.jpg') }}",
+                    "{{ asset('images/amiga-backgrounds/bg-3.jpg') }}",
+                    "{{ asset('images/amiga-backgrounds/bg-4.jpg') }}",
+                    "{{ asset('images/amiga-backgrounds/bg-5.jpg') }}",
+                    "{{ asset('images/amiga-backgrounds/bg-6.jpg') }}",
+                    "{{ asset('images/amiga-backgrounds/bg-7.jpg') }}",
+                    "{{ asset('images/amiga-backgrounds/bg-8.jpg') }}",
+
+                    // Core brand logos & icons
+                    "{{ asset('images/amiga_logo_white_outline.png') }}",
+                    "{{ asset('images/amiga-logo-transparent.png') }}",
+                    "{{ asset('images/amiga-logo.jpg') }}",
+                    "{{ asset('images/app-icon-original.png') }}",
+                    "{{ asset('images/world-map.svg') }}",
+
+                    // Official Store badges
+                    "{{ asset('images/badges/appgallery-icon.png') }}",
+                    "{{ asset('images/badges/apple-icon.png') }}",
+                    "{{ asset('images/badges/appstore-icon.png') }}",
+
+                    // Partner Airline & Ferry logos
+                    "{{ asset('images/2GO-Logo.png') }}",
+                    "{{ asset('images/AirAsia-Logo.png') }}",
+                    "{{ asset('images/CebuPecific-Logo.png') }}",
+                    "{{ asset('images/Pal-Logo.jfif') }}",
+                    "{{ asset('images/starlite-Logo.jfif') }}",
+                    "{{ asset('images/Starlite_Logo.png') }}"
+                ];
+
+                var staticVideos = [
+                    "{{ asset('video/animation1.mp4') }}",
+                    "{{ asset('video/coral-reef-safari.mp4') }}",
+                    "{{ asset('video/Concept_A_smooth_motion_graph.mp4') }}"
+                ];
+
+                function autoDownloadStaticAssets() {
+                    // Preload all static images into browser memory & HTTP cache
+                    staticAssets.forEach(function (url) {
+                        var img = new Image();
+                        img.src = url;
+                    });
+
+                    // Prefetch static videos in background
+                    staticVideos.forEach(function (url) {
+                        var link = document.createElement('link');
+                        link.rel = 'prefetch';
+                        link.as = 'video';
+                        link.href = url;
+                        document.head.appendChild(link);
+                    });
+                }
+
+                // Run automatically in background during idle time so page loads with zero delay
+                if ('requestIdleCallback' in window) {
+                    window.addEventListener('load', function () {
+                        requestIdleCallback(autoDownloadStaticAssets, { timeout: 1000 });
+                    });
+                } else {
+                    window.addEventListener('load', function () {
+                        setTimeout(autoDownloadStaticAssets, 300);
+                    });
+                }
+            })();
         </script>
         {{-- Global Animate-on-Scroll CSS & JS for all pages --}}
         <style>
