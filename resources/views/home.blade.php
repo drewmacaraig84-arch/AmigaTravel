@@ -130,13 +130,17 @@
             },
             
             get isDisabled() {
-                if (!this.origin || !this.destination) return true;
+                let orig = this.currentOrigin || this.origin;
+                let dest = this.selectedDestination || this.destination;
+                if (!orig || !dest) return true;
                 let enabled = type === 'departure' ? this.enabledDepartureDates : this.enabledReturnDates;
                 return enabled.length === 0;
             },
 
             get placeholderText() {
-                if (!this.origin || !this.destination) {
+                let orig = this.currentOrigin || this.origin;
+                let dest = this.selectedDestination || this.destination;
+                if (!orig || !dest) {
                     return 'Select origin & destination first';
                 }
                 let enabled = type === 'departure' ? this.enabledDepartureDates : this.enabledReturnDates;
@@ -268,7 +272,11 @@
              mode: 'ferry',
              operator: '',
              origin: '',
+             selectedOrigin: '',
+             originIsDirty: false,
              destination: '',
+             selectedDestination: '',
+             destinationIsDirty: false,
              departure_date: '{{ \Carbon\Carbon::tomorrow()->format('Y-m-d') }}',
              return_date: '{{ \Carbon\Carbon::tomorrow()->addDay()->format('Y-m-d') }}',
              adults: 1,
@@ -473,6 +481,8 @@
                   });
                   this.$watch('origin', () => this.checkVehicleRouteEligibility());
                   this.$watch('destination', () => this.checkVehicleRouteEligibility());
+                  this.$watch('selectedOrigin', () => this.checkVehicleRouteEligibility());
+                  this.$watch('selectedDestination', () => this.checkVehicleRouteEligibility());
              },
              hasReturnRoute(origin, destination) {
                   if (!origin || !destination) return false;
@@ -514,9 +524,41 @@
                   });
                   return origins.sort();
               },
+              get currentOrigin() {
+                  if (this.selectedOrigin) return this.selectedOrigin;
+                  if (this.origin) {
+                      let match = this.availableOrigins.find(o => o.toLowerCase() === this.origin.trim().toLowerCase());
+                      if (match) return match;
+                  }
+                  return '';
+              },
+              get filteredOrigins() {
+                  let origins = this.availableOrigins;
+                  if (!origins || origins.length === 0) return [];
+                  let q = (this.origin || '').trim().toLowerCase();
+                  if (!q || !this.originIsDirty) {
+                      return origins;
+                  }
+                  let filtered = origins.filter(port => {
+                      let name = (port || '').trim().toLowerCase();
+                      if (name.startsWith(q)) return true;
+                      let words = name.split(/[\s\-_/()]+/);
+                      return words.some(w => w.startsWith(q));
+                  });
+                  return filtered.sort((a, b) => {
+                      let aLower = a.toLowerCase();
+                      let bLower = b.toLowerCase();
+                      let aStarts = aLower.startsWith(q);
+                      let bStarts = bLower.startsWith(q);
+                      if (aStarts && !bStarts) return -1;
+                      if (!aStarts && bStarts) return 1;
+                      return aLower.localeCompare(bLower);
+                  });
+              },
               get availableDestinations() {
-                  if (!this.operator || !this.origin) return [];
-                  let origLower = (this.origin || '').trim().toLowerCase();
+                  let orig = this.currentOrigin;
+                  if (!this.operator || !orig) return [];
+                  let origLower = orig.trim().toLowerCase();
                   let destinations = [];
                   this.activeRoutes.forEach(r => {
                       if ((!this.mode || r.mode === this.mode) && 
@@ -530,32 +572,100 @@
                   });
                   return destinations.sort();
               },
+              get filteredDestinations() {
+                  let destinations = this.availableDestinations;
+                  if (!destinations || destinations.length === 0) return [];
+                  let q = (this.destination || '').trim().toLowerCase();
+                  if (!q || !this.destinationIsDirty) {
+                      return destinations;
+                  }
+                  let filtered = destinations.filter(port => {
+                      let name = (port || '').trim().toLowerCase();
+                      if (name.startsWith(q)) return true;
+                      let words = name.split(/[\s\-_/()]+/);
+                      return words.some(w => w.startsWith(q));
+                  });
+                  return filtered.sort((a, b) => {
+                      let aLower = a.toLowerCase();
+                      let bLower = b.toLowerCase();
+                      let aStarts = aLower.startsWith(q);
+                      let bStarts = bLower.startsWith(q);
+                      if (aStarts && !bStarts) return -1;
+                      if (!aStarts && bStarts) return 1;
+                      return aLower.localeCompare(bLower);
+                  });
+              },
               selectOrigin(port) {
                   this.origin = port;
+                  this.selectedOrigin = port;
+                  this.originIsDirty = false;
                   this.showOriginSuggestions = false;
                   this.errors.origin = '';
                   this.$nextTick(() => {
                       let validDests = this.availableDestinations.map(d => d.trim().toLowerCase());
                       if (this.destination && !validDests.includes(this.destination.trim().toLowerCase())) {
                           this.destination = '';
+                          this.selectedDestination = '';
                       }
                   });
               },
+              closeOriginSuggestions() {
+                  this.showOriginSuggestions = false;
+                  let typed = (this.origin || '').trim();
+                  if (!typed) {
+                      this.origin = '';
+                      this.selectedOrigin = '';
+                      this.originIsDirty = false;
+                      return;
+                  }
+                  let match = this.availableOrigins.find(o => o.toLowerCase() === typed.toLowerCase());
+                  if (match) {
+                      this.selectOrigin(match);
+                  } else if (this.selectedOrigin) {
+                      this.origin = this.selectedOrigin;
+                  } else {
+                      this.origin = '';
+                  }
+                  this.originIsDirty = false;
+              },
               selectDestination(port) {
                   this.destination = port;
+                  this.selectedDestination = port;
+                  this.destinationIsDirty = false;
                   this.showDestinationSuggestions = false;
                   this.errors.destination = '';
-                  if (this.trip_type === 'round_trip' && !this.hasReturnRoute(this.origin, port)) {
+                  if (this.trip_type === 'round_trip' && !this.hasReturnRoute(this.currentOrigin, port)) {
                       this.trip_type = 'one_way';
                       this.return_date = '';
                       this.vehicleCutoffNotice = 'Notice: ' + port + ' only operates as One Way (no return sailing scheduled). Switched to One Way trip.';
                       setTimeout(() => { this.vehicleCutoffNotice = ''; }, 7000);
                   }
               },
+              closeDestinationSuggestions() {
+                  this.showDestinationSuggestions = false;
+                  let typed = (this.destination || '').trim();
+                  if (!typed) {
+                      this.destination = '';
+                      this.selectedDestination = '';
+                      this.destinationIsDirty = false;
+                      return;
+                  }
+                  let match = this.availableDestinations.find(d => d.toLowerCase() === typed.toLowerCase());
+                  if (match) {
+                      this.selectDestination(match);
+                  } else if (this.selectedDestination) {
+                      this.destination = this.selectedDestination;
+                  } else {
+                      this.destination = '';
+                  }
+                  this.destinationIsDirty = false;
+              },
               get enabledDepartureDates() {
-                  if (!this.origin || !this.destination) return [];
-                  let origLower = (this.origin || '').trim().toLowerCase();
-                  let destLower = (this.destination || '').trim().toLowerCase();
+                  let orig = this.currentOrigin || this.origin;
+                  let dest = this.selectedDestination || this.destination;
+                  if (!orig || !dest) return [];
+                  let origLower = orig.trim().toLowerCase();
+                  let destLower = dest.trim().toLowerCase();
                   let dates = [];
                   this.activeRoutes.forEach(r => {
                        if ((!this.mode || r.mode === this.mode) && 
@@ -572,9 +682,11 @@
                   return dates.sort();
               },
               get enabledReturnDates() {
-                  if (!this.origin || !this.destination) return [];
-                  let origLower = (this.origin || '').trim().toLowerCase();
-                  let destLower = (this.destination || '').trim().toLowerCase();
+                  let orig = this.currentOrigin || this.origin;
+                  let dest = this.selectedDestination || this.destination;
+                  if (!orig || !dest) return [];
+                  let origLower = orig.trim().toLowerCase();
+                  let destLower = dest.trim().toLowerCase();
                   let dates = [];
                   this.activeRoutes.forEach(r => {
                        if ((!this.mode || r.mode === this.mode) && 
@@ -630,6 +742,11 @@
                   let tmp = this.origin;
                   this.origin = this.destination;
                   this.destination = tmp;
+                  let tmpSel = this.selectedOrigin;
+                  this.selectedOrigin = this.selectedDestination;
+                  this.selectedDestination = tmpSel;
+                  this.originIsDirty = false;
+                  this.destinationIsDirty = false;
               },
              search() {
                  this.clampPassengersToMax();
@@ -641,11 +758,24 @@
                      this.errors.operator = 'Please select an operator';
                      hasError = true;
                  }
-                 if (!this.origin || !this.origin.trim()) {
-                     this.errors.origin = 'Departure city is required';
-                     hasError = true;
-                 }
-                  if (!this.destination || !this.destination.trim()) {
+                 let origMatch = this.availableOrigins.find(o => o.toLowerCase() === (this.origin || '').trim().toLowerCase());
+                  if (origMatch) {
+                      this.origin = origMatch;
+                      this.selectedOrigin = origMatch;
+                  } else if (this.selectedOrigin) {
+                      this.origin = this.selectedOrigin;
+                  } else {
+                      this.errors.origin = 'Departure city is required';
+                      hasError = true;
+                  }
+
+                  let destMatch = this.availableDestinations.find(d => d.toLowerCase() === (this.destination || '').trim().toLowerCase());
+                  if (destMatch) {
+                      this.destination = destMatch;
+                      this.selectedDestination = destMatch;
+                  } else if (this.selectedDestination) {
+                      this.destination = this.selectedDestination;
+                  } else {
                       this.errors.destination = 'Arrival City is required';
                       hasError = true;
                   }
@@ -868,7 +998,7 @@
                          class="absolute left-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 max-h-72 overflow-y-auto"
                          style="display: none;">
                         <template x-for="op in filteredOperatorsList" :key="op.value">
-                            <button type="button" @click="operator = op.value; showOperatorDropdown = false; errors.operator = ''; if (origin && !availableOrigins.includes(origin)) { origin = ''; destination = ''; } if (destination && !availableDestinations.includes(destination)) { destination = ''; }"
+                            <button type="button" @click="operator = op.value; showOperatorDropdown = false; errors.operator = ''; if (origin && !availableOrigins.includes(origin)) { origin = ''; selectedOrigin = ''; destination = ''; selectedDestination = ''; } if (destination && !availableDestinations.includes(destination)) { destination = ''; selectedDestination = ''; }"
                                     class="w-full text-left px-4 py-2.5 text-sm font-semibold flex items-center justify-between hover:bg-slate-50 transition"
                                     :class="operator === op.value ? 'text-[#216417] bg-emerald-50/50' : 'text-slate-700'">
                                 <div class="flex items-center gap-3">
@@ -1073,7 +1203,7 @@
             <div class="flex flex-col md:flex-row gap-2.5 md:items-stretch w-full min-w-0">
                 
                 <!-- From (Origin) -->
-                <div @click.outside="showOriginSuggestions = false" class="w-full md:flex-1 min-w-0 relative border border-gray-200 rounded-xl px-4 py-2.5 bg-white hover:border-[#216417] focus-within:border-[#216417] focus-within:ring-1 focus-within:ring-[#216417] transition flex flex-col justify-center">
+                <div @click.outside="closeOriginSuggestions()" class="w-full md:flex-1 min-w-0 relative border border-gray-200 rounded-xl px-4 py-2.5 bg-white hover:border-[#216417] focus-within:border-[#216417] focus-within:ring-1 focus-within:ring-[#216417] transition flex flex-col justify-center">
                     {{-- Validation Tooltip --}}
                     <div x-show="errors.origin" 
                          x-transition
@@ -1086,11 +1216,15 @@
                     <label class="text-xs text-gray-400 font-medium block mb-0.5 truncate">From</label>
                     <div class="flex items-center gap-2 w-full min-w-0">
                         <input type="text" 
+                               x-ref="originInput"
                                x-model="origin" 
-                               @input="errors.origin = ''"
-                               @focus="if (!operator) { errors.operator = 'Please select an operator first'; showOperatorDropdown = true; return; } showOriginSuggestions = true; errors.origin = ''" 
-                               @click="if (!operator) { errors.operator = 'Please select an operator first'; showOperatorDropdown = true; return; } showOriginSuggestions = true; errors.origin = ''" 
+                               @input="originIsDirty = true; errors.origin = ''; showOriginSuggestions = true; if (!origin) { selectedOrigin = ''; }"
+                               @focus="if (!operator) { errors.operator = 'Please select an operator first'; showOperatorDropdown = true; return; } showOriginSuggestions = true; errors.origin = ''; originIsDirty = false; $el.select();" 
+                               @click="if (!operator) { errors.operator = 'Please select an operator first'; showOperatorDropdown = true; return; } showOriginSuggestions = true; errors.origin = '';" 
+                               @keydown.enter.prevent="if (filteredOrigins.length > 0) { selectOrigin(filteredOrigins[0]); $refs.destinationInput.focus(); }"
+                               @keydown.escape="showOriginSuggestions = false"
                                placeholder="Origin" 
+                               autocomplete="off"
                                class="w-full min-w-0 bg-transparent text-sm md:text-base font-semibold text-gray-800 placeholder:text-gray-400 focus:outline-none border-0 p-0 truncate">
                     </div>
                     {{-- Origin Suggestions --}}
@@ -1101,10 +1235,17 @@
                         <template x-if="availableOrigins.length === 0">
                             <div class="px-4 py-2 text-xs font-semibold text-gray-500">No schedules found for this operator</div>
                         </template>
-                        <template x-for="port in availableOrigins" :key="port">
-                            <button type="button" @click="selectOrigin(port)"
-                                    class="w-full text-left px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-emerald-50 hover:text-[#216417] transition flex items-center justify-between">
+                        <template x-if="availableOrigins.length > 0 && filteredOrigins.length === 0">
+                            <div class="px-4 py-2 text-xs font-semibold text-gray-500">No origins matching "<span x-text="origin"></span>"</div>
+                        </template>
+                        <template x-for="port in filteredOrigins" :key="port">
+                            <button type="button" @click="selectOrigin(port); $refs.destinationInput.focus();"
+                                    class="w-full text-left px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-emerald-50 hover:text-[#216417] transition flex items-center justify-between"
+                                    :class="{ 'bg-emerald-50 text-[#216417] font-bold': (selectedOrigin || origin) === port }">
                                 <span x-text="port"></span>
+                                <svg x-show="(selectedOrigin || origin) === port" class="w-4 h-4 text-[#216417]" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
                             </button>
                         </template>
                     </div>
@@ -1123,7 +1264,7 @@
                 </div>
 
                 <!-- To (Destination) -->
-                <div @click.outside="showDestinationSuggestions = false" class="w-full md:flex-1 min-w-0 relative border border-gray-200 rounded-xl px-4 py-2.5 bg-white hover:border-[#216417] focus-within:border-[#216417] focus-within:ring-1 focus-within:ring-[#216417] transition flex flex-col justify-center">
+                <div @click.outside="closeDestinationSuggestions()" class="w-full md:flex-1 min-w-0 relative border border-gray-200 rounded-xl px-4 py-2.5 bg-white hover:border-[#216417] focus-within:border-[#216417] focus-within:ring-1 focus-within:ring-[#216417] transition flex flex-col justify-center">
                     {{-- Validation Tooltip --}}
                     <div x-show="errors.destination" 
                          x-transition
@@ -1136,11 +1277,15 @@
                     <label class="text-xs text-gray-400 font-medium block mb-0.5 truncate">To</label>
                     <div class="flex items-center gap-2 w-full min-w-0">
                         <input type="text" 
+                               x-ref="destinationInput"
                                x-model="destination" 
-                               @input="errors.destination = ''"
-                               @focus="if (!operator) { errors.operator = 'Please select an operator first'; showOperatorDropdown = true; return; } showDestinationSuggestions = true; errors.destination = ''" 
-                               @click="if (!operator) { errors.operator = 'Please select an operator first'; showOperatorDropdown = true; return; } showDestinationSuggestions = true; errors.destination = ''" 
+                               @input="destinationIsDirty = true; errors.destination = ''; showDestinationSuggestions = true; if (!destination) { selectedDestination = ''; }"
+                               @focus="if (!operator) { errors.operator = 'Please select an operator first'; showOperatorDropdown = true; return; } showDestinationSuggestions = true; errors.destination = ''; destinationIsDirty = false; $el.select();" 
+                               @click="if (!operator) { errors.operator = 'Please select an operator first'; showOperatorDropdown = true; return; } showDestinationSuggestions = true; errors.destination = '';" 
+                               @keydown.enter.prevent="if (filteredDestinations.length > 0) { selectDestination(filteredDestinations[0]); }"
+                               @keydown.escape="showDestinationSuggestions = false"
                                placeholder="Destination" 
+                               autocomplete="off"
                                class="w-full min-w-0 bg-transparent text-sm md:text-base font-semibold text-gray-800 placeholder:text-gray-400 focus:outline-none border-0 p-0 truncate">
                     </div>
                     {{-- Destination Suggestions --}}
@@ -1148,19 +1293,28 @@
                          class="absolute left-0 right-0 top-full mt-2 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50 max-h-56 overflow-y-auto"
                          style="display: none;">
                         <div class="px-4 py-1.5 text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Available Destinations</div>
-                        <template x-if="!origin">
+                        <template x-if="!currentOrigin">
                             <div class="px-4 py-2 text-xs font-semibold text-gray-500">Please select From (Origin) first</div>
                         </template>
-                        <template x-if="origin && availableDestinations.length === 0">
-                            <div class="px-4 py-2 text-xs font-semibold text-gray-500">No destinations available from <span x-text="origin"></span></div>
+                        <template x-if="currentOrigin && availableDestinations.length === 0">
+                            <div class="px-4 py-2 text-xs font-semibold text-gray-500">No destinations available from <span x-text="currentOrigin"></span></div>
                         </template>
-                        <template x-for="port in availableDestinations" :key="port">
+                        <template x-if="currentOrigin && availableDestinations.length > 0 && filteredDestinations.length === 0">
+                            <div class="px-4 py-2 text-xs font-semibold text-gray-500">No destinations matching "<span x-text="destination"></span>"</div>
+                        </template>
+                        <template x-for="port in filteredDestinations" :key="port">
                             <button type="button" @click="selectDestination(port)"
-                                    class="w-full text-left px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-emerald-50 hover:text-[#216417] transition flex items-center justify-between">
+                                    class="w-full text-left px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-emerald-50 hover:text-[#216417] transition flex items-center justify-between"
+                                    :class="{ 'bg-emerald-50 text-[#216417] font-bold': (selectedDestination || destination) === port }">
                                 <span x-text="port"></span>
-                                <template x-if="trip_type === 'round_trip' && !hasReturnRoute(origin, port)">
-                                    <span class="text-[10px] uppercase font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">One Way only</span>
-                                </template>
+                                <div class="flex items-center gap-1.5">
+                                    <template x-if="trip_type === 'round_trip' && !hasReturnRoute(currentOrigin, port)">
+                                        <span class="text-[10px] uppercase font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">One Way only</span>
+                                    </template>
+                                    <svg x-show="(selectedDestination || destination) === port" class="w-4 h-4 text-[#216417]" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                    </svg>
+                                </div>
                             </button>
                         </template>
                     </div>
