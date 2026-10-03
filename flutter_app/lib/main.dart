@@ -9482,6 +9482,16 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
 
   Widget _buildPromoTicketBanner(Map<String, dynamic> promo,
       {bool isReturn = false}) {
+    if (promo['ends_at'] != null) {
+      final endsAt = DateTime.tryParse(promo['ends_at'].toString());
+      if (endsAt != null && DateTime.now().toUtc().isAfter(endsAt.toUtc())) {
+        return const SizedBox.shrink();
+      }
+    }
+    if ((promo['quantity_remaining'] ?? 0) <= 0) {
+      return const SizedBox.shrink();
+    }
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       padding: const EdgeInsets.all(16),
@@ -9597,14 +9607,23 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
               final c = classes[index];
               final isSelected = c['id'] == val;
 
-              final rateType = c['rate_type']?.toString() ??
+              final promoEndStr = c['promo_duration_end']?.toString();
+              final promoEnd = promoEndStr != null ? DateTime.tryParse(promoEndStr) : null;
+              final bool isExpired = promoEnd != null && DateTime.now().toUtc().isAfter(promoEnd.toUtc());
+
+              final rawRateType = c['rate_type']?.toString() ??
                   ((c['is_promo'] == true || c['is_promo'] == 1)
                       ? 'promotional'
                       : 'regular');
-              final isSuperPromo = rateType == 'super_promotional';
-              final isPromo = rateType == 'promotional' ||
+              final rateType = isExpired ? 'regular' : rawRateType;
+              final isSuperPromo = !isExpired && rateType == 'super_promotional';
+              final isPromo = !isExpired && (rateType == 'promotional' ||
                   (!isSuperPromo &&
-                      (c['is_promo'] == true || c['is_promo'] == 1));
+                      (c['is_promo'] == true || c['is_promo'] == 1)));
+
+              final effectivePrice = (isExpired && c['original_price'] != null)
+                  ? _parseDouble(c['original_price'])
+                  : _parseDouble(c['price']);
 
               return GestureDetector(
                 onTap: () async {
@@ -9676,7 +9695,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                         widget.booking.selectedReturnFerryAccommodationName =
                             c['name'];
                         widget.booking.selectedReturnFerryAccommodationPrice =
-                            _parseDouble(c['price']);
+                            effectivePrice;
                         widget.booking.selectedReturnRateType = rateType;
                         widget.booking.selectedReturnRateCode =
                             c['rate_code']?.toString();
@@ -9685,7 +9704,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                         widget.booking.selectedFerryAccommodationName =
                             c['name'];
                         widget.booking.selectedFerryAccommodationPrice =
-                            _parseDouble(c['price']);
+                            effectivePrice;
                         widget.booking.selectedRateType = rateType;
                         widget.booking.selectedRateCode =
                             c['rate_code']?.toString();
@@ -9696,7 +9715,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                         widget.booking.selectedReturnAirlineClassName =
                             c['name'];
                         widget.booking.selectedReturnAirlineClassPrice =
-                            _parseDouble(c['price']);
+                            effectivePrice;
                         widget.booking.selectedReturnRateType = rateType;
                         widget.booking.selectedReturnRateCode =
                             c['rate_code']?.toString();
@@ -9704,7 +9723,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                         widget.booking.selectedAirlineClassId = c['id'];
                         widget.booking.selectedAirlineClassName = c['name'];
                         widget.booking.selectedAirlineClassPrice =
-                            _parseDouble(c['price']);
+                            effectivePrice;
                         widget.booking.selectedRateType = rateType;
                         widget.booking.selectedRateCode =
                             c['rate_code']?.toString();
@@ -9808,7 +9827,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                           Row(
                             children: [
                               Text(
-                                '₱${(_parseDouble(c['price']) + schedulePrice).toStringAsFixed(2)}',
+                                '₱${(effectivePrice + schedulePrice).toStringAsFixed(2)}',
                                 style: TextStyle(
                                     color: isPromo
                                         ? const Color(0xFFEA580C)

@@ -221,14 +221,7 @@ class TransactionResource extends Resource
                                 $breakdown = $booking->getPriceBreakdown();
                                 $total = (float) $booking->total_price;
 
-                                // Reconcile computed sum with stored total_price
-                                $computedSum = array_sum(array_column($breakdown, 'amount'));
-                                $diff = round($total - $computedSum, 2);
-                                if (abs($diff) >= 0.01) {
-                                    $breakdown[] = $diff > 0
-                                        ? ['label' => 'Service Fees & Adjustments', 'amount' => $diff, 'class' => 'text-slate-500']
-                                        : ['label' => 'Discount / Adjustment', 'amount' => $diff, 'class' => 'text-green-600'];
-                                }
+
 
                                 $html = '<div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">';
                                 $html .= '<table class="w-full text-sm text-left text-gray-700 dark:text-gray-200">';

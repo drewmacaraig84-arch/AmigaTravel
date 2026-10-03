@@ -648,6 +648,7 @@ class Schedule extends Model
                         'name' => $class->name,
                         'description' => $pivot?->description ?? $class->description,
                         'price' => floatval($price),
+                        'original_price' => $pivot?->original_price !== null ? floatval($pivot->original_price) : ($class->price > 0 ? floatval($class->price) : null),
                         'has_bed' => (bool) ($pivot?->has_bed ?? false),
                         'is_on_sale' => (bool) $class->is_on_sale,
                         'sale_price' => $class->sale_price ? floatval($class->sale_price) : null,
