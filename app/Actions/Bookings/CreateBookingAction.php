@@ -725,7 +725,7 @@ class CreateBookingAction
             if ($hasDiscount) {
                 $discount = $discounts->get($passenger['discount_id']);
                 if ($discount) {
-                    $fare -= $fare * ((float) $discount->percentage / 100);
+                    $fare = max(0.0, $fare - $discount->computeDiscountAmount($fare));
                 }
             }
 

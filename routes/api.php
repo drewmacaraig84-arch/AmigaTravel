@@ -32,8 +32,8 @@ Route::middleware('throttle:60,1')->group(function () {
     Route::get('/destinations',     [ScheduleController::class, 'destinations']);
     Route::get('/available-dates',  [ScheduleController::class, 'availableDates']);
     Route::get('/operators',        [ScheduleController::class, 'operators']);
-    Route::post('/schedules',       [ScheduleController::class, 'search']);
-    Route::get('/all-schedules',    [ScheduleController::class, 'allSchedules']);
+    Route::post('/schedules',       [ScheduleController::class, 'search'])->middleware('app.maintenance');
+    Route::get('/all-schedules',    [ScheduleController::class, 'allSchedules'])->middleware('app.maintenance');
     Route::get('/payment-settings', [BookingController::class, 'paymentSettings']);
     Route::get('/promotions',       [PromotionController::class, 'index']);
     Route::get('/discounts',        [DiscountController::class, 'index']);
@@ -76,6 +76,14 @@ Route::middleware('throttle:60,1')->group(function () {
             'play_store_url' => config('services.app_updates.play_store_url', 'https://play.google.com/store/apps/details?id=com.amiga.travel.flutter_app'),
             'app_store_url' => config('services.app_updates.app_store_url', 'https://apps.apple.com/app/amiga-gracia/id6470000000'),
             'app_gallery_url' => config('services.app_updates.app_gallery_url', 'https://appgallery.huawei.com/app/C118908953'),
+            'maintenance' => \App\Models\WebsiteSetting::getAppMaintenanceSettings(),
+        ]);
+    });
+
+    Route::get('/app-maintenance', function () {
+        return response()->json([
+            'status' => 'success',
+            'maintenance' => \App\Models\WebsiteSetting::getAppMaintenanceSettings(),
         ]);
     });
 });
@@ -84,8 +92,9 @@ Route::middleware('throttle:60,1')->group(function () {
 // Booking write endpoints — moderate throttle (20 per minute) to deter spam
 // Booking creation is kept public to support guest bookings.
 // Ownership is verified via client_email on all mutating endpoints.
+// Protected by app.maintenance break middleware.
 // ─────────────────────────────────────────────────────────────────────────────
-Route::middleware(['throttle:20,1', 'sensitive.actions'])->group(function () {
+Route::middleware(['throttle:20,1', 'sensitive.actions', 'app.maintenance'])->group(function () {
     Route::get('/bookings',               [BookingController::class, 'index']);
     Route::get('/bookings/{transaction_number}', [BookingController::class, 'show']);
     Route::post('/bookings',              [BookingController::class, 'store'])->middleware('throttle:30,1');

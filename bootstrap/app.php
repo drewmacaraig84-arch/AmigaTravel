@@ -30,6 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
             'staff.permission' => \App\Http\Middleware\EnsureStaffPermission::class,
             'sensitive.actions' => \App\Http\Middleware\ThrottleSensitiveActions::class,
+            'app.maintenance' => \App\Http\Middleware\CheckAppMaintenanceBreak::class,
         ]);
         
         $middleware->api(append: [

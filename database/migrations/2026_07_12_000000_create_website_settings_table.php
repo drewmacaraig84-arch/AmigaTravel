@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('website_settings', function (Blueprint $table) {
             $table->id();
-            $table->enum('page', ['header', 'footer', 'home', 'about', 'gallery', 'services', 'tour_package', 'contact_us', 'download'])->default('home');
+            $table->string('page', 50)->default('home');
             
             // Hero/Promotion section (for carousel)
             $table->json('hero_images')->nullable();

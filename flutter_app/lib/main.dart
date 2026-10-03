@@ -70,6 +70,156 @@ class AppEventBus {
 }
 
 // ==========================================
+// APP MAINTENANCE BREAK MODEL & DIALOG
+// ==========================================
+class AppMaintenanceInfo {
+  final bool isActive;
+  final String title;
+  final String message;
+  final int durationValue;
+  final String durationUnit;
+  final String estimatedDuration;
+  final String? startsAt;
+  final String? endsAt;
+  final int remainingSeconds;
+  final bool allowBrowsing;
+
+  const AppMaintenanceInfo({
+    required this.isActive,
+    required this.title,
+    required this.message,
+    required this.durationValue,
+    required this.durationUnit,
+    required this.estimatedDuration,
+    this.startsAt,
+    this.endsAt,
+    required this.remainingSeconds,
+    required this.allowBrowsing,
+  });
+
+  factory AppMaintenanceInfo.fromJson(Map<String, dynamic> json) {
+    return AppMaintenanceInfo(
+      isActive: json['is_active'] == true || json['is_active'] == 1,
+      title: json['title']?.toString() ?? 'Scheduled System Maintenance',
+      message: json['message']?.toString() ??
+          'We are currently performing system maintenance. Schedules, bookings, and ticket actions are temporarily paused. Thank you for your patience!',
+      durationValue: int.tryParse(json['duration_value']?.toString() ?? '45') ?? 45,
+      durationUnit: json['duration_unit']?.toString() ?? 'minutes',
+      estimatedDuration: json['estimated_duration']?.toString() ?? '45 minutes',
+      startsAt: json['starts_at']?.toString(),
+      endsAt: json['ends_at']?.toString(),
+      remainingSeconds: int.tryParse(json['remaining_seconds']?.toString() ?? '0') ?? 0,
+      allowBrowsing: json['allow_browsing'] != false,
+    );
+  }
+
+  static const fallback = AppMaintenanceInfo(
+    isActive: true,
+    title: 'Scheduled System Maintenance',
+    message: 'We are currently performing system maintenance. Schedules, bookings, and ticket actions are temporarily paused. Thank you for your patience!',
+    durationValue: 45,
+    durationUnit: 'minutes',
+    estimatedDuration: '45 minutes',
+    remainingSeconds: 2700,
+    allowBrowsing: true,
+  );
+}
+
+class MaintenanceBreakDialog {
+  static bool _alreadyShownThisSession = false;
+
+  static void showIfActive(BuildContext context, AppMaintenanceInfo maint, {bool force = false}) {
+    if (!maint.isActive) return;
+    if (_alreadyShownThisSession && !force) return;
+    _alreadyShownThisSession = true;
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        contentPadding: const EdgeInsets.all(24),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF3C7),
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFFFDE68A)),
+              ),
+              child: const Icon(Icons.build_rounded, size: 30, color: Color(0xFFB45309)),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              maint.title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: kSlate800),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF1F2),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFFECDD3)),
+              ),
+              child: Text(
+                'Estimated Duration: ${maint.estimatedDuration}',
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFFBE123C)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              maint.message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 13, color: kSlate600, height: 1.4),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline, size: 18, color: Color(0xFF64748B)),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'You can still browse destinations, routes, and tours. Booking, rebooking, and cancellations are temporarily paused.',
+                      style: TextStyle(fontSize: 11, color: Color(0xFF475569)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: kGreen,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Understood, Continue Browsing', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ==========================================
 // GLOBAL SESSION
 // ==========================================
 class UserSession {
@@ -96,12 +246,16 @@ class UserSession {
     }
   }
 
+  static final ValueNotifier<AppMaintenanceInfo?> maintenanceNotifier =
+      ValueNotifier<AppMaintenanceInfo?>(null);
+  static bool get isMaintenanceActive => maintenanceNotifier.value?.isActive ?? false;
+
   static int pointsAwarded = 0;
   static int spendThreshold = 0;
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.144+156';
+  static const String appVersion = '1.0.145+157';
   static String installedAppVersion = appVersion;
 
   static Future<void> init() async {
@@ -909,6 +1063,16 @@ class _GlobalUpdateWrapperState extends State<GlobalUpdateWrapper>
           .timeout(const Duration(seconds: 5));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        if (data['maintenance'] != null && data['maintenance'] is Map<String, dynamic>) {
+          final maint = AppMaintenanceInfo.fromJson(data['maintenance']);
+          UserSession.maintenanceNotifier.value = maint;
+          if (maint.isActive && mounted) {
+            final context = navigatorKey.currentContext;
+            if (context != null) {
+              MaintenanceBreakDialog.showIfActive(context, maint);
+            }
+          }
+        }
         final latestVersion = data['version'] as String;
         final forceUpdate = data['force_update'] as bool? ?? true;
         final playStoreUrl = data['play_store_url'] as String?;
@@ -1218,6 +1382,10 @@ class _SplashLoaderScreenState extends State<SplashLoaderScreen> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        if (data['maintenance'] != null && data['maintenance'] is Map<String, dynamic>) {
+          final maint = AppMaintenanceInfo.fromJson(data['maintenance']);
+          UserSession.maintenanceNotifier.value = maint;
+        }
         final latestVersion = data['version'] as String;
         final forceUpdate = data['force_update'] as bool? ?? true;
         final playStoreUrl = data['play_store_url'] as String?;
@@ -1925,6 +2093,10 @@ class _MainScreenState extends State<MainScreen> {
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final currentMaint = UserSession.maintenanceNotifier.value;
+      if (currentMaint != null && currentMaint.isActive) {
+        MaintenanceBreakDialog.showIfActive(context, currentMaint);
+      }
       if (pendingNotificationData != null) {
         final data = pendingNotificationData!;
         pendingNotificationData = null;
@@ -2218,21 +2390,64 @@ class _MainScreenState extends State<MainScreen> {
           ]
         ],
       ),
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: [
-          HomeScreen(
-            onBookFerry: () => _navigateToTravel('ferry'),
-            onBookAirline: () => _navigateToTravel('airline'),
-            onTrackBooking: () => setState(() => _selectedIndex = 4),
-          ),
-          const SchedulesScreen(),
-          TravelScreen(initialMode: _travelMode),
-          VouchersScreen(
-              onUseVoucher: () => setState(() => _selectedIndex = 2)),
-          ActivityScreen(
-              key: _activityKey, onLoginSuccess: () => setState(() {})),
-        ],
+      body: ValueListenableBuilder<AppMaintenanceInfo?>(
+        valueListenable: UserSession.maintenanceNotifier,
+        builder: (context, maint, child) {
+          final isMaintenance = maint?.isActive ?? false;
+          return Column(
+            children: [
+              if (isMaintenance)
+                Container(
+                  width: double.infinity,
+                  color: const Color(0xFFFEF3C7),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.build_circle, size: 20, color: Color(0xFFD97706)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Maintenance ongoing (${maint!.estimatedDuration}): Bookings & ticket operations paused.',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF92400E),
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => MaintenanceBreakDialog.showIfActive(context, maint, force: true),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text('Details', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFFB45309))),
+                      ),
+                    ],
+                  ),
+                ),
+              Expanded(
+                child: IndexedStack(
+                  index: _selectedIndex,
+                  children: [
+                    HomeScreen(
+                      onBookFerry: () => _navigateToTravel('ferry'),
+                      onBookAirline: () => _navigateToTravel('airline'),
+                      onTrackBooking: () => setState(() => _selectedIndex = 4),
+                    ),
+                    const SchedulesScreen(),
+                    TravelScreen(initialMode: _travelMode),
+                    VouchersScreen(
+                        onUseVoucher: () => setState(() => _selectedIndex = 2)),
+                    ActivityScreen(
+                        key: _activityKey, onLoginSuccess: () => setState(() {})),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
       floatingActionButtonLocation:
           const _RaisedCenterDockedFabLocation(riseAboveNotch: -8),
@@ -5230,6 +5445,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
 
   List<dynamic> _bookings = [];
   bool _loadingBookings = false;
+  String? _bookingsMaintenance;
   StreamSubscription<String>? _eventSub;
 
   @override
@@ -5301,9 +5517,19 @@ class _ActivityScreenState extends State<ActivityScreen> {
       }
       
       final data = jsonDecode(response.body);
+      if (response.statusCode == 503 || (data is Map && data['status'] == 'maintenance')) {
+        if (data is Map && data['maintenance'] != null) {
+          UserSession.maintenanceNotifier.value = AppMaintenanceInfo.fromJson(data['maintenance']);
+        }
+        setState(() {
+          _bookingsMaintenance = data['message'] ?? 'My Bookings is temporarily unavailable during maintenance break.';
+        });
+        return;
+      }
       if (response.statusCode == 200 && data['status'] == 'success') {
         setState(() {
           _bookings = parseJsonList(data['bookings']);
+          _bookingsMaintenance = null;
         });
       } else {
         debugPrint('Bookings error: ${response.statusCode} ${response.body}');
@@ -6462,7 +6688,72 @@ class _ActivityScreenState extends State<ActivityScreen> {
               style: TextStyle(
                   fontWeight: FontWeight.bold, fontSize: 18, color: kSlate800)),
           const SizedBox(height: 12),
-          if (_bookings.isEmpty)
+          if (_bookings.isEmpty && (UserSession.isMaintenanceActive || _bookingsMaintenance != null))
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 4))],
+                    border: Border.all(color: const Color(0xFFFDE68A)),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFEF3C7),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.build_rounded, size: 28, color: Color(0xFFB45309)),
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        UserSession.maintenanceNotifier.value?.title ?? 'Scheduled System Maintenance',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: kSlate800),
+                      ),
+                      const SizedBox(height: 6),
+                      if (UserSession.maintenanceNotifier.value?.estimatedDuration != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                          margin: const EdgeInsets.only(bottom: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF1F2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'Estimated Duration: ${UserSession.maintenanceNotifier.value!.estimatedDuration}',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFBE123C)),
+                          ),
+                        ),
+                      Text(
+                        _bookingsMaintenance ?? (UserSession.maintenanceNotifier.value?.message ?? 'My Bookings and ticket actions are temporarily paused.'),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 13, color: kSlate600, height: 1.4),
+                      ),
+                      const SizedBox(height: 18),
+                      ElevatedButton.icon(
+                        onPressed: _fetchBookings,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Refresh Bookings'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: kGreen,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          else if (_bookings.isEmpty)
             const Center(
               child: Padding(
                 padding: EdgeInsets.symmetric(vertical: 48),
@@ -6859,6 +7150,14 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   }
 
   Future<void> _confirmCancellation() async {
+    if (UserSession.isMaintenanceActive) {
+      if (UserSession.maintenanceNotifier.value != null) {
+        MaintenanceBreakDialog.showIfActive(context, UserSession.maintenanceNotifier.value!, force: true);
+      } else {
+        _showMessage('Ticket actions are temporarily paused for maintenance.', error: true);
+      }
+      return;
+    }
     if (_refundAccountCtrl.text.trim().isEmpty ||
         _refundNameCtrl.text.trim().isEmpty ||
         (_refundMethod != 'GCash' &&
@@ -6933,6 +7232,14 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   }
 
   Future<void> _uploadPaymentProof() async {
+    if (UserSession.isMaintenanceActive) {
+      if (UserSession.maintenanceNotifier.value != null) {
+        MaintenanceBreakDialog.showIfActive(context, UserSession.maintenanceNotifier.value!, force: true);
+      } else {
+        _showMessage('Payment proof uploads are temporarily paused for maintenance.', error: true);
+      }
+      return;
+    }
     final proof = await ImagePicker()
         .pickImage(source: ImageSource.gallery, imageQuality: 80);
     if (proof == null) return;
@@ -8750,6 +9057,13 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
         }),
       );
       final data = jsonDecode(res.body);
+      if (res.statusCode == 503 || (data is Map && data['status'] == 'maintenance')) {
+        if (data is Map && data['maintenance'] != null) {
+          UserSession.maintenanceNotifier.value = AppMaintenanceInfo.fromJson(data['maintenance']);
+        }
+        setState(() => _error = data['message'] ?? 'Schedule retrieval is temporarily paused due to maintenance break.');
+        return;
+      }
       if (res.statusCode == 200 && data['status'] == 'success') {
         _schedules = parseAndFilterSchedules(
             data['schedules'], widget.booking.departureDate);
@@ -8776,6 +9090,13 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
           }),
         );
         final returnData = jsonDecode(returnRes.body);
+        if (returnRes.statusCode == 503 || (returnData is Map && returnData['status'] == 'maintenance')) {
+          if (returnData is Map && returnData['maintenance'] != null) {
+            UserSession.maintenanceNotifier.value = AppMaintenanceInfo.fromJson(returnData['maintenance']);
+          }
+          setState(() => _error = returnData['message'] ?? 'Schedule retrieval is temporarily paused due to maintenance break.');
+          return;
+        }
         if (returnRes.statusCode == 200 && returnData['status'] == 'success') {
           _returnSchedules = parseAndFilterSchedules(
               returnData['schedules'], widget.booking.returnDate);
@@ -8845,21 +9166,99 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                 ? const Center(child: CircularProgressIndicator(color: kGreen))
                 : _error != null
                     ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(_error!,
-                                style: const TextStyle(color: Colors.red),
-                                textAlign: TextAlign.center),
-                            const SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: _fetchSchedules,
-                              style: ElevatedButton.styleFrom(
-                                  backgroundColor: kGreen),
-                              child: const Text('Retry',
-                                  style: TextStyle(color: Colors.white)),
-                            ),
-                          ],
+                        child: Padding(
+                          padding: const EdgeInsets.all(24.0),
+                          child: (UserSession.isMaintenanceActive || _error!.toLowerCase().contains('maintenance'))
+                              ? Container(
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 4))],
+                                    border: Border.all(color: const Color(0xFFFDE68A)),
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 56,
+                                        height: 56,
+                                        decoration: const BoxDecoration(
+                                          color: Color(0xFFFEF3C7),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(Icons.build_rounded, size: 28, color: Color(0xFFB45309)),
+                                      ),
+                                      const SizedBox(height: 14),
+                                      const Text(
+                                        'System Maintenance Ongoing',
+                                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: kSlate800),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      if (UserSession.maintenanceNotifier.value?.estimatedDuration != null)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                                          margin: const EdgeInsets.only(bottom: 10),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFFFF1F2),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            'Estimated Duration: ${UserSession.maintenanceNotifier.value!.estimatedDuration}',
+                                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFBE123C)),
+                                          ),
+                                        ),
+                                      Text(
+                                        _error!,
+                                        style: const TextStyle(color: kSlate600, fontSize: 13, height: 1.4),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      const SizedBox(height: 18),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: OutlinedButton(
+                                              onPressed: () => Navigator.of(context).pop(),
+                                              style: OutlinedButton.styleFrom(
+                                                foregroundColor: kSlate700,
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                              ),
+                                              child: const Text('Back to Home'),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: ElevatedButton(
+                                              onPressed: _fetchSchedules,
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: kGreen,
+                                                foregroundColor: Colors.white,
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                              ),
+                                              child: const Text('Retry'),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(_error!,
+                                        style: const TextStyle(color: Colors.red),
+                                        textAlign: TextAlign.center),
+                                    const SizedBox(height: 16),
+                                    ElevatedButton(
+                                      onPressed: _fetchSchedules,
+                                      style: ElevatedButton.styleFrom(
+                                          backgroundColor: kGreen),
+                                      child: const Text('Retry',
+                                          style: TextStyle(color: Colors.white)),
+                                    ),
+                                  ],
+                                ),
                         ),
                       )
                     : SingleChildScrollView(
@@ -11925,7 +12324,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
   double _computePassengerDiscount(double grossFare, dynamic discountId) {
     if (grossFare <= 0 || discountId == null) return 0.0;
     final disc = _discountsList.firstWhere(
-      (d) => d['id'] == discountId,
+      (d) => d['id'] == discountId || d['id'].toString() == discountId.toString(),
       orElse: () => {},
     );
     final discName = (disc['name'] ?? '').toString().toLowerCase();
@@ -12174,6 +12573,20 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
 
   Future<void> _submit() async {
     if (_isSubmitting) return;
+    if (UserSession.isMaintenanceActive) {
+      if (UserSession.maintenanceNotifier.value != null) {
+        MaintenanceBreakDialog.showIfActive(context, UserSession.maintenanceNotifier.value!, force: true);
+      } else {
+        showTopSnack(
+          context,
+          const SnackBar(
+            content: Text('Bookings are temporarily paused due to scheduled system maintenance.'),
+            backgroundColor: Colors.amber,
+          ),
+        );
+      }
+      return;
+    }
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isSubmitting = true);
@@ -12329,6 +12742,23 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
         }),
       );
       final data = jsonDecode(res.body);
+      if (res.statusCode == 503 || (data is Map && data['status'] == 'maintenance')) {
+        if (data is Map && data['maintenance'] != null) {
+          UserSession.maintenanceNotifier.value = AppMaintenanceInfo.fromJson(data['maintenance']);
+          if (mounted) {
+            MaintenanceBreakDialog.showIfActive(context, UserSession.maintenanceNotifier.value!, force: true);
+          }
+        } else if (mounted) {
+          showTopSnack(
+            context,
+            SnackBar(
+              content: Text(data['message'] ?? 'Booking is temporarily paused for maintenance.'),
+              backgroundColor: Colors.amber,
+            ),
+          );
+        }
+        return;
+      }
       if (res.statusCode == 200 && data['status'] == 'success') {
         BookingData.clearPrefs();
         BookingData.activeSession = null;
@@ -12707,107 +13137,87 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
 
                   Builder(builder: (ctx) {
                     try {
-                      double scheduleAccommodationCost = 0.0;
-                      final totalAirlinePassengers = widget.booking.mode == 'airline'
-                          ? widget.booking.adults + widget.booking.children + widget.booking.minors + widget.booking.infants
-                          : widget.booking.adults + widget.booking.children;
-                      int payingAdults = widget.booking.hasVehicle
-                          ? (widget.booking.adults - 1).clamp(0, 999)
-                          : widget.booking.adults;
-                      int payingChildren = widget.booking.children;
-                      int payingMinors = widget.booking.mode == 'airline' ? widget.booking.minors : 0;
-                      int payingInfants = widget.booking.mode == 'airline' ? widget.booking.infants : 0;
-                      int payingPax = payingAdults + payingChildren + payingMinors + payingInfants;
-
+                      final isFerry = widget.booking.mode == 'ferry';
                       final bool isSuperPromo = widget.booking.isSuperPromo;
                       final bool isPromo = widget.booking.isPromo ||
                           (widget.booking.usePromoTicket && widget.booking.promotionalTicketId != null);
 
-                      final depTc = (widget.booking.mode == 'ferry'
+                      final depTc = (isFerry
                           ? (widget.booking.selectedFerryAccommodationPrice ?? 0)
                           : (widget.booking.selectedAirlineClassPrice ?? 0)).toDouble();
                       final retTc = widget.booking.tripType == 'round_trip'
-                          ? (widget.booking.mode == 'ferry'
+                          ? (isFerry
                               ? (widget.booking.selectedReturnFerryAccommodationPrice ?? 0)
                               : (widget.booking.selectedReturnAirlineClassPrice ?? 0)).toDouble()
                           : 0.0;
 
-                      final childMultiplier = (isSuperPromo || isPromo) ? 1.0 : 0.5;
-                      final minorMultiplier = (isSuperPromo || isPromo) ? 1.0 : 0.5;
-                      final infantMultiplier = (isSuperPromo || isPromo) ? 1.0 : 0.5;
-
                       double depTicketAndClass = 0.0;
-                      if (widget.booking.selectedSchedule != null) {
-                        final rawAdultP = isPromo && widget.booking.selectedSchedule!['promotional_ticket'] != null
-                            ? (widget.booking.selectedSchedule!['promotional_ticket']['promo_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0)
-                            : (widget.booking.selectedSchedule!['adult_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0);
-                        final adultDepBase = rawAdultP is num ? rawAdultP.toDouble() : (double.tryParse(rawAdultP.toString()) ?? 0.0);
-                        final adultDepGross = adultDepBase + depTc;
-
-                        final childDep = childMultiplier * adultDepGross;
-                        final minorDep = minorMultiplier * adultDepGross;
-                        final infantDep = infantMultiplier * adultDepGross;
-
-                        depTicketAndClass = (payingAdults * adultDepGross) +
-                            (payingChildren * childDep) +
-                            (payingMinors * minorDep) +
-                            (payingInfants * infantDep);
-
-                        if (widget.booking.selectedScheduleAccommodation != null) {
-                          final accPrice = widget.booking.selectedScheduleAccommodation!['price'] ?? 0;
-                          scheduleAccommodationCost += (payingPax *
-                              (accPrice is num ? accPrice.toDouble() : (double.tryParse(accPrice.toString()) ?? 0.0)));
-                        }
-                      }
-
                       double retTicketAndClass = 0.0;
-                      if (widget.booking.tripType == 'round_trip' &&
-                          widget.booking.selectedReturnSchedule != null) {
-                        final rawAdultP = widget.booking.selectedReturnSchedule!['adult_price'] ?? widget.booking.selectedReturnSchedule!['price'] ?? 0;
-                        final adultRetBase = rawAdultP is num ? rawAdultP.toDouble() : (double.tryParse(rawAdultP.toString()) ?? 0.0);
-                        final adultRetGross = adultRetBase + retTc;
-
-                        final childRet = childMultiplier * adultRetGross;
-                        final minorRet = minorMultiplier * adultRetGross;
-                        final infantRet = infantMultiplier * adultRetGross;
-
-                        retTicketAndClass = (payingAdults * adultRetGross) +
-                            (payingChildren * childRet) +
-                            (payingMinors * minorRet) +
-                            (payingInfants * infantRet);
-
-                        if (widget.booking.selectedReturnScheduleAccommodation != null) {
-                          final accPrice = widget.booking.selectedReturnScheduleAccommodation!['price'] ?? 0;
-                          scheduleAccommodationCost += (payingPax *
-                              (accPrice is num ? accPrice.toDouble() : (double.tryParse(accPrice.toString()) ?? 0.0)));
-                        }
-                      }
-
+                      double scheduleAccommodationCost = 0.0;
                       double passengerDiscount = 0.0;
                       final Map<String, double> groupedPassengerDiscounts = {};
-                      if (!isSuperPromo && !isPromo) {
-                        for (var p in widget.booking.passengers) {
-                          final pType = (p['type'] ?? '').toString().toLowerCase();
-                          final isRegularMinor = !isPromo &&
-                              (pType == 'minor' || pType == 'child' || (widget.booking.mode == 'airline' && pType == 'infant'));
-                          if (p['discount_id'] != null && !isRegularMinor &&
-                              widget.booking.selectedSchedule != null) {
-                            final rawAp = isPromo && widget.booking.selectedSchedule!['promotional_ticket'] != null
-                                ? (widget.booking.selectedSchedule!['promotional_ticket']['promo_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0)
-                                : (widget.booking.selectedSchedule!['adult_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0);
-                            final ap = (rawAp is num ? rawAp.toDouble() : (double.tryParse(rawAp.toString()) ?? 0.0)) + depTc;
-                            final depDisc = _computePassengerDiscount(ap, p['discount_id']);
-                            double retDisc = 0.0;
-                            if (widget.booking.tripType == 'round_trip' &&
-                                widget.booking.selectedReturnSchedule != null) {
-                              final rp = widget.booking
-                                      .selectedReturnSchedule!['adult_price'] ??
-                                  widget.booking
-                                      .selectedReturnSchedule!['price'] ??
-                                  0;
-                              final retAp = (rp is num ? rp.toDouble() : (double.tryParse(rp.toString()) ?? 0.0)) + retTc;
-                              retDisc = _computePassengerDiscount(retAp, p['discount_id']);
+                      int payingPax = 0;
+
+                      final rawDepPrice = (isPromo && widget.booking.selectedSchedule?['promotional_ticket'] != null)
+                          ? (widget.booking.selectedSchedule!['promotional_ticket']['promo_price'] ?? widget.booking.selectedSchedule!['price'] ?? 0)
+                          : (widget.booking.selectedSchedule?['adult_price'] ?? widget.booking.selectedSchedule?['price'] ?? 0);
+                      final depBasePrice = (rawDepPrice is num ? rawDepPrice.toDouble() : (double.tryParse(rawDepPrice.toString()) ?? 0.0));
+
+                      final rawRetPrice = widget.booking.selectedReturnSchedule != null
+                          ? (widget.booking.selectedReturnSchedule!['adult_price'] ?? widget.booking.selectedReturnSchedule!['price'] ?? 0)
+                          : 0;
+                      final retBasePrice = (rawRetPrice is num ? rawRetPrice.toDouble() : (double.tryParse(rawRetPrice.toString()) ?? 0.0));
+
+                      final depAccPrice = widget.booking.selectedScheduleAccommodation != null
+                          ? _parseDouble(widget.booking.selectedScheduleAccommodation!['price'])
+                          : 0.0;
+                      final retAccPrice = widget.booking.selectedReturnScheduleAccommodation != null
+                          ? _parseDouble(widget.booking.selectedReturnScheduleAccommodation!['price'])
+                          : 0.0;
+
+                      final pList = widget.booking.passengers;
+                      if (pList.isNotEmpty) {
+                        for (final p in pList) {
+                          final pType = (p['type'] ?? 'adult').toString().toLowerCase();
+                          if (pType == 'driver') {
+                            continue; // Driver ticket, transport class and schedule accommodation are free
+                          }
+                          payingPax++;
+
+                          double paxMultiplier = 1.0;
+                          if (!isSuperPromo && !isPromo) {
+                            if (isFerry) {
+                              if (pType == 'child' || pType == 'minor') {
+                                paxMultiplier = 0.5;
+                              }
+                            } else {
+                              if (pType == 'minor' || pType == 'child' || pType == 'infant') {
+                                paxMultiplier = 0.5;
+                              }
                             }
+                          }
+
+                          final depTicket = (depBasePrice + depTc) * paxMultiplier;
+                          depTicketAndClass += depTicket;
+                          scheduleAccommodationCost += depAccPrice;
+
+                          double retTicket = 0.0;
+                          if (widget.booking.tripType == 'round_trip' && widget.booking.selectedReturnSchedule != null) {
+                            retTicket = (retBasePrice + retTc) * paxMultiplier;
+                            retTicketAndClass += retTicket;
+                            scheduleAccommodationCost += retAccPrice;
+                          }
+
+                          final isMinorPax = (pType == 'child' || pType == 'minor') || (!isFerry && pType == 'infant');
+                          final hasDiscount = p['discount_id'] != null &&
+                              !isSuperPromo &&
+                              !(!isSuperPromo && !isPromo && isMinorPax);
+
+                          if (hasDiscount) {
+                            final depDisc = _computePassengerDiscount(depTicket, p['discount_id']);
+                            final retDisc = (widget.booking.tripType == 'round_trip' && widget.booking.selectedReturnSchedule != null)
+                                ? _computePassengerDiscount(retTicket, p['discount_id'])
+                                : 0.0;
                             final totalPaxDisc = depDisc + retDisc;
                             if (totalPaxDisc > 0) {
                               passengerDiscount += totalPaxDisc;
@@ -12820,20 +13230,30 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                             }
                           }
                         }
+                      } else {
+                        int fallbackAdults = widget.booking.hasVehicle ? (widget.booking.adults - 1).clamp(0, 999) : widget.booking.adults;
+                        int fallbackChildren = widget.booking.children;
+                        payingPax = fallbackAdults + fallbackChildren;
+                        final childMult = (isSuperPromo || isPromo) ? 1.0 : 0.5;
+
+                        depTicketAndClass = (fallbackAdults * (depBasePrice + depTc)) + (fallbackChildren * (depBasePrice + depTc) * childMult);
+                        scheduleAccommodationCost += payingPax * depAccPrice;
+
+                        if (widget.booking.tripType == 'round_trip' && widget.booking.selectedReturnSchedule != null) {
+                          retTicketAndClass = (fallbackAdults * (retBasePrice + retTc)) + (fallbackChildren * (retBasePrice + retTc) * childMult);
+                          scheduleAccommodationCost += payingPax * retAccPrice;
+                        }
                       }
 
                       double vehicleCost = 0.0;
-                      if (widget.booking.hasVehicle &&
-                          widget.booking.mode == 'ferry') {
+                      if (widget.booking.hasVehicle && isFerry) {
                         vehicleCost = widget.booking.vehiclePrice;
                       }
 
                       double accommodationCost = 0.0;
                       if (widget.booking.selectedAccommodationIds.isNotEmpty) {
-                        for (var acc
-                            in widget.booking.availableAccommodations) {
-                          if (widget.booking.selectedAccommodationIds
-                              .contains(acc['id'])) {
+                        for (var acc in widget.booking.availableAccommodations) {
+                          if (widget.booking.selectedAccommodationIds.contains(acc['id'])) {
                             accommodationCost += (acc['price'] ?? 0).toDouble();
                           }
                         }
@@ -12851,15 +13271,15 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                         }
                       }
 
-                      int travelers = totalAirlinePassengers;
+                      int travelers = pList.isNotEmpty ? pList.length : (widget.booking.adults + widget.booking.children);
                       int multiplier = travelers < 1 ? 1 : travelers;
 
                       final isShortHaul = _isShortHaulTrip();
                       final activeFeePerPerson = isShortHaul ? _shortHaulFeePerPerson : _feePerPerson;
                       final activeTxFee = isShortHaul ? _shortHaulTransactionFee : _transactionFee;
 
-                      double calculationFee = (multiplier * activeFeePerPerson) +
-                          (accommodationCost > 0 ? _feePerAccommodation : 0);
+                      double webAdminFeeTotal = multiplier * activeFeePerPerson;
+                      double hotelServiceFee = accommodationCost > 0 ? _feePerAccommodation : 0.0;
                       double transactionFeeTotal = multiplier * activeTxFee;
 
                       double subtotal = depTicketAndClass +
@@ -12867,20 +13287,16 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                           scheduleAccommodationCost +
                           vehicleCost +
                           accommodationCost +
-                          calculationFee +
                           extraBaggageCost +
-                          transactionFeeTotal -
-                          passengerDiscount;
-                      if (subtotal < 0) subtotal = 0.0;
+                          webAdminFeeTotal +
+                          hotelServiceFee +
+                          transactionFeeTotal;
 
                       // Voucher and points are blocked on Promo and Super Promo
-                      final discount = (!isPromo &&
-                              widget.booking.voucherData != null)
-                          ? _parseDouble(
-                              widget.booking.voucherData!['discount_amount'])
+                      final discount = (!isPromo && widget.booking.voucherData != null)
+                          ? _parseDouble(widget.booking.voucherData!['discount_amount'])
                           : 0.0;
-                      double totalBeforePoints = subtotal - discount;
-                      if (totalBeforePoints < 0) totalBeforePoints = 0.0;
+                      double totalBeforePoints = (subtotal - passengerDiscount - discount).clamp(0.0, double.infinity);
 
                       double pointsDiscount = 0.0;
                       if (!isPromo && _usePoints) {
@@ -12889,14 +13305,8 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                             : _availablePoints;
                       }
 
-                      final finalTotal =
-                          (totalBeforePoints - pointsDiscount) > 0
-                              ? (totalBeforePoints - pointsDiscount)
-                              : 0.0;
-                      final webAdminFee = multiplier * activeFeePerPerson;
-                      final eligiblePointsTotal =
-                          (finalTotal - webAdminFee - transactionFeeTotal)
-                              .clamp(0.0, double.infinity);
+                      final finalTotal = (totalBeforePoints - pointsDiscount).clamp(0.0, double.infinity);
+                      final eligiblePointsTotal = (finalTotal - webAdminFeeTotal - transactionFeeTotal).clamp(0.0, double.infinity);
 
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -12974,9 +13384,12 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                               _SummaryRow(
                                   'Extra Baggage (${widget.booking.extraBaggageType ?? 'Specified'})',
                                   'Settled at Terminal'),
-                            if (calculationFee > 0)
+                            if (webAdminFeeTotal > 0)
                               _SummaryRow('Web Admin Fee',
-                                  '₱${calculationFee.toStringAsFixed(2)}'),
+                                  '₱${webAdminFeeTotal.toStringAsFixed(2)}'),
+                            if (hotelServiceFee > 0)
+                              _SummaryRow('Hotel Service Fee',
+                                  '₱${hotelServiceFee.toStringAsFixed(2)}'),
                             if (transactionFeeTotal > 0)
                               _SummaryRow('Transaction Fee',
                                   '₱${transactionFeeTotal.toStringAsFixed(2)}'),
@@ -17147,6 +17560,7 @@ class SchedulesScreen extends StatefulWidget {
 
 class _SchedulesScreenState extends State<SchedulesScreen> {
   bool _loading = true;
+  String? _maintenanceError;
   List<dynamic> _routes = [];
   String _filterMode = 'all'; // all, ferry, airline
   String? _originFilter;
@@ -17175,10 +17589,23 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
       final baseUrl = UserSession.getBaseUrl();
       final res = await http.get(Uri.parse('$baseUrl/api/all-schedules'));
       final data = jsonDecode(res.body);
+      if (res.statusCode == 503 || (data is Map && data['status'] == 'maintenance')) {
+        if (data is Map && data['maintenance'] != null) {
+          UserSession.maintenanceNotifier.value = AppMaintenanceInfo.fromJson(data['maintenance']);
+        }
+        if (mounted) {
+          setState(() {
+            _maintenanceError = data['message'] ?? 'Schedules are temporarily paused for maintenance.';
+            _loading = false;
+          });
+        }
+        return;
+      }
       if (res.statusCode == 200 && data['status'] == 'success') {
         if (mounted) {
           setState(() {
             _routes = parseJsonList(data['routes']);
+            _maintenanceError = null;
             _loading = false;
           });
         }
@@ -17194,6 +17621,84 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
   Widget build(BuildContext context) {
     if (_loading) {
       return const Center(child: CircularProgressIndicator(color: kGreen));
+    }
+
+    if (_routes.isEmpty && (UserSession.isMaintenanceActive || _maintenanceError != null)) {
+      final maint = UserSession.maintenanceNotifier.value;
+      return RefreshIndicator(
+        onRefresh: _fetchSchedules,
+        color: kGreen,
+        child: ListView(
+          padding: const EdgeInsets.all(24),
+          children: [
+            const SizedBox(height: 60),
+            Center(
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 4))],
+                  border: Border.all(color: const Color(0xFFFDE68A)),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFEF3C7),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.build_rounded, size: 30, color: Color(0xFFB45309)),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      maint?.title ?? 'Schedules Temporarily Paused',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: kSlate800),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF1F2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'Estimated Duration: ${maint?.estimatedDuration ?? 'In Progress'}',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFFBE123C)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      _maintenanceError ?? (maint?.message ?? 'We are performing scheduled maintenance. Schedules will resume shortly.'),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 13, color: kSlate600, height: 1.4),
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        setState(() => _loading = true);
+                        _fetchSchedules();
+                      },
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Check Status / Refresh'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: kGreen,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
     }
 
     final filteredRoutes = _routes.where((r) {
@@ -18851,6 +19356,14 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
   }
 
   Future<void> _submitRefund() async {
+    if (UserSession.isMaintenanceActive) {
+      if (UserSession.maintenanceNotifier.value != null) {
+        MaintenanceBreakDialog.showIfActive(context, UserSession.maintenanceNotifier.value!, force: true);
+      } else {
+        setState(() => _feedback = 'Refund requests are temporarily paused for scheduled maintenance.');
+      }
+      return;
+    }
     if (_selectedPassengerItems.isEmpty) {
       setState(() => _feedback = 'Please select at least one passenger item to refund.');
       return;
@@ -19056,6 +19569,14 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
   }
 
   Future<void> _submitReschedule() async {
+    if (UserSession.isMaintenanceActive) {
+      if (UserSession.maintenanceNotifier.value != null) {
+        MaintenanceBreakDialog.showIfActive(context, UserSession.maintenanceNotifier.value!, force: true);
+      } else {
+        setState(() => _feedback = 'Reschedule requests are temporarily paused for scheduled maintenance.');
+      }
+      return;
+    }
     if (_selectedPassengerItems.isEmpty) {
       setState(() => _feedback = 'Please select at least one passenger item to reschedule.');
       return;
@@ -20492,6 +21013,14 @@ class _RefundScreenState extends State<RefundScreen> {
   }
 
   Future<void> _submitRefund() async {
+    if (UserSession.isMaintenanceActive) {
+      if (UserSession.maintenanceNotifier.value != null) {
+        MaintenanceBreakDialog.showIfActive(context, UserSession.maintenanceNotifier.value!, force: true);
+      } else {
+        showTopSnack(context, const SnackBar(content: Text('Refund requests are temporarily paused for maintenance.')));
+      }
+      return;
+    }
     if (_selectedPassengerItems.isEmpty) {
       showTopSnack(context,
           const SnackBar(content: Text('Please select at least one passenger item to refund.')));
