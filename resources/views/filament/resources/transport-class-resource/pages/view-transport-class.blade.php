@@ -598,15 +598,31 @@
                                         @php
                                             $pivot       = $schedule->pivot;
                                             $isSelected  = in_array($schedule->id, $this->selectedSchedules, true);
-                                            $rateType    = $pivot->rate_type ?? 'regular';
-                                            $isPromo     = (bool) ($pivot->is_promo ?? false) || in_array($rateType, ['promotional', 'super_promotional'], true);
+                                            $rawRateType = $pivot->rate_type ?? 'regular';
                                             $promoType   = $pivot->promo_type ?? 'temporary';
                                             $promoStart  = $pivot->promo_duration_start ? \Carbon\Carbon::parse($pivot->promo_duration_start) : null;
                                             $promoEnd    = $pivot->promo_duration_end ? \Carbon\Carbon::parse($pivot->promo_duration_end) : null;
-                                            $addOnPrice  = (float) ($pivot->additional_price ?? 0);
-                                            $origPrice   = $pivot->original_price !== null ? (float) $pivot->original_price : ($basePrice > 0 ? $basePrice : $addOnPrice);
-                                            $isBasePrice = abs($addOnPrice - $origPrice) < 0.01;
                                             $now         = now();
+
+                                            $isDateExpired = $promoEnd && $now->isAfter($promoEnd);
+                                            $isTicketsExhausted = $pivot->promo_tickets_available !== null && $pivot->promo_tickets_available <= 0;
+                                            $isExpired   = in_array($rawRateType, ['promotional', 'super_promotional'], true) && ($isDateExpired || $isTicketsExhausted);
+                                            $isTemporary = $promoType === 'temporary';
+
+                                            $origPrice   = $pivot->original_price !== null ? (float) $pivot->original_price : ($basePrice > 0 ? $basePrice : (float) ($pivot->additional_price ?? 0));
+
+                                            // When a temporary promo has expired, display the reverted regular rate and original price
+                                            if ($isExpired && $isTemporary) {
+                                                $rateType   = 'regular';
+                                                $isPromo    = false;
+                                                $addOnPrice = $origPrice;
+                                            } else {
+                                                $rateType   = $rawRateType;
+                                                $isPromo    = (bool) ($pivot->is_promo ?? false) || in_array($rawRateType, ['promotional', 'super_promotional'], true);
+                                                $addOnPrice = (float) ($pivot->additional_price ?? 0);
+                                            }
+
+                                            $isBasePrice = abs($addOnPrice - $origPrice) < 0.01;
 
                                             $rateBadge = match($rateType) {
                                                 'promotional'       => ['label' => '🟠 Promotional', 'class' => 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300'],
@@ -645,7 +661,7 @@
                                                 <span class="font-semibold {{ $isBasePrice ? 'text-gray-700 dark:text-gray-200' : 'text-primary-600 dark:text-primary-400' }}">
                                                     ₱{{ number_format($addOnPrice, 2) }}
                                                 </span>
-                                                @if (!$isBasePrice)
+                                                @if (!$isBasePrice && !$isExpired)
                                                     <span class="ml-1 text-xs text-gray-400 dark:text-gray-500 line-through">₱{{ number_format($origPrice, 2) }}</span>
                                                 @endif
                                             </td>
@@ -658,13 +674,21 @@
                                                         <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {{ $rateBadge['class'] }}">
                                                             {{ $rateBadge['label'] }}
                                                         </span>
-                                                        @if ($isPromo)
+                                                        @if ($isExpired && $isTemporary)
+                                                            <span class="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                                                                ↩️ Reverted
+                                                            </span>
+                                                        @elseif ($isPromo)
                                                             <span class="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold {{ $promoType === 'permanent' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' }}">
                                                                 {{ $promoType === 'permanent' ? '🔒 Perm' : '⏳ Temp' }}
                                                             </span>
                                                         @endif
                                                     </div>
-                                                    @if ($isPromo && $promoEnd)
+                                                    @if ($isExpired && $isTemporary)
+                                                        <span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                                                            Restored to regular fare (₱{{ number_format($origPrice, 2) }})
+                                                        </span>
+                                                    @elseif ($isPromo && $promoEnd)
                                                         <span class="text-[11px] text-gray-500 dark:text-gray-400">
                                                             @if ($now->isAfter($promoEnd))
                                                                 <span class="text-red-500 font-semibold">{{ $promoType === 'permanent' ? 'Expired (Hidden)' : 'Expired (Reverted)' }}</span>

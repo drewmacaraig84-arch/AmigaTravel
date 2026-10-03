@@ -135,8 +135,12 @@ class ScheduleTransportClass extends Pivot
     public function getEffectivePrice(): float
     {
         // When a temporary promo has expired, automatically fall back to the pre-promo regular price
-        if ($this->isTemporaryPromo() && $this->isPromoExpired() && $this->original_price !== null) {
-            return (float) $this->original_price;
+        if ($this->isTemporaryPromo() && $this->isPromoExpired()) {
+            if ($this->original_price !== null) {
+                return (float) $this->original_price;
+            }
+            $basePrice = (float) ($this->transportClass?->effective_price ?? $this->transportClass?->price ?? 0.0);
+            return $basePrice > 0 ? $basePrice : (float) ($this->additional_price ?? 0.0);
         }
 
         if ($this->additional_price !== null) {
@@ -144,6 +148,74 @@ class ScheduleTransportClass extends Pivot
         }
 
         return (float) ($this->transportClass?->effective_price ?? $this->transportClass?->price ?? 0.0);
+    }
+
+    /**
+     * Revert this promotional class back to regular fare in the database,
+     * restoring its pre-promo original_price.
+     */
+    public function revertToRegular(): bool
+    {
+        $basePrice = (float) ($this->transportClass?->price ?? 0);
+        $restoredPrice = $this->original_price !== null
+            ? (float) $this->original_price
+            : ($basePrice > 0 ? $basePrice : (float) $this->additional_price);
+
+        $updated = $this->update([
+            'rate_type'               => 'regular',
+            'is_promo'                => false,
+            'additional_price'        => $restoredPrice,
+            'original_price'          => null,
+            'promo_type'              => null,
+            'promo_duration_start'    => null,
+            'promo_duration_end'      => null,
+            'promo_tickets_available' => null,
+        ]);
+
+        if ($updated) {
+            Schedule::bust();
+        }
+
+        return $updated;
+    }
+
+    /**
+     * Revert all temporary promos that have expired by end date or exhausted promo tickets.
+     * Restores them to their original pre-promo regular price.
+     */
+    public static function revertExpiredPromos(): int
+    {
+        $now = now();
+
+        $expired = static::with('transportClass')
+            ->where(function ($query) use ($now) {
+                // Temporary promos whose duration end has passed
+                $query->where(function ($q) use ($now) {
+                    $q->whereIn('rate_type', ['promotional', 'super_promotional'])
+                      ->where(function ($sub) {
+                          $sub->where('promo_type', 'temporary')
+                              ->orWhereNull('promo_type');
+                      })
+                      ->whereNotNull('promo_duration_end')
+                      ->where('promo_duration_end', '<=', $now);
+                })
+                // Promos whose tickets available have reached 0
+                ->orWhere(function ($q) {
+                    $q->whereIn('rate_type', ['promotional', 'super_promotional'])
+                      ->whereNotNull('promo_tickets_available')
+                      ->where('promo_tickets_available', '<=', 0);
+                });
+            })
+            ->get();
+
+        $count = 0;
+        foreach ($expired as $stc) {
+            if ($stc->revertToRegular()) {
+                $count++;
+            }
+        }
+
+        return $count;
     }
 
     /**
@@ -159,14 +231,25 @@ class ScheduleTransportClass extends Pivot
         // Try by pivot primary key ID first
         $stc = static::with('transportClass')->find($classOrPivotId);
         if ($stc && (int) $stc->schedule_id === (int) $scheduleId) {
+            if ($stc->isTemporaryPromo() && ($stc->isPromoExpired() || ($stc->promo_tickets_available !== null && $stc->promo_tickets_available <= 0))) {
+                $stc->revertToRegular();
+                $stc->refresh();
+            }
             return $stc;
         }
 
         // Fallback: lookup by transport_class_id
-        return static::with('transportClass')
+        $stc = static::with('transportClass')
             ->where('schedule_id', $scheduleId)
             ->where('transport_class_id', $classOrPivotId)
             ->first();
+
+        if ($stc && $stc->isTemporaryPromo() && ($stc->isPromoExpired() || ($stc->promo_tickets_available !== null && $stc->promo_tickets_available <= 0))) {
+            $stc->revertToRegular();
+            $stc->refresh();
+        }
+
+        return $stc;
     }
 
     protected static function booted(): void

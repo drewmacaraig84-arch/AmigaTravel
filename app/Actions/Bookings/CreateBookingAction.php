@@ -529,8 +529,8 @@ class CreateBookingAction
                 $price = $depStc->getEffectivePrice();
                 $booking->transportClasses()->attach($depStc->transport_class_id, [
                     'price'     => $price,
-                    'is_promo'  => (bool) ($depStc->is_promo || ($depStc->rate_type && $depStc->rate_type !== 'regular')),
-                    'rate_type' => $depStc->rate_type ?? 'regular',
+                    'is_promo'  => $depStc->isPromo(),
+                    'rate_type' => $depStc->getEffectiveRateType(),
                     'rate_code' => $depStc->rate_code,
                     'is_return' => false,
                 ]);
@@ -539,8 +539,8 @@ class CreateBookingAction
                 $price = $retStc->getEffectivePrice();
                 $booking->transportClasses()->attach($retStc->transport_class_id, [
                     'price'     => $price,
-                    'is_promo'  => (bool) ($retStc->is_promo || ($retStc->rate_type && $retStc->rate_type !== 'regular')),
-                    'rate_type' => $retStc->rate_type ?? 'regular',
+                    'is_promo'  => $retStc->isPromo(),
+                    'rate_type' => $retStc->getEffectiveRateType(),
                     'rate_code' => $retStc->rate_code,
                     'is_return' => true,
                 ]);

@@ -42,6 +42,12 @@ class ViewTransportClass extends ViewRecord
     
     public ?int $modalPromoTickets = null;
 
+    public function mount(int | string $record): void
+    {
+        parent::mount($record);
+        ScheduleTransportClass::revertExpiredPromos();
+    }
+
     protected function getHeaderActions(): array
     {
         return [
@@ -344,11 +350,13 @@ class ViewTransportClass extends ViewRecord
                 }
             }
 
+            $basePrice = (float) $this->getRecord()->price;
+
             foreach ($stcs as $stc) {
                 // Preserve original regular price before applying promo price
                 $origPrice = $stc->original_price !== null
                     ? $stc->original_price
-                    : ($stc->is_promo ? null : $stc->additional_price);
+                    : ($stc->is_promo ? null : ($stc->additional_price !== null ? $stc->additional_price : ($basePrice > 0 ? $basePrice : null)));
 
                 $stc->update([
                     'rate_type'            => $this->modalRateType,

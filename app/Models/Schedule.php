@@ -62,7 +62,7 @@ class Schedule extends Model
     {
         return $this->belongsToMany(TransportClass::class, 'schedule_transport_class')
             ->using(ScheduleTransportClass::class)
-            ->withPivot('id', 'additional_price', 'tickets_available', 'description', 'has_bed', 'is_active', 'is_promo', 'rate_type', 'rate_code', 'promo_duration_start', 'promo_duration_end', 'promo_type')
+            ->withPivot('id', 'additional_price', 'original_price', 'tickets_available', 'promo_tickets_available', 'description', 'has_bed', 'is_active', 'is_promo', 'rate_type', 'rate_code', 'promo_duration_start', 'promo_duration_end', 'promo_type')
             ->withTimestamps();
     }
 
@@ -618,15 +618,19 @@ class Schedule extends Model
                     $price = $pivot?->additional_price !== null ? $pivot->additional_price : ($class->is_on_sale && $class->sale_price ? $class->sale_price : $class->price);
 
                     if ($isPromoConfig && $promoEnd && $now->isAfter($promoEnd) && $promoType === 'temporary') {
-                        // Temporary promo has expired -> revert to regular fare and restore base price
+                        // Temporary promo has expired -> revert to regular fare and restore pre-promo original price
                         $effectiveRateType = 'regular';
                         $effectiveIsPromo = false;
-                        $price = floatval($class->price ?? 0);
+                        $price = $pivot?->original_price !== null 
+                            ? floatval($pivot->original_price) 
+                            : ($class->price > 0 ? floatval($class->price) : floatval($price));
                     } elseif ($isPromoConfig && $promoStart && $now->isBefore($promoStart)) {
                         // Not yet active -> behave as regular
                         $effectiveRateType = 'regular';
                         $effectiveIsPromo = false;
-                        $price = floatval($class->price ?? 0);
+                        $price = $pivot?->original_price !== null 
+                            ? floatval($pivot->original_price) 
+                            : ($class->price > 0 ? floatval($class->price) : floatval($price));
                     }
 
                     $classCode = $this->inferTransportClassCode($class);

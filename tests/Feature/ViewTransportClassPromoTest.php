@@ -289,4 +289,62 @@ class ViewTransportClassPromoTest extends TestCase
         // Effective price automatically falls back to original_price (680.00)
         $this->assertEquals(680.00, $stc->getEffectivePrice());
     }
+
+    public function test_revert_expired_promos_updates_database_to_original_price(): void
+    {
+        $route = FerryRoute::create([
+            'origin' => 'Manila',
+            'destination' => 'Dipolog',
+            'mode' => 'ferry',
+            'operator' => '2GO Travel',
+            'is_active' => true,
+        ]);
+
+        $tc = TransportClass::create([
+            'name' => 'Tourist Class',
+            'price' => 4497.61,
+            'is_active' => true,
+        ]);
+
+        $dep = now()->addDays(5)->setTime(21, 30);
+        $schedule = Schedule::create([
+            'ferry_route_id' => $route->id,
+            'departure_date' => $dep->format('Y-m-d'),
+            'departure_time' => $dep->format('Y-m-d H:i:s'),
+            'arrival_time' => $dep->copy()->addDays(2)->format('Y-m-d H:i:s'),
+            'price' => 0.00,
+            'duration_minutes' => 2160,
+            'status' => 'scheduled',
+            'is_active' => true,
+        ]);
+
+        // Attach with expired temporary promo: original was 4497.61, promo was 999.00
+        $schedule->transportClasses()->attach($tc->id, [
+            'additional_price' => 999.00,
+            'original_price' => 4497.61,
+            'tickets_available' => 5,
+            'promo_tickets_available' => 5,
+            'rate_type' => 'super_promotional',
+            'is_promo' => true,
+            'promo_type' => 'temporary',
+            'promo_duration_start' => now()->subDays(10),
+            'promo_duration_end' => now()->subDay(), // Expired
+            'is_active' => true,
+        ]);
+
+        $revertedCount = ScheduleTransportClass::revertExpiredPromos();
+        $this->assertEquals(1, $revertedCount);
+
+        $stc = ScheduleTransportClass::where('schedule_id', $schedule->id)
+            ->where('transport_class_id', $tc->id)
+            ->first();
+
+        $this->assertEquals('regular', $stc->rate_type);
+        $this->assertFalse((bool) $stc->is_promo);
+        $this->assertEquals(4497.61, (float) $stc->additional_price);
+        $this->assertNull($stc->original_price);
+        $this->assertNull($stc->promo_duration_end);
+        $this->assertNull($stc->promo_type);
+        $this->assertNull($stc->promo_tickets_available);
+    }
 }

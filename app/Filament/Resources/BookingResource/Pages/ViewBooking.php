@@ -98,28 +98,6 @@ class ViewBooking extends ViewRecord
         $breakdown = $this->record->getPriceBreakdown();
         $total     = (float) $this->record->total_price;
 
-        // Sum what the breakdown items give us
-        $computedSum = array_sum(array_column($breakdown, 'amount'));
-
-        // If there is a discrepancy between computed items and stored total_price,
-        // insert a reconciliation row so the table always balances.
-        $diff = round($total - $computedSum, 2);
-        if (abs($diff) >= 0.01) {
-            if ($diff > 0) {
-                $breakdown[] = [
-                    'label'  => 'Service Fees & Adjustments',
-                    'amount' => $diff,
-                    'class'  => 'text-slate-500',
-                ];
-            } else {
-                $breakdown[] = [
-                    'label'  => 'Discount / Adjustment',
-                    'amount' => $diff,          // negative → shown as discount
-                    'class'  => 'text-green-600',
-                ];
-            }
-        }
-
         $html  = '<div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">';
         $html .= '<table class="w-full text-sm text-left text-gray-700 dark:text-gray-200">';
         $html .= '<thead class="text-xs uppercase bg-gray-50 dark:bg-gray-700/50 text-gray-500 border-b border-gray-200 dark:border-gray-700">';

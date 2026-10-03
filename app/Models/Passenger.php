@@ -326,18 +326,39 @@ class Passenger extends Model
             return 0.0;
         }
 
-        // If passenger record has fare_amount explicitly set (including 0)
-        if (array_key_exists('fare_amount', $this->attributes) && $this->attributes['fare_amount'] !== null) {
+        // If passenger record has fare_amount explicitly set and is non-zero, use it.
+        // A stored 0.00 on a non-driver passenger is a sign of a bad write (old code bug);
+        // fall through to the reconstruction path below in that case.
+        if (
+            array_key_exists('fare_amount', $this->attributes)
+            && $this->attributes['fare_amount'] !== null
+            && (float) $this->attributes['fare_amount'] > 0
+        ) {
             return (float) $this->attributes['fare_amount'];
         }
 
         if ($booking) {
             $schedPrice = (float) ($booking->schedule_price ?? 0);
             $retPrice   = (float) ($booking->return_schedule_price ?? 0);
-            $isPromo    = in_array($this->rate_type ?? 'regular', ['promotional', 'super_promotional'], true)
+
+            // Also include transport class add-on prices saved at booking time in the
+            // booking_transport_class pivot. Old records (pre-fare_amount column) have
+            // fare_amount = NULL, so we reconstruct from the snapshot pivot prices.
+            // This is the same formula used in BookingForm::processBookingInternal.
+            if (! $booking->relationLoaded('transportClasses')) {
+                $booking->load('transportClasses');
+            }
+            $allTcs     = $booking->transportClasses;
+            $depTcPrice = $allTcs->filter(fn ($tc) => ! (bool) $tc->pivot->is_return)
+                                  ->sum(fn ($tc) => (float) $tc->pivot->price);
+            $retTcPrice = $allTcs->filter(fn ($tc) => (bool) $tc->pivot->is_return)
+                                  ->sum(fn ($tc) => (float) $tc->pivot->price);
+
+            $isPromo       = in_array($this->rate_type ?? 'regular', ['promotional', 'super_promotional'], true)
                 || (bool) ($this->is_promo ?? false);
             $paxMultiplier = (! $isPromo && in_array(strtolower($this->type ?? 'adult'), ['child', 'minor'], true)) ? 0.5 : 1.0;
-            return ($schedPrice + $retPrice) * $paxMultiplier;
+
+            return ($schedPrice + $depTcPrice + $retPrice + $retTcPrice) * $paxMultiplier;
         }
 
         return 0.0;
