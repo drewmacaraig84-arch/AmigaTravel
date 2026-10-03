@@ -5,12 +5,13 @@ namespace App\Filament\Widgets;
 use App\Support\ReportingService;
 use Filament\Widgets\Widget;
 use Illuminate\Support\Collection;
+use Livewire\Attributes\On;
 
 class TopRoutesWidget extends Widget
 {
     protected static string $view = 'filament.widgets.top-routes-widget';
 
-    protected static ?string $pollingInterval = '10m';
+    protected static ?string $pollingInterval = '30s';
 
     protected static ?int $sort = 5;
 
@@ -23,6 +24,8 @@ class TopRoutesWidget extends Widget
         $this->routes = app(ReportingService::class)->getTopRoutes(5);
     }
 
+    #[On('admin-data-updated')]
+    #[On('refresh')]
     public function loadData(): void
     {
         $this->routes = app(ReportingService::class)->getTopRoutes(5);

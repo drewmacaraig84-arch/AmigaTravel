@@ -28,6 +28,20 @@ class AdminNotificationController
         ]);
     }
 
+    public function heartbeat(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $user = $request->user();
+
+        if (! $user instanceof User || ! $user->isStaff()) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
+        $feed = app(AdminNotificationFeed::class);
+        $summary = $feed->getHeartbeatForUser($user);
+
+        return response()->json($summary);
+    }
+
     public function list(Request $request): \Illuminate\Http\JsonResponse
     {
         $user = $request->user();

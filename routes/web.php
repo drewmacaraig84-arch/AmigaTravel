@@ -680,6 +680,7 @@ Route::middleware(['auth:admin,web', 'admin'])->group(function () {
     Route::get('/admin/bookings/export/csv', [BookingExportController::class, 'exportCsv'])->name('bookings.export.csv')->middleware('staff.permission:bookings,overall_reports');
     Route::get('/admin/bookings/export/print', [BookingExportController::class, 'exportPrint'])->name('bookings.export.print')->middleware('staff.permission:bookings,overall_reports');
     Route::get('/admin/notifications/dropdown', [AdminNotificationController::class, 'dropdown']);
+    Route::get('/admin/notifications/heartbeat', [AdminNotificationController::class, 'heartbeat']);
     Route::get('/admin/notifications/api/list', [AdminNotificationController::class, 'list']);
     Route::post('/admin/notifications/api/mark-read', [AdminNotificationController::class, 'markRead']);
     Route::post('/admin/notifications/api/mark-all-read', [AdminNotificationController::class, 'markAllRead']);

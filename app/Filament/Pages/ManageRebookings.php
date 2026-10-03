@@ -61,7 +61,7 @@ class ManageRebookings extends Page implements HasTable
                     ->with(['transaction', 'user', 'schedule.ferryRoute', 'passengers'])
             )
             ->defaultSort('updated_at', 'desc')
-            ->poll('10s')
+            ->poll('3s')
             ->columns([
                 Tables\Columns\TextColumn::make('transaction_number')
                     ->label('Transaction #')

@@ -95,7 +95,7 @@ class BookingResource extends Resource
     {
         return $table
             ->defaultSort('created_at', 'desc')
-            ->poll('10s')
+            ->poll('3s')
             ->columns([
                 Tables\Columns\TextColumn::make('transaction_number')
                     ->searchable()

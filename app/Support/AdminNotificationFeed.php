@@ -93,6 +93,26 @@ class AdminNotificationFeed
         return $this->getForUser($user)->count();
     }
 
+    public function getHeartbeatForUser(User $user): array
+    {
+        $feedVersion = (int) Cache::get('admin_notification_feed_v', 1);
+        $activityVersion = (string) Cache::get('admin_activity_version', '0');
+        $notifications = $this->getForUser($user);
+        $unread = $notifications->where('is_read', false)->count();
+        $total = $notifications->count();
+        $latest = $notifications->first();
+
+        return [
+            'version' => "{$feedVersion}_{$activityVersion}",
+            'unread' => $unread,
+            'total' => $total,
+            'latest_id' => $latest['id'] ?? null,
+            'latest_title' => $latest['title'] ?? null,
+            'latest_message' => $latest['message'] ?? null,
+            'latest_url' => $latest['url'] ?? null,
+        ];
+    }
+
     public function markAsRead(User $user, array $notificationIds): int
     {
         $updated = 0;
@@ -187,6 +207,8 @@ class AdminNotificationFeed
             'booking-refund-req-' . $bookingId,
             'booking-refund-done-' . $bookingId,
             'booking-op-rebook-' . $bookingId,
+            'payment-proof-' . $bookingId,
+            'rebooking-proof-' . $bookingId,
         ];
 
         return $this->markAsRead($user, array_values(array_unique(array_merge($targetIds, $defaultIds))));
@@ -346,6 +368,31 @@ class AdminNotificationFeed
                 ]);
             }
 
+            // ─── Payment Proof Upload Notification ───
+            if ($booking->transaction && filled($booking->transaction->proof_of_payment) && $booking->transaction->payment_status === 'pending') {
+                $notifications->push([
+                    'id' => 'payment-proof-' . $booking->id,
+                    'type' => 'payment_proof',
+                    'title' => 'Payment Proof Uploaded',
+                    'message' => "{$booking->client_name} uploaded payment receipt for #{$booking->transaction_number}",
+                    'created_at' => $booking->transaction->proof_submitted_at ?? $booking->transaction->updated_at ?? $booking->updated_at ?? $booking->created_at,
+                    'url' => '/admin/manage-proofs',
+                    'auto_read' => false,
+                ]);
+            }
+
+            if ($booking->transaction && filled($booking->transaction->rebooking_proof_of_payment) && $booking->rebooking_status === 'pending') {
+                $notifications->push([
+                    'id' => 'rebooking-proof-' . $booking->id,
+                    'type' => 'rebooking_proof',
+                    'title' => 'Rebooking Fee Receipt',
+                    'message' => "{$booking->client_name} uploaded rebooking fee receipt for #{$booking->transaction_number}",
+                    'created_at' => $booking->transaction->updated_at ?? $booking->updated_at ?? $booking->created_at,
+                    'url' => '/admin/manage-rebookings',
+                    'auto_read' => false,
+                ]);
+            }
+
             // ─── Booking Creation / Status Notification ───
             if (! $booking->is_rebooked && $booking->status !== 'pending_rebooking') {
                 $isPending = ($booking->status === 'pending');
@@ -373,7 +420,7 @@ class AdminNotificationFeed
                 'title' => 'New inquiry',
                 'message' => $inquiry->name . ' sent an inquiry: ' . $inquiry->subject,
                 'created_at' => $inquiry->created_at,
-                'url' => '/admin',
+                'url' => '/admin/inquiries/' . $inquiry->id,
             ]);
         }
 

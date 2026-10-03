@@ -52,6 +52,7 @@ class VehicleModelsRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return $table
+            ->poll('4s')
             ->columns([
                 TextColumn::make('sort_order')
                     ->label('Order')

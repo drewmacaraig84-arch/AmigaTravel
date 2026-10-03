@@ -1,4 +1,4 @@
-<div>
+<div wire:poll.30s="loadData">
     <div class="fi-wi-stats-overview-stat rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-base font-semibold text-gray-950 dark:text-white">Booking Status</h3>

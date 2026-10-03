@@ -1,7 +1,7 @@
 <x-filament-panels::page>
     <link rel="stylesheet" href="{{ asset('css/admin-proofs.css') }}">
 
-    <div class="space-y-6">
+    <div class="space-y-6" wire:poll.3s>
         <!-- Retention Settings & Backups Card -->
         <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900 space-y-4">
             <form wire:submit="saveSettings" class="space-y-4">

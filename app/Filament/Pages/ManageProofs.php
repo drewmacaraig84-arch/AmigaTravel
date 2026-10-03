@@ -23,11 +23,19 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 
 class ManageProofs extends Page implements HasActions, HasForms
 {
     use InteractsWithActions;
     use InteractsWithForms;
+
+    #[On('admin-data-updated')]
+    #[On('refresh')]
+    public function refreshProofs(): void
+    {
+        unset($this->allItems);
+    }
 
     public static function canAccess(): bool
     {

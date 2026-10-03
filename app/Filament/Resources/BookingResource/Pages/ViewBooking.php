@@ -23,11 +23,20 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
+use Livewire\Attributes\On;
 use Throwable;
 
 class ViewBooking extends ViewRecord
 {
     protected static string $resource = BookingResource::class;
+
+    #[On('admin-data-updated')]
+    #[On('refresh')]
+    public function refreshRecord(): void
+    {
+        $this->record->refresh();
+        $this->fillForm();
+    }
 
     public function mount(int | string $record): void
     {

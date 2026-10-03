@@ -14,11 +14,20 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Livewire\Attributes\On;
 use Throwable;
 
 class ViewTransaction extends ViewRecord
 {
     protected static string $resource = TransactionResource::class;
+
+    #[On('admin-data-updated')]
+    #[On('refresh')]
+    public function refreshRecord(): void
+    {
+        $this->record->refresh();
+        $this->fillForm();
+    }
 
     protected function getHeaderActions(): array
     {

@@ -121,6 +121,7 @@ class AccommodationResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->poll('4s')
             ->columns([
                 ImageColumn::make('images')
                     ->label('Photo')

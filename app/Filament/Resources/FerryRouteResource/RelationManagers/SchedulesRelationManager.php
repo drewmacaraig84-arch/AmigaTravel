@@ -201,6 +201,7 @@ class SchedulesRelationManager extends RelationManager
     {
         return $table
             ->recordTitleAttribute('departure_time')
+            ->poll('4s')
             ->defaultSort('departure_time', 'asc')
             ->defaultPaginationPageOption(15)
             ->paginationPageOptions([10, 15, 25, 50, 100])

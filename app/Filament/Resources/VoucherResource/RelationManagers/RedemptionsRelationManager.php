@@ -24,6 +24,7 @@ class RedemptionsRelationManager extends RelationManager
     {
         return $table
             ->recordTitleAttribute('id')
+            ->poll('4s')
             ->columns([
                 Tables\Columns\TextColumn::make('booking.transaction_number')
                     ->label('Booking #')

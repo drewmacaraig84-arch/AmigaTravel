@@ -115,6 +115,7 @@ class VehicleResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->poll('4s')
             ->columns([
                 TextColumn::make('type')
                     ->label(fn ($livewire) => $livewire->vehicleType === 'airline' ? 'Vehicle Type' : 'Vessel Type')

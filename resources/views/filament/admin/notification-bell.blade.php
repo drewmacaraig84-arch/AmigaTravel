@@ -1,5 +1,5 @@
 <div x-data="adminNotificationBell({ initialNotifications: [], initialTotalCount: 0, initialUnreadCount: 0 })"
-     x-init="fetchDropdown(); setInterval(() => { if (!dropdownOpen) fetchDropdown(); }, 25000);"
+     x-init="init()"
      @keydown.escape.window="actionMenuOpen = false; itemMenuOpen = null"
      class="relative">
 
@@ -10,10 +10,11 @@
             x-ref="trigger"
             type="button"
             @click.prevent="toggleDropdown()"
+            :class="{ 'ring-2 ring-amber-400 dark:ring-amber-500 shadow-md': isRinging }"
             class="relative flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-sm transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-400/50 ring-offset-0"
             aria-label="Admin notifications"
         >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+            <svg xmlns="http://www.w3.org/2000/svg" :class="{ 'animate-bounce text-amber-500': isRinging }" class="h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0 1 18 14.158V11a6.002 6.002 0 0 0-4-5.659V4a2 2 0 10-4 0v1.341A6.002 6.002 0 0 0 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 1 1-6 0v-1m6 0H9" />
             </svg>
             {{-- Unread badge --}}
@@ -21,8 +22,10 @@
                 x-show="unreadCount > 0"
                 x-cloak
                 class="absolute -right-1 -top-1 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white dark:ring-gray-900"
-                x-text="unreadCount > 99 ? '99+' : unreadCount"
-            ></span>
+            >
+                <span x-show="isRinging" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span class="relative" x-text="unreadCount > 99 ? '99+' : unreadCount"></span>
+            </span>
         </button>
 
         {{-- ───── Dropdown Panel ───── --}}
@@ -49,6 +52,13 @@
                     <div class="flex items-center gap-2">
                         <h2 class="text-[16px] font-bold tracking-tight text-gray-950 dark:text-white pl-1">Notifications</h2>
                         <span x-show="unreadCount > 0" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 leading-none" x-text="unreadCount + ' unread'"></span>
+                        <div class="flex items-center gap-1.5 ml-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                            <span class="relative flex h-2 w-2">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                            </span>
+                            <span class="text-[9px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 leading-none">Live</span>
+                        </div>
                     </div>
 
                     <div class="flex items-center gap-1">
@@ -123,6 +133,25 @@
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                                     Select all
+                                </button>
+
+                                {{-- Sound Mute/Unmute Toggle --}}
+                                <button type="button"
+                                    @click.prevent="toggleSound(); actionMenuOpen = false"
+                                    class="group w-full flex items-center gap-3 px-4 py-2 text-left text-xs text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                >
+                                    <template x-if="soundMuted">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-rose-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                                        </svg>
+                                    </template>
+                                    <template x-if="!soundMuted">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                                        </svg>
+                                    </template>
+                                    <span x-text="soundMuted ? 'Unmute alerts' : 'Mute alerts'"></span>
                                 </button>
 
                                 <div class="my-1 border-t border-gray-100 dark:border-gray-800"></div>

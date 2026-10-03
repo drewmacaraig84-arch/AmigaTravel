@@ -1,11 +1,128 @@
 <script>
+window.__adminNotificationBaseUrl = @js(url('/admin/notifications'));
+
+// Web Audio API synthesized notification chime (no external MP3 needed, zero latency)
+let _adminAudioCtx = null;
+function getAdminAudioContext() {
+    try {
+        if (!_adminAudioCtx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) {
+                _adminAudioCtx = new AudioCtx();
+            }
+        }
+        if (_adminAudioCtx && _adminAudioCtx.state === 'suspended') {
+            _adminAudioCtx.resume();
+        }
+        return _adminAudioCtx;
+    } catch (e) {
+        return null;
+    }
+}
+document.addEventListener('click', () => getAdminAudioContext(), { once: true, passive: true });
+document.addEventListener('keydown', () => getAdminAudioContext(), { once: true, passive: true });
+
+window.playNotificationChime = function (force = false) {
+    if (!force && localStorage.getItem('admin_notification_sound_muted') === 'true') {
+        return;
+    }
+    try {
+        const ctx = getAdminAudioContext();
+        if (!ctx) return;
+        const now = ctx.currentTime;
+
+        // Tone 1: 587.33 Hz (D5)
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(587.33, now);
+        gain1.gain.setValueAtTime(0.18, now);
+        gain1.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.35);
+
+        // Tone 2: 880.00 Hz (A5)
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(880.00, now + 0.12);
+        gain2.gain.setValueAtTime(0.22, now + 0.12);
+        gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start(now + 0.12);
+        osc2.stop(now + 0.55);
+    } catch (e) {
+        console.warn('Audio chime playback inhibited:', e);
+    }
+};
+
+window.showAdminNotificationToast = function (item) {
+    if (!item || !item.title) return;
+    let container = document.getElementById('admin-realtime-toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'admin-realtime-toast-container';
+        container.style.cssText = 'position:fixed;top:1.25rem;right:1.25rem;z-index:99999;display:flex;flex-direction:column;gap:0.5rem;max-width:24rem;pointer-events:none;';
+        document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.style.cssText = 'pointer-events:auto;background:rgba(17,24,39,0.96);backdrop-filter:blur(8px);border:1px solid rgba(251,191,36,0.4);border-radius:0.75rem;padding:0.75rem 1rem;color:#fff;box-shadow:0 10px 25px -5px rgba(0,0,0,0.4);display:flex;align-items:flex-start;gap:0.75rem;cursor:pointer;transition:all 0.25s ease;transform:translateX(100%);opacity:0;';
+    
+    toast.innerHTML = `
+        <div style="flex-shrink:0;margin-top:2px;">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:9999px;background:#f59e0b;color:#111827;font-weight:bold;font-size:12px;">🔔</span>
+        </div>
+        <div style="flex:1;min-width:0;">
+            <div style="font-weight:600;font-size:13px;color:#f3f4f6;line-height:1.2;">${String(item.title).replace(/</g, '&lt;')}</div>
+            <div style="font-size:12px;color:#9ca3af;margin-top:2px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${String(item.message || '').replace(/</g, '&lt;')}</div>
+        </div>
+        <button type="button" style="color:#6b7280;background:none;border:none;cursor:pointer;font-size:16px;line-height:1;padding:0 2px;">&times;</button>
+    `;
+
+    toast.querySelector('button').onclick = (e) => {
+        e.stopPropagation();
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        setTimeout(() => toast.remove(), 250);
+    };
+
+    toast.onclick = () => {
+        if (item.url) window.location.href = item.url;
+    };
+
+    container.appendChild(toast);
+    requestAnimationFrame(() => {
+        toast.style.transform = 'translateX(0)';
+        toast.style.opacity = '1';
+    });
+
+    setTimeout(() => {
+        if (toast.isConnected) {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(100%)';
+            setTimeout(() => toast.remove(), 250);
+        }
+    }, 5500);
+};
+
 window.adminNotificationBell = function (config) {
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
     return {
+        baseUrl:       window.__adminNotificationBaseUrl || '/admin/notifications',
         notifications: config.initialNotifications ?? [],
         totalCount:    config.initialTotalCount ?? 0,
         unreadCount:   config.initialUnreadCount ?? 0,
+        soundMuted:    localStorage.getItem('admin_notification_sound_muted') === 'true',
+        isRinging:     false,
+        lastHeartbeatVersion: null,
+        lastUnreadCount: config.initialUnreadCount ?? 0,
+        lastKnownLatestId: null,
+        heartbeatTimer: null,
         selectedIds:   [],
         dropdownOpen:  false,
         actionMenuOpen: false,
@@ -43,6 +160,72 @@ window.adminNotificationBell = function (config) {
 
         init() {
             this.selectedIds = [];
+            this.fetchDropdown();
+            if (!this.heartbeatTimer) {
+                this.heartbeatTimer = setInterval(() => {
+                    this.checkHeartbeat();
+                }, 3500);
+            }
+        },
+
+        triggerBellRing() {
+            this.isRinging = true;
+            setTimeout(() => { this.isRinging = false; }, 2200);
+        },
+
+        toggleSound() {
+            this.soundMuted = !this.soundMuted;
+            localStorage.setItem('admin_notification_sound_muted', this.soundMuted ? 'true' : 'false');
+            if (!this.soundMuted) {
+                window.playNotificationChime(true);
+                this.showSuccess('Notification sound enabled');
+            } else {
+                this.showSuccess('Notification sound muted');
+            }
+        },
+
+        async checkHeartbeat() {
+            try {
+                const res = await fetch(`${this.baseUrl}/heartbeat`, {
+                    headers: { 'Accept': 'application/json' },
+                    credentials: 'same-origin',
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+                
+                const isVersionChanged = this.lastHeartbeatVersion !== null && data.version !== this.lastHeartbeatVersion;
+                const hasNewUnread = this.lastHeartbeatVersion !== null && (data.unread > this.lastUnreadCount || (data.latest_id && data.latest_id !== this.lastKnownLatestId && data.unread > 0));
+
+                if (hasNewUnread) {
+                    this.triggerBellRing();
+                    window.playNotificationChime();
+                    window.showAdminNotificationToast({
+                        title: data.latest_title || 'New Admin Activity',
+                        message: data.latest_message || 'A new update requires your attention',
+                        url: data.latest_url || '/admin',
+                    });
+                }
+
+                if (isVersionChanged || hasNewUnread) {
+                    window.dispatchEvent(new CustomEvent('admin-data-updated', { detail: data }));
+                    if (window.Livewire) {
+                        window.Livewire.dispatch('refresh');
+                    }
+                    if (this.dropdownOpen) {
+                        await this.fetchDropdown();
+                    }
+                }
+
+                this.unreadCount = data.unread;
+                this.totalCount = data.total;
+                this.lastHeartbeatVersion = data.version;
+                this.lastUnreadCount = data.unread;
+                if (data.latest_id) {
+                    this.lastKnownLatestId = data.latest_id;
+                }
+            } catch (e) {
+                // Silently handle transient connection issues
+            }
         },
 
         get selectedCount() {
@@ -85,7 +268,7 @@ window.adminNotificationBell = function (config) {
             if (this.busy) return;
             this.busy = true;
             try {
-                const res = await fetch('/admin/notifications/dropdown', {
+                const res = await fetch(`${this.baseUrl}/dropdown`, {
                     headers: { 'Accept': 'application/json' },
                     credentials: 'same-origin',
                 });
@@ -103,8 +286,9 @@ window.adminNotificationBell = function (config) {
         async sendAction(url, method, ids) {
             if (!ids.length) return;
             this.busy = true;
+            const targetUrl = url.startsWith('/admin/notifications') ? url.replace('/admin/notifications', this.baseUrl) : url;
             try {
-                const res = await fetch(url, {
+                const res = await fetch(targetUrl, {
                     method,
                     headers: {
                         'Accept': 'application/json',
@@ -128,11 +312,11 @@ window.adminNotificationBell = function (config) {
             }
         },
 
-        async markRead(ids = null)   { await this.sendAction('/admin/notifications/api/mark-read',   'POST',   ids ?? this.selectedIds); },
+        async markRead(ids = null)   { await this.sendAction(`${this.baseUrl}/api/mark-read`,   'POST',   ids ?? this.selectedIds); },
         async markAllRead() {
             this.busy = true;
             try {
-                const res = await fetch('/admin/notifications/api/mark-all-read', {
+                const res = await fetch(`${this.baseUrl}/api/mark-all-read`, {
                     method: 'POST',
                     headers: {
                         'Accept': 'application/json',
@@ -151,8 +335,8 @@ window.adminNotificationBell = function (config) {
                 this.busy = false;
             }
         },
-        async markUnread(ids = null) { await this.sendAction('/admin/notifications/api/mark-unread', 'POST',   ids ?? this.selectedIds); },
-        async confirmDelete()        { await this.sendAction('/admin/notifications/api',             'DELETE', this.deleteTargetIds); },
+        async markUnread(ids = null) { await this.sendAction(`${this.baseUrl}/api/mark-unread`, 'POST',   ids ?? this.selectedIds); },
+        async confirmDelete()        { await this.sendAction(`${this.baseUrl}/api`,             'DELETE', this.deleteTargetIds); },
 
         deleteSelected() {
             if (!this.selectedCount) return;
@@ -223,6 +407,7 @@ window.adminNotificationsPage = function () {
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
     return {
+        baseUrl:          window.__adminNotificationBaseUrl || '/admin/notifications',
         notifications:    [],
         totalCount:       0,
         unreadCount:      0,
@@ -293,7 +478,7 @@ window.adminNotificationsPage = function () {
                 params.set('search',   this.search);
                 if (this.activeTab === 'unread') params.set('unread_only', '1');
 
-                const res = await fetch(`/admin/notifications/api/list?${params}`, {
+                const res = await fetch(`${this.baseUrl}/api/list?${params}`, {
                     headers: { 'Accept': 'application/json' },
                     credentials: 'same-origin',
                 });
@@ -322,8 +507,9 @@ window.adminNotificationsPage = function () {
         async sendAction(url, method, ids) {
             if (!ids.length) return;
             this.busy = true;
+            const targetUrl = url.startsWith('/admin/notifications') ? url.replace('/admin/notifications', this.baseUrl) : url;
             try {
-                const res = await fetch(url, {
+                const res = await fetch(targetUrl, {
                     method,
                     headers: {
                         'Accept': 'application/json',
@@ -347,11 +533,11 @@ window.adminNotificationsPage = function () {
             }
         },
 
-        async markRead(ids = null)   { await this.sendAction('/admin/notifications/api/mark-read',   'POST',   ids ?? this.selectedIds); },
+        async markRead(ids = null)   { await this.sendAction(`${this.baseUrl}/api/mark-read`,   'POST',   ids ?? this.selectedIds); },
         async markAllRead() {
             this.busy = true;
             try {
-                const res = await fetch('/admin/notifications/api/mark-all-read', {
+                const res = await fetch(`${this.baseUrl}/api/mark-all-read`, {
                     method: 'POST',
                     headers: {
                         'Accept': 'application/json',
@@ -369,8 +555,8 @@ window.adminNotificationsPage = function () {
                 this.busy = false;
             }
         },
-        async markUnread(ids = null) { await this.sendAction('/admin/notifications/api/mark-unread', 'POST',   ids ?? this.selectedIds); },
-        async confirmDelete()        { await this.sendAction('/admin/notifications/api',             'DELETE', this.deleteTargetIds); },
+        async markUnread(ids = null) { await this.sendAction(`${this.baseUrl}/api/mark-unread`, 'POST',   ids ?? this.selectedIds); },
+        async confirmDelete()        { await this.sendAction(`${this.baseUrl}/api`,             'DELETE', this.deleteTargetIds); },
 
         deleteSelected() {
             if (!this.selectedCount) return;

@@ -81,7 +81,7 @@ class ManageRefunds extends Page implements HasTable, HasInfolists
                     ->with(['transaction', 'user', 'refundProcessedByUser', 'passengers'])
             )
             ->defaultSort('updated_at', 'desc')
-            ->poll('10s')
+            ->poll('3s')
             ->recordAction('viewRefund')
             ->columns([
                 Tables\Columns\TextColumn::make('transaction_number')

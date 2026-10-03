@@ -47,6 +47,18 @@ class Transaction extends Model
                 }
             }
         });
+
+        static::saved(function ($transaction) {
+            if ($transaction->wasRecentlyCreated || $transaction->wasChanged(['proof_of_payment', 'rebooking_proof_of_payment', 'payment_status', 'payment_reference'])) {
+                \App\Support\AdminNotificationFeed::clearAllCache();
+                \Illuminate\Support\Facades\Cache::put('admin_activity_version', microtime(true), now()->addHours(24));
+            }
+        });
+
+        static::deleted(function () {
+            \App\Support\AdminNotificationFeed::clearAllCache();
+            \Illuminate\Support\Facades\Cache::put('admin_activity_version', microtime(true), now()->addHours(24));
+        });
     }
 
     public function booking(): BelongsTo

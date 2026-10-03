@@ -13,7 +13,7 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class SystemStatsOverview extends BaseWidget
 {
-    protected static ?string $pollingInterval = '5m';
+    protected static ?string $pollingInterval = '15s';
 
     protected static ?int $sort = 0; // Rank it first, at the top
 

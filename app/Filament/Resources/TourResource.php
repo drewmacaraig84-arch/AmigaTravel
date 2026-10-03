@@ -194,6 +194,7 @@ class TourResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->poll('4s')
             ->columns([
                 Tables\Columns\TextColumn::make('tour_name')
                     ->label('Tour Name')

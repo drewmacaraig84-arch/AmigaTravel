@@ -115,6 +115,7 @@ class TransportClassResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->poll('4s')
             ->columns([
                 TextColumn::make('name')
                     ->searchable()

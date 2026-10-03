@@ -55,6 +55,7 @@ class OperatorResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->poll('4s')
             ->columns([
                 Tables\Columns\ImageColumn::make('logo_path')
                     ->label('Logo')

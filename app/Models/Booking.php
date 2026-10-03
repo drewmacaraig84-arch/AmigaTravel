@@ -213,11 +213,13 @@ class Booking extends Model
         static::saved(function (Booking $booking) {
             if ($booking->wasRecentlyCreated || $booking->wasChanged(['status', 'rebooking_status', 'disruption_status', 'refund_amount', 'refund_processed_at', 'refund_reference', 'refund_status'])) {
                 \App\Support\AdminNotificationFeed::clearAllCache();
+                \Illuminate\Support\Facades\Cache::put('admin_activity_version', microtime(true), now()->addHours(24));
             }
         });
 
         static::deleted(function () {
             \App\Support\AdminNotificationFeed::clearAllCache();
+            \Illuminate\Support\Facades\Cache::put('admin_activity_version', microtime(true), now()->addHours(24));
         });
     }
 

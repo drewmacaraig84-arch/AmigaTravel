@@ -155,6 +155,7 @@ class AirlineBaggageRuleResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->poll('4s')
             ->defaultGroup('operator_name')
             ->columns([
                 TextColumn::make('operator_name')

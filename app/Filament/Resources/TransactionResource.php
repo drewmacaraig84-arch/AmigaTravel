@@ -375,7 +375,7 @@ class TransactionResource extends Resource
     {
         return $table
             ->defaultSort('created_at', 'desc')
-            ->poll('10s')
+            ->poll('3s')
             ->columns([
                 TextColumn::make('booking.transaction_number')
                     ->label('Transaction')
