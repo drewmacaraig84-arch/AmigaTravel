@@ -220,6 +220,133 @@ class MaintenanceBreakDialog {
 }
 
 // ==========================================
+// APP DOWNLOAD ROOTS & INSTALL SOURCE
+// ==========================================
+enum AppDownloadSource {
+  playStore,
+  appGallery,
+  website,
+  appStore,
+}
+
+extension AppDownloadSourceExt on AppDownloadSource {
+  String get id {
+    switch (this) {
+      case AppDownloadSource.playStore:
+        return 'play_store';
+      case AppDownloadSource.appGallery:
+        return 'app_gallery';
+      case AppDownloadSource.website:
+        return 'website';
+      case AppDownloadSource.appStore:
+        return 'app_store';
+    }
+  }
+
+  String get displayName {
+    switch (this) {
+      case AppDownloadSource.playStore:
+        return 'Google Play Store';
+      case AppDownloadSource.appGallery:
+        return 'Huawei AppGallery';
+      case AppDownloadSource.website:
+        return 'Amiga Website (Direct APK)';
+      case AppDownloadSource.appStore:
+        return 'Apple App Store';
+    }
+  }
+
+  String get shortName {
+    switch (this) {
+      case AppDownloadSource.playStore:
+        return 'Play Store';
+      case AppDownloadSource.appGallery:
+        return 'AppGallery';
+      case AppDownloadSource.website:
+        return 'Amiga Website';
+      case AppDownloadSource.appStore:
+        return 'App Store';
+    }
+  }
+
+  IconData get icon {
+    switch (this) {
+      case AppDownloadSource.playStore:
+        return Icons.shop_two_outlined;
+      case AppDownloadSource.appGallery:
+        return Icons.apps_outlined;
+      case AppDownloadSource.website:
+        return Icons.language_outlined;
+      case AppDownloadSource.appStore:
+        return Icons.apple;
+    }
+  }
+}
+
+class AppDownloadSourceDetector {
+  static const String _prefSourceKey = 'cached_app_install_source';
+  static const String _prefInstallerKey = 'cached_app_installer_pkg';
+
+  static Future<AppDownloadSource> detectSource({
+    required PackageInfo packageInfo,
+    required SharedPreferences prefs,
+  }) async {
+    // 1. iOS is always Apple App Store
+    if (!kIsWeb && Platform.isIOS) {
+      await prefs.setString(_prefSourceKey, 'app_store');
+      return AppDownloadSource.appStore;
+    }
+
+    final rawInstaller = (packageInfo.installerStore ?? '').toLowerCase().trim();
+    if (rawInstaller.isNotEmpty) {
+      await prefs.setString(_prefInstallerKey, rawInstaller);
+    }
+
+    // 2. Direct package manager matching
+    // Google Play Store
+    if (rawInstaller == 'com.android.vending' ||
+        rawInstaller.contains('vending') ||
+        rawInstaller.contains('play.google')) {
+      await prefs.setString(_prefSourceKey, 'play_store');
+      return AppDownloadSource.playStore;
+    }
+
+    // Huawei AppGallery
+    if (rawInstaller == 'com.huawei.appmarket' ||
+        rawInstaller.contains('huawei.appmarket') ||
+        rawInstaller.contains('appmarket')) {
+      await prefs.setString(_prefSourceKey, 'app_gallery');
+      return AppDownloadSource.appGallery;
+    }
+
+    // Huawei package ID heuristic: if app was built with com.amigagracia.app
+    if (packageInfo.packageName == 'com.amigagracia.app') {
+      await prefs.setString(_prefSourceKey, 'app_gallery');
+      return AppDownloadSource.appGallery;
+    }
+
+    // 3. Check previously cached source in SharedPreferences (persists across OTA APK updates)
+    final cached = prefs.getString(_prefSourceKey);
+    if (cached != null) {
+      switch (cached) {
+        case 'play_store':
+          return AppDownloadSource.playStore;
+        case 'app_gallery':
+          return AppDownloadSource.appGallery;
+        case 'app_store':
+          return AppDownloadSource.appStore;
+        case 'website':
+          return AppDownloadSource.website;
+      }
+    }
+
+    // 4. Default for direct website downloads / sideloaded APK
+    await prefs.setString(_prefSourceKey, 'website');
+    return AppDownloadSource.website;
+  }
+}
+
+// ==========================================
 // GLOBAL SESSION
 // ==========================================
 class UserSession {
@@ -255,8 +382,13 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.146+158';
+  static const String appVersion = '1.0.147+159';
   static String installedAppVersion = appVersion;
+  static AppDownloadSource downloadSource = AppDownloadSource.website;
+  static String? installerPackage;
+
+  static String get downloadSourceId => downloadSource.id;
+  static String get downloadSourceDisplayName => downloadSource.displayName;
 
   static Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
@@ -289,8 +421,14 @@ class UserSession {
           ? '0'
           : packageInfo.buildNumber.trim();
       installedAppVersion = '$version+$buildNumber';
+      installerPackage = packageInfo.installerStore;
+      downloadSource = await AppDownloadSourceDetector.detectSource(
+        packageInfo: packageInfo,
+        prefs: prefs,
+      );
     } catch (_) {
       installedAppVersion = appVersion;
+      downloadSource = AppDownloadSource.website;
     }
   }
 
@@ -312,12 +450,18 @@ class UserSession {
 
   static Future<void> refreshInstalledAppVersion() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
       final packageInfo = await PackageInfo.fromPlatform();
       final version = packageInfo.version.trim();
       final buildNumber = packageInfo.buildNumber.trim().isEmpty
           ? '0'
           : packageInfo.buildNumber.trim();
       installedAppVersion = '$version+$buildNumber';
+      installerPackage = packageInfo.installerStore;
+      downloadSource = await AppDownloadSourceDetector.detectSource(
+        packageInfo: packageInfo,
+        prefs: prefs,
+      );
     } catch (_) {
       installedAppVersion = appVersion;
     }
@@ -1058,8 +1202,19 @@ class _GlobalUpdateWrapperState extends State<GlobalUpdateWrapper>
     _isChecking = true;
     try {
       await UserSession.refreshInstalledAppVersion();
+      final queryParams = {
+        'source': UserSession.downloadSource.id,
+        if (UserSession.installerPackage != null && UserSession.installerPackage!.isNotEmpty)
+          'installer': UserSession.installerPackage!,
+        'version': UserSession.installedAppVersion,
+      };
+      final uri = Uri.parse('${UserSession.getBaseUrl()}/api/app-version')
+          .replace(queryParameters: queryParams);
       final response = await http
-          .get(Uri.parse('${UserSession.getBaseUrl()}/api/app-version'))
+          .get(uri, headers: {
+            'Accept': 'application/json',
+            'X-App-Install-Source': UserSession.downloadSource.id,
+          })
           .timeout(const Duration(seconds: 5));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -1078,6 +1233,7 @@ class _GlobalUpdateWrapperState extends State<GlobalUpdateWrapper>
         final playStoreUrl = data['play_store_url'] as String?;
         final appStoreUrl = data['app_store_url'] as String?;
         final appGalleryUrl = data['app_gallery_url'] as String?;
+        final apkDownloadUrl = data['apk_download_url'] as String?;
         final updateRequired = UserSession.isUpdateRequired(latestVersion);
         if (!updateRequired) {
           UpdateChecker._apkInstallTriggered = false;
@@ -1092,6 +1248,7 @@ class _GlobalUpdateWrapperState extends State<GlobalUpdateWrapper>
               playStoreUrl: playStoreUrl,
               appStoreUrl: appStoreUrl,
               appGalleryUrl: appGalleryUrl,
+              apkDownloadUrl: apkDownloadUrl,
             );
           }
         }
@@ -1112,12 +1269,75 @@ class UpdateChecker {
   static bool _apkInstallTriggered = false;
   static DateTime? _updateInstalledTime;
 
+  static Future<void> launchStore({
+    required AppDownloadSource source,
+    String? packageName,
+    String? playStoreUrl,
+    String? appGalleryUrl,
+    String? appStoreUrl,
+  }) async {
+    final pkg = (packageName != null && packageName.isNotEmpty)
+        ? packageName
+        : 'com.amiga.travel.flutter_app';
+
+    if (source == AppDownloadSource.playStore) {
+      final marketUri = Uri.parse('market://details?id=$pkg');
+      final webUri = Uri.parse(
+        (playStoreUrl != null && playStoreUrl.isNotEmpty)
+            ? playStoreUrl
+            : 'https://play.google.com/store/apps/details?id=$pkg',
+      );
+      try {
+        if (await canLaunchUrl(marketUri)) {
+          await launchUrl(marketUri, mode: LaunchMode.externalApplication);
+          return;
+        }
+      } catch (_) {}
+      try {
+        await launchUrl(webUri, mode: LaunchMode.externalApplication);
+      } catch (e) {
+        debugPrint('Failed to open Play Store: $e');
+      }
+    } else if (source == AppDownloadSource.appGallery) {
+      final appMarketUri = Uri.parse('appmarket://details?id=$pkg');
+      final webUri = Uri.parse(
+        (appGalleryUrl != null && appGalleryUrl.isNotEmpty)
+            ? appGalleryUrl
+            : 'https://appgallery.huawei.com/app/C118908953',
+      );
+      try {
+        if (await canLaunchUrl(appMarketUri)) {
+          await launchUrl(appMarketUri, mode: LaunchMode.externalApplication);
+          return;
+        }
+      } catch (_) {}
+      try {
+        await launchUrl(webUri, mode: LaunchMode.externalApplication);
+      } catch (e) {
+        debugPrint('Failed to open AppGallery: $e');
+      }
+    } else if (source == AppDownloadSource.appStore) {
+      final webUri = Uri.parse(
+        (appStoreUrl != null && appStoreUrl.isNotEmpty)
+            ? appStoreUrl
+            : 'https://apps.apple.com/app/amiga-gracia/id6470000000',
+      );
+      try {
+        await launchUrl(webUri, mode: LaunchMode.externalApplication);
+      } catch (e) {
+        debugPrint('Failed to open App Store: $e');
+      }
+    }
+  }
+
   static Future<void> showUpdateDialog(
-      BuildContext context,
-      String latestVersion, {
-      String? playStoreUrl,
-      String? appStoreUrl,
-      String? appGalleryUrl,
+    BuildContext context,
+    String latestVersion, {
+    String? playStoreUrl,
+    String? appStoreUrl,
+    String? appGalleryUrl,
+    String? apkDownloadUrl,
+    AppDownloadSource? sourceOverride,
   }) async {
     if (_dialogAlreadyVisible && _lastPromptedVersion == latestVersion) {
       return;
@@ -1130,7 +1350,13 @@ class UpdateChecker {
     _dialogAlreadyVisible = true;
     _lastPromptedVersion = latestVersion;
 
+    final source = sourceOverride ?? UserSession.downloadSource;
     final isIOS = !kIsWeb && Platform.isIOS;
+    String? packageName;
+    try {
+      final info = await PackageInfo.fromPlatform();
+      packageName = info.packageName;
+    } catch (_) {}
 
     await showDialog(
       context: context,
@@ -1139,122 +1365,315 @@ class UpdateChecker {
         bool isDownloading = false;
         double progress = 0.0;
         String dlError = '';
+
         return StatefulBuilder(
-          builder: (context, setState) {
+          builder: (dialogContext, setState) {
+            Future<void> startDirectApkDownload() async {
+              setState(() {
+                isDownloading = true;
+                dlError = '';
+              });
+              try {
+                final targetApkUrl = (apkDownloadUrl != null && apkDownloadUrl.isNotEmpty)
+                    ? (apkDownloadUrl.contains('?')
+                        ? '$apkDownloadUrl&v=$latestVersion'
+                        : '$apkDownloadUrl?v=$latestVersion')
+                    : '${UserSession.getBaseUrl()}/downloads/amiga-travel.apk?v=$latestVersion';
+                final request = http.Request('GET', Uri.parse(targetApkUrl));
+                final response = await http.Client().send(request);
+                if (response.statusCode != 200) {
+                  throw Exception('Server returned ${response.statusCode}');
+                }
+
+                final contentLength = response.contentLength ?? 1;
+                final dir = await getExternalStorageDirectory();
+                final file = File('${dir!.path}/update_$latestVersion.apk');
+                final sink = file.openWrite();
+
+                int bytes = 0;
+                double lastProgress = 0.0;
+                await response.stream.listen((List<int> chunk) {
+                  bytes += chunk.length;
+                  sink.add(chunk);
+                  double currentProgress = bytes / contentLength;
+                  if (currentProgress - lastProgress >= 0.01 ||
+                      currentProgress >= 1.0) {
+                    lastProgress = currentProgress;
+                    setState(() => progress = currentProgress);
+                  }
+                }).asFuture();
+                await sink.close();
+
+                await UserSession.save();
+                if (BookingData.activeSession != null) {
+                  await BookingData.activeSession!
+                      .saveToPrefs(BookingData.activeSession!.savedStep);
+                }
+
+                _apkInstallTriggered = true;
+                UpdateChecker._updateInstalledTime = DateTime.now();
+
+                final result = await OpenFilex.open(file.path);
+                if (result.type != ResultType.done) {
+                  _apkInstallTriggered = false;
+                  UpdateChecker._updateInstalledTime = null;
+                  throw Exception(result.message);
+                }
+
+                if (dialogContext.mounted) {
+                  Navigator.of(dialogContext, rootNavigator: true).pop();
+                }
+              } catch (e) {
+                debugPrint('Download error: $e');
+                setState(() {
+                  isDownloading = false;
+                  dlError =
+                      'Failed to download update. Please try again or download from website.';
+                });
+              }
+            }
+
+            // Description text tailored to the detected root
+            String messageText;
+            if (isIOS) {
+              messageText =
+                  'A new version ($latestVersion) of Amiga Gracia is available on the App Store. Please update to continue.';
+            } else {
+              switch (source) {
+                case AppDownloadSource.playStore:
+                  messageText =
+                      'A new version ($latestVersion) of Amiga Gracia is available on Google Play. Please update to continue using the app.';
+                  break;
+                case AppDownloadSource.appGallery:
+                  messageText =
+                      'A new version ($latestVersion) of Amiga Gracia is available on Huawei AppGallery. Please update to continue using the app.';
+                  break;
+                case AppDownloadSource.website:
+                default:
+                  messageText =
+                      'A new version ($latestVersion) of Amiga Gracia is available. The app will download and install the update directly.';
+                  break;
+              }
+            }
+
+            // Badging colors & label
+            Color badgeBg;
+            Color badgeText;
+            String badgeLabel;
+            IconData badgeIcon;
+
+            if (isIOS) {
+              badgeBg = Colors.grey.shade200;
+              badgeText = Colors.black87;
+              badgeLabel = 'Apple App Store';
+              badgeIcon = Icons.apple;
+            } else {
+              switch (source) {
+                case AppDownloadSource.playStore:
+                  badgeBg = const Color(0xFFE8F5E9);
+                  badgeText = const Color(0xFF1B5E20);
+                  badgeLabel = 'Google Play Store';
+                  badgeIcon = Icons.shop_two_outlined;
+                  break;
+                case AppDownloadSource.appGallery:
+                  badgeBg = const Color(0xFFFFEBEE);
+                  badgeText = const Color(0xFFB71C1C);
+                  badgeLabel = 'Huawei AppGallery';
+                  badgeIcon = Icons.apps_outlined;
+                  break;
+                case AppDownloadSource.website:
+                default:
+                  badgeBg = const Color(0xFFE0F2FE);
+                  badgeText = const Color(0xFF0369A1);
+                  badgeLabel = 'Amiga Website (Direct APK)';
+                  badgeIcon = Icons.language_outlined;
+                  break;
+              }
+            }
+
             return AlertDialog(
-              title: const Text('Update Required'),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: kGreen.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.system_update_rounded, color: kGreen, size: 24),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'Update Required',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                    ),
+                  ),
+                ],
+              ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Root download indicator badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: badgeBg,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(badgeIcon, size: 14, color: badgeText),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            'Installed via: $badgeLabel',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: badgeText,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
                   Text(
-                    isIOS
-                        ? 'A new version ($latestVersion) of Amiga Gracia is available on the App Store. Please update to continue.'
-                        : 'A new version ($latestVersion) of Amiga Gracia is available. Please update to continue using the app.',
+                    messageText,
+                    style: const TextStyle(fontSize: 14, color: kSlate700, height: 1.4),
                   ),
                   if (isDownloading) ...[
                     const SizedBox(height: 20),
-                    LinearProgressIndicator(value: progress, color: kGreen),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        color: kGreen,
+                        backgroundColor: kSlate200,
+                        minHeight: 8,
+                      ),
+                    ),
                     const SizedBox(height: 8),
-                    Text('${(progress * 100).toStringAsFixed(0)}% downloaded'),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '${(progress * 100).toStringAsFixed(0)}% downloaded',
+                          style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: kSlate700),
+                        ),
+                        const Text(
+                          'Downloading APK...',
+                          style: TextStyle(fontSize: 12, color: kSlate500),
+                        ),
+                      ],
+                    ),
                   ],
                   if (dlError.isNotEmpty) ...[
                     const SizedBox(height: 12),
-                    Text(dlError,
-                        style:
-                            const TextStyle(color: Colors.red, fontSize: 12)),
+                    Text(
+                      dlError,
+                      style: const TextStyle(color: Colors.red, fontSize: 12),
+                    ),
                   ]
                 ],
               ),
+              actionsAlignment: MainAxisAlignment.end,
+              actionsOverflowButtonSpacing: 8,
               actions: [
-                if (isIOS)
-                  FilledButton(
-                    onPressed: () async {
-                      final url = (appStoreUrl != null && appStoreUrl.isNotEmpty)
-                          ? appStoreUrl
-                          : 'https://apps.apple.com/app/amiga-gracia/id6470000000';
-                      await launchUrl(Uri.parse(url),
-                          mode: LaunchMode.externalApplication);
-                    },
-                    child: const Text('Update on App Store'),
+                if (isDownloading)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: kGreen),
+                        ),
+                        SizedBox(width: 8),
+                        Text('Installing update...',
+                            style: TextStyle(fontSize: 12, color: kSlate600)),
+                      ],
+                    ),
                   )
                 else ...[
-                  if (playStoreUrl != null && playStoreUrl.isNotEmpty)
-                    TextButton(
-                      onPressed: () async {
-                        await launchUrl(Uri.parse(playStoreUrl),
-                            mode: LaunchMode.externalApplication);
-                      },
-                      child: const Text('Google Play'),
+                  // Primary Action dynamically routed to user's installation root:
+                  if (isIOS)
+                    FilledButton.icon(
+                      icon: const Icon(Icons.apple, size: 18),
+                      label: const Text('Update on App Store'),
+                      onPressed: () async => launchStore(
+                        source: AppDownloadSource.appStore,
+                        appStoreUrl: appStoreUrl,
+                      ),
+                    )
+                  else if (source == AppDownloadSource.playStore) ...[
+                    FilledButton.icon(
+                      style: FilledButton.styleFrom(backgroundColor: kGreen),
+                      icon: const Icon(Icons.shop_two_outlined, size: 18),
+                      label: const Text('Update on Google Play'),
+                      onPressed: () async => launchStore(
+                        source: AppDownloadSource.playStore,
+                        packageName: packageName,
+                        playStoreUrl: playStoreUrl,
+                      ),
                     ),
-                  if (!isDownloading)
-                    FilledButton(
-                      onPressed: () async {
-                        setState(() {
-                          isDownloading = true;
-                          dlError = '';
-                        });
-                        try {
-                          final apkUrl =
-                              '${UserSession.getBaseUrl()}/downloads/amiga-travel.apk?v=$latestVersion';
-                          final request = http.Request('GET', Uri.parse(apkUrl));
-                          final response = await http.Client().send(request);
-                          if (response.statusCode != 200) {
-                            throw Exception(
-                                'Server returned ${response.statusCode}');
-                          }
-
-                          final contentLength = response.contentLength ?? 1;
-                          final dir = await getExternalStorageDirectory();
-                          final file =
-                              File('${dir!.path}/update_$latestVersion.apk');
-                          final sink = file.openWrite();
-
-                          int bytes = 0;
-                          double lastProgress = 0.0;
-                          await response.stream.listen((List<int> chunk) {
-                            bytes += chunk.length;
-                            sink.add(chunk);
-                            double currentProgress = bytes / contentLength;
-                            if (currentProgress - lastProgress >= 0.01 ||
-                                currentProgress >= 1.0) {
-                              lastProgress = currentProgress;
-                              setState(() => progress = currentProgress);
-                            }
-                          }).asFuture();
-                          await sink.close();
-
-                          await UserSession.save();
-                          if (BookingData.activeSession != null) {
-                            await BookingData.activeSession!.saveToPrefs(
-                                BookingData.activeSession!.savedStep);
-                          }
-
-                          _apkInstallTriggered = true;
-                          UpdateChecker._updateInstalledTime = DateTime.now();
-
-                          final result = await OpenFilex.open(file.path);
-                          if (result.type != ResultType.done) {
-                            _apkInstallTriggered = false;
-                            UpdateChecker._updateInstalledTime = null;
-                            throw Exception(result.message);
-                          }
-
-                          if (context.mounted) {
-                            Navigator.of(context, rootNavigator: true).pop();
-                          }
-
-                          return;
-                        } catch (e) {
-                          debugPrint('Download error: $e');
-                          setState(() {
-                            isDownloading = false;
-                            dlError =
-                                'Failed to download update. Please try again or download from website.';
-                          });
-                        }
-                      },
-                      child: const Text('Update Now'),
+                    TextButton.icon(
+                      icon: const Icon(Icons.download, size: 16),
+                      label: const Text('Direct APK'),
+                      onPressed: startDirectApkDownload,
                     ),
+                  ] else if (source == AppDownloadSource.appGallery) ...[
+                    FilledButton.icon(
+                      style: FilledButton.styleFrom(backgroundColor: const Color(0xFFC7000B)),
+                      icon: const Icon(Icons.apps_outlined, size: 18),
+                      label: const Text('Update on AppGallery'),
+                      onPressed: () async => launchStore(
+                        source: AppDownloadSource.appGallery,
+                        packageName: packageName,
+                        appGalleryUrl: appGalleryUrl,
+                      ),
+                    ),
+                    TextButton.icon(
+                      icon: const Icon(Icons.download, size: 16),
+                      label: const Text('Direct APK'),
+                      onPressed: startDirectApkDownload,
+                    ),
+                  ] else ...[
+                    FilledButton.icon(
+                      style: FilledButton.styleFrom(backgroundColor: kGreen),
+                      icon: const Icon(Icons.download_rounded, size: 18),
+                      label: const Text('Update Now (In-App)'),
+                      onPressed: startDirectApkDownload,
+                    ),
+                    if (playStoreUrl != null && playStoreUrl.isNotEmpty)
+                      TextButton(
+                        onPressed: () async => launchStore(
+                          source: AppDownloadSource.playStore,
+                          packageName: packageName,
+                          playStoreUrl: playStoreUrl,
+                        ),
+                        child: const Text('Google Play'),
+                      ),
+                    if (appGalleryUrl != null && appGalleryUrl.isNotEmpty)
+                      TextButton(
+                        onPressed: () async => launchStore(
+                          source: AppDownloadSource.appGallery,
+                          packageName: packageName,
+                          appGalleryUrl: appGalleryUrl,
+                        ),
+                        child: const Text('AppGallery'),
+                      ),
+                  ],
                 ],
               ],
             );
@@ -1264,6 +1683,88 @@ class UpdateChecker {
     );
 
     _dialogAlreadyVisible = false;
+  }
+
+  static Future<void> checkForUpdateManual(BuildContext context) async {
+    showTopSnack(
+      context,
+      const SnackBar(
+        content: Text('Checking for updates...'),
+        duration: Duration(seconds: 1),
+      ),
+    );
+    try {
+      await UserSession.refreshInstalledAppVersion();
+      final queryParams = {
+        'source': UserSession.downloadSource.id,
+        if (UserSession.installerPackage != null && UserSession.installerPackage!.isNotEmpty)
+          'installer': UserSession.installerPackage!,
+        'version': UserSession.installedAppVersion,
+      };
+      final uri = Uri.parse('${UserSession.getBaseUrl()}/api/app-version')
+          .replace(queryParameters: queryParams);
+      final response = await http
+          .get(uri, headers: {
+            'Accept': 'application/json',
+            'X-App-Install-Source': UserSession.downloadSource.id,
+          })
+          .timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final latestVersion = data['version'] as String;
+        final playStoreUrl = data['play_store_url'] as String?;
+        final appStoreUrl = data['app_store_url'] as String?;
+        final appGalleryUrl = data['app_gallery_url'] as String?;
+        final apkDownloadUrl = data['apk_download_url'] as String?;
+        final updateRequired = UserSession.isUpdateRequired(latestVersion);
+
+        if (updateRequired) {
+          if (context.mounted) {
+            await showUpdateDialog(
+              context,
+              latestVersion,
+              playStoreUrl: playStoreUrl,
+              appStoreUrl: appStoreUrl,
+              appGalleryUrl: appGalleryUrl,
+              apkDownloadUrl: apkDownloadUrl,
+            );
+          }
+        } else {
+          if (context.mounted) {
+            showTopSnack(
+              context,
+              SnackBar(
+                content: Text(
+                  'You are using the latest version (${UserSession.installedAppVersion}) from ${UserSession.downloadSource.displayName}.',
+                ),
+                backgroundColor: kGreen,
+              ),
+            );
+          }
+        }
+      } else {
+        if (context.mounted) {
+          showTopSnack(
+            context,
+            const SnackBar(
+              content: Text('Failed to check for updates. Please try again later.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        showTopSnack(
+          context,
+          SnackBar(
+            content: Text('Network error checking updates: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }
 
@@ -1376,8 +1877,19 @@ class _SplashLoaderScreenState extends State<SplashLoaderScreen> {
     await UserSession.refreshInstalledAppVersion();
 
     try {
+      final queryParams = {
+        'source': UserSession.downloadSource.id,
+        if (UserSession.installerPackage != null && UserSession.installerPackage!.isNotEmpty)
+          'installer': UserSession.installerPackage!,
+        'version': UserSession.installedAppVersion,
+      };
+      final uri = Uri.parse('${UserSession.getBaseUrl()}/api/app-version')
+          .replace(queryParameters: queryParams);
       final response = await http
-          .get(Uri.parse('${UserSession.getBaseUrl()}/api/app-version'))
+          .get(uri, headers: {
+            'Accept': 'application/json',
+            'X-App-Install-Source': UserSession.downloadSource.id,
+          })
           .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
@@ -1391,6 +1903,7 @@ class _SplashLoaderScreenState extends State<SplashLoaderScreen> {
         final playStoreUrl = data['play_store_url'] as String?;
         final appStoreUrl = data['app_store_url'] as String?;
         final appGalleryUrl = data['app_gallery_url'] as String?;
+        final apkDownloadUrl = data['apk_download_url'] as String?;
 
         if (forceUpdate && UserSession.isUpdateRequired(latestVersion)) {
           if (mounted) {
@@ -1400,6 +1913,7 @@ class _SplashLoaderScreenState extends State<SplashLoaderScreen> {
               playStoreUrl: playStoreUrl,
               appStoreUrl: appStoreUrl,
               appGalleryUrl: appGalleryUrl,
+              apkDownloadUrl: apkDownloadUrl,
             );
           }
           await UserSession.refreshInstalledAppVersion();
@@ -5832,8 +6346,17 @@ class _ActivityScreenState extends State<ActivityScreen> {
     try {
       final response = await http.post(
         Uri.parse('${UserSession.getBaseUrl()}/api/login'),
-        headers: {'Accept': 'application/json'},
-        body: {'email': email, 'password': password},
+        headers: {
+          'Accept': 'application/json',
+          'X-App-Install-Source': UserSession.downloadSource.id,
+        },
+        body: {
+          'email': email,
+          'password': password,
+          'install_source': UserSession.downloadSource.id,
+          'installer': UserSession.installerPackage ?? '',
+          'app_version': UserSession.installedAppVersion,
+        },
       );
 
       final data = jsonDecode(response.body);
@@ -8889,20 +9412,38 @@ class AppDrawer extends StatelessWidget {
                 onLogout(); // Clears full session & navigates to Home tab
               },
             ),
-          const Padding(
-            padding: EdgeInsets.all(16),
+          Padding(
+            padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                Text(
-                  'Version ${UserSession.appVersion}',
-                  style: TextStyle(
-                      color: kSlate400,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
+                InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () {
+                    Navigator.pop(context);
+                    UpdateChecker.checkForUpdateManual(context);
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(UserSession.downloadSource.icon, size: 13, color: kSlate400),
+                        const SizedBox(width: 5),
+                        Text(
+                          'v${UserSession.installedAppVersion} • ${UserSession.downloadSource.shortName}',
+                          style: const TextStyle(
+                              color: kSlate400,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                SizedBox(height: 4),
-                Text(
+                const SizedBox(height: 2),
+                const Text(
                   '© 2025 Amiga Gracia Travel Services',
                   style: TextStyle(color: kSlate400, fontSize: 11),
                   textAlign: TextAlign.center,
@@ -15545,15 +16086,108 @@ class AboutScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            const Text('Kay Amiga, Hassle Free Ka!',
-                style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: kSlate800),
-                textAlign: TextAlign.center),
+            Card(
+              color: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.info_outline, color: kGreen, size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          'App & Download Origin',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: kSlate800,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    _AppInfoRow(
+                      label: 'Installed Version',
+                      value: 'v${UserSession.installedAppVersion}',
+                    ),
+                    const SizedBox(height: 8),
+                    _AppInfoRow(
+                      label: 'Download Root',
+                      value: UserSession.downloadSource.displayName,
+                    ),
+                    if (UserSession.installerPackage != null &&
+                        UserSession.installerPackage!.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      _AppInfoRow(
+                        label: 'Installer Package',
+                        value: UserSession.installerPackage!,
+                      ),
+                    ],
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.sync_rounded, size: 18),
+                        label: const Text('Check for Updates'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: kGreen,
+                          side: const BorderSide(color: kGreen),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: () => UpdateChecker.checkForUpdateManual(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Center(
+              child: Text('Kay Amiga, Hassle Free Ka!',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: kSlate800),
+                  textAlign: TextAlign.center),
+            ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _AppInfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+  const _AppInfoRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12, color: kSlate500)),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: kSlate800,
+            ),
+            textAlign: TextAlign.end,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
     );
   }
 }

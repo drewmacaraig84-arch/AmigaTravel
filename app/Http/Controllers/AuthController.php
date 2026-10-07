@@ -130,6 +130,19 @@ class AuthController extends Controller
 
     protected function logUserLogin(?User $user, string $type, Request $request, bool $success, string $description = null): void
     {
+        $metadata = [
+            'remember' => $request->boolean('remember'),
+        ];
+        if ($request->filled('install_source')) {
+            $metadata['install_source'] = $request->input('install_source');
+        }
+        if ($request->filled('installer')) {
+            $metadata['installer'] = $request->input('installer');
+        }
+        if ($request->filled('app_version')) {
+            $metadata['app_version'] = $request->input('app_version');
+        }
+
         \App\Models\UserLoginHistory::create([
             'user_id' => $user?->id,
             'email' => $request->input('email'),
@@ -138,9 +151,7 @@ class AuthController extends Controller
             'user_agent' => $request->userAgent(),
             'success' => $success,
             'description' => $description,
-            'metadata' => [
-                'remember' => $request->boolean('remember'),
-            ],
+            'metadata' => $metadata,
         ]);
     }
 

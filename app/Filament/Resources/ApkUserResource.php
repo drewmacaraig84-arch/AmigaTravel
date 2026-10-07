@@ -121,6 +121,27 @@ class ApkUserResource extends Resource
                         'Online' => 'success',
                         'Offline' => 'gray',
                     }),
+                Tables\Columns\TextColumn::make('install_source')
+                    ->label('Download Root')
+                    ->getStateUsing(function (Model $record) {
+                        $latestLogin = $record->loginHistories()->whereNotNull('metadata')->latest()->first();
+                        $source = $latestLogin?->metadata['install_source'] ?? null;
+                        return match ($source) {
+                            'play_store' => 'Google Play',
+                            'app_gallery' => 'AppGallery',
+                            'website' => 'Amiga Website',
+                            'app_store' => 'App Store',
+                            default => 'Amiga Website',
+                        };
+                    })
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'Google Play' => 'success',
+                        'AppGallery' => 'danger',
+                        'Amiga Website' => 'info',
+                        'App Store' => 'warning',
+                        default => 'gray',
+                    }),
             ])
             ->filters([
                 //
