@@ -382,7 +382,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.147+159';
+  static const String appVersion = '1.0.148+160';
   static String installedAppVersion = appVersion;
   static AppDownloadSource downloadSource = AppDownloadSource.website;
   static String? installerPackage;
@@ -13525,11 +13525,23 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                   _SummarySection(title: 'Passengers', children: [
                     ...List.generate(
                         pax.length,
-                        (i) => _SummaryRow(
-                              BookingData.passengerTypeLabel(
-                                  pax[i]['type']?.toString() ?? 'adult', i + 1),
-                              pax[i]['name'] as String? ?? '',
-                            )),
+                        (i) {
+                          final g = (pax[i]['gender'] ?? '').toString();
+                          final gLabel = g == 'male'
+                              ? 'Male'
+                              : (g == 'female'
+                                  ? 'Female'
+                                  : (g == 'prefer_not_to_say'
+                                      ? 'Prefer not to say'
+                                      : ''));
+                          final name = pax[i]['name'] as String? ?? '';
+                          final val = gLabel.isNotEmpty ? '$name  ($gLabel)' : name;
+                          return _SummaryRow(
+                            BookingData.passengerTypeLabel(
+                                pax[i]['type']?.toString() ?? 'adult', i + 1),
+                            val,
+                          );
+                        }),
                   ]),
                   const SizedBox(height: 16),
 
@@ -14474,6 +14486,17 @@ class _PassengerItemsCardState extends State<_PassengerItemsCard> {
                     runSpacing: 4,
                     children: [
                       _detailPill('Type', type),
+                      () {
+                        final g = (p['gender'] ?? '').toString();
+                        final gLabel = g == 'male'
+                            ? 'Male'
+                            : (g == 'female'
+                                ? 'Female'
+                                : (g == 'prefer_not_to_say'
+                                    ? 'Prefer not to say'
+                                    : ''));
+                        return gLabel.isNotEmpty ? _detailPill('Gender', gLabel) : const SizedBox.shrink();
+                      }(),
                       if (bday.isNotEmpty) _detailPill('Bday', bday),
                       if (discount.isNotEmpty) _detailPill('Discount', discount),
                       if (idNum.isNotEmpty) _detailPill('ID#', idNum),
