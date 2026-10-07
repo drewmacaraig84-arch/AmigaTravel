@@ -643,9 +643,13 @@ class CreateBookingAction
         $returnScheduleAccomPrice     = $returnScheduleAccommodation ? (float) $returnScheduleAccommodation->price : 0;
 
         // Cache the discount table — it rarely changes and is loaded on every booking.
-        $discounts = Cache::remember('discounts:all:keyed', now()->addHours(12), function () {
-            return \App\Models\Discount::all()->keyBy('id');
-        });
+        try {
+            $discounts = Cache::remember('discounts:all:keyed', now()->addHours(12), function () {
+                return \App\Models\Discount::all()->keyBy('id');
+            });
+        } catch (\Throwable) {
+            $discounts = \App\Models\Discount::all()->keyBy('id');
+        }
 
         $defaultPromoTicket = ! empty($promotionalTicketId)
             ? PromotionalTicket::find($promotionalTicketId)

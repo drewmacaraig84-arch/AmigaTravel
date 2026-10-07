@@ -9,15 +9,25 @@ class DiscountController extends Controller
 {
     public function index()
     {
-        $discounts = \Illuminate\Support\Facades\Cache::remember('api:discounts', now()->addHours(6), function () {
-            return Discount::orderBy('name')->get()->map(function ($d) {
+        try {
+            $discounts = \Illuminate\Support\Facades\Cache::remember('api:discounts', now()->addHours(6), function () {
+                return Discount::orderBy('name')->get()->map(function ($d) {
+                    return [
+                        'id' => $d->id,
+                        'name' => $d->name,
+                        'percentage' => floatval($d->percentage),
+                    ];
+                });
+            });
+        } catch (\Throwable $e) {
+            $discounts = Discount::orderBy('name')->get()->map(function ($d) {
                 return [
                     'id' => $d->id,
                     'name' => $d->name,
                     'percentage' => floatval($d->percentage),
                 ];
             });
-        });
+        }
 
         return response()->json([
             'status' => 'success',

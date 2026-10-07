@@ -382,7 +382,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.148+160';
+  static const String appVersion = '1.0.149+161';
   static String installedAppVersion = appVersion;
   static AppDownloadSource downloadSource = AppDownloadSource.website;
   static String? installerPackage;
@@ -11383,7 +11383,14 @@ class DiscountScreen extends StatefulWidget {
 
 class _DiscountScreenState extends State<DiscountScreen> {
   final _formKey = GlobalKey<FormState>();
-  List<Map<String, dynamic>> _discounts = [];
+  static const List<Map<String, dynamic>> _defaultDiscounts = [
+    {'id': 1, 'name': 'Student', 'percentage': 20.0},
+    {'id': 2, 'name': 'Senior Citizen', 'percentage': 20.0},
+    {'id': 3, 'name': 'PWD', 'percentage': 20.0},
+    {'id': 4, 'name': 'Infant', 'percentage': 100.0},
+  ];
+
+  List<Map<String, dynamic>> _discounts = List.from(_defaultDiscounts);
   List<TextEditingController> _nameControllers = [];
   List<TextEditingController> _birthdateControllers = [];
   List<TextEditingController> _idControllers = [];
@@ -11562,12 +11569,15 @@ class _DiscountScreenState extends State<DiscountScreen> {
   void _fetchDiscounts() async {
     try {
       final baseUrl = UserSession.getBaseUrl();
-      final res = await http.get(Uri.parse('$baseUrl/api/discounts'));
+      final res = await http.get(Uri.parse('$baseUrl/api/discounts'),
+          headers: {'Accept': 'application/json'});
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         if (data['status'] == 'success') {
-          setState(() =>
-              _discounts = List<Map<String, dynamic>>.from(data['discounts']));
+          final list = List<Map<String, dynamic>>.from(data['discounts'] ?? []);
+          if (list.isNotEmpty && mounted) {
+            setState(() => _discounts = list);
+          }
         }
       }
     } catch (_) {}
@@ -11586,14 +11596,26 @@ class _DiscountScreenState extends State<DiscountScreen> {
           (pType == 'minor' || pType == 'child' || (widget.booking.mode == 'airline' && pType == 'infant'));
       if (widget.booking.isSuperPromo || isRegularMinor) {
         widget.booking.passengers[i]['discount_id'] = null;
+        widget.booking.passengers[i]['discount_name'] = null;
+        widget.booking.passengers[i]['discount_percentage'] = null;
       }
 
       final discId = widget.booking.passengers[i]['discount_id'];
-      final disc =
-          _discounts.firstWhere((d) => d['id'] == discId, orElse: () => {});
-      final discName = disc['name']?.toString().toLowerCase() ?? '';
+      final disc = _discounts.firstWhere(
+        (d) => d['id'] == discId || d['id'].toString() == discId.toString(),
+        orElse: () => {
+          'id': discId,
+          'name': discId == 2 ? 'Senior Citizen' : (discId == 1 ? 'Student' : (discId == 3 ? 'PWD' : 'Discount')),
+          'percentage': 20.0,
+        },
+      );
+      final discName = (disc['name'] ?? '').toString().toLowerCase();
 
       if (discId != null && discName != 'infant') {
+        widget.booking.passengers[i]['discount_name'] = disc['name'];
+        widget.booking.passengers[i]['discount_percentage'] = (disc['percentage'] is num)
+            ? (disc['percentage'] as num).toDouble()
+            : 20.0;
         final idNumber = _idControllers[i].text.trim();
         widget.booking.passengers[i]['id_number'] = idNumber;
 
@@ -12148,6 +12170,23 @@ class _DiscountScreenState extends State<DiscountScreen> {
                                       onChanged: (v) {
                                         setState(() {
                                           pax[i]['discount_id'] = v;
+                                          if (v != null) {
+                                            final selected = eligibleDiscounts.firstWhere(
+                                              (d) => d['id'] == v || d['id'].toString() == v.toString(),
+                                              orElse: () => {
+                                                'id': v,
+                                                'name': v == 2 ? 'Senior Citizen' : (v == 1 ? 'Student' : (v == 3 ? 'PWD' : 'Discount')),
+                                                'percentage': 20.0,
+                                              },
+                                            );
+                                            pax[i]['discount_name'] = selected['name'];
+                                            pax[i]['discount_percentage'] = (selected['percentage'] is num)
+                                                ? (selected['percentage'] as num).toDouble()
+                                                : 20.0;
+                                          } else {
+                                            pax[i]['discount_name'] = null;
+                                            pax[i]['discount_percentage'] = null;
+                                          }
                                         });
                                         if (v != null) {
                                           showDialog(
@@ -12914,29 +12953,53 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
   double _availablePoints = 0.0;
   bool _fetchingPoints = false;
 
-  // Discounts
-  List<Map<String, dynamic>> _discountsList = [];
+  // Statutory Discounts Catalog (defaults match Philippine mandated rates)
+  static const List<Map<String, dynamic>> _defaultDiscounts = [
+    {'id': 1, 'name': 'Student', 'percentage': 20.0},
+    {'id': 2, 'name': 'Senior Citizen', 'percentage': 20.0},
+    {'id': 3, 'name': 'PWD', 'percentage': 20.0},
+    {'id': 4, 'name': 'Infant', 'percentage': 100.0},
+  ];
 
-  double _computePassengerDiscount(double grossFare, dynamic discountId) {
+  List<Map<String, dynamic>> _discountsList = List.from(_defaultDiscounts);
+
+  double _computePassengerDiscount(double grossFare, dynamic discountId, [Map<String, dynamic>? pax]) {
     if (grossFare <= 0 || discountId == null) return 0.0;
     final disc = _discountsList.firstWhere(
       (d) => d['id'] == discountId || d['id'].toString() == discountId.toString(),
       orElse: () => {},
     );
-    final discName = (disc['name'] ?? '').toString().toLowerCase();
+    String discName = (disc['name'] ?? pax?['discount_name'] ?? '').toString().toLowerCase();
+    if (discName.isEmpty) {
+      final idStr = discountId.toString();
+      if (idStr == '2') {
+        discName = 'senior citizen';
+      } else if (idStr == '1') {
+        discName = 'student';
+      } else if (idStr == '3') {
+        discName = 'pwd';
+      } else if (idStr == '4') {
+        discName = 'infant';
+      }
+    }
+
     final discPct = (disc['percentage'] is num)
         ? (disc['percentage'] as num).toDouble()
-        : (double.tryParse(disc['percentage']?.toString() ?? '20') ?? 20.0);
+        : (double.tryParse(disc['percentage']?.toString() ?? '') ??
+            ((pax != null && pax['discount_percentage'] is num)
+                ? (pax['discount_percentage'] as num).toDouble()
+                : 20.0));
 
-    if (discName.contains('senior')) {
+    final isSenior = discountId == 2 || discountId.toString() == '2' || discName.contains('senior');
+    if (isSenior) {
       // Step 1: 20% discount first
       final discountedRate = grossFare * 0.80;
       // Step 2: Remove 12% VAT
       final netSeniorFare = discountedRate / 1.12;
-      return (grossFare - netSeniorFare).clamp(0.0, grossFare);
+      return double.parse((grossFare - netSeniorFare).clamp(0.0, grossFare).toStringAsFixed(2));
     }
 
-    return (grossFare * (discPct / 100.0)).clamp(0.0, grossFare);
+    return double.parse((grossFare * (discPct / 100.0)).clamp(0.0, grossFare).toStringAsFixed(2));
   }
 
   static const _steps = ['Route', 'Schedule', 'Details', 'Hotels', 'Submit'];
@@ -12976,10 +13039,10 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         if (data['status'] == 'success') {
-          if (mounted) {
+          final list = List<Map<String, dynamic>>.from(data['discounts'] ?? []);
+          if (list.isNotEmpty && mounted) {
             setState(() {
-              _discountsList =
-                  List<Map<String, dynamic>>.from(data['discounts'] ?? []);
+              _discountsList = list;
             });
           }
         }
@@ -13535,7 +13598,21 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                                       ? 'Prefer not to say'
                                       : ''));
                           final name = pax[i]['name'] as String? ?? '';
-                          final val = gLabel.isNotEmpty ? '$name  ($gLabel)' : name;
+                          final baseVal = gLabel.isNotEmpty ? '$name  ($gLabel)' : name;
+
+                          final discId = pax[i]['discount_id'];
+                          String? discLabel;
+                          if (discId != null) {
+                            final d = _discountsList.firstWhere(
+                              (item) => item['id'] == discId || item['id'].toString() == discId.toString(),
+                              orElse: () => {},
+                            );
+                            discLabel = (d['name'] ?? pax[i]['discount_name'] ?? (discId == 2 ? 'Senior Citizen' : (discId == 1 ? 'Student' : (discId == 3 ? 'PWD' : 'Discount')))).toString();
+                          }
+                          final val = (discLabel != null && discLabel.isNotEmpty)
+                              ? (baseVal.isNotEmpty ? '$baseVal • $discLabel' : discLabel)
+                              : baseVal;
+
                           return _SummaryRow(
                             BookingData.passengerTypeLabel(
                                 pax[i]['type']?.toString() ?? 'adult', i + 1),
@@ -13822,9 +13899,9 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                               !(!isSuperPromo && !isPromo && isMinorPax);
 
                           if (hasDiscount) {
-                            final depDisc = _computePassengerDiscount(depTicket, p['discount_id']);
+                            final depDisc = _computePassengerDiscount(depTicket, p['discount_id'], p);
                             final retDisc = (widget.booking.tripType == 'round_trip' && widget.booking.selectedReturnSchedule != null)
-                                ? _computePassengerDiscount(retTicket, p['discount_id'])
+                                ? _computePassengerDiscount(retTicket, p['discount_id'], p)
                                 : 0.0;
                             final totalPaxDisc = depDisc + retDisc;
                             if (totalPaxDisc > 0) {
@@ -13833,7 +13910,21 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                                 (d) => d['id'] == p['discount_id'] || d['id'].toString() == p['discount_id'].toString(),
                                 orElse: () => {},
                               );
-                              final String discName = (disc['name'] ?? 'Discount').toString();
+                              String discName = (disc['name'] ?? p['discount_name'] ?? '').toString();
+                              if (discName.isEmpty) {
+                                final sId = p['discount_id'].toString();
+                                if (sId == '2') {
+                                  discName = 'Senior Citizen';
+                                } else if (sId == '1') {
+                                  discName = 'Student';
+                                } else if (sId == '3') {
+                                  discName = 'PWD';
+                                } else if (sId == '4') {
+                                  discName = 'Infant';
+                                } else {
+                                  discName = 'Discount';
+                                }
+                              }
                               groupedPassengerDiscounts[discName] = (groupedPassengerDiscounts[discName] ?? 0.0) + totalPaxDisc;
                             }
                           }
@@ -13935,14 +14026,6 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                             if (scheduleAccommodationCost > 0)
                               _SummaryRow('Accommodation',
                                   '₱${scheduleAccommodationCost.toStringAsFixed(2)}'),
-                            if (groupedPassengerDiscounts.isNotEmpty) ...[
-                              for (final entry in groupedPassengerDiscounts.entries)
-                                _SummaryRow('Discount (${entry.key})',
-                                    '-₱${entry.value.toStringAsFixed(2)}'),
-                            ] else if (passengerDiscount > 0) ...[
-                              _SummaryRow('Passenger Discount',
-                                  '-₱${passengerDiscount.toStringAsFixed(2)}'),
-                            ],
                             if (vehicleCost > 0)
                               _SummaryRow('Vehicle Freight',
                                   '₱${vehicleCost.toStringAsFixed(2)}'),
@@ -14004,9 +14087,174 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                             const Divider(height: 16),
                             _SummaryRow(
                                 'Subtotal', '₱${subtotal.toStringAsFixed(2)}'),
-                            if (discount > 0)
-                              _SummaryRow('Voucher Discount',
-                                  '-₱${discount.toStringAsFixed(2)}'),
+                            if (groupedPassengerDiscounts.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              for (final entry in groupedPassengerDiscounts.entries)
+                                Container(
+                                  margin: const EdgeInsets.only(bottom: 6),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFECFDF5),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: const Color(0xFFA7F3D0)),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Text(
+                                            'Discount (${entry.key})',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                              color: Color(0xFF065F46),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 7, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFA7F3D0),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            child: const Text(
+                                              'Applied',
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFF065F46),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      Text(
+                                        '-₱${entry.value.toStringAsFixed(2)}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 14,
+                                          color: Color(0xFF047857),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ] else if (passengerDiscount > 0) ...[
+                              const SizedBox(height: 8),
+                              Container(
+                                margin: const EdgeInsets.only(bottom: 6),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFECFDF5),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: const Color(0xFFA7F3D0)),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const Text(
+                                          'Passenger Discount',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                            color: Color(0xFF065F46),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 7, vertical: 2),
+                                          decoration: const BoxDecoration(
+                                            color: Color(0xFFA7F3D0),
+                                            borderRadius: BorderRadius.all(Radius.circular(12)),
+                                          ),
+                                          child: const Text(
+                                            'Applied',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF065F46),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Text(
+                                      '-₱${passengerDiscount.toStringAsFixed(2)}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 14,
+                                        color: Color(0xFF047857),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                            if (discount > 0) ...[
+                              const SizedBox(height: 4),
+                              Container(
+                                margin: const EdgeInsets.only(bottom: 6),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFECFDF5),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: const Color(0xFFA7F3D0)),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const Text(
+                                          'Voucher Discount',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                            color: Color(0xFF065F46),
+                                          ),
+                                        ),
+                                        if (widget.booking.voucherCode != null &&
+                                            widget.booking.voucherCode!.isNotEmpty) ...[
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 7, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFA7F3D0),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            child: Text(
+                                              widget.booking.voucherCode!.toUpperCase(),
+                                              style: const TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFF065F46),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                    Text(
+                                      '-₱${discount.toStringAsFixed(2)}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 14,
+                                        color: Color(0xFF047857),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                             if (pointsDiscount > 0)
                               _SummaryRow(
                                   'Points Discount (${pointsDiscount.toInt()} pts)',
