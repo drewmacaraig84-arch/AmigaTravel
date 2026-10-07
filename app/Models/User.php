@@ -18,7 +18,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'phone', 'password', 'role', 'is_staff', 'is_admin', 'is_app_user', 'admin_permissions', 'api_token', 'referral_code', 'referred_by', 'referral_redeemed', 'welcome_bonus_claimed', 'deletion_scheduled_at', 'deletion_reason', 'deletion_feedback'])]
+#[Fillable(['name', 'email', 'phone', 'password', 'role', 'is_staff', 'is_admin', 'is_app_user', 'install_source', 'installer_package', 'admin_permissions', 'api_token', 'referral_code', 'referred_by', 'referral_redeemed', 'welcome_bonus_claimed', 'deletion_scheduled_at', 'deletion_reason', 'deletion_feedback'])]
 #[Hidden(['password', 'remember_token', 'api_token'])]
 class User extends Authenticatable implements FilamentUser
 {
@@ -226,5 +226,57 @@ class User extends Authenticatable implements FilamentUser
     public function graciaPointLedgers(): HasMany
     {
         return $this->hasMany(GraciaPointLedger::class);
+    }
+
+    public function getDetectedInstallSourceAttribute(): ?string
+    {
+        if (!empty($this->install_source)) {
+            return $this->install_source;
+        }
+
+        // 1. Check login history metadata
+        $historyWithSource = $this->loginHistories()
+            ->whereNotNull('metadata')
+            ->latest()
+            ->first();
+
+        if ($historyWithSource && !empty($historyWithSource->metadata['install_source'])) {
+            return $historyWithSource->metadata['install_source'];
+        }
+
+        // 2. Scan user agents
+        $recentLogins = $this->loginHistories()->latest()->take(10)->get();
+        foreach ($recentLogins as $history) {
+            $ua = strtolower($history->user_agent ?? '');
+            if (str_contains($ua, 'huawei') || str_contains($ua, 'hms') || str_contains($ua, 'harmony') || str_contains($ua, 'honor')) {
+                return 'app_gallery';
+            }
+            if (str_contains($ua, 'iphone') || str_contains($ua, 'ipad') || str_contains($ua, 'cfnetwork')) {
+                return 'app_store';
+            }
+        }
+
+        // 3. Name or email heuristics
+        $email = strtolower($this->email ?? '');
+        $name = strtolower($this->name ?? '');
+        if (str_contains($email, 'huawei') || str_contains($name, 'huawei')) {
+            return 'app_gallery';
+        }
+        if (str_contains($email, 'appaudit') || str_contains($email, 'playstore') || str_contains($name, 'playstore')) {
+            return 'play_store';
+        }
+
+        return null;
+    }
+
+    public function getInstallSourceLabelAttribute(): string
+    {
+        return match ($this->detected_install_source) {
+            'play_store' => 'Google Play',
+            'app_gallery' => 'AppGallery',
+            'website' => 'Amiga Website',
+            'app_store' => 'App Store',
+            default => 'Not Detected',
+        };
     }
 }

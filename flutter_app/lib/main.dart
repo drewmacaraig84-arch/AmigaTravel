@@ -430,6 +430,30 @@ class UserSession {
       installedAppVersion = appVersion;
       downloadSource = AppDownloadSource.website;
     }
+
+    if (isLoggedIn && (userId > 0 || email.isNotEmpty)) {
+      syncDownloadRootToServer();
+    }
+  }
+
+  static Future<void> syncDownloadRootToServer() async {
+    try {
+      final url = Uri.parse('${getBaseUrl()}/api/sync-download-root');
+      await http.post(
+        url,
+        headers: {
+          'Accept': 'application/json',
+          if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+        body: {
+          if (userId > 0) 'user_id': userId.toString(),
+          if (email.isNotEmpty) 'email': email,
+          'source': downloadSource.id,
+          'installer': installerPackage ?? '',
+          'version': installedAppVersion,
+        },
+      ).timeout(const Duration(seconds: 4));
+    } catch (_) {}
   }
 
   static bool isUpdateRequired(String latestVersion) {
@@ -1206,6 +1230,10 @@ class _GlobalUpdateWrapperState extends State<GlobalUpdateWrapper>
         'source': UserSession.downloadSource.id,
         if (UserSession.installerPackage != null && UserSession.installerPackage!.isNotEmpty)
           'installer': UserSession.installerPackage!,
+        if (UserSession.userId > 0)
+          'user_id': UserSession.userId.toString(),
+        if (UserSession.isLoggedIn && UserSession.email.isNotEmpty)
+          'email': UserSession.email,
         'version': UserSession.installedAppVersion,
       };
       final uri = Uri.parse('${UserSession.getBaseUrl()}/api/app-version')
@@ -1214,6 +1242,8 @@ class _GlobalUpdateWrapperState extends State<GlobalUpdateWrapper>
           .get(uri, headers: {
             'Accept': 'application/json',
             'X-App-Install-Source': UserSession.downloadSource.id,
+            if (UserSession.token.isNotEmpty)
+              'Authorization': 'Bearer ${UserSession.token}',
           })
           .timeout(const Duration(seconds: 5));
       if (response.statusCode == 200) {
@@ -1881,6 +1911,10 @@ class _SplashLoaderScreenState extends State<SplashLoaderScreen> {
         'source': UserSession.downloadSource.id,
         if (UserSession.installerPackage != null && UserSession.installerPackage!.isNotEmpty)
           'installer': UserSession.installerPackage!,
+        if (UserSession.userId > 0)
+          'user_id': UserSession.userId.toString(),
+        if (UserSession.isLoggedIn && UserSession.email.isNotEmpty)
+          'email': UserSession.email,
         'version': UserSession.installedAppVersion,
       };
       final uri = Uri.parse('${UserSession.getBaseUrl()}/api/app-version')
@@ -1889,6 +1923,8 @@ class _SplashLoaderScreenState extends State<SplashLoaderScreen> {
           .get(uri, headers: {
             'Accept': 'application/json',
             'X-App-Install-Source': UserSession.downloadSource.id,
+            if (UserSession.token.isNotEmpty)
+              'Authorization': 'Bearer ${UserSession.token}',
           })
           .timeout(const Duration(seconds: 5));
 

@@ -257,8 +257,15 @@ class AuthController extends Controller
         // When a user logs in via the mobile app, activate their app user status so they start earning Gracia points
         if (!$user->is_app_user) {
             $user->is_app_user = true;
-            $user->save();
         }
+
+        if ($request->filled('install_source')) {
+            $user->install_source = $request->input('install_source');
+            if ($request->filled('installer')) {
+                $user->installer_package = $request->input('installer');
+            }
+        }
+        $user->save();
 
         if (empty($user->referral_code)) {
             $user->referral_code = strtoupper(Str::random(8));

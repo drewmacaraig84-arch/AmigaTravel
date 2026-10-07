@@ -76,6 +76,16 @@ class ApkUserResource extends Resource
                             ->email()
                             ->required()
                             ->maxLength(255),
+                        Forms\Components\Select::make('install_source')
+                            ->label('Download Root')
+                            ->options([
+                                'play_store' => 'Google Play Store',
+                                'app_gallery' => 'Huawei AppGallery',
+                                'website' => 'Amiga Website (Direct APK)',
+                                'app_store' => 'Apple App Store',
+                            ])
+                            ->placeholder('Not Detected')
+                            ->nullable(),
                         Forms\Components\DateTimePicker::make('created_at')
                             ->label('Date Registered')
                             ->disabled(),
@@ -123,17 +133,7 @@ class ApkUserResource extends Resource
                     }),
                 Tables\Columns\TextColumn::make('install_source')
                     ->label('Download Root')
-                    ->getStateUsing(function (Model $record) {
-                        $latestLogin = $record->loginHistories()->whereNotNull('metadata')->latest()->first();
-                        $source = $latestLogin?->metadata['install_source'] ?? null;
-                        return match ($source) {
-                            'play_store' => 'Google Play',
-                            'app_gallery' => 'AppGallery',
-                            'website' => 'Amiga Website',
-                            'app_store' => 'App Store',
-                            default => 'Amiga Website',
-                        };
-                    })
+                    ->getStateUsing(fn (User $record) => $record->install_source_label)
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'Google Play' => 'success',
@@ -144,10 +144,52 @@ class ApkUserResource extends Resource
                     }),
             ])
             ->filters([
-                //
+                Tables\Filters\SelectFilter::make('install_source')
+                    ->label('Download Root')
+                    ->options([
+                        'play_store' => 'Google Play',
+                        'app_gallery' => 'AppGallery',
+                        'website' => 'Amiga Website',
+                        'app_store' => 'App Store',
+                    ]),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
+                Tables\Actions\Action::make('set_download_root')
+                    ->label('Set Root')
+                    ->icon('heroicon-o-device-phone-mobile')
+                    ->color('info')
+                    ->form([
+                        Forms\Components\Select::make('install_source')
+                            ->label('Download Root')
+                            ->options([
+                                'play_store' => 'Google Play Store',
+                                'app_gallery' => 'Huawei AppGallery',
+                                'website' => 'Amiga Website (Direct APK)',
+                                'app_store' => 'Apple App Store',
+                            ])
+                            ->default(fn (User $record) => $record->detected_install_source ?? 'website')
+                            ->required(),
+                    ])
+                    ->action(function (User $record, array $data): void {
+                        $record->update([
+                            'install_source' => $data['install_source'],
+                        ]);
+
+                        $label = match ($data['install_source']) {
+                            'play_store' => 'Google Play',
+                            'app_gallery' => 'Huawei AppGallery',
+                            'website' => 'Amiga Website',
+                            'app_store' => 'Apple App Store',
+                            default => $data['install_source'],
+                        };
+
+                        \Filament\Notifications\Notification::make()
+                            ->title('Download Root Updated')
+                            ->body("{$record->name}'s download root has been updated to {$label}.")
+                            ->success()
+                            ->send();
+                    }),
                 Tables\Actions\Action::make('adjust_points')
                     ->label('Adjust Points')
                     ->icon('heroicon-o-plus-circle')

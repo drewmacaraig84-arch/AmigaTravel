@@ -70,8 +70,25 @@ Route::middleware('throttle:60,1')->group(function () {
             }
         }
         $forceUpdate = (bool) config('services.app_updates.force_update', false);
-        $source = $request->query('source', $request->header('X-App-Install-Source', 'website'));
+        $source = $request->query('source', $request->header('X-App-Install-Source'));
         $installer = $request->query('installer');
+
+        // Automatically associate and persist download root if user is known
+        $user = auth('sanctum')->user() ?? auth('api')->user();
+        if (!$user && $request->filled('user_id')) {
+            $user = \App\Models\User::find($request->input('user_id'));
+        }
+        if (!$user && $request->filled('email')) {
+            $user = \App\Models\User::where('email', $request->input('email'))->first();
+        }
+
+        if ($user && $source) {
+            $updateData = ['install_source' => $source];
+            if (!empty($installer)) {
+                $updateData['installer_package'] = $installer;
+            }
+            $user->update($updateData);
+        }
 
         return response()->json([
             'version' => $version,
@@ -83,6 +100,27 @@ Route::middleware('throttle:60,1')->group(function () {
             'apk_download_url' => url('/downloads/amiga-travel.apk'),
             'maintenance' => \App\Models\WebsiteSetting::getAppMaintenanceSettings(),
         ]);
+    });
+
+    Route::post('/sync-download-root', function (\Illuminate\Http\Request $request) {
+        $user = auth('sanctum')->user() ?? auth('api')->user();
+        if (!$user && $request->filled('user_id')) {
+            $user = \App\Models\User::find($request->input('user_id'));
+        }
+        if (!$user && $request->filled('email')) {
+            $user = \App\Models\User::where('email', $request->input('email'))->first();
+        }
+        $source = $request->input('source');
+        $installer = $request->input('installer');
+        if ($user && $source) {
+            $updateData = ['install_source' => $source];
+            if (!empty($installer)) {
+                $updateData['installer_package'] = $installer;
+            }
+            $user->update($updateData);
+            return response()->json(['status' => 'success', 'source' => $user->install_source]);
+        }
+        return response()->json(['status' => 'ignored']);
     });
 
     Route::get('/app-maintenance', function () {
