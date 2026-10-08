@@ -21,14 +21,14 @@ dependencies:
   video_player: any
   flutter_local_notifications: any
   flutter_svg: any
-  firebase_core: ^3.1.0
-  firebase_messaging: ^15.0.2
+  firebase_core: ^4.15.0
+  firebase_messaging: ^16.7.0
   qr_flutter: ^4.1.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^4.0.0
+  flutter_lints: ^6.0.0
 
 # ─── HarmonyOS (OHOS) dependency overrides ──────────────────────────────────
 # Uncomment these overrides when building specifically with flutter-ohos for HarmonyOS.
