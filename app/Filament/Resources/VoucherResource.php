@@ -297,11 +297,13 @@ class VoucherResource extends Resource
                     ->sortable()
                     ->copyable()
                     ->copyMessage('Voucher code copied')
-                    ->weight('bold'),
+                    ->weight('bold')
+                    ->extraAttributes(['style' => 'min-width: 150px;']),
                 TextColumn::make('name')
                     ->label('Name')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->extraAttributes(['style' => 'min-width: 200px;']),
                 TextColumn::make('discount_type')
                     ->label('Type')
                     ->badge()
@@ -310,46 +312,56 @@ class VoucherResource extends Resource
                         'percentage' => 'info',
                         'fixed' => 'warning',
                         default => 'gray',
-                    }),
+                    })
+                    ->extraAttributes(['style' => 'min-width: 100px;']),
                 TextColumn::make('discount_value')
                     ->label('Discount')
                     ->formatStateUsing(fn (Voucher $record) => $record->discount_type === 'percentage' 
                         ? "{$record->discount_value}%" 
-                        : "₱" . number_format($record->discount_value, 2)),
+                        : "₱" . number_format($record->discount_value, 2))
+                    ->extraAttributes(['style' => 'min-width: 120px;']),
 
                 TextColumn::make('eligibleOperator.name')
                     ->label('Operator')
                     ->default('All')
                     ->badge()
                     ->color(fn ($state) => $state === 'All' ? 'gray' : 'primary')
-                    ->sortable(),
+                    ->sortable()
+                    ->extraAttributes(['style' => 'min-width: 150px;']),
 
                 ToggleColumn::make('is_active')
-                    ->label('Active'),
+                    ->label('Active')
+                    ->extraAttributes(['style' => 'min-width: 100px;']),
                 ToggleColumn::make('is_hidden')
-                    ->label('Hidden'),
+                    ->label('Hidden')
+                    ->extraAttributes(['style' => 'min-width: 100px;']),
                 TextColumn::make('total_used')
                     ->label('Used')
                     ->getStateUsing(fn (Voucher $record) => $record->total_used)
                     ->sortable(query: function (Builder $query, string $direction): Builder {
                         return $query->withCount('redemptions')->orderBy('redemptions_count', $direction);
-                    }),
+                    })
+                    ->extraAttributes(['style' => 'min-width: 100px;']),
                 TextColumn::make('remaining_uses')
                     ->label('Remaining')
-                    ->getStateUsing(fn (Voucher $record) => $record->remaining_uses ?? 'Unlimited'),
+                    ->getStateUsing(fn (Voucher $record) => $record->remaining_uses ?? 'Unlimited')
+                    ->extraAttributes(['style' => 'min-width: 120px;']),
                 TextColumn::make('total_discount_granted')
                     ->label('Total Discount')
-                    ->getStateUsing(fn (Voucher $record) => '₱' . number_format($record->total_discount_granted, 2)),
+                    ->getStateUsing(fn (Voucher $record) => '₱' . number_format($record->total_discount_granted, 2))
+                    ->extraAttributes(['style' => 'min-width: 150px;']),
                 TextColumn::make('start_at')
                     ->label('Starts')
                     ->dateTime()
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->extraAttributes(['style' => 'min-width: 150px;']),
                 TextColumn::make('end_at')
                     ->label('Ends')
                     ->dateTime()
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->extraAttributes(['style' => 'min-width: 150px;']),
             ])
             ->filters([
                 TernaryFilter::make('is_active')
