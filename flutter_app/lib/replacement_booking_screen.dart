@@ -99,7 +99,12 @@ class _ReplacementBookingScreenState extends State<ReplacementBookingScreen> {
       request.fields['price_diff'] = _priceDiff.toString();
 
       if (_priceDiff > 0 && _proofImage != null) {
-        request.files.add(await http.MultipartFile.fromPath('proof', _proofImage!.path));
+        final proofBytes = await _proofImage!.readAsBytes();
+        request.files.add(http.MultipartFile.fromBytes(
+          'proof',
+          proofBytes,
+          filename: _proofImage!.name.isNotEmpty ? _proofImage!.name : 'proof.jpg',
+        ));
       }
 
       var streamedResponse = await request.send();

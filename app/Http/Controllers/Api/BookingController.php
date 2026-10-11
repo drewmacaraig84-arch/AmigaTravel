@@ -289,6 +289,8 @@ class BookingController extends Controller
                 $pArr['item_total'] = $p->getEffectiveItemTotal();
                 $pArr['status_label'] = $p->getStatusLabel();
                 $pArr['status_color'] = $p->getStatusColor();
+                $pArr['rate_type_label'] = $p->getRateTypeLabel();
+                $pArr['transport_class_name'] = $p->getTransportClassName();
                 return $pArr;
             })->toArray();
 
@@ -440,6 +442,8 @@ class BookingController extends Controller
             $pArr['item_total'] = $p->getEffectiveItemTotal();
             $pArr['status_label'] = $p->getStatusLabel();
             $pArr['status_color'] = $p->getStatusColor();
+            $pArr['rate_type_label'] = $p->getRateTypeLabel();
+            $pArr['transport_class_name'] = $p->getTransportClassName();
             $pArr['is_active_item'] = $p->isActiveBookingItem();
             $pArr['is_refund_item'] = $p->isRefundItem();
             $pArr['is_rebooked_history'] = $p->isRebookingHistoryItem();

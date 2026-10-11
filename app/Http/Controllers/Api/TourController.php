@@ -12,7 +12,7 @@ class TourController extends Controller
     public function index(Request $request)
     {
         $rows = Cache::remember('api:tours', now()->addHours(6), function () {
-            $tours = Tour::with(['dates' => fn($q) => $q->where('is_active', true)])
+            $tours = Tour::with('activeDates')
                 ->where('is_active', true)
                 ->ordered()
                 ->get();

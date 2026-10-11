@@ -189,6 +189,17 @@ class ViewBooking extends ViewRecord
             $txFee = $p->getEffectiveTransactionFee();
             $itemTotal = $p->getEffectiveItemTotal();
 
+            $rateType = $p->getRateTypeLabel();
+            $rateBadgeClass = match($rateType) {
+                'Super Promo' => 'bg-purple-100 text-purple-800 border border-purple-200 dark:bg-purple-900/40 dark:text-purple-300 dark:border-purple-800',
+                'Promotional' => 'bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-800',
+                default       => 'bg-gray-100 text-gray-700 border border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700',
+            };
+            $rateBadge = '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ' . $rateBadgeClass . '">' . htmlspecialchars($rateType) . '</span>';
+
+            $tcName = $p->getTransportClassName();
+            $tcBadge = $tcName ? '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-sky-50 text-sky-800 border border-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800">' . htmlspecialchars($tcName) . '</span>' : '';
+
             $rowOpacity = $isArchived ? 'opacity-70 bg-gray-50/50 dark:bg-gray-800/30' : '';
 
             $discCell = $discAmt > 0
@@ -201,7 +212,7 @@ class ViewBooking extends ViewRecord
 
             $row  = '<tr class="hover:bg-gray-50/50 dark:hover:bg-gray-700/20 ' . $rowOpacity . '">';
             $row .= '<td class="py-2.5 px-3 font-bold text-gray-900 dark:text-white">Item ' . $itemNum . '</td>';
-            $row .= '<td class="py-2.5 px-3"><span class="font-medium text-gray-900 dark:text-white">' . $name . '</span> <span class="text-xs text-gray-500">(' . $typeAndGender . ')</span>' . $ticket . '</td>';
+            $row .= '<td class="py-2.5 px-3"><span class="font-medium text-gray-900 dark:text-white">' . $name . '</span> <span class="text-xs text-gray-500">(' . $typeAndGender . ')</span>' . $ticket . '<div class="mt-1 flex flex-wrap items-center gap-1.5">' . $tcBadge . $rateBadge . '</div></td>';
             $row .= '<td class="py-2.5 px-3"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ' . $badgeColorClass . '">' . $statusLabel . '</span></td>';
             $row .= '<td class="py-2.5 px-3 text-right font-medium">' . $fareDisplay . '</td>';
             $row .= '<td class="py-2.5 px-3 text-right">' . $discCell . '</td>';

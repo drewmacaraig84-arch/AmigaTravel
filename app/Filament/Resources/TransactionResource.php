@@ -294,6 +294,15 @@ class TransactionResource extends Resource
                                     $itemNum = $p->item_number ?? 1;
                                     $name = htmlspecialchars($p->name ?? 'Passenger');
                                     $type = htmlspecialchars(ucfirst($p->type ?? 'adult'));
+                                    $rateTypeLabel = htmlspecialchars($p->getRateTypeLabel());
+                                    $rateBadgeClass = match($rateTypeLabel) {
+                                        'Super Promo' => 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300 border border-purple-300 dark:border-purple-700',
+                                        'Promotional' => 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-300 dark:border-amber-700',
+                                        default       => 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700',
+                                    };
+                                    $tcName = $p->getTransportClassName();
+                                    $tcBadge = $tcName ? '<span class="inline-flex items-center text-[10px] font-medium bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800">' . htmlspecialchars($tcName) . '</span>' : '';
+
                                     $ticket = $p->ticket_number ? '<div class="text-xs text-gray-400 font-mono">' . htmlspecialchars($p->ticket_number) . '</div>' : '';
                                     $statusLabel = htmlspecialchars($p->getStatusLabel());
                                     $statusColor = $p->getStatusColor();
@@ -323,7 +332,7 @@ class TransactionResource extends Resource
 
                                     $html .= '<tr class="hover:bg-gray-50/50 dark:hover:bg-gray-700/20">';
                                     $html .= '<td class="py-2.5 px-3 font-bold text-gray-900 dark:text-white">Item ' . $itemNum . '</td>';
-                                    $html .= '<td class="py-2.5 px-3"><span class="font-medium text-gray-900 dark:text-white">' . $name . '</span> <span class="text-xs text-gray-500">(' . $type . ')</span>' . $ticket . '</td>';
+                                    $html .= '<td class="py-2.5 px-3"><div class="flex items-center gap-1.5 flex-wrap"><span class="font-medium text-gray-900 dark:text-white">' . $name . '</span> <span class="text-xs text-gray-500">(' . $type . ')</span> <span class="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded ' . $rateBadgeClass . '">' . $rateTypeLabel . '</span>' . ($tcBadge ? ' ' . $tcBadge : '') . '</div>' . $ticket . '</td>';
                                     $html .= '<td class="py-2.5 px-3"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ' . $badgeColorClass . '">' . $statusLabel . '</span></td>';
                                     $html .= '<td class="py-2.5 px-3 text-right font-medium">₱' . number_format($fareAndClass, 2) . '</td>';
                                     $html .= '<td class="py-2.5 px-3 text-right">' . $discCell . '</td>';

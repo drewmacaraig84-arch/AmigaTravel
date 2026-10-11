@@ -382,7 +382,7 @@ class UserSession {
   static String? autoApplyVoucherCode;
 
   // Match this with pubspec.yaml version
-  static const String appVersion = '1.0.149+161';
+  static const String appVersion = '1.0.151+163';
   static String installedAppVersion = appVersion;
   static AppDownloadSource downloadSource = AppDownloadSource.website;
   static String? installerPackage;
@@ -859,11 +859,15 @@ class BookingData {
       'selectedFerryAccommodationId': selectedFerryAccommodationId,
       'selectedFerryAccommodationName': selectedFerryAccommodationName,
       'selectedFerryAccommodationPrice': selectedFerryAccommodationPrice,
+      'selectedRateType': selectedRateType,
+      'selectedRateCode': selectedRateCode,
       'selectedReturnFerryAccommodationId': selectedReturnFerryAccommodationId,
       'selectedReturnFerryAccommodationName':
           selectedReturnFerryAccommodationName,
       'selectedReturnFerryAccommodationPrice':
           selectedReturnFerryAccommodationPrice,
+      'selectedReturnRateType': selectedReturnRateType,
+      'selectedReturnRateCode': selectedReturnRateCode,
       'selectedAirlineClassId': selectedAirlineClassId,
       'selectedAirlineClassName': selectedAirlineClassName,
       'selectedAirlineClassPrice': selectedAirlineClassPrice,
@@ -940,6 +944,8 @@ class BookingData {
         json['selectedFerryAccommodationPrice'] != null
             ? (json['selectedFerryAccommodationPrice'] as num).toDouble()
             : null;
+    b.selectedRateType = json['selectedRateType'] ?? 'regular';
+    b.selectedRateCode = json['selectedRateCode'];
 
     b.selectedReturnFerryAccommodationId =
         json['selectedReturnFerryAccommodationId'];
@@ -949,6 +955,8 @@ class BookingData {
         json['selectedReturnFerryAccommodationPrice'] != null
             ? (json['selectedReturnFerryAccommodationPrice'] as num).toDouble()
             : null;
+    b.selectedReturnRateType = json['selectedReturnRateType'] ?? 'regular';
+    b.selectedReturnRateCode = json['selectedReturnRateCode'];
 
     b.selectedAirlineClassId = json['selectedAirlineClassId'];
     b.selectedAirlineClassName = json['selectedAirlineClassName'];
@@ -7808,7 +7816,12 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
           'POST', Uri.parse('$_baseUrl/api/bookings/${_booking['id']}/proof'));
       request.headers['Accept'] = 'application/json';
       request.fields['email'] = UserSession.email;
-      request.files.add(await http.MultipartFile.fromPath('proof', proof.path));
+      final proofBytes = await proof.readAsBytes();
+      request.files.add(http.MultipartFile.fromBytes(
+        'proof',
+        proofBytes,
+        filename: proof.name.isNotEmpty ? proof.name : 'proof.jpg',
+      ));
       final response = await http.Response.fromStream(await request.send());
       final data = jsonDecode(response.body);
       if (response.statusCode == 200 && data['status'] == 'success') {
@@ -9936,6 +9949,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                                                   .selectedReturnSchedule !=
                                               null)
                                       ? () {
+                                          if (!_validateTravelClassSelection()) return;
                                           widget.booking.savedStep = 2;
                                           widget.booking.saveToPrefs(2);
                                           Navigator.push(
@@ -10016,6 +10030,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                                       horizontal: 16.0, vertical: 12.0),
                                   child: ElevatedButton(
                                     onPressed: () {
+                                      if (!_validateTravelClassSelection()) return;
                                       widget.booking.savedStep = 2;
                                       widget.booking.saveToPrefs(2);
                                       Navigator.push(
@@ -10125,6 +10140,53 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
         ],
       ),
     );
+  }
+
+  bool _validateTravelClassSelection() {
+    final s = widget.booking.selectedSchedule;
+    if (s != null) {
+      final isFerry = widget.booking.mode == 'ferry';
+      final classes = s['transport_classes'] as List<dynamic>? ?? [];
+      final accommodations = s['accommodations'] as List<dynamic>? ?? [];
+      final bool hasClasses = classes.isNotEmpty || accommodations.isNotEmpty;
+      final bool hasSelected = isFerry
+          ? widget.booking.selectedFerryAccommodationId != null
+          : widget.booking.selectedAirlineClassId != null;
+
+      if (hasClasses && !hasSelected) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please select a travel class or accommodation for your departure trip.'),
+            backgroundColor: Color(0xFFDC2626),
+          ),
+        );
+        return false;
+      }
+    }
+
+    if (widget.booking.tripType == 'round_trip') {
+      final retS = widget.booking.selectedReturnSchedule;
+      if (retS != null) {
+        final isFerry = widget.booking.mode == 'ferry';
+        final retClasses = retS['transport_classes'] as List<dynamic>? ?? [];
+        final retAccommodations = retS['accommodations'] as List<dynamic>? ?? [];
+        final bool hasRetClasses = retClasses.isNotEmpty || retAccommodations.isNotEmpty;
+        final bool hasRetSelected = isFerry
+            ? widget.booking.selectedReturnFerryAccommodationId != null
+            : widget.booking.selectedReturnAirlineClassId != null;
+
+        if (hasRetClasses && !hasRetSelected) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please select a travel class or accommodation for your return trip.'),
+              backgroundColor: Color(0xFFDC2626),
+            ),
+          );
+          return false;
+        }
+      }
+    }
+    return true;
   }
 
   Widget _buildTransportClassesSelection({required bool isReturn}) {
@@ -10278,6 +10340,7 @@ class _ScheduleSelectScreenState extends State<ScheduleSelectScreen> {
                             c['rate_code']?.toString();
                       } else {
                         widget.booking.selectedFerryAccommodationId = c['id'];
+                        widget.booking.selectedTransportClassId = c['id'];
                         widget.booking.selectedFerryAccommodationName =
                             c['name'];
                         widget.booking.selectedFerryAccommodationPrice =
@@ -11594,7 +11657,7 @@ class _DiscountScreenState extends State<DiscountScreen> {
       final pType = (widget.booking.passengers[i]['type'] ?? '').toString().toLowerCase();
       final isRegularMinor = !widget.booking.isPromo &&
           (pType == 'minor' || pType == 'child' || (widget.booking.mode == 'airline' && pType == 'infant'));
-      if (widget.booking.isSuperPromo || isRegularMinor) {
+      if (widget.booking.isSuperPromo || widget.booking.isPromo || isRegularMinor) {
         widget.booking.passengers[i]['discount_id'] = null;
         widget.booking.passengers[i]['discount_name'] = null;
         widget.booking.passengers[i]['discount_percentage'] = null;
@@ -12076,10 +12139,35 @@ class _DiscountScreenState extends State<DiscountScreen> {
                                     SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
-                                        '⚡ Super Promo fare — Mandated discounts (Senior/PWD/Student) are not applicable to this rate tier.',
+                                        'Super Promo fare — Mandated discounts (Senior/PWD/Student) are not applicable to this rate tier.',
                                         style: TextStyle(
                                             fontSize: 12,
                                             color: Color(0xFF6B21A8),
+                                            fontWeight: FontWeight.w600),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ] else if (widget.booking.isPromo) ...[
+                              const SizedBox(height: 10),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFFBEB),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: const Color(0xFFFDE68A)),
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Icon(Icons.local_offer, color: Color(0xFFD97706), size: 18),
+                                    SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Promotional fare — Mandated discounts (Senior/PWD/Student) are not applicable to promotional tickets.',
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            color: Color(0xFFB45309),
                                             fontWeight: FontWeight.w600),
                                       ),
                                     ),
@@ -13300,7 +13388,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                   ...p,
                   'rate_type': widget.booking.selectedRateType,
                   'is_promo': widget.booking.selectedRateType != 'regular',
-                  if (widget.booking.isSuperPromo || isRegularMinor) 'discount_id': null,
+                  if (widget.booking.isSuperPromo || widget.booking.isPromo || isRegularMinor) 'discount_id': null,
                 };
               }).toList(),
           // Vehicle
@@ -13462,65 +13550,116 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
     final s = widget.booking.selectedSchedule!;
     final pax = widget.booking.passengers;
 
-    // Auto-populate missing class prices (if loaded from older SharedPreferences session)
+    // Auto-populate missing class prices and fallback if schedule has 0 base price
     if (widget.booking.mode == 'ferry') {
-      if ((widget.booking.selectedFerryAccommodationPrice ?? 0) == 0 &&
-          widget.booking.selectedFerryAccommodationId != null) {
-        final classes = (s['schedule_accommodations'] ??
-            s['transport_classes'] ??
-            s['accommodations'] ??
-            []) as List<dynamic>;
-        for (var c in classes) {
-          if (c['id'] == widget.booking.selectedFerryAccommodationId) {
-            widget.booking.selectedFerryAccommodationPrice =
-                _parseDouble(c['price']);
-            break;
+      final classes = (s['transport_classes'] ??
+          s['accommodations'] ??
+          s['schedule_accommodations'] ??
+          []) as List<dynamic>;
+      if ((widget.booking.selectedFerryAccommodationPrice ?? 0) == 0 && classes.isNotEmpty) {
+        dynamic matched;
+        if (widget.booking.selectedFerryAccommodationId != null) {
+          matched = classes.firstWhere(
+            (c) => c['id'] == widget.booking.selectedFerryAccommodationId ||
+                c['pivot_id'] == widget.booking.selectedFerryAccommodationId,
+            orElse: () => null,
+          );
+        }
+        matched ??= classes.first;
+        if (matched != null) {
+          widget.booking.selectedFerryAccommodationId ??= matched['id'];
+          widget.booking.selectedTransportClassId ??= matched['id'];
+          widget.booking.selectedFerryAccommodationName ??= matched['name'];
+          widget.booking.selectedFerryAccommodationPrice = _parseDouble(matched['price']);
+          if (widget.booking.selectedRateType == 'regular' && matched['rate_type'] != null) {
+            widget.booking.selectedRateType = matched['rate_type'];
+          }
+          if (widget.booking.selectedRateCode == null && matched['rate_code'] != null) {
+            widget.booking.selectedRateCode = matched['rate_code'].toString();
           }
         }
       }
       if (widget.booking.tripType == 'round_trip' &&
           widget.booking.selectedReturnSchedule != null) {
-        if ((widget.booking.selectedReturnFerryAccommodationPrice ?? 0) == 0 &&
-            widget.booking.selectedReturnFerryAccommodationId != null) {
-          final retS = widget.booking.selectedReturnSchedule!;
-          final classes = (retS['schedule_accommodations'] ??
-              retS['transport_classes'] ??
-              retS['accommodations'] ??
-              []) as List<dynamic>;
-          for (var c in classes) {
-            if (c['id'] == widget.booking.selectedReturnFerryAccommodationId) {
-              widget.booking.selectedReturnFerryAccommodationPrice =
-                  _parseDouble(c['price']);
-              break;
+        final retS = widget.booking.selectedReturnSchedule!;
+        final retClasses = (retS['transport_classes'] ??
+            retS['accommodations'] ??
+            retS['schedule_accommodations'] ??
+            []) as List<dynamic>;
+        if ((widget.booking.selectedReturnFerryAccommodationPrice ?? 0) == 0 && retClasses.isNotEmpty) {
+          dynamic matched;
+          if (widget.booking.selectedReturnFerryAccommodationId != null) {
+            matched = retClasses.firstWhere(
+              (c) => c['id'] == widget.booking.selectedReturnFerryAccommodationId ||
+                  c['pivot_id'] == widget.booking.selectedReturnFerryAccommodationId,
+              orElse: () => null,
+            );
+          }
+          matched ??= retClasses.first;
+          if (matched != null) {
+            widget.booking.selectedReturnFerryAccommodationId ??= matched['id'];
+            widget.booking.selectedReturnFerryAccommodationName ??= matched['name'];
+            widget.booking.selectedReturnFerryAccommodationPrice = _parseDouble(matched['price']);
+            if (widget.booking.selectedReturnRateType == 'regular' && matched['rate_type'] != null) {
+              widget.booking.selectedReturnRateType = matched['rate_type'];
+            }
+            if (widget.booking.selectedReturnRateCode == null && matched['rate_code'] != null) {
+              widget.booking.selectedReturnRateCode = matched['rate_code'].toString();
             }
           }
         }
       }
     } else {
-      if ((widget.booking.selectedAirlineClassPrice ?? 0) == 0 &&
-          widget.booking.selectedAirlineClassId != null) {
-        final classes = (s['airline_classes'] ?? s['transport_classes'] ?? [])
-            as List<dynamic>;
-        for (var c in classes) {
-          if (c['id'] == widget.booking.selectedAirlineClassId) {
-            widget.booking.selectedAirlineClassPrice = _parseDouble(c['price']);
-            break;
+      final classes = (s['transport_classes'] ??
+          s['airline_classes'] ??
+          []) as List<dynamic>;
+      if ((widget.booking.selectedAirlineClassPrice ?? 0) == 0 && classes.isNotEmpty) {
+        dynamic matched;
+        if (widget.booking.selectedAirlineClassId != null) {
+          matched = classes.firstWhere(
+            (c) => c['id'] == widget.booking.selectedAirlineClassId ||
+                c['pivot_id'] == widget.booking.selectedAirlineClassId,
+            orElse: () => null,
+          );
+        }
+        matched ??= classes.first;
+        if (matched != null) {
+          widget.booking.selectedAirlineClassId ??= matched['id'];
+          widget.booking.selectedAirlineClassName ??= matched['name'];
+          widget.booking.selectedAirlineClassPrice = _parseDouble(matched['price']);
+          if (widget.booking.selectedRateType == 'regular' && matched['rate_type'] != null) {
+            widget.booking.selectedRateType = matched['rate_type'];
+          }
+          if (widget.booking.selectedRateCode == null && matched['rate_code'] != null) {
+            widget.booking.selectedRateCode = matched['rate_code'].toString();
           }
         }
       }
       if (widget.booking.tripType == 'round_trip' &&
           widget.booking.selectedReturnSchedule != null) {
-        if ((widget.booking.selectedReturnAirlineClassPrice ?? 0) == 0 &&
-            widget.booking.selectedReturnAirlineClassId != null) {
-          final retS = widget.booking.selectedReturnSchedule!;
-          final classes = (retS['airline_classes'] ??
-              retS['transport_classes'] ??
-              []) as List<dynamic>;
-          for (var c in classes) {
-            if (c['id'] == widget.booking.selectedReturnAirlineClassId) {
-              widget.booking.selectedReturnAirlineClassPrice =
-                  _parseDouble(c['price']);
-              break;
+        final retS = widget.booking.selectedReturnSchedule!;
+        final retClasses = (retS['transport_classes'] ??
+            retS['airline_classes'] ??
+            []) as List<dynamic>;
+        if ((widget.booking.selectedReturnAirlineClassPrice ?? 0) == 0 && retClasses.isNotEmpty) {
+          dynamic matched;
+          if (widget.booking.selectedReturnAirlineClassId != null) {
+            matched = retClasses.firstWhere(
+              (c) => c['id'] == widget.booking.selectedReturnAirlineClassId ||
+                  c['pivot_id'] == widget.booking.selectedReturnAirlineClassId,
+              orElse: () => null,
+            );
+          }
+          matched ??= retClasses.first;
+          if (matched != null) {
+            widget.booking.selectedReturnAirlineClassId ??= matched['id'];
+            widget.booking.selectedReturnAirlineClassName ??= matched['name'];
+            widget.booking.selectedReturnAirlineClassPrice = _parseDouble(matched['price']);
+            if (widget.booking.selectedReturnRateType == 'regular' && matched['rate_type'] != null) {
+              widget.booking.selectedReturnRateType = matched['rate_type'];
+            }
+            if (widget.booking.selectedReturnRateCode == null && matched['rate_code'] != null) {
+              widget.booking.selectedReturnRateCode = matched['rate_code'].toString();
             }
           }
         }
@@ -13556,18 +13695,43 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                       _SummaryRow('Departure Schedule',
                           '${s['service']}  ${s['departure']} – ${s['arrival']}'),
                       _SummaryRow('Departure Ticket & Class',
-                          '₱${(_parseDouble(s['price']) + (widget.booking.mode == 'ferry' ? (widget.booking.selectedFerryAccommodationPrice ?? 0) : (widget.booking.selectedAirlineClassPrice ?? 0))).toStringAsFixed(2)} / pax'),
+                          (() {
+                            final cName = widget.booking.mode == 'ferry'
+                                ? widget.booking.selectedFerryAccommodationName
+                                : widget.booking.selectedAirlineClassName;
+                            final pricePerPax = (_parseDouble(s['price']) + (widget.booking.mode == 'ferry' ? (widget.booking.selectedFerryAccommodationPrice ?? 0) : (widget.booking.selectedAirlineClassPrice ?? 0))).toStringAsFixed(2);
+                            return (cName != null && cName.isNotEmpty)
+                                ? '$cName • ₱$pricePerPax / pax'
+                                : '₱$pricePerPax / pax';
+                          }())),
                       if (widget.booking.selectedReturnSchedule != null) ...[
                         _SummaryRow('Return Schedule',
                             '${widget.booking.selectedReturnSchedule!['service']}  ${widget.booking.selectedReturnSchedule!['departure']} – ${widget.booking.selectedReturnSchedule!['arrival']}'),
                         _SummaryRow('Return Ticket & Class',
-                            '₱${(_parseDouble(widget.booking.selectedReturnSchedule!['price']) + (widget.booking.mode == 'ferry' ? (widget.booking.selectedReturnFerryAccommodationPrice ?? 0) : (widget.booking.selectedReturnAirlineClassPrice ?? 0))).toStringAsFixed(2)} / pax'),
+                            (() {
+                              final retS = widget.booking.selectedReturnSchedule!;
+                              final cName = widget.booking.mode == 'ferry'
+                                  ? widget.booking.selectedReturnFerryAccommodationName
+                                  : widget.booking.selectedReturnAirlineClassName;
+                              final pricePerPax = (_parseDouble(retS['price']) + (widget.booking.mode == 'ferry' ? (widget.booking.selectedReturnFerryAccommodationPrice ?? 0) : (widget.booking.selectedAirlineClassPrice ?? 0))).toStringAsFixed(2);
+                              return (cName != null && cName.isNotEmpty)
+                                  ? '$cName • ₱$pricePerPax / pax'
+                                  : '₱$pricePerPax / pax';
+                            }())),
                       ],
                     ] else ...[
                       _SummaryRow('Schedule',
                           '${s['service']}  ${s['departure']} – ${s['arrival']}'),
                       _SummaryRow('Departure Tickets & Class',
-                          '₱${(_parseDouble(s['price']) + (widget.booking.mode == 'ferry' ? (widget.booking.selectedFerryAccommodationPrice ?? 0) : (widget.booking.selectedAirlineClassPrice ?? 0))).toStringAsFixed(2)} / pax'),
+                          (() {
+                            final cName = widget.booking.mode == 'ferry'
+                                ? widget.booking.selectedFerryAccommodationName
+                                : widget.booking.selectedAirlineClassName;
+                            final pricePerPax = (_parseDouble(s['price']) + (widget.booking.mode == 'ferry' ? (widget.booking.selectedFerryAccommodationPrice ?? 0) : (widget.booking.selectedAirlineClassPrice ?? 0))).toStringAsFixed(2);
+                            return (cName != null && cName.isNotEmpty)
+                                ? '$cName • ₱$pricePerPax / pax'
+                                : '₱$pricePerPax / pax';
+                          }())),
                     ],
                     if (widget.booking.hasExtraBaggage &&
                         widget.booking.mode == 'airline')
@@ -13598,7 +13762,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                                       ? 'Prefer not to say'
                                       : ''));
                           final name = pax[i]['name'] as String? ?? '';
-                          final baseVal = gLabel.isNotEmpty ? '$name  ($gLabel)' : name;
+                          final baseVal = gLabel.isNotEmpty ? '$name ($gLabel)' : name;
 
                           final discId = pax[i]['discount_id'];
                           String? discLabel;
@@ -13609,9 +13773,22 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                             );
                             discLabel = (d['name'] ?? pax[i]['discount_name'] ?? (discId == 2 ? 'Senior Citizen' : (discId == 1 ? 'Student' : (discId == 3 ? 'PWD' : 'Discount')))).toString();
                           }
-                          final val = (discLabel != null && discLabel.isNotEmpty)
-                              ? (baseVal.isNotEmpty ? '$baseVal • $discLabel' : discLabel)
-                              : baseVal;
+
+                          final ticketType = widget.booking.isSuperPromo
+                              ? 'Super Promo'
+                              : (widget.booking.isPromo ? 'Promo' : 'Regular');
+                          final transportClass = widget.booking.mode == 'ferry'
+                              ? (widget.booking.selectedFerryAccommodationName ?? '')
+                              : (widget.booking.selectedAirlineClassName ?? '');
+
+                          final metaParts = <String>[];
+                          if (transportClass.isNotEmpty) metaParts.add(transportClass);
+                          metaParts.add(ticketType);
+                          if (discLabel != null && discLabel.isNotEmpty) metaParts.add(discLabel);
+
+                          final val = baseVal.isNotEmpty
+                              ? '$baseVal\n${metaParts.join(' • ')}'
+                              : metaParts.join(' • ');
 
                           return _SummaryRow(
                             BookingData.passengerTypeLabel(
@@ -13736,7 +13913,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                           SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              '⚡ Super Promo fare is active. Vouchers and Gracia Points are strictly not applicable to Super Promo tickets.',
+                              'Super Promo fare is active. Vouchers and Gracia Points are strictly not applicable to Super Promo tickets.',
                               style: TextStyle(
                                   fontSize: 12,
                                   color: Color(0xFF6B21A8),
@@ -13896,7 +14073,8 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                           final isMinorPax = (pType == 'child' || pType == 'minor') || (!isFerry && pType == 'infant');
                           final hasDiscount = p['discount_id'] != null &&
                               !isSuperPromo &&
-                              !(!isSuperPromo && !isPromo && isMinorPax);
+                              !isPromo &&
+                              !isMinorPax;
 
                           if (hasDiscount) {
                             final depDisc = _computePassengerDiscount(depTicket, p['discount_id'], p);
@@ -13981,8 +14159,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                       double hotelServiceFee = accommodationCost > 0 ? _feePerAccommodation : 0.0;
                       double transactionFeeTotal = multiplier * activeTxFee;
 
-                      double subtotal = depTicketAndClass +
-                          retTicketAndClass +
+                      double subtotal = ((depTicketAndClass + retTicketAndClass) - passengerDiscount).clamp(0.0, double.infinity) +
                           scheduleAccommodationCost +
                           vehicleCost +
                           accommodationCost +
@@ -13995,7 +14172,7 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                       final discount = (!isPromo && widget.booking.voucherData != null)
                           ? _parseDouble(widget.booking.voucherData!['discount_amount'])
                           : 0.0;
-                      double totalBeforePoints = (subtotal - passengerDiscount - discount).clamp(0.0, double.infinity);
+                      double totalBeforePoints = (subtotal - discount).clamp(0.0, double.infinity);
 
                       double pointsDiscount = 0.0;
                       if (!isPromo && _usePoints) {
@@ -14022,6 +14199,116 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                               _SummaryRow(
                                   'Departure Tickets & Class (${payingPax}x)',
                                   '₱${depTicketAndClass.toStringAsFixed(2)}'),
+                            ],
+                            if (groupedPassengerDiscounts.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              for (final entry in groupedPassengerDiscounts.entries)
+                                Container(
+                                  margin: const EdgeInsets.only(bottom: 6),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFECFDF5),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: const Color(0xFFA7F3D0)),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Text(
+                                            'Discount (${entry.key})',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                              color: Color(0xFF065F46),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 7, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFA7F3D0),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            child: const Text(
+                                              'Applied',
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFF065F46),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      Text(
+                                        '-₱${entry.value.toStringAsFixed(2)}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 14,
+                                          color: Color(0xFF047857),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ] else if (passengerDiscount > 0) ...[
+                              const SizedBox(height: 6),
+                              Container(
+                                margin: const EdgeInsets.only(bottom: 6),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFECFDF5),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: const Color(0xFFA7F3D0)),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const Text(
+                                          'Passenger Discount',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                            color: Color(0xFF065F46),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 7, vertical: 2),
+                                          decoration: const BoxDecoration(
+                                            color: Color(0xFFA7F3D0),
+                                            borderRadius: BorderRadius.all(Radius.circular(12)),
+                                          ),
+                                          child: const Text(
+                                            'Applied',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF065F46),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Text(
+                                      '-₱${passengerDiscount.toStringAsFixed(2)}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 14,
+                                        color: Color(0xFF047857),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ],
                             if (scheduleAccommodationCost > 0)
                               _SummaryRow('Accommodation',
@@ -14087,116 +14374,6 @@ class _BookingSubmitScreenState extends State<BookingSubmitScreen> {
                             const Divider(height: 16),
                             _SummaryRow(
                                 'Subtotal', '₱${subtotal.toStringAsFixed(2)}'),
-                            if (groupedPassengerDiscounts.isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              for (final entry in groupedPassengerDiscounts.entries)
-                                Container(
-                                  margin: const EdgeInsets.only(bottom: 6),
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 10),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFECFDF5),
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(color: const Color(0xFFA7F3D0)),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Text(
-                                            'Discount (${entry.key})',
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 13,
-                                              color: Color(0xFF065F46),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 7, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFFA7F3D0),
-                                              borderRadius: BorderRadius.circular(12),
-                                            ),
-                                            child: const Text(
-                                              'Applied',
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.bold,
-                                                color: Color(0xFF065F46),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      Text(
-                                        '-₱${entry.value.toStringAsFixed(2)}',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w800,
-                                          fontSize: 14,
-                                          color: Color(0xFF047857),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                            ] else if (passengerDiscount > 0) ...[
-                              const SizedBox(height: 8),
-                              Container(
-                                margin: const EdgeInsets.only(bottom: 6),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 10),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFECFDF5),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: const Color(0xFFA7F3D0)),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        const Text(
-                                          'Passenger Discount',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 13,
-                                            color: Color(0xFF065F46),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 7, vertical: 2),
-                                          decoration: const BoxDecoration(
-                                            color: Color(0xFFA7F3D0),
-                                            borderRadius: BorderRadius.all(Radius.circular(12)),
-                                          ),
-                                          child: const Text(
-                                            'Applied',
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.bold,
-                                              color: Color(0xFF065F46),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    Text(
-                                      '-₱${passengerDiscount.toStringAsFixed(2)}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 14,
-                                        color: Color(0xFF047857),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
                             if (discount > 0) ...[
                               const SizedBox(height: 4),
                               Container(
@@ -14582,6 +14759,15 @@ class _PassengerItemsCardState extends State<_PassengerItemsCard> {
       final ticketNum  = p['ticket_number']?.toString() ?? '';
       final name       = p['name']?.toString() ?? 'Passenger';
       final type       = (p['type']?.toString() ?? 'adult').toUpperCase();
+      final rateLabel  = p['rate_type_label']?.toString() ??
+          (p['rate_type'] == 'super_promotional'
+              ? 'Super Promo'
+              : (p['rate_type'] == 'promotional' || p['is_promo'] == true
+                  ? 'Promotional'
+                  : 'Regular'));
+      final tcName     = p['transport_class_name']?.toString() ??
+          p['transport_class']?['name']?.toString() ??
+          '';
       final bday       = p['birthdate']?.toString() ?? '';
       final idNum      = p['id_number']?.toString() ?? '';
       final discount   = p['discount']?['name']?.toString() ?? '';
@@ -14689,14 +14875,73 @@ class _PassengerItemsCardState extends State<_PassengerItemsCard> {
                               ),
                             ],
                           ),
-                          if (ticketNum.isNotEmpty)
-                            Text(
-                              ticketNum,
-                              style: TextStyle(
-                                  fontFamily: 'monospace',
-                                  fontSize: 10,
-                                  color: Colors.grey.shade500),
-                            ),
+                          const SizedBox(height: 3),
+                          Wrap(
+                            spacing: 4,
+                            runSpacing: 2,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: rateLabel == 'Super Promo'
+                                      ? Colors.purple.shade50
+                                      : (rateLabel == 'Promotional' ? Colors.amber.shade50 : Colors.grey.shade100),
+                                  borderRadius: BorderRadius.circular(5),
+                                  border: Border.all(
+                                    color: rateLabel == 'Super Promo'
+                                        ? Colors.purple.shade300
+                                        : (rateLabel == 'Promotional' ? Colors.amber.shade300 : Colors.grey.shade300),
+                                    width: 0.8,
+                                  ),
+                                ),
+                                child: Text(
+                                  rateLabel == 'Super Promo'
+                                      ? 'Super Promo'
+                                      : (rateLabel == 'Promotional' ? 'Promo' : 'Regular'),
+                                  style: TextStyle(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: rateLabel == 'Super Promo'
+                                        ? Colors.purple.shade700
+                                        : (rateLabel == 'Promotional' ? Colors.amber.shade800 : Colors.grey.shade700),
+                                  ),
+                                ),
+                              ),
+                              if (tcName.isNotEmpty)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.shade50,
+                                    borderRadius: BorderRadius.circular(5),
+                                    border: Border.all(color: Colors.blue.shade300, width: 0.8),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.airline_seat_recline_normal_rounded, size: 10, color: Colors.blue),
+                                      const SizedBox(width: 2),
+                                      Text(
+                                        tcName,
+                                        style: TextStyle(
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.blue.shade800,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              if (ticketNum.isNotEmpty)
+                                Text(
+                                  ticketNum,
+                                  style: TextStyle(
+                                      fontFamily: 'monospace',
+                                      fontSize: 10,
+                                      color: Colors.grey.shade500),
+                                ),
+                            ],
+                          ),
                         ],
                       ),
                     ),
@@ -14734,6 +14979,8 @@ class _PassengerItemsCardState extends State<_PassengerItemsCard> {
                     runSpacing: 4,
                     children: [
                       _detailPill('Type', type),
+                      if (tcName.isNotEmpty) _detailPill('Class', tcName),
+                      _detailPill('Rate', rateLabel),
                       () {
                         final g = (p['gender'] ?? '').toString();
                         final gLabel = g == 'male'
@@ -15113,6 +15360,7 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
   String? _qrCodeUrl;
   bool _loadingPaymentSettings = true;
   XFile? _proofImage;
+  Uint8List? _proofImageBytes;
   bool _isUploadingProof = false;
   bool _proofUploaded = false;
   bool _isExpired = false;
@@ -15194,8 +15442,14 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
     try {
       final XFile? image =
           await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
-      if (image != null && mounted) {
-        setState(() => _proofImage = image);
+      if (image != null) {
+        final bytes = await image.readAsBytes();
+        if (mounted) {
+          setState(() {
+            _proofImage = image;
+            _proofImageBytes = bytes;
+          });
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -15226,8 +15480,20 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
       request.headers['Accept'] = 'application/json';
       request.fields['email'] = UserSession.email;
       request.fields['reference_number'] = _refController.text.trim();
-      request.files
-          .add(await http.MultipartFile.fromPath('proof', _proofImage!.path));
+      if (_proofImageBytes != null) {
+        request.files.add(http.MultipartFile.fromBytes(
+          'proof',
+          _proofImageBytes!,
+          filename: _proofImage?.name.isNotEmpty == true ? _proofImage!.name : 'proof.jpg',
+        ));
+      } else {
+        final bytes = await _proofImage!.readAsBytes();
+        request.files.add(http.MultipartFile.fromBytes(
+          'proof',
+          bytes,
+          filename: _proofImage!.name.isNotEmpty ? _proofImage!.name : 'proof.jpg',
+        ));
+      }
       final streamed = await request.send();
       final res = await http.Response.fromStream(streamed);
       final data = jsonDecode(res.body);
@@ -15482,12 +15748,56 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
                   else ...[
                     // Image preview
                     if (_proofImage != null) ...[
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: Image.file(File(_proofImage!.path),
-                            height: 180,
-                            width: double.infinity,
-                            fit: BoxFit.cover),
+                      GestureDetector(
+                        onTap: _pickProofImage,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Stack(
+                            alignment: Alignment.bottomRight,
+                            children: [
+                              _proofImageBytes != null
+                                  ? Image.memory(
+                                      _proofImageBytes!,
+                                      height: 180,
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : (kIsWeb
+                                      ? const SizedBox(
+                                          height: 180,
+                                          width: double.infinity,
+                                          child: Center(
+                                              child: CircularProgressIndicator()),
+                                        )
+                                      : Image.file(
+                                          File(_proofImage!.path),
+                                          height: 180,
+                                          width: double.infinity,
+                                          fit: BoxFit.cover,
+                                        )),
+                              Container(
+                                margin: const EdgeInsets.all(8),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.65),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.edit,
+                                        color: Colors.white, size: 14),
+                                    SizedBox(width: 4),
+                                    Text('Change',
+                                        style: TextStyle(
+                                            color: Colors.white, fontSize: 12)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 12),
                     ] else
@@ -20611,8 +20921,12 @@ class _ServiceCancellationScreenState extends State<ServiceCancellationScreen> {
       }
       request.fields['price_diff'] = _priceDiff.toStringAsFixed(2);
       if (_priceDiff > 0 && _priceProofFile != null) {
-        request.files.add(
-            await http.MultipartFile.fromPath('proof', _priceProofFile!.path));
+        final proofBytes = await _priceProofFile!.readAsBytes();
+        request.files.add(http.MultipartFile.fromBytes(
+          'proof',
+          proofBytes,
+          filename: _priceProofFile!.name.isNotEmpty ? _priceProofFile!.name : 'proof.jpg',
+        ));
       }
 
       final streamedResponse = await request.send();
@@ -22019,13 +22333,28 @@ class _RefundScreenState extends State<RefundScreen> {
       request.fields['passenger_items'] = _selectedPassengerItems.join(',');
 
       if (_idFile != null) {
-        request.files.add(await http.MultipartFile.fromPath('refund_id_image', _idFile!.path));
+        final bytes = await _idFile!.readAsBytes();
+        request.files.add(http.MultipartFile.fromBytes(
+          'refund_id_image',
+          bytes,
+          filename: _idFile!.name.isNotEmpty ? _idFile!.name : 'id.jpg',
+        ));
       }
       if (_ticketFile != null) {
-        request.files.add(await http.MultipartFile.fromPath('refund_ticket_file', _ticketFile!.path));
+        final bytes = await _ticketFile!.readAsBytes();
+        request.files.add(http.MultipartFile.fromBytes(
+          'refund_ticket_file',
+          bytes,
+          filename: _ticketFile!.name.isNotEmpty ? _ticketFile!.name : 'ticket.jpg',
+        ));
       }
       if (_authLetterFile != null) {
-        request.files.add(await http.MultipartFile.fromPath('refund_auth_letter', _authLetterFile!.path));
+        final bytes = await _authLetterFile!.readAsBytes();
+        request.files.add(http.MultipartFile.fromBytes(
+          'refund_auth_letter',
+          bytes,
+          filename: _authLetterFile!.name.isNotEmpty ? _authLetterFile!.name : 'auth.jpg',
+        ));
       }
 
       final streamedRes = await request.send();

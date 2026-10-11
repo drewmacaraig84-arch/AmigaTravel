@@ -724,7 +724,8 @@ class CreateBookingAction
 
             $hasDiscount = ! empty($passenger['discount_id'])
                 && ! $isSuperPromoPax
-                && ! (! $isSuperPromoPax && ! $isPromoPax && $isMinorPax);
+                && ! $isPromoPax
+                && ! $isMinorPax;
 
             if ($hasDiscount) {
                 $discount = $discounts->get($passenger['discount_id']);

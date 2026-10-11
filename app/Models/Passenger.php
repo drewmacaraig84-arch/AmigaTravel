@@ -313,6 +313,31 @@ class Passenger extends Model
         return null;
     }
 
+    public function getRateTypeLabel(): string
+    {
+        $rate = strtolower($this->rate_type ?? '');
+        if ($rate === 'super_promotional') {
+            return 'Super Promo';
+        }
+        if ($rate === 'promotional' || (bool) $this->is_promo) {
+            return 'Promotional';
+        }
+        return 'Regular';
+    }
+
+    public function getTransportClassName(): ?string
+    {
+        $booking = $this->getBookingModel();
+        if (! $booking) {
+            return null;
+        }
+        if (! $booking->relationLoaded('transportClasses')) {
+            $booking->load('transportClasses');
+        }
+        $depTc = $booking->transportClasses->firstWhere(fn ($tc) => ! (bool) $tc->pivot->is_return);
+        return $depTc?->name;
+    }
+
     // ─── Financial Helpers ────────────────────────────────────────────────────
 
     /**
