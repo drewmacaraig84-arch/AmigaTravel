@@ -587,7 +587,8 @@
                                         <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Arrival</th>
                                         <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Base Price</th>
                                         <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Class Add-on</th>
-                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Tickets</th>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Regular Tickets</th>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Promo Tickets</th>
                                         <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Rate Tier</th>
                                         <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Status</th>
                                         <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Actions</th>
@@ -665,8 +666,32 @@
                                                     <span class="ml-1 text-xs text-gray-400 dark:text-gray-500 line-through">₱{{ number_format($origPrice, 2) }}</span>
                                                 @endif
                                             </td>
-                                            <td class="px-4 py-3 text-gray-700 dark:text-gray-200">
+                                            <td class="px-4 py-3 text-gray-700 dark:text-gray-200 whitespace-nowrap font-medium">
                                                 {{ number_format((int) ($pivot->tickets_available ?? 0)) }}
+                                            </td>
+                                            <td class="px-4 py-3 whitespace-nowrap">
+                                                @if ($isPromo && !$isExpired)
+                                                    @if ($pivot->promo_tickets_available !== null)
+                                                        @if ($pivot->promo_tickets_available > 0)
+                                                            <div class="flex items-center gap-1.5">
+                                                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-800 dark:bg-orange-950/60 dark:text-orange-300 border border-orange-200 dark:border-orange-800/60 shadow-xs">
+                                                                    <span>🎫</span> {{ number_format((int) $pivot->promo_tickets_available) }}
+                                                                </span>
+                                                                <span class="text-[10px] text-gray-400 dark:text-gray-500 font-medium">quota</span>
+                                                            </div>
+                                                        @else
+                                                            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">
+                                                                Exhausted (0)
+                                                            </span>
+                                                        @endif
+                                                    @else
+                                                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/40" title="All regular tickets are eligible for promo until expiry">
+                                                            All ({{ number_format((int) ($pivot->tickets_available ?? 0)) }})
+                                                        </span>
+                                                    @endif
+                                                @else
+                                                    <span class="text-gray-400 dark:text-gray-500 text-xs">—</span>
+                                                @endif
                                             </td>
                                             <td class="px-4 py-3 whitespace-nowrap">
                                                 <div class="flex flex-col gap-1 items-start">

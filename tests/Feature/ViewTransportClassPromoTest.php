@@ -347,4 +347,56 @@ class ViewTransportClassPromoTest extends TestCase
         $this->assertNull($stc->promo_type);
         $this->assertNull($stc->promo_tickets_available);
     }
+
+    public function test_view_renders_regular_and_promo_tickets_columns(): void
+    {
+        $route = FerryRoute::create([
+            'origin' => 'Cebu',
+            'destination' => 'Cagayan de Oro',
+            'mode' => 'ferry',
+            'operator' => '2GO Travel',
+            'is_active' => true,
+        ]);
+
+        $tc = TransportClass::create([
+            'name' => 'Tourist Class',
+            'price' => 4497.61,
+            'is_active' => true,
+        ]);
+
+        $dep = now()->addDays(2)->setTime(23, 0);
+        $schedule = Schedule::create([
+            'ferry_route_id' => $route->id,
+            'departure_date' => $dep->format('Y-m-d'),
+            'departure_time' => $dep->format('Y-m-d H:i:s'),
+            'arrival_time' => $dep->copy()->addHours(8)->format('Y-m-d H:i:s'),
+            'price' => 0.00,
+            'duration_minutes' => 480,
+            'status' => 'scheduled',
+            'is_active' => true,
+        ]);
+
+        $schedule->transportClasses()->attach($tc->id, [
+            'additional_price' => 2291.20,
+            'original_price' => 4497.61,
+            'tickets_available' => 33,
+            'promo_tickets_available' => 15,
+            'rate_type' => 'promotional',
+            'is_promo' => true,
+            'promo_type' => 'temporary',
+            'promo_duration_start' => now()->subDay(),
+            'promo_duration_end' => now()->addDays(7),
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($this->admin);
+
+        Livewire::test(ViewTransportClass::class, ['record' => $tc->id])
+            ->assertSee('Regular Tickets')
+            ->assertSee('Promo Tickets')
+            ->assertSee('33')
+            ->assertSee('15')
+            ->assertSee('quota');
+    }
 }
+
