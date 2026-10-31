@@ -2,6 +2,9 @@ buildscript {
     repositories {
         google()
         mavenCentral()
+        maven {
+            url 'https://storage.googleapis.com/download.flutter.io'
+        }
     }
     dependencies {
         classpath 'com.google.gms:google-services:4.4.1'
@@ -12,12 +15,15 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        maven {
+            url 'https://storage.googleapis.com/download.flutter.io'
+        }
     }
 }
 
 ext {
     compileSdkVersion = 35
-    minSdkVersion = 21
+    minSdkVersion = 24
     targetSdkVersion = 35
 }
 

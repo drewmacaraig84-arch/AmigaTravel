@@ -867,7 +867,9 @@
                                                     @if(!empty($selectedAirlineData['options']))
                                                         <div class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-slate-50 border border-slate-200/80 p-3.5">
                                                             <div class="flex items-center gap-2 text-xs font-bold text-slate-700">
-                                                                <span class="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-slate-700 text-[10px]">⚡</span>
+                                                                <span class="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-slate-700 text-[10px]">
+                                                                    <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"/></svg>
+                                                                </span>
                                                                 Quick apply to all {{ $passengersCount }} traveler{{ $passengersCount > 1 ? 's' : '' }}:
                                                             </div>
                                                             <div class="flex flex-wrap items-center gap-1.5">
@@ -1400,7 +1402,7 @@
                                         $isPromo = $this->isPromo || (! empty($passenger['use_promo'])) || (($passenger['rate_type'] ?? '') === 'promotional');
                                         $isRegularMinor = ! $isSuperPromo && ! $isPromo && in_array(strtolower($passenger['type'] ?? ''), ['minor', 'child', 'infant'], true);
                                     @endphp
-                                    <label class="block min-w-0 {{ ($isDriver || $isSuperPromo || $isRegularMinor) ? 'opacity-75' : '' }}">
+                                    <label class="block min-w-0 {{ ($isDriver || $isSuperPromo || $isPromo || $isRegularMinor) ? 'opacity-75' : '' }}">
                                         <span class="text-slate-900 font-bold text-sm">Discount</span>
                                         @if($isDriver)
                                             <div class="mt-3 rounded-xl border border-[#00a859] bg-[#00a859]/10 px-4 py-3 text-sm text-[#216417] font-bold flex items-center gap-2 shadow-sm">
@@ -1410,7 +1412,12 @@
                                         @elseif($isSuperPromo)
                                             <div class="mt-3 rounded-xl border border-purple-200 bg-purple-50 px-4 py-3 text-xs text-purple-900 font-semibold flex items-start gap-2 shadow-sm">
                                                 <svg class="w-4 h-4 text-purple-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                                                <span>⚡ Super Promo fare &mdash; Mandated discounts (Senior/PWD/Student) are not applicable to this rate tier.</span>
+                                                <span>Super Promo fare &mdash; Mandated discounts (Senior/PWD/Student) are not applicable to this rate tier.</span>
+                                            </div>
+                                        @elseif($isPromo)
+                                            <div class="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900 font-semibold flex items-start gap-2 shadow-sm">
+                                                <svg class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                                                <span>Promotional fare &mdash; Mandated discounts (Senior/PWD/Student) are not applicable to promotional tickets.</span>
                                             </div>
                                         @elseif($isRegularMinor)
                                             <div class="mt-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-xs text-sky-800 font-medium flex items-start gap-2 shadow-sm">
@@ -1713,24 +1720,41 @@
                             <div class="mt-6 space-y-3">
                                 @php
                                     $summaryPromoTicket = ($mode === 'airline') ? $this->getActivePromoTicket() : null;
+                                    $selectedClassName = $this->getSelectedTransportClassName();
                                 @endphp
                                 @forelse($passengers as $passenger)
                                     @php
-                                        $summaryIsPromo = $summaryPromoTicket && ! empty($passenger['use_promo']);
+                                        $isAirlinePromo = $summaryPromoTicket && ! empty($passenger['use_promo']);
+                                        $paxRateType = $passenger['rate_type'] ?? ($this->isSuperPromo ? 'super_promotional' : (($this->isPromo || $isAirlinePromo) ? 'promotional' : 'regular'));
+                                        $rateBadgeClass = match($paxRateType) {
+                                            'super_promotional' => 'bg-purple-100 text-purple-800 border border-purple-200',
+                                            'promotional'       => 'bg-amber-100 text-amber-800 border border-amber-200',
+                                            default             => 'bg-slate-100 text-slate-700 border border-slate-200',
+                                        };
+                                        $rateLabel = match($paxRateType) {
+                                            'super_promotional' => 'Super Promo',
+                                            'promotional'       => 'Promotional',
+                                            default             => 'Regular',
+                                        };
+                                        $paxName = !empty($passenger['name']) ? $passenger['name'] : (!empty($passenger['first_name']) ? ($passenger['first_name'] . ' ' . ($passenger['last_name'] ?? '')) : '');
                                     @endphp
                                     <div class="rounded-xl bg-white p-4 border border-slate-200 shadow-sm transition-shadow hover:shadow-md">
-                                        <div class="flex items-center justify-between">
-                                            <span class="text-slate-900 font-bold text-sm">{{ ucfirst($passenger['type']) }}{{ $passenger['name'] ? ' — ' . $passenger['name'] : '' }}</span>
-                                            @if($summaryIsPromo)
-                                                <span class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 bg-[#db2777]/10 text-[#db2777] rounded-full">
-                                                    <svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                                                    Promotional Fare &mdash; &#8369;{{ number_format($summaryPromoTicket->promo_price, 2) }}
+                                        <div class="flex flex-wrap items-center justify-between gap-2">
+                                            <div class="flex items-center gap-2 flex-wrap">
+                                                <span class="text-slate-900 font-bold text-sm">{{ ucfirst($passenger['type'] ?? 'Passenger') }}{{ $paxName ? ' — ' . $paxName : '' }}</span>
+                                                <span class="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full {{ $rateBadgeClass }}">
+                                                    {{ $rateLabel }}
                                                 </span>
-                                            @else
-                                                <span class="text-slate-500 text-xs font-semibold px-2 py-1 bg-slate-100 rounded-full">{{ optional($discounts->firstWhere('id', $passenger['discount_id']))->name ?? 'No discount' }}</span>
+                                                @if($selectedClassName)
+                                                    <span class="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                                                        {{ $selectedClassName }}
+                                                    </span>
+                                                @endif
+                                            </div>
+                                            @if($paxRateType === 'regular' && !empty($passenger['discount_id']))
+                                                <span class="text-slate-500 text-xs font-semibold px-2 py-1 bg-slate-100 rounded-full">{{ optional($discounts->firstWhere('id', $passenger['discount_id']))->name ?? 'Discount' }}</span>
                                             @endif
                                         </div>
-
                                     </div>
                                 @empty
                                     <p class="text-slate-500 italic">No passengers added yet.</p>
@@ -1780,15 +1804,22 @@
                                 $departureClass = $departureSchedule && $selected_transport_class_id
                                     ? collect($departureSchedule['transport_classes'] ?? [])->firstWhere(fn($c) => (int)($c['pivot_id'] ?? $c['id']) === (int)$selected_transport_class_id)
                                     : null;
+                                $departureAccommodation = (!$departureClass && $departureSchedule && $selected_schedule_accommodation_id)
+                                    ? collect($departureSchedule['accommodations'] ?? [])->firstWhere('id', (int)$selected_schedule_accommodation_id)
+                                    : null;
                                 $returnClass = $returnSchedule && $selected_return_transport_class_id
                                     ? collect($returnSchedule['transport_classes'] ?? [])->firstWhere(fn($c) => (int)($c['pivot_id'] ?? $c['id']) === (int)$selected_return_transport_class_id)
+                                    : null;
+                                $returnAccommodation = (!$returnClass && $returnSchedule && $selected_return_schedule_accommodation_id)
+                                    ? collect($returnSchedule['accommodations'] ?? [])->firstWhere('id', (int)$selected_return_schedule_accommodation_id)
                                     : null;
                             @endphp
                             
                             {{-- Departure Ticket --}}
                             @if ($departureSchedule)
                                 @php
-                                    $depTicketFare = (float)($departureSchedule['price'] ?? 0) + (float)($departureClass['price'] ?? 0);
+                                    $depClassOrAccPrice = $departureClass ? (float)($departureClass['price'] ?? 0) : ($departureAccommodation ? (float)($departureAccommodation['price'] ?? 0) : 0);
+                                    $depTicketFare = (float)($departureSchedule['price'] ?? 0) + $depClassOrAccPrice;
                                 @endphp
                                 <div class="mt-4 rounded-xl bg-white p-5 border border-slate-200 shadow-sm">
                                     <div class="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">Departure</div>
@@ -1816,6 +1847,8 @@
                                             <p class="text-slate-600 font-medium mt-1">{{ $departureSchedule['departure'] }} - {{ $departureSchedule['arrival'] }}</p>
                                             @if ($departureClass)
                                                 <p class="text-slate-700 text-sm mt-1.5"><span class="font-bold text-slate-900">Travel Class:</span> <span class="text-[#db2777] font-semibold">{{ $departureClass['name'] }}</span></p>
+                                            @elseif ($departureAccommodation)
+                                                <p class="text-slate-700 text-sm mt-1.5"><span class="font-bold text-slate-900">Accommodation:</span> <span class="text-[#db2777] font-semibold">{{ $departureAccommodation['name'] }}</span></p>
                                             @endif
                                         </div>
                                         <div class="text-right">
@@ -1837,7 +1870,8 @@
                             @if ($trip_type === 'round_trip')
                                 @if ($returnSchedule)
                                     @php
-                                        $retTicketFare = (float)($returnSchedule['price'] ?? 0) + (float)($returnClass['price'] ?? 0);
+                                        $retClassOrAccPrice = $returnClass ? (float)($returnClass['price'] ?? 0) : ($returnAccommodation ? (float)($returnAccommodation['price'] ?? 0) : 0);
+                                        $retTicketFare = (float)($returnSchedule['price'] ?? 0) + $retClassOrAccPrice;
                                     @endphp
                                     <div class="mt-4 rounded-xl bg-white p-5 border border-slate-200 shadow-sm">
                                         <div class="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">Return</div>
@@ -1865,6 +1899,8 @@
                                                 <p class="text-slate-600 font-medium mt-1">{{ $returnSchedule['departure'] }} - {{ $returnSchedule['arrival'] }}</p>
                                                 @if ($returnClass)
                                                     <p class="text-slate-700 text-sm mt-1.5"><span class="font-bold text-slate-900">Travel Class:</span> <span class="text-[#db2777] font-semibold">{{ $returnClass['name'] }}</span></p>
+                                                @elseif ($returnAccommodation)
+                                                    <p class="text-slate-700 text-sm mt-1.5"><span class="font-bold text-slate-900">Accommodation:</span> <span class="text-[#db2777] font-semibold">{{ $returnAccommodation['name'] }}</span></p>
                                                 @endif
                                             </div>
                                             <div class="text-right">

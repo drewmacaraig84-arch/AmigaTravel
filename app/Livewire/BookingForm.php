@@ -1470,6 +1470,12 @@ class BookingForm extends Component
             }
 
             if (preg_match('/^passengers\.(\d+)\.discount_id$/', $propertyName, $matches)) {
+                if ($this->isPromo || $this->isSuperPromo) {
+                    $this->passengers[$matches[1]]['discount_id'] = null;
+                    $this->saveDraft();
+
+                    return;
+                }
                 $discountId = $this->passengers[$matches[1]]['discount_id'] ?? null;
                 $discount = $this->discounts->firstWhere('id', $discountId);
 
@@ -1834,7 +1840,14 @@ class BookingForm extends Component
 
     public function updatedUsePromoTicket(bool $value): void
     {
-        // Ferry-mode booking-level toggle — unchanged behavior
+        // Ferry-mode booking-level toggle
+        if ($value) {
+            foreach ($this->passengers as $idx => $p) {
+                if (! empty($p['discount_id'])) {
+                    $this->passengers[$idx]['discount_id'] = null;
+                }
+            }
+        }
         $this->saveDraft();
     }
 
@@ -1994,13 +2007,35 @@ class BookingForm extends Component
     public function selectTransportClass(?int $classId): void
     {
         $this->selected_transport_class_id = $this->selected_transport_class_id === $classId ? null : $classId;
+        if ($this->isPromo || $this->isSuperPromo) {
+            foreach ($this->passengers as $idx => $p) {
+                if (! empty($p['discount_id'])) {
+                    $this->passengers[$idx]['discount_id'] = null;
+                }
+            }
+        }
         $this->saveDraft();
     }
 
     public function selectReturnTransportClass(?int $classId): void
     {
         $this->selected_return_transport_class_id = $this->selected_return_transport_class_id === $classId ? null : $classId;
+        if ($this->isPromo || $this->isSuperPromo) {
+            foreach ($this->passengers as $idx => $p) {
+                if (! empty($p['discount_id'])) {
+                    $this->passengers[$idx]['discount_id'] = null;
+                }
+            }
+        }
         $this->saveDraft();
+    }
+
+    public function getSelectedTransportClassName(): ?string
+    {
+        if (! $this->selected_transport_class_id) {
+            return null;
+        }
+        return \App\Models\TransportClass::find($this->selected_transport_class_id)?->name;
     }
 
     public function submit()
@@ -2483,10 +2518,11 @@ class BookingForm extends Component
                     $grossAcc = $schedAccPrice + $retAccPrice;
 
                     $discAmount = 0.0;
-                    // Super Promo blocks mandated discounts. Regular minors get auto 50% fare and cannot stack. Promo tickets ALLOW mandated discounts.
+                    // Both Promo and Super Promo block government mandated discounts (Senior, Student, PWD). Regular minors get auto 50% fare and cannot stack.
                     $hasDiscount = ! empty($passenger['discount_id'])
                         && ! $isSuperPromoPax
-                        && ! (! $isSuperPromoPax && ! $isPromoPax && $isMinorPax);
+                        && ! $isPromoPax
+                        && ! $isMinorPax;
 
                     if ($hasDiscount) {
                         $disc = $discountsKeyed->get($passenger['discount_id']);
@@ -3373,8 +3409,9 @@ class BookingForm extends Component
 
             $isMinorPax = in_array($type, ['child', 'minor'], true) || (! $isFerry && $type === 'infant');
             $hasDiscount = ! empty($passenger['discount_id'])
-                && ! $this->isSuperPromo
-                && ! (! $isSuperPromoPax && ! $isPromoPax && $isMinorPax);
+                && ! $isSuperPromoPax
+                && ! $isPromoPax
+                && ! $isMinorPax;
 
             if ($hasDiscount) {
                 $discount = $discountsById->get($passenger['discount_id']);
@@ -3504,14 +3541,17 @@ class BookingForm extends Component
                 $depTicket = floatval($activePromoTicket->promo_price) + $departureTransportClassTotal;
                 $retTicket = ($returnTicketPrice + $returnTransportClassTotal) * $paxMultiplier;
             } else {
-                $depTicket = ($departureTicketPrice + $departureTransportClassTotal) * $paxMultiplier;
-                $retTicket = ($returnTicketPrice + $returnTransportClassTotal) * $paxMultiplier;
+                $depAccShare = ($departureTransportClassTotal == 0) ? $departureAccommodationPrice : 0;
+                $retAccShare = ($returnTransportClassTotal == 0) ? $returnAccommodationPrice : 0;
+                $depTicket = ($departureTicketPrice + $departureTransportClassTotal + $depAccShare) * $paxMultiplier;
+                $retTicket = ($returnTicketPrice + $returnTransportClassTotal + $retAccShare) * $paxMultiplier;
             }
 
             $isMinorPax = in_array($type, ['child', 'minor'], true) || (! $isFerry && $type === 'infant');
             $hasDiscount = ! empty($passenger['discount_id'])
-                && ! $this->isSuperPromo
-                && ! (! $isSuperPromoPax && ! $isPromoPax && $isMinorPax);
+                && ! $isSuperPromoPax
+                && ! $isPromoPax
+                && ! $isMinorPax;
 
             if ($hasDiscount) {
                 $discount = $discountsById->get($passenger['discount_id']);
@@ -3528,8 +3568,12 @@ class BookingForm extends Component
 
             $totalDepartureTicket += $depTicket;
             $totalReturnTicket += $retTicket;
-            $totalDepartureAccommodation += $departureAccommodationPrice;
-            $totalReturnAccommodation += $returnAccommodationPrice;
+            if ($departureTransportClassTotal > 0) {
+                $totalDepartureAccommodation += $departureAccommodationPrice;
+            }
+            if ($returnTransportClassTotal > 0) {
+                $totalReturnAccommodation += $returnAccommodationPrice;
+            }
         }
 
         $discountsList = [];
@@ -3612,15 +3656,20 @@ class BookingForm extends Component
         $schedule = collect($this->availableSchedules)
             ->firstWhere('id', $this->selected_schedule_id);
 
-        if ($schedule && isset($schedule['accommodations'])) {
-            $accommodation = collect($schedule['accommodations'])
+        $accList = $schedule['accommodations'] ?? ($schedule['schedule_accommodations'] ?? null);
+        if ($accList) {
+            $accommodation = collect($accList)
                 ->firstWhere('id', $this->selected_schedule_accommodation_id);
             if ($accommodation) {
                 return floatval($accommodation['price']);
             }
         }
 
-        return 0;
+        $dbAcc = \App\Models\ScheduleAccommodation::query()
+            ->where('schedule_id', $this->selected_schedule_id)
+            ->find($this->selected_schedule_accommodation_id);
+
+        return $dbAcc ? floatval($dbAcc->price) : 0;
     }
 
     public function getMaxPassengers(): int
@@ -3796,6 +3845,15 @@ class BookingForm extends Component
                     }
                 }
 
+                $paxRateType = $passenger['rate_type'] ?? ($this->isSuperPromo ? 'super_promotional' : ($this->isPromo ? 'promotional' : 'regular'));
+                $isSuperPromoPax = $paxRateType === 'super_promotional';
+                $isPromoPax = $paxRateType === 'promotional' || (! empty($passenger['use_promo']) && ! $isSuperPromoPax);
+
+                if ($isSuperPromoPax || $isPromoPax) {
+                    $this->passengers[$index]['discount_id'] = null;
+                    continue;
+                }
+
                 // --- Discount eligibility ---
                 $discount = $this->discounts->firstWhere('id', $passenger['discount_id']);
 
@@ -3890,14 +3948,20 @@ class BookingForm extends Component
         $schedule = collect($this->availableReturnSchedules)
             ->firstWhere('id', $this->selected_return_schedule_id);
 
-        if (! $schedule || empty($schedule['schedule_accommodations'])) {
-            return 0;
+        $accList = $schedule['accommodations'] ?? ($schedule['schedule_accommodations'] ?? null);
+        if ($accList) {
+            $accommodation = collect($accList)
+                ->firstWhere('id', $this->selected_return_schedule_accommodation_id);
+            if ($accommodation) {
+                return floatval($accommodation['price']);
+            }
         }
 
-        $accommodation = collect($schedule['schedule_accommodations'])
-            ->firstWhere('id', $this->selected_return_schedule_accommodation_id);
+        $dbAcc = \App\Models\ScheduleAccommodation::query()
+            ->where('schedule_id', $this->selected_return_schedule_id)
+            ->find($this->selected_return_schedule_accommodation_id);
 
-        return $accommodation ? floatval($accommodation['price']) : 0;
+        return $dbAcc ? floatval($dbAcc->price) : 0;
     }
 
     protected function getSelectedSchedulePrice(): float

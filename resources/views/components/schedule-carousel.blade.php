@@ -184,6 +184,21 @@
         @if($selectedSchedule && !empty($selectedSchedule['transport_classes']))
             <div class="mt-5 sm:mt-4 border-t border-slate-200 pt-5 sm:pt-4">
                 <p class="text-slate-900 font-bold mb-4 sm:mb-3 text-sm">Select travel class for this trip:</p>
+                @if(($selectClassMethod ?? '') === 'selectTransportClass')
+                    @error('selected_transport_class_id')
+                        <div class="mb-3 p-3 rounded-lg bg-rose-50 border border-rose-200 text-xs font-bold text-rose-600 flex items-center gap-2">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <span>{{ $message }}</span>
+                        </div>
+                    @enderror
+                @elseif(($selectClassMethod ?? '') === 'selectReturnTransportClass')
+                    @error('selected_return_transport_class_id')
+                        <div class="mb-3 p-3 rounded-lg bg-rose-50 border border-rose-200 text-xs font-bold text-rose-600 flex items-center gap-2">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <span>{{ $message }}</span>
+                        </div>
+                    @enderror
+                @endif
                 <div class="grid gap-3 grid-cols-2 sm:gap-4 lg:grid-cols-3">
                     @foreach($selectedSchedule['transport_classes'] as $class)
                         @php
@@ -278,7 +293,7 @@
 
             <div class="flex gap-3 justify-center w-full">
                 <button type="button" @click="show = false" class="flex-1 px-5 py-2.5 text-sm font-semibold text-slate-700 bg-slate-100 rounded-xl hover:bg-slate-200 transition">Cancel</button>
-                <button type="button" @click="$wire.call(method, id); show = false" class="flex-1 px-5 py-2.5 text-sm font-semibold text-white rounded-xl shadow-sm transition" :class="type === 'super_promotional' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-amber-500 hover:bg-amber-600'">Proceed</button>
+                <button type="button" @click="(typeof $wire[method] === 'function' ? $wire[method](id) : $wire.call(method, id)); show = false" class="flex-1 px-5 py-2.5 text-sm font-semibold text-white rounded-xl shadow-sm transition" :class="type === 'super_promotional' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-amber-500 hover:bg-amber-600'">Proceed</button>
             </div>
         </div>
     </div>
