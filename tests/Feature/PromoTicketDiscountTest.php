@@ -439,6 +439,9 @@ class PromoTicketDiscountTest extends TestCase
 
     public function test_promotional_ticket_allows_website_vouchers(): void
     {
+        // Website vouchers are gated by an admin toggle (Vouchers page → "Website Vouchers: ON/OFF"), default OFF.
+        \App\Models\WebsiteSetting::setWebsiteVouchersEnabled(true);
+
         $schedule = $this->createAirlineSchedule();
         $promoTicket = PromotionalTicket::create([
             'schedule_id' => $schedule->id,
@@ -636,6 +639,7 @@ class PromoTicketDiscountTest extends TestCase
                 'rate_type' => 'promotional',
                 'is_promo' => true,
                 'additional_price' => 299.00,
+                'original_price' => 450.00, // pre-promo regular fare saved when promo was applied
                 'promo_type' => 'temporary',
                 'promo_duration_start' => now()->subDays(10),
                 'promo_duration_end' => now()->subDay(),
@@ -647,10 +651,23 @@ class PromoTicketDiscountTest extends TestCase
         $this->assertNotEmpty($bookingArray['transport_classes']);
         $tcData = collect($bookingArray['transport_classes'])->firstWhere('id', $tc->id);
         $this->assertNotNull($tcData);
-        // Should have reverted to regular fare and restored base price
+        // Should have reverted to regular fare and restored the pre-promo original price
         $this->assertEquals('regular', $tcData['rate_type']);
         $this->assertFalse($tcData['is_promo']);
-        $this->assertEquals((float)$tc->price, (float)$tcData['price']);
+        $this->assertEquals(450.00, (float)$tcData['price']);
+
+        // Without a saved original price and a ₱0 class base price, the fare must NOT drop to ₱0
+        // (would make the ticket free) — it keeps the stored additional_price instead.
+        \Illuminate\Support\Facades\DB::table('schedule_transport_class')
+            ->where('schedule_id', $schedule->id)
+            ->where('transport_class_id', $tc->id)
+            ->update(['original_price' => null]);
+
+        $schedule->load('transportClasses');
+        $tcData = collect($schedule->toBookingArray()['transport_classes'])->firstWhere('id', $tc->id);
+        $this->assertEquals('regular', $tcData['rate_type']);
+        $this->assertFalse($tcData['is_promo']);
+        $this->assertEquals(299.00, (float)$tcData['price']);
     }
 
     public function test_permanent_promo_expiry_hides_from_booking_array(): void

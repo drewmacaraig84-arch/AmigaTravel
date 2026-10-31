@@ -297,7 +297,15 @@ Route::get('/schedules', function (\Illuminate\Http\Request $request) {
 
     try {
         $cacheKey = 'web:schedules:' . $startDate . ':' . $endDate;
-        $routes = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(3), $fetchRoutes);
+        // Use tagged cache so Schedule::bust() → Cache::tags(['schedules'])->flush() instantly
+        // invalidates this entry when a promo is applied or restored from the admin panel.
+        // Falls back to untagged remember() on drivers that don't support tags (e.g. file, array).
+        if (\Illuminate\Support\Facades\Cache::supportsTags()) {
+            $routes = \Illuminate\Support\Facades\Cache::tags(['schedules', 'routes'])
+                ->remember($cacheKey, now()->addMinutes(3), $fetchRoutes);
+        } else {
+            $routes = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(3), $fetchRoutes);
+        }
     } catch (\Throwable $e) {
         \Illuminate\Support\Facades\Log::warning('Schedules cache retrieval error: ' . $e->getMessage());
         $routes = $fetchRoutes();

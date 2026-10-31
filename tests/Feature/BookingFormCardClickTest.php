@@ -37,9 +37,9 @@ class BookingFormCardClickTest extends TestCase
     public function test_booking_form_shows_confirmation_modal(): void
     {
         Livewire::withQueryParams([
-            'operator' => 'AirAsia',
+            'operator' => 'Starlite',
             'trip_type' => 'one_way',
-            'mode' => 'airline',
+            'mode' => 'ferry',
         ])
         ->test(BookingForm::class)
         ->assertSet('showOperatorConfirmation', true);

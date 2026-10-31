@@ -690,37 +690,9 @@ class ScheduleCsvImportService
         $accommodationUpdated = false;
         // For Ferry mode, also maintain schedule_accommodations compatibility
         if ($mode === 'ferry') {
-            $acc = $schedule->scheduleAccommodations()
-                ->where('name', $transportClass->name)
-                ->first();
-
-            if ($acc) {
-                $acc->update([
-                    'rate_code' => $rateCode,
-                    'price' => $accommodationPrice,
-                    'tickets_available' => $ticketsAvailable,
-                    'has_bed' => $hasBed,
-                    'is_active' => true,
-                ]);
-                $accommodationUpdated = true;
-
-                // Clean up any duplicate records for this accommodation name on this schedule
-                $schedule->scheduleAccommodations()
-                    ->where('name', $transportClass->name)
-                    ->where('id', '!=', $acc->id)
-                    ->delete();
-            } else {
-                ScheduleAccommodation::create([
-                    'schedule_id' => $schedule->id,
-                    'name' => $transportClass->name,
-                    'rate_code' => $rateCode,
-                    'price' => $accommodationPrice,
-                    'tickets_available' => $ticketsAvailable,
-                    'has_bed' => $hasBed,
-                    'is_active' => true,
-                ]);
-                $accommodationCreated = true;
-            }
+            $accResult = $this->upsertScheduleAccommodation($schedule, $transportClass->name, $rateCode, $accommodationPrice, $ticketsAvailable, $hasBed);
+            $accommodationCreated = $accResult === 'created';
+            $accommodationUpdated = $accResult === 'updated';
         }
 
         if ($scheduleCreated || $scheduleUpdated || $tcPivotUpdated || $accommodationCreated || $accommodationUpdated) {
@@ -907,35 +879,65 @@ class ScheduleCsvImportService
         }
 
         if ($mode === 'ferry') {
-            $returnAcc = $schedule->scheduleAccommodations()
-                ->where('name', $transportClass->name)
-                ->first();
-
-            if ($returnAcc) {
-                $returnAcc->update([
-                    'rate_code' => $rateCode,
-                    'price' => $accommodationPrice,
-                    'tickets_available' => $ticketsAvailable,
-                    'has_bed' => $hasBed,
-                    'is_active' => true,
-                ]);
-
-                $schedule->scheduleAccommodations()
-                    ->where('name', $transportClass->name)
-                    ->where('id', '!=', $returnAcc->id)
-                    ->delete();
-            } else {
-                ScheduleAccommodation::create([
-                    'schedule_id' => $schedule->id,
-                    'name' => $transportClass->name,
-                    'rate_code' => $rateCode,
-                    'price' => $accommodationPrice,
-                    'tickets_available' => $ticketsAvailable,
-                    'has_bed' => $hasBed,
-                    'is_active' => true,
-                ]);
-            }
+            $this->upsertScheduleAccommodation($schedule, $transportClass->name, $rateCode, $accommodationPrice, $ticketsAvailable, $hasBed);
         }
+    }
+
+    /**
+     * Create or update a schedule accommodation keyed on (name, rate_code).
+     * Multiple rate codes (e.g. PROMO / REGULAR) for the same accommodation coexist,
+     * while re-importing the same row updates it in place. Legacy rows without a rate
+     * code are adopted instead of duplicated.
+     *
+     * @return string 'created' or 'updated'
+     */
+    protected function upsertScheduleAccommodation(
+        Schedule $schedule,
+        string $name,
+        ?string $rateCode,
+        float $price,
+        int $ticketsAvailable,
+        bool $hasBed
+    ): string {
+        $noRateCode = fn ($q) => $q->whereNull('rate_code')->orWhere('rate_code', '');
+        $sameRateCode = $rateCode === null ? $noRateCode : fn ($q) => $q->where('rate_code', $rateCode);
+
+        $acc = $schedule->scheduleAccommodations()
+            ->where('name', $name)
+            ->where($sameRateCode)
+            ->first();
+
+        if (! $acc && $rateCode !== null) {
+            $acc = $schedule->scheduleAccommodations()
+                ->where('name', $name)
+                ->where($noRateCode)
+                ->first();
+        }
+
+        $attributes = [
+            'rate_code' => $rateCode,
+            'price' => $price,
+            'tickets_available' => $ticketsAvailable,
+            'has_bed' => $hasBed,
+            'is_active' => true,
+        ];
+
+        if ($acc) {
+            $acc->update($attributes);
+
+            // Remove duplicates of this exact name + rate code on the schedule
+            $schedule->scheduleAccommodations()
+                ->where('name', $name)
+                ->where($sameRateCode)
+                ->where('id', '!=', $acc->id)
+                ->delete();
+
+            return 'updated';
+        }
+
+        ScheduleAccommodation::create(['schedule_id' => $schedule->id, 'name' => $name] + $attributes);
+
+        return 'created';
     }
 
     /**

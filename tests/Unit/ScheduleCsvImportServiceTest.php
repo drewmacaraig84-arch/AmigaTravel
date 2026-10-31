@@ -107,7 +107,8 @@ class ScheduleCsvImportServiceTest extends TestCase
     public function test_imports_schedule_with_embedded_eta_date_and_etd_prefix(): void
     {
         $csvContent = "Operator,Mode,Vehicle Tail No,Origin,Destination,Departure Date,Departure Time,Arrival Time,Transport Class,Rate,Tickets Available\n";
-        $csvContent .= "2GO,ferry,MV 2GO Maligaya,Manila,Bacolod,10/3/2026,ETD: 7 PM,ETA: OCT 04 @ 11 PM,Tourist Class,1997,50\n";
+        // Dates are Day/Month/Year (enforced import format) — 3/10/2026 = 3 October 2026
+        $csvContent .= "2GO,ferry,MV 2GO Maligaya,Manila,Bacolod,3/10/2026,ETD: 7 PM,ETA: OCT 04 @ 11 PM,Tourist Class,1997,50\n";
 
         $tempFile = tempnam(sys_get_temp_dir(), 'test_smarteta_') . '.csv';
         file_put_contents($tempFile, $csvContent);

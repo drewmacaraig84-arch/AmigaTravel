@@ -174,28 +174,73 @@ class ScheduleController extends Controller
         $cacheKey = 'api:schedule:search:'
             . md5("{$origin}:{$destination}:{$date}:{$mode}:{$operator}:" . ($hasVehicle ? '1' : '0'));
 
-        $schedules = $this->rememberCache(
-            $cacheKey,
-            now()->addMinutes(2),
-            function () use ($origin, $destination, $date, $mode, $operator, $activeRule, $hasVehicle) {
-                return Schedule::forRouteAndDate($origin, $destination, $date, $mode, $operator)
-                    ->get()
-                    ->filter(function ($schedule) use ($hasVehicle) {
-                        return ! $hasVehicle || app(\App\Services\VehicleBookingPolicyService::class)->isScheduleEligible($schedule);
-                    })
-                    ->map(function ($schedule) use ($date, $activeRule) {
-                        $arr = $schedule->toBookingArray($date);
-                        $pts = 0;
-                        if ($activeRule && $activeRule->spend_threshold_centavos > 0) {
-                            $pts = (int) floor(($arr['price'] * 100) / $activeRule->spend_threshold_centavos)
-                                * $activeRule->points_awarded;
+        // Use tagged cache so Schedule::bust() → Cache::tags(['schedules'])->flush() instantly
+        // invalidates stale promo data when a promo is set or restored from the admin panel.
+        try {
+            if (\Illuminate\Support\Facades\Cache::supportsTags()) {
+                $schedules = \Illuminate\Support\Facades\Cache::tags(['schedules', 'routes'])
+                    ->remember(
+                        $cacheKey,
+                        now()->addMinutes(2),
+                        function () use ($origin, $destination, $date, $mode, $operator, $activeRule, $hasVehicle) {
+                            return Schedule::forRouteAndDate($origin, $destination, $date, $mode, $operator)
+                                ->get()
+                                ->filter(function ($schedule) use ($hasVehicle) {
+                                    return ! $hasVehicle || app(\App\Services\VehicleBookingPolicyService::class)->isScheduleEligible($schedule);
+                                })
+                                ->map(function ($schedule) use ($date, $activeRule) {
+                                    $arr = $schedule->toBookingArray($date);
+                                    $pts = 0;
+                                    if ($activeRule && $activeRule->spend_threshold_centavos > 0) {
+                                        $pts = (int) floor(($arr['price'] * 100) / $activeRule->spend_threshold_centavos)
+                                            * $activeRule->points_awarded;
+                                    }
+                                    $arr['gracia_points'] = $pts;
+                                    return $arr;
+                                })
+                                ->values();
                         }
-                        $arr['gracia_points'] = $pts;
-                        return $arr;
-                    })
-                    ->values();
+                    );
+            } else {
+                $schedules = $this->rememberCache(
+                    $cacheKey,
+                    now()->addMinutes(2),
+                    function () use ($origin, $destination, $date, $mode, $operator, $activeRule, $hasVehicle) {
+                        return Schedule::forRouteAndDate($origin, $destination, $date, $mode, $operator)
+                            ->get()
+                            ->filter(function ($schedule) use ($hasVehicle) {
+                                return ! $hasVehicle || app(\App\Services\VehicleBookingPolicyService::class)->isScheduleEligible($schedule);
+                            })
+                            ->map(function ($schedule) use ($date, $activeRule) {
+                                $arr = $schedule->toBookingArray($date);
+                                $pts = 0;
+                                if ($activeRule && $activeRule->spend_threshold_centavos > 0) {
+                                    $pts = (int) floor(($arr['price'] * 100) / $activeRule->spend_threshold_centavos)
+                                        * $activeRule->points_awarded;
+                                }
+                                $arr['gracia_points'] = $pts;
+                                return $arr;
+                            })
+                            ->values();
+                    }
+                );
             }
-        );
+        } catch (\Throwable) {
+            $schedules = Schedule::forRouteAndDate($origin, $destination, $date, $mode, $operator)
+                ->get()
+                ->filter(fn ($s) => !$hasVehicle || app(\App\Services\VehicleBookingPolicyService::class)->isScheduleEligible($s))
+                ->map(function ($schedule) use ($date, $activeRule) {
+                    $arr = $schedule->toBookingArray($date);
+                    $pts = 0;
+                    if ($activeRule && $activeRule->spend_threshold_centavos > 0) {
+                        $pts = (int) floor(($arr['price'] * 100) / $activeRule->spend_threshold_centavos)
+                            * $activeRule->points_awarded;
+                    }
+                    $arr['gracia_points'] = $pts;
+                    return $arr;
+                })
+                ->values();
+        }
 
         if ($hasVehicle) {
             $policy = app(\App\Services\VehicleBookingPolicyService::class);
@@ -237,7 +282,7 @@ class ScheduleController extends Controller
 
         $cacheKey = 'api:all_schedules:' . $startDate . ':' . $endDate;
 
-        $routes = $this->rememberCache($cacheKey, now()->addMinutes(10), function () use ($startDate, $endDate) {
+        $callback = function () use ($startDate, $endDate) {
             return FerryRoute::with([
                 'operatorRecord',
                 'vehicle',
@@ -251,7 +296,20 @@ class ScheduleController extends Controller
             ])->where('is_active', true)->orderBy('origin')->orderBy('destination')->get()
               ->filter(fn ($route) => $route->schedules->isNotEmpty())
               ->values();
-        });
+        };
+
+        // Use tagged cache so Schedule::bust() → Cache::tags(['schedules'])->flush() instantly
+        // invalidates stale promo data when a promo is applied or restored from admin.
+        try {
+            if (\Illuminate\Support\Facades\Cache::supportsTags()) {
+                $routes = \Illuminate\Support\Facades\Cache::tags(['schedules', 'routes'])
+                    ->remember($cacheKey, now()->addMinutes(10), $callback);
+            } else {
+                $routes = $this->rememberCache($cacheKey, now()->addMinutes(10), $callback);
+            }
+        } catch (\Throwable) {
+            $routes = $callback();
+        }
 
         $routesArray = $this->ensureSequentialArray($routes);
         
