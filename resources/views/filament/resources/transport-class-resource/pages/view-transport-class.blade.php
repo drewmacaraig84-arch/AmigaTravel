@@ -214,7 +214,8 @@
             x-trap.noscroll="true"
             x-data="{
                 rateType: @entangle('modalRateType'),
-                promoType: @entangle('modalPromoType')
+                promoType: @entangle('modalPromoType'),
+                promoMode: @entangle('modalPromoMode')
             }">
             <div class="w-full max-w-xl rounded-2xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-2xl border border-gray-200 dark:border-gray-800 flex flex-col"
                 style="max-height: calc(100vh - 3rem); overflow: hidden;">
@@ -339,6 +340,50 @@
                         {{-- 3. Dynamic Fields: Promo Expiry Mode & Duration (Instantly Toggled via Alpine) --}}
                         <div x-show="rateType !== 'regular'" x-cloak class="rounded-2xl border border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/40 dark:bg-indigo-950/20 p-6 space-y-6">
                             
+                            {{-- Tier Mode: Dual-Tier vs Replace --}}
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-indigo-950 dark:text-indigo-300 mb-3">
+                                    Promo Allocation Mode
+                                </label>
+                                <div style="display: flex; gap: 14px; width: 100%;">
+                                    {{-- Dual-Tier (Keep Regular & Add Promo) --}}
+                                    <div 
+                                        @click="promoMode = 'dual_tier'; $wire.set('modalPromoMode', 'dual_tier', false)"
+                                        class="p-4 rounded-xl flex flex-col gap-2 min-h-[110px] justify-center cursor-pointer select-none"
+                                        :class="promoMode === 'dual_tier' ? 'promo-expiry-selected-temp' : 'promo-expiry-unselected'"
+                                        style="display: flex; flex: 1; flex-direction: column; margin: 0; min-width: 0;">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center gap-2">
+                                                <input type="radio" value="dual_tier" x-model="promoMode" wire:model="modalPromoMode" class="sr-only" />
+                                                <span class="text-xs font-bold" :class="promoMode === 'dual_tier' ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-900 dark:text-white'">✨ Dual-Tier (Regular &amp; Promo)</span>
+                                            </div>
+                                            <span x-show="promoMode === 'dual_tier'" x-cloak class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-indigo-600 text-white shadow-sm">Recommended</span>
+                                        </div>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                                            Keeps the <strong>Regular fare active</strong> and offers a separate <strong>Promo tier</strong> side-by-side on the booking page.
+                                        </p>
+                                    </div>
+
+                                    {{-- Replace Entire Class --}}
+                                    <div 
+                                        @click="promoMode = 'replace'; $wire.set('modalPromoMode', 'replace', false)"
+                                        class="p-4 rounded-xl flex flex-col gap-2 min-h-[110px] justify-center cursor-pointer select-none"
+                                        :class="promoMode === 'replace' ? 'promo-expiry-selected-perm' : 'promo-expiry-unselected'"
+                                        style="display: flex; flex: 1; flex-direction: column; margin: 0; min-width: 0;">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center gap-2">
+                                                <input type="radio" value="replace" x-model="promoMode" wire:model="modalPromoMode" class="sr-only" />
+                                                <span class="text-xs font-bold" :class="promoMode === 'replace' ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'">🔄 Replace Entire Class</span>
+                                            </div>
+                                            <span x-show="promoMode === 'replace'" x-cloak class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-red-600 text-white shadow-sm">Selected</span>
+                                        </div>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                                            Converts the <strong>entire class to promo</strong> (regular fare will be temporarily hidden).
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
                             {{-- Expiry Behavior Option (Spacious & Non-touching) --}}
                             <div>
                                 <label class="block text-xs font-bold uppercase tracking-wider text-indigo-950 dark:text-indigo-300 mb-3">

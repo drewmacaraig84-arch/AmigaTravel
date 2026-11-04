@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Models\WebsiteSetting;
+use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Section;
@@ -32,6 +33,48 @@ class ManageWebsiteSettings extends Page implements HasForms
     {
         $user = Auth::user();
         return $user instanceof \App\Models\User && $user->hasAdminPermission('website_settings');
+    }
+
+    protected function getHeaderActions(): array
+    {
+        $areEnabled = WebsiteSetting::areSchedulesEnabled();
+
+        return [
+            Action::make('toggleSchedules')
+                ->label($areEnabled ? 'Turn Off Schedules' : 'Turn On Schedules')
+                ->icon($areEnabled ? 'heroicon-o-eye-slash' : 'heroicon-o-eye')
+                ->color($areEnabled ? 'danger' : 'success')
+                ->tooltip($areEnabled 
+                    ? 'Click to turn off and hide all schedules on the Booking Page and Schedules Page' 
+                    : 'Click to turn on and show all schedules on the Booking Page and Schedules Page')
+                ->requiresConfirmation()
+                ->modalHeading($areEnabled ? 'Turn Off All Schedules?' : 'Turn On All Schedules?')
+                ->modalDescription($areEnabled 
+                    ? 'When turned off, ALL schedules will be hidden from both the Booking Page (/book/new) and the Schedules Page (/schedules). Customers will not be able to browse or select schedules.' 
+                    : 'When turned on, schedules will become visible again on the Booking Page and the Schedules Page.')
+                ->modalSubmitActionLabel($areEnabled ? 'Yes, Turn Off Schedules' : 'Yes, Turn On Schedules')
+                ->action(fn () => $this->toggleSchedulesVisibility()),
+        ];
+    }
+
+    public function toggleSchedulesVisibility(): void
+    {
+        $currentState = WebsiteSetting::areSchedulesEnabled();
+        $newState = ! $currentState;
+        WebsiteSetting::setSchedulesEnabled($newState);
+
+        $statusLabel = $newState ? 'turned ON (visible)' : 'turned OFF (hidden)';
+        Notification::make()
+            ->title("Schedules {$statusLabel}")
+            ->body($newState 
+                ? 'All schedules are now visible on both the Booking Page and the Schedules Page.' 
+                : 'All schedules have been turned off and will not appear on either the Booking Page or the Schedules Page.')
+            ->color($newState ? 'success' : 'danger')
+            ->send();
+
+        $this->loadSettings();
+        $this->iframeKey++;
+        $this->dispatch('refresh-preview');
     }
 
     public ?string $currentPage = 'home';
@@ -85,6 +128,10 @@ class ManageWebsiteSettings extends Page implements HasForms
 
             if ($this->currentPage === 'home') {
                 $formData['booking_cards'] = $setting->booking_cards ?? $this->getDefaultBookingCards();
+            }
+
+            if ($this->currentPage === 'schedules') {
+                $formData['content']['schedules_enabled'] = WebsiteSetting::areSchedulesEnabled();
             }
 
             $this->form->fill($formData);
@@ -240,6 +287,36 @@ class ManageWebsiteSettings extends Page implements HasForms
                                 Textarea::make('description')->required()->rows(2),
                             ])->columns(1),
                     ])
+            ];
+        }
+
+        if ($this->currentPage === 'schedules') {
+            return [
+                Section::make('Schedules Availability & Visibility')->collapsible()
+                    ->description('Turn schedules ON or OFF across the entire website (Booking Page and Schedules Page)')
+                    ->schema([
+                        Toggle::make('content.schedules_enabled')
+                            ->label('Schedules Active (Show on Website)')
+                            ->helperText('When turned OFF, all schedules will be hidden from both the Booking Page and the Schedules Page.')
+                            ->default(WebsiteSetting::areSchedulesEnabled())
+                            ->live(),
+                    ]),
+                Section::make('Schedules Page Hero & Content')->collapsible()
+                    ->schema([
+                        TextInput::make('content.schedules_badge')
+                            ->label('Hero Badge Text')
+                            ->default('Real-time schedules')
+                            ->maxLength(100),
+                        TextInput::make('content.schedules_title')
+                            ->label('Page Title')
+                            ->default('Schedule and Routes')
+                            ->maxLength(150),
+                        Textarea::make('content.schedules_description')
+                            ->label('Page Description')
+                            ->rows(3)
+                            ->default('Browse available ferry and airline routes with live pricing, departure times, and accommodation options.')
+                            ->maxLength(500),
+                    ]),
             ];
         }
 
@@ -402,6 +479,11 @@ class ManageWebsiteSettings extends Page implements HasForms
     {
         try {
             $data = $this->form->getState();
+
+            if ($this->currentPage === 'schedules' && isset($data['content']['schedules_enabled'])) {
+                WebsiteSetting::setSchedulesEnabled((bool) $data['content']['schedules_enabled']);
+            }
+
             $setting = WebsiteSetting::getOrCreateByPage($this->currentPage);
             $setting->update($data);
 
@@ -466,6 +548,9 @@ class ManageWebsiteSettings extends Page implements HasForms
         try {
             $setting = WebsiteSetting::getOrCreateByPage($this->currentPage);
             $data = $this->settingsData ?? [];
+            if ($this->currentPage === 'schedules' && isset($data['content']['schedules_enabled'])) {
+                WebsiteSetting::setSchedulesEnabled((bool) $data['content']['schedules_enabled']);
+            }
             $updateData = [];
             foreach (['content', 'hero_images', 'header_data', 'footer_data', 'booking_cards', 'is_active'] as $field) {
                 if (array_key_exists($field, $data)) {

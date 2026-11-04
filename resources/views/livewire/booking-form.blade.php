@@ -129,6 +129,31 @@
                         }
                     </style>
                     @if ($step === 1)
+                        @if (!\App\Models\WebsiteSetting::areSchedulesEnabled() && !$tour_id && !$prefilled_from_package)
+                            <div class="mb-6 rounded-2xl border-2 border-amber-300 bg-amber-50 p-5 shadow-sm">
+                                <div class="flex items-start gap-4">
+                                    <div class="rounded-xl bg-amber-500/10 p-2.5 text-amber-600 flex-shrink-0">
+                                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                                        </svg>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <h3 class="text-base font-bold text-amber-900">Trip Schedules Currently Turned Off</h3>
+                                        <p class="text-sm text-amber-800 leading-relaxed">
+                                            Online ferry and airline trip schedules have been temporarily turned off by management. Trip bookings are currently unavailable. Please check back later or contact us directly for ticket reservations.
+                                        </p>
+                                        <div class="pt-2 flex items-center gap-3">
+                                            <a href="{{ url('/contact') }}" class="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow hover:bg-amber-700 transition">
+                                                Contact Support
+                                            </a>
+                                            <a href="{{ url('/schedules') }}" class="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-100 transition">
+                                                View Schedules Page
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
                         <div class="relative">
                             <div class="space-y-4">
                                 <div class="flex items-center gap-3">
@@ -2103,9 +2128,10 @@
 
                             @php
                                 $currentMaxStep = $maxStep ?? ($this->maxStep ?? 5);
+                                $isSchedulesDisabled = ! \App\Models\WebsiteSetting::areSchedulesEnabled() && ! $tour_id && ! $prefilled_from_package;
                             @endphp
                             @if ($step < $currentMaxStep)
-                                <button type="button" wire:click.prevent="nextStep" class="inline-flex w-full sm:w-auto items-center justify-center rounded-xl bg-[#db2777] px-8 py-3.5 text-sm font-bold text-white shadow-md transition-all hover:bg-[#db2777]/90 hover:shadow-lg">
+                                <button type="button" wire:click.prevent="nextStep" @disabled($isSchedulesDisabled && $step === 1) class="inline-flex w-full sm:w-auto items-center justify-center rounded-xl bg-[#db2777] px-8 py-3.5 text-sm font-bold text-white shadow-md transition-all hover:bg-[#db2777]/90 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
                                     Next
                                     <svg class="ml-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                                 </button>

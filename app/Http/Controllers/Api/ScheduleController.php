@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\FerryRoute;
 use App\Models\Schedule;
+use App\Models\WebsiteSetting;
 use Illuminate\Http\Request;
 
 class ScheduleController extends Controller
@@ -40,6 +41,13 @@ class ScheduleController extends Controller
 
     public function origins(Request $request)
     {
+        if (! WebsiteSetting::areSchedulesEnabled()) {
+            return response()->json([
+                'status' => 'success',
+                'origins' => [],
+            ]);
+        }
+
         $mode = $request->input('mode', '');
         $operator = $request->input('operator', '');
         $cacheKey = "api:origins:{$mode}:{$operator}";
@@ -71,6 +79,13 @@ class ScheduleController extends Controller
 
     public function destinations(Request $request)
     {
+        if (! WebsiteSetting::areSchedulesEnabled()) {
+            return response()->json([
+                'status' => 'success',
+                'destinations' => [],
+            ]);
+        }
+
         $request->validate([
             'origin' => 'required|string',
         ]);
@@ -93,6 +108,13 @@ class ScheduleController extends Controller
 
     public function availableDates(Request $request)
     {
+        if (! WebsiteSetting::areSchedulesEnabled()) {
+            return response()->json([
+                'status' => 'success',
+                'available_dates' => [],
+            ]);
+        }
+
         $request->validate([
             'origin' => 'required|string',
             'destination' => 'required|string',
@@ -148,6 +170,14 @@ class ScheduleController extends Controller
 
     public function search(Request $request)
     {
+        if (! WebsiteSetting::areSchedulesEnabled()) {
+            return response()->json([
+                'status'    => 'success',
+                'schedules' => [],
+                'message'   => 'Online schedules are currently turned off by management.',
+            ]);
+        }
+
         $request->validate([
             'origin' => 'required|string',
             'destination' => 'required|string',
@@ -265,6 +295,14 @@ class ScheduleController extends Controller
     }
     public function allSchedules(Request $request)
     {
+        if (! WebsiteSetting::areSchedulesEnabled()) {
+            return response()->json([
+                'status'  => 'success',
+                'routes'  => [],
+                'message' => 'Online schedules are currently turned off by management.',
+            ]);
+        }
+
         $startDate = $request->query('start_date', \Carbon\Carbon::today()->format('Y-m-d'));
         $endDate   = $request->query('end_date',   \Carbon\Carbon::today()->addDays(6)->format('Y-m-d'));
 

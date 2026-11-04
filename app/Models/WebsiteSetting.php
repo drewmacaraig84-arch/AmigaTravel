@@ -21,6 +21,7 @@ class WebsiteSetting extends Model
         'header' => 'Header',
         'footer' => 'Footer',
         'home' => 'Home',
+        'schedules' => 'Schedules',
         'about' => 'About',
         'services' => 'Services',
         'contact_us' => 'Contact Us',
@@ -51,6 +52,10 @@ class WebsiteSetting extends Model
             \Illuminate\Support\Facades\Cache::forget('website_settings:page:home');
             \Illuminate\Support\Facades\Cache::forget('api:services');
             \Illuminate\Support\Facades\Cache::forget('api:promotions');
+            \Illuminate\Support\Facades\Cache::forget('website_schedules_enabled');
+            \Illuminate\Support\Facades\Cache::forget('web:activeRoutes');
+            \Illuminate\Support\Facades\Cache::forget('web:schedules');
+            \Illuminate\Support\Facades\Cache::forget('api:all_schedules');
         };
 
         static::saved($flushCache);
@@ -94,6 +99,68 @@ class WebsiteSetting extends Model
         $setting->content = $content;
         $setting->save();
         \Illuminate\Support\Facades\Cache::forget('website_vouchers_enabled');
+    }
+
+    public static function areSchedulesEnabled(): bool
+    {
+        try {
+            return (bool) \Illuminate\Support\Facades\Cache::remember('website_schedules_enabled', 3600, function () {
+                return static::checkSchedulesEnabledFromDb();
+            });
+        } catch (\Throwable) {
+            return static::checkSchedulesEnabledFromDb();
+        }
+    }
+
+    protected static function checkSchedulesEnabledFromDb(): bool
+    {
+        try {
+            $setting = static::where('page', 'schedules')->first();
+            if (! $setting) {
+                return true;
+            }
+            if (isset($setting->is_active) && ! $setting->is_active) {
+                return false;
+            }
+            if (is_array($setting->content) && array_key_exists('schedules_enabled', $setting->content)) {
+                return (bool) $setting->content['schedules_enabled'];
+            }
+            return true;
+        } catch (\Throwable) {
+            return true;
+        }
+    }
+
+    public static function setSchedulesEnabled(bool $enabled): void
+    {
+        try {
+            $setting = static::getOrCreateByPage('schedules');
+            $setting->is_active = $enabled;
+            $content = is_array($setting->content) ? $setting->content : [];
+            $content['schedules_enabled'] = $enabled;
+            $setting->content = $content;
+            $setting->save();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Failed saving schedules_enabled to database: ' . $e->getMessage());
+        }
+
+        try {
+            \Illuminate\Support\Facades\Cache::forget('website_schedules_enabled');
+            \Illuminate\Support\Facades\Cache::forget('website_settings:schedules');
+            \Illuminate\Support\Facades\Cache::forget('website_settings:page:schedules');
+            \Illuminate\Support\Facades\Cache::forget('web:activeRoutes');
+            \Illuminate\Support\Facades\Cache::forget('web:schedules');
+            \Illuminate\Support\Facades\Cache::forget('api:all_schedules');
+            if (\Illuminate\Support\Facades\Cache::supportsTags()) {
+                \Illuminate\Support\Facades\Cache::tags(['schedules', 'routes'])->flush();
+            }
+        } catch (\Throwable) {}
+
+        try {
+            if (class_exists(\App\Models\Schedule::class)) {
+                \App\Models\Schedule::bust();
+            }
+        } catch (\Throwable) {}
     }
 
     public static function getAppMaintenanceSettings(): array

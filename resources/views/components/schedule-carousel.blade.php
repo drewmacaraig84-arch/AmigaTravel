@@ -241,6 +241,8 @@
                                         <span class="text-[9px] font-bold uppercase tracking-wider bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full border border-purple-200">Non-refundable & Non-rebookable</span>
                                     @elseif($isPromo)
                                         <span class="text-[9px] font-bold uppercase tracking-wider bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full border border-rose-200">Non-refundable</span>
+                                    @else
+                                        <span class="text-[9px] font-bold uppercase tracking-wider bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full border border-blue-200">Regular Fare</span>
                                     @endif
                                 </div>
                             </div>

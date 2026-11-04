@@ -1809,7 +1809,7 @@
                 }
                 if (is_dir($__promo_dir)) {
                     $__dir_name = basename($__promo_dir);
-                    foreach (scandir($__promo_dir) as $__f) {
+                    foreach ((scandir($__promo_dir) ?: []) as $__f) {
                         if (in_array(strtolower(pathinfo($__f, PATHINFO_EXTENSION)), $extensions, true)) {
                             $__promo_files[] = [
                                 'file'     => $__f,
@@ -2061,7 +2061,11 @@
     <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-6 lg:gap-8 relative ws-sbtn-container">
         @if(auth('admin')->check()) <button type="button" @click.prevent="$dispatch('open-editor', { section: 'booking_cards' })" class="ws-sbtn absolute -top-4 right-2 z-20"></button> @endif
         @php
-            $bookingCards = data_get($pageContent, 'content.booking_cards', data_get($pageContent, 'booking_cards', []));
+            $rawBookingCards = data_get($pageContent, 'content.booking_cards', data_get($pageContent, 'booking_cards', []));
+            if (! is_array($rawBookingCards)) {
+                $rawBookingCards = is_string($rawBookingCards) ? (json_decode($rawBookingCards, true) ?: []) : [];
+            }
+            $bookingCards = is_array($rawBookingCards) ? $rawBookingCards : [];
             $defaultBookingCards = [
                 [
                         'title' => '2GO',
@@ -2165,7 +2169,11 @@
 <div class="max-w-7xl mx-auto px-4 pb-12 amiga-animate-on-scroll amiga-transition relative ws-sbtn-container">
     @if(auth('admin')->check()) <button type="button" @click.prevent="$dispatch('open-editor', { section: 'suggested_trips' })" class="ws-sbtn absolute top-0 right-2 z-20"></button> @endif
     @php
-        $suggestedTrips = data_get($pageContent, 'suggested_trips', []);
+        $rawSuggestedTrips = data_get($pageContent, 'suggested_trips', []);
+        if (! is_array($rawSuggestedTrips)) {
+            $rawSuggestedTrips = is_string($rawSuggestedTrips) ? (json_decode($rawSuggestedTrips, true) ?: []) : [];
+        }
+        $suggestedTrips = is_array($rawSuggestedTrips) ? $rawSuggestedTrips : [];
     @endphp
 
     @if(!empty($suggestedTrips))

@@ -152,16 +152,36 @@ class ScheduleTransportClass extends Pivot
 
     /**
      * Revert this promotional class back to regular fare in the database,
-     * restoring its pre-promo original_price.
+     * restoring its pre-promo original_price or removing it if a separate regular peer exists.
      */
     public function revertToRegular(): bool
     {
+        // Check if there is another regular row for this schedule & transport class (Dual-tier)
+        $hasRegularPeer = static::where('schedule_id', $this->schedule_id)
+            ->where('transport_class_id', $this->transport_class_id)
+            ->where('id', '!=', $this->id)
+            ->where('is_promo', false)
+            ->exists();
+
+        if ($hasRegularPeer) {
+            // It was a dual-tier promo. Deactivate / zero out tickets so the regular tier remains active
+            $updated = (bool) $this->update([
+                'tickets_available'       => 0,
+                'promo_tickets_available' => 0,
+                'is_active'               => false,
+            ]);
+            if ($updated) {
+                Schedule::bust();
+            }
+            return $updated;
+        }
+
         $basePrice = (float) ($this->transportClass?->price ?? 0);
         $restoredPrice = $this->original_price !== null
             ? (float) $this->original_price
             : ($basePrice > 0 ? $basePrice : (float) $this->additional_price);
 
-        $updated = $this->update([
+        $updated = (bool) $this->update([
             'rate_type'               => 'regular',
             'is_promo'                => false,
             'additional_price'        => $restoredPrice,
@@ -170,6 +190,7 @@ class ScheduleTransportClass extends Pivot
             'promo_duration_start'    => null,
             'promo_duration_end'      => null,
             'promo_tickets_available' => null,
+            'is_active'               => true,
         ]);
 
         if ($updated) {
@@ -242,6 +263,7 @@ class ScheduleTransportClass extends Pivot
         $stc = static::with('transportClass')
             ->where('schedule_id', $scheduleId)
             ->where('transport_class_id', $classOrPivotId)
+            ->orderBy('is_promo', 'asc')
             ->first();
 
         if ($stc && $stc->isTemporaryPromo() && ($stc->isPromoExpired() || ($stc->promo_tickets_available !== null && $stc->promo_tickets_available <= 0))) {

@@ -446,7 +446,7 @@ class BookingForm extends Component
             $this->mode = strtolower(trim($this->mode));
         }
 
-        if ($requestedStep === 2 && ! $this->tour_id && $this->mode && $this->operator && $this->origin && $this->destination && $this->departure_date) {
+        if ($requestedStep === 2 && ! $this->tour_id && $this->mode && $this->operator && $this->origin && $this->destination && $this->departure_date && \App\Models\WebsiteSetting::areSchedulesEnabled()) {
             $this->step = 2;
             $this->availableSchedules = $this->getAvailableSchedules();
             $this->availableReturnSchedules = $this->getAvailableReturnSchedules();
@@ -548,6 +548,10 @@ class BookingForm extends Component
             return [];
         }
 
+        if (! \App\Models\WebsiteSetting::areSchedulesEnabled() && ! $this->tour_id && ! $this->prefilled_from_package) {
+            return [];
+        }
+
         return FerryRoute::scheduleOrigins($this->mode, $this->operator);
     }
 
@@ -555,6 +559,10 @@ class BookingForm extends Component
     public function destinations(): array
     {
         if (blank($this->origin)) {
+            return [];
+        }
+
+        if (! \App\Models\WebsiteSetting::areSchedulesEnabled() && ! $this->tour_id && ! $this->prefilled_from_package) {
             return [];
         }
 
@@ -1239,6 +1247,14 @@ class BookingForm extends Component
 
     protected function updateAvailableScheduleDates(): void
     {
+        if (! \App\Models\WebsiteSetting::areSchedulesEnabled() && ! $this->tour_id && ! $this->prefilled_from_package) {
+            $this->available_schedule_dates = [];
+            $this->available_return_schedule_dates = [];
+            $this->available_package_dates = [];
+
+            return;
+        }
+
         if ($this->prefilled_from_package || $this->tour_id) {
             $this->available_schedule_dates = [];
             $this->available_return_schedule_dates = [];
@@ -1519,6 +1535,13 @@ class BookingForm extends Component
 
         if ($this->step === 1) {
             if (! $this->tour_id) {
+                if (! \App\Models\WebsiteSetting::areSchedulesEnabled()) {
+                    $this->dispatch('validation-error');
+                    throw ValidationException::withMessages([
+                        'departure_date' => 'Online schedules are currently turned off by management. Trip bookings are temporarily suspended.',
+                    ]);
+                }
+
                 $this->availableSchedules = $this->getAvailableSchedules();
                 $this->availableReturnSchedules = $this->getAvailableReturnSchedules();
 
@@ -1620,6 +1643,10 @@ class BookingForm extends Component
 
     protected function getAvailableSchedules(): array
     {
+        if (! \App\Models\WebsiteSetting::areSchedulesEnabled()) {
+            return [];
+        }
+
         $query = Schedule::query()
             ->with(['ferryRoute', 'transportClasses', 'scheduleAccommodations'])
             ->forRouteAndDate($this->origin, $this->destination, $this->departure_date, $this->mode, $this->operator);
@@ -1637,7 +1664,7 @@ class BookingForm extends Component
 
     protected function getAvailableReturnSchedules(): array
     {
-        if ($this->trip_type !== 'round_trip' || ! $this->return_date) {
+        if (! \App\Models\WebsiteSetting::areSchedulesEnabled() || $this->trip_type !== 'round_trip' || ! $this->return_date) {
             return [];
         }
 
@@ -2035,6 +2062,16 @@ class BookingForm extends Component
         if (! $this->selected_transport_class_id) {
             return null;
         }
+
+        $stc = ScheduleTransportClass::resolveForSchedule($this->selected_schedule_id, $this->selected_transport_class_id);
+        if ($stc && $stc->transportClass) {
+            $name = $stc->transportClass->name;
+            if ($stc->is_promo) {
+                $name .= ' (' . ($stc->isSuperPromo() ? 'Super Promo' : 'Promo') . ')';
+            }
+            return $name;
+        }
+
         return \App\Models\TransportClass::find($this->selected_transport_class_id)?->name;
     }
 

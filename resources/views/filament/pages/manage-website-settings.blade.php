@@ -257,6 +257,42 @@
 </div>
 
 {{-- ============================================================ --}}
+{{-- SCHEDULES VISIBILITY CONTROL BAR                             --}}
+{{-- ============================================================ --}}
+@php
+    $schedulesEnabled = WebsiteSetting::areSchedulesEnabled();
+@endphp
+<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 p-3.5 mb-4 rounded-xl border transition-all duration-300 {{ $schedulesEnabled ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-rose-500/15 border-rose-500/40' }}">
+    <div class="flex items-center gap-3">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold {{ $schedulesEnabled ? 'bg-emerald-600 text-white shadow-sm' : 'bg-rose-600 text-white shadow-sm animate-pulse' }}">
+            <span class="w-2 h-2 rounded-full bg-white"></span>
+            {{ $schedulesEnabled ? 'Schedules: ACTIVE (ON)' : 'Schedules: TURNED OFF' }}
+        </span>
+        <div class="text-xs {{ $schedulesEnabled ? 'text-slate-300' : 'text-rose-200 font-medium' }}">
+            @if($schedulesEnabled)
+                All schedules are currently visible and bookable on both the <strong>Booking Page</strong> and <strong>Schedules Page</strong>.
+            @else
+                ⚠️ All schedules are currently <strong>TURNED OFF</strong>. Customers cannot see or select any schedules on the Booking Page or Schedules Page.
+            @endif
+        </div>
+    </div>
+    <div class="flex items-center gap-2">
+        <button type="button"
+                wire:click="toggleSchedulesVisibility"
+                wire:confirm="{{ $schedulesEnabled ? 'Are you sure you want to TURN OFF all schedules? All schedules will be hidden from both the Booking Page and the Schedules Page.' : 'Are you sure you want to TURN ON schedules? They will be visible again on the Booking Page and the Schedules Page.' }}"
+                class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition shadow-md {{ $schedulesEnabled ? 'bg-rose-600 hover:bg-rose-700 text-white' : 'bg-emerald-600 hover:bg-emerald-700 text-white' }}">
+            @if($schedulesEnabled)
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"/></svg>
+                Turn Off Schedules
+            @else
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                Turn On Schedules
+            @endif
+        </button>
+    </div>
+</div>
+
+{{-- ============================================================ --}}
 {{-- MAIN EDITOR                                                   --}}
 {{-- ============================================================ --}}
 <div class="ws-editor"
@@ -880,6 +916,25 @@
             {{-- SCHEDULES HERO                           --}}
             {{-- ======================================= --}}
             @elseif($activeSection === 'schedules_hero')
+                <div class="ws-field" style="margin-bottom:1.25rem;">
+                    <label class="ws-label">Schedules Global Visibility</label>
+                    <div style="background:rgba(255,255,255,.03);border:1.5px solid rgba(255,255,255,.08);border-radius:.75rem;padding:.875rem;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem;">
+                            <span style="font-size:.78rem;font-weight:700;color:{{ \App\Models\WebsiteSetting::areSchedulesEnabled() ? '#4ade80' : '#f87171' }};">
+                                {{ \App\Models\WebsiteSetting::areSchedulesEnabled() ? '● Schedules are Visible (ON)' : '● Schedules are Hidden (OFF)' }}
+                            </span>
+                        </div>
+                        <p style="font-size:.68rem;color:rgba(255,255,255,.45);margin-bottom:.75rem;line-height:1.4;">
+                            Turn off all schedules on both the Booking Page and the Schedules Page.
+                        </p>
+                        <button type="button"
+                                wire:click="toggleSchedulesVisibility"
+                                wire:confirm="{{ \App\Models\WebsiteSetting::areSchedulesEnabled() ? 'Are you sure you want to TURN OFF all schedules? All schedules will be hidden from both the Booking Page and the Schedules Page.' : 'Are you sure you want to TURN ON schedules?' }}"
+                                style="width:100%;padding:.5rem;border-radius:.5rem;font-size:.75rem;font-weight:700;border:none;cursor:pointer;color:#fff;background:{{ \App\Models\WebsiteSetting::areSchedulesEnabled() ? '#dc2626' : '#16a34a' }};">
+                            {{ \App\Models\WebsiteSetting::areSchedulesEnabled() ? 'Turn Off Schedules' : 'Turn On Schedules' }}
+                        </button>
+                    </div>
+                </div>
                 <div class="ws-field">
                     <label class="ws-label">Hero Badge Text</label>
                     <input type="text" class="ws-input" wire:model.blur="settingsData.content.schedules_badge"

@@ -100,7 +100,21 @@ $renderWebsitePage = function (string $page, string $view) {
         return storage_asset_path($path) ?: null;
     };
 
-    $normalizeCards = function (array $cards) use ($normalizePath): array {
+    $ensureArray = function ($value): array {
+        if (is_array($value)) {
+            return $value;
+        }
+        if (is_string($value) && $value !== '') {
+            $decoded = json_decode($value, true);
+            if (is_array($decoded)) {
+                return $decoded;
+            }
+        }
+        return [];
+    };
+
+    $normalizeCards = function ($cards) use ($normalizePath, $ensureArray): array {
+        $cards = $ensureArray($cards);
         return array_map(function ($card) use ($normalizePath) {
             if (! is_array($card)) {
                 return $card;
@@ -114,10 +128,22 @@ $renderWebsitePage = function (string $page, string $view) {
         }, $cards);
     };
 
-    $settingsData['hero_images'] = array_values(array_filter(array_map($normalizePath, $settingsData['hero_images'] ?? [])));
+    $settingsData['hero_images'] = array_values(array_filter(array_map($normalizePath, $ensureArray($settingsData['hero_images'] ?? []))));
     $settingsData['booking_cards'] = $normalizeCards($settingsData['booking_cards'] ?? []);
+
+    if (! isset($settingsData['content']) || ! is_array($settingsData['content'])) {
+        $settingsData['content'] = $ensureArray($settingsData['content'] ?? []);
+    }
     $settingsData['content']['booking_cards'] = $normalizeCards($settingsData['content']['booking_cards'] ?? []);
+
+    if (! isset($settingsData['header_data']) || ! is_array($settingsData['header_data'])) {
+        $settingsData['header_data'] = $ensureArray($settingsData['header_data'] ?? []);
+    }
     $settingsData['header_data']['logo'] = $normalizePath($settingsData['header_data']['logo'] ?? null) ?: ($settingsData['header_data']['logo'] ?? null);
+
+    if (! isset($settingsData['footer_data']) || ! is_array($settingsData['footer_data'])) {
+        $settingsData['footer_data'] = $ensureArray($settingsData['footer_data'] ?? []);
+    }
     $settingsData['footer_data']['logo'] = $normalizePath($settingsData['footer_data']['logo'] ?? null) ?: ($settingsData['footer_data']['logo'] ?? null);
 
     return view($view, [
@@ -127,6 +153,10 @@ $renderWebsitePage = function (string $page, string $view) {
         'bookingCards' => collect($settingsData['booking_cards'] ?? $settingsData['content']['booking_cards'] ?? []),
         'activeRoutes' => \Illuminate\Support\Facades\Cache::remember('web:activeRoutes', now()->addMinutes(3), function () {
             try {
+                if (! \App\Models\WebsiteSetting::areSchedulesEnabled()) {
+                    return [];
+                }
+
                 return \App\Models\FerryRoute::query()
                     ->active()
                     ->whereHas('schedules', fn ($q) => $q->active()->where('departure_time', '>=', \Carbon\Carbon::today()))
@@ -257,6 +287,20 @@ Route::get('/privacy-policy', function () use ($renderWebsitePage) {
 Route::get('/schedules', function (\Illuminate\Http\Request $request) {
     $startDate = $request->query('start_date', \Carbon\Carbon::today()->format('Y-m-d'));
     $endDate = $request->query('end_date', \Carbon\Carbon::today()->addDays(6)->format('Y-m-d'));
+
+    if (! \App\Models\WebsiteSetting::areSchedulesEnabled()) {
+        $routes = collect();
+        $settingsData = [];
+        try {
+            $settingsData = WebsiteSetting::firstWhere('page', 'schedules')?->toArray() ?? [];
+        } catch (\Throwable) {}
+        $pageSettings = (object) ($settingsData ?? []);
+        $pageContent = $settingsData['content'] ?? [];
+        $activeTab = 'ferry';
+        $schedulesDisabled = true;
+
+        return view('schedules', compact('routes', 'startDate', 'endDate', 'pageSettings', 'pageContent', 'activeTab', 'schedulesDisabled'));
+    }
 
     // Validate date format to prevent parsing crashes
     try {

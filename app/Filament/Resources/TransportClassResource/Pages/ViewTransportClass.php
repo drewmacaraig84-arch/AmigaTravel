@@ -42,6 +42,8 @@ class ViewTransportClass extends ViewRecord
     
     public ?int $modalPromoTickets = null;
 
+    public string $modalPromoMode = 'dual_tier'; // 'dual_tier' (Keep Regular & Add Promo Tier) or 'replace' (Convert All to Promo)
+
     public function mount(int | string $record): void
     {
         parent::mount($record);
@@ -229,22 +231,39 @@ class ViewTransportClass extends ViewRecord
             ->whereIn('schedule_id', $targets)
             ->get();
 
-        foreach ($stcs as $stc) {
-            // Restore to original_price if it was saved, or fallback to class base price if > 0, otherwise keep existing additional_price
-            $restoredPrice = $stc->original_price !== null
-                ? (float) $stc->original_price
-                : ($basePrice > 0 ? $basePrice : (float) $stc->additional_price);
+        foreach ($targets as $schedId) {
+            $schedStcs = $stcs->where('schedule_id', $schedId);
+            $hasMultiple = $schedStcs->count() > 1;
 
-            $stc->update([
-                'additional_price'     => $restoredPrice,
-                'original_price'       => null,
-                'rate_type'            => 'regular',
-                'is_promo'             => false,
-                'promo_type'           => null,
-                'promo_duration_start' => null,
-                'promo_duration_end'   => null,
-                'promo_tickets_available' => null,
-            ]);
+            if ($hasMultiple) {
+                // If dual-tier exists, remove the promo tier(s) and ensure regular tier remains active
+                foreach ($schedStcs as $stc) {
+                    if ($stc->is_promo) {
+                        $stc->delete();
+                    } else {
+                        $stc->update(['is_active' => true]);
+                    }
+                }
+            } else {
+                $stc = $schedStcs->first();
+                if ($stc) {
+                    $restoredPrice = $stc->original_price !== null
+                        ? (float) $stc->original_price
+                        : ($basePrice > 0 ? $basePrice : (float) $stc->additional_price);
+
+                    $stc->update([
+                        'additional_price'        => $restoredPrice,
+                        'original_price'          => null,
+                        'rate_type'               => 'regular',
+                        'is_promo'                => false,
+                        'promo_type'              => null,
+                        'promo_duration_start'    => null,
+                        'promo_duration_end'      => null,
+                        'promo_tickets_available' => null,
+                        'is_active'               => true,
+                    ]);
+                }
+            }
         }
 
         Schedule::bust();
@@ -278,6 +297,8 @@ class ViewTransportClass extends ViewRecord
         $existing = ScheduleTransportClass::where('transport_class_id', $this->getRecord()->id)
             ->where('schedule_id', $firstScheduleId)
             ->first();
+
+        $this->modalPromoMode = 'dual_tier';
 
         if ($existing) {
             $this->modalRateType = in_array($existing->rate_type, ['promotional', 'super_promotional'], true)
@@ -315,25 +336,8 @@ class ViewTransportClass extends ViewRecord
 
         $price = max(0, (float) $this->modalPrice);
 
-        $stcs = ScheduleTransportClass::where('transport_class_id', $this->getRecord()->id)
-            ->whereIn('schedule_id', $this->selectedSchedules)
-            ->get();
-
         if ($this->modalRateType === 'regular') {
-            foreach ($stcs as $stc) {
-                // If reverting to regular, restore to original_price if available, otherwise use entered price
-                $regularPrice = $stc->original_price !== null ? (float) $stc->original_price : $price;
-                $stc->update([
-                    'rate_type'            => 'regular',
-                    'is_promo'             => false,
-                    'additional_price'     => $regularPrice,
-                    'original_price'       => null,
-                    'promo_type'           => null,
-                    'promo_duration_start' => null,
-                    'promo_duration_end'   => null,
-                    'promo_tickets_available' => null,
-                ]);
-            }
+            $this->restorePrice();
             $tierLabel = 'Regular Fare';
         } else {
             // Promotional or Super Promotional
@@ -351,26 +355,107 @@ class ViewTransportClass extends ViewRecord
             }
 
             $basePrice = (float) $this->getRecord()->price;
+            $classId = $this->getRecord()->id;
+            $promoQuota = $this->modalPromoTickets !== '' && $this->modalPromoTickets !== null ? (int) $this->modalPromoTickets : 50;
 
-            foreach ($stcs as $stc) {
-                // Preserve original regular price before applying promo price
-                $origPrice = $stc->original_price !== null
-                    ? $stc->original_price
-                    : ($stc->is_promo ? null : ($stc->additional_price !== null ? $stc->additional_price : ($basePrice > 0 ? $basePrice : null)));
+            foreach ($this->selectedSchedules as $schedId) {
+                if ($this->modalPromoMode === 'dual_tier') {
+                    // Dual-tier: Keep regular row active & add/update promotional row alongside it
+                    $regularStc = ScheduleTransportClass::where('transport_class_id', $classId)
+                        ->where('schedule_id', $schedId)
+                        ->where('is_promo', false)
+                        ->first();
 
-                $stc->update([
-                    'rate_type'            => $this->modalRateType,
-                    'is_promo'             => true,
-                    'additional_price'     => $price,
-                    'original_price'       => $origPrice,
-                    'promo_type'           => $this->modalPromoType,
-                    'promo_duration_start' => $this->modalDurationStart ? Carbon::parse($this->modalDurationStart) : now(),
-                    'promo_duration_end'   => $this->modalDurationEnd ? Carbon::parse($this->modalDurationEnd) : null,
-                    'promo_tickets_available' => $this->modalPromoTickets !== '' && $this->modalPromoTickets !== null ? (int) $this->modalPromoTickets : null,
-                ]);
+                    if (! $regularStc) {
+                        $existingStc = ScheduleTransportClass::where('transport_class_id', $classId)
+                            ->where('schedule_id', $schedId)
+                            ->first();
+
+                        if ($existingStc) {
+                            $regPrice = $existingStc->original_price !== null ? (float) $existingStc->original_price : ($basePrice > 0 ? $basePrice : (float) $existingStc->additional_price);
+                            $regularStc = $existingStc;
+                            $regularStc->update([
+                                'rate_type'        => 'regular',
+                                'is_promo'         => false,
+                                'additional_price' => $regPrice,
+                                'original_price'   => null,
+                                'is_active'        => true,
+                            ]);
+                        } else {
+                            $regularStc = ScheduleTransportClass::create([
+                                'schedule_id'        => $schedId,
+                                'transport_class_id' => $classId,
+                                'additional_price'   => $basePrice,
+                                'tickets_available'  => 50,
+                                'rate_type'          => 'regular',
+                                'is_promo'           => false,
+                                'is_active'          => true,
+                            ]);
+                        }
+                    }
+
+                    // Find or create the separate promotional row
+                    $promoStc = ScheduleTransportClass::where('transport_class_id', $classId)
+                        ->where('schedule_id', $schedId)
+                        ->where('is_promo', true)
+                        ->first();
+
+                    if (! $promoStc) {
+                        $promoStc = new ScheduleTransportClass();
+                        $promoStc->schedule_id = $schedId;
+                        $promoStc->transport_class_id = $classId;
+                        $promoStc->description = $regularStc->description ?? $this->getRecord()->description;
+                        $promoStc->has_bed = $regularStc->has_bed ?? false;
+                    }
+
+                    $origPrice = $regularStc->additional_price !== null ? (float) $regularStc->additional_price : ($basePrice > 0 ? $basePrice : null);
+
+                    $promoStc->fill([
+                        'rate_type'               => $this->modalRateType,
+                        'is_promo'                => true,
+                        'additional_price'        => $price,
+                        'original_price'          => $origPrice,
+                        'promo_type'              => $this->modalPromoType,
+                        'promo_duration_start'    => $this->modalDurationStart ? Carbon::parse($this->modalDurationStart) : now(),
+                        'promo_duration_end'      => $this->modalDurationEnd ? Carbon::parse($this->modalDurationEnd) : null,
+                        'tickets_available'       => $promoQuota,
+                        'promo_tickets_available' => $promoQuota,
+                        'rate_code'               => 'PROMO',
+                        'is_active'               => true,
+                    ]);
+                    $promoStc->save();
+
+                } else {
+                    // Replace mode (legacy: converts entire class on schedule to promo)
+                    $stcs = ScheduleTransportClass::where('transport_class_id', $classId)
+                        ->where('schedule_id', $schedId)
+                        ->get();
+
+                    foreach ($stcs as $stc) {
+                        $origPrice = $stc->original_price !== null
+                            ? $stc->original_price
+                            : ($stc->is_promo ? null : ($stc->additional_price !== null ? $stc->additional_price : ($basePrice > 0 ? $basePrice : null)));
+
+                        $stc->update([
+                            'rate_type'               => $this->modalRateType,
+                            'is_promo'                => true,
+                            'additional_price'        => $price,
+                            'original_price'          => $origPrice,
+                            'promo_type'              => $this->modalPromoType,
+                            'promo_duration_start'    => $this->modalDurationStart ? Carbon::parse($this->modalDurationStart) : now(),
+                            'promo_duration_end'      => $this->modalDurationEnd ? Carbon::parse($this->modalDurationEnd) : null,
+                            'tickets_available'       => $promoQuota,
+                            'promo_tickets_available' => $promoQuota,
+                            'is_active'               => true,
+                        ]);
+                    }
+                }
             }
 
             $tierLabel = $this->modalRateType === 'super_promotional' ? 'Super Promo' : 'Promotional';
+            if ($this->modalPromoMode === 'dual_tier') {
+                $tierLabel .= ' (Dual-Tier alongside Regular)';
+            }
         }
 
         Schedule::bust();

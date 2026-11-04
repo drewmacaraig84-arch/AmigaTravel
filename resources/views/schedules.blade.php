@@ -426,8 +426,13 @@
             @empty
                 <div class="rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-16 text-center">
                     <svg class="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    <h3 class="text-lg font-bold text-slate-600 mb-2">No Schedules Available</h3>
-                    <p class="text-sm text-slate-500 max-w-sm mx-auto">No active schedules at the moment. Please check back later or contact us for the latest route information.</p>
+                    @if(!\App\Models\WebsiteSetting::areSchedulesEnabled())
+                        <h3 class="text-lg font-bold text-slate-700 mb-2">Schedules Are Currently Turned Off</h3>
+                        <p class="text-sm text-slate-500 max-w-sm mx-auto">Online trip schedules have been turned off by management. Please check back later or contact us for direct inquiries.</p>
+                    @else
+                        <h3 class="text-lg font-bold text-slate-600 mb-2">No Schedules Available</h3>
+                        <p class="text-sm text-slate-500 max-w-sm mx-auto">No active schedules at the moment. Please check back later or contact us for the latest route information.</p>
+                    @endif
                     <a href="{{ url('/contact-us') }}" class="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#216417] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#1a5212]">
                         Contact Us
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
