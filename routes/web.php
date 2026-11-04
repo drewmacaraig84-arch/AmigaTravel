@@ -13,6 +13,14 @@ Route::withoutMiddleware([])->get('/up', function () {
     return response('OK', 200)->header('Content-Type', 'text/plain');
 });
 
+Route::withoutMiddleware([])->get('/version-check', function () {
+    return response()->json([
+        'status' => 'OK',
+        'build'  => '2026-11-04-v2',
+        'time'   => now()->toIso8601String(),
+    ]);
+});
+
 // ─── Diagnostic & Queue Status Endpoints (Admin / Staff Only) ─────────────────
 Route::middleware(['auth:admin,web', 'admin'])->group(function () {
     Route::get('/queue-status', function () {
@@ -221,8 +229,47 @@ $renderWebsitePage = function (string $page, string $view) {
     ]);
 };
 
-Route::get('/', function () use ($renderWebsitePage) {
-    return $renderWebsitePage('home', 'home');
+Route::get('/', function (\Illuminate\Http\Request $request) use ($renderWebsitePage) {
+    if ($request->query('flush_cache') === '1') {
+        \Illuminate\Support\Facades\Cache::flush();
+    }
+
+    try {
+        return $renderWebsitePage('home', 'home');
+    } catch (\Throwable $e) {
+        \Illuminate\Support\Facades\Log::error('Homepage render error: ' . $e->getMessage(), [
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+        ]);
+
+        if ($request->query('debug') === '1') {
+            return response()->json([
+                'error' => $e->getMessage(),
+                'class' => get_class($e),
+                'file'  => $e->getFile(),
+                'line'  => $e->getLine(),
+                'trace' => collect($e->getTrace())->take(10)->map(fn($t) => ($t['file'] ?? '') . ':' . ($t['line'] ?? '') . ' ' . ($t['function'] ?? ''))->all(),
+            ], 500);
+        }
+
+        try {
+            return view('home', [
+                'pageSettings'      => (object) [],
+                'pageContent'       => [],
+                'heroImages'        => collect(),
+                'bookingCards'      => collect(),
+                'activeRoutes'      => [],
+                'vehicleRates'      => [],
+                'vehicleBrands'     => [],
+                'routeVehicleRates' => [],
+            ]);
+        } catch (\Throwable $e2) {
+            if ($request->query('debug') === '1') {
+                return response()->json(['fallback_error' => $e2->getMessage()], 500);
+            }
+            throw $e;
+        }
+    }
 })->name('home');
 
 Route::get('/tours', [TourController::class, 'index'])->name('tours.index');
