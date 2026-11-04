@@ -490,7 +490,7 @@
                   let d = destination.trim().toLowerCase();
                   return this.activeRoutes.some(r => 
                       (!this.mode || r.mode === this.mode) && 
-                      (!this.operator || r.operator === this.operator) && 
+                      (!this.operator || (r.operator || '').trim().toLowerCase() === (this.operator || '').trim().toLowerCase()) && 
                       (r.origin || '').trim().toLowerCase() === d && 
                       (r.destination || '').trim().toLowerCase() === o &&
                       (!r.dates || r.dates.length > 0)
@@ -515,7 +515,7 @@
                   if (!this.operator) return [];
                   let origins = [];
                   this.activeRoutes.forEach(r => {
-                      if ((!this.mode || r.mode === this.mode) && r.operator === this.operator) {
+                      if ((!this.mode || r.mode === this.mode) && (!this.operator || (r.operator || '').trim().toLowerCase() === (this.operator || '').trim().toLowerCase())) {
                           let origTrim = (r.origin || '').trim();
                           if (origTrim && !origins.some(o => o.toLowerCase() === origTrim.toLowerCase())) {
                               origins.push(origTrim);
@@ -562,7 +562,7 @@
                   let destinations = [];
                   this.activeRoutes.forEach(r => {
                       if ((!this.mode || r.mode === this.mode) && 
-                          r.operator === this.operator && 
+                          (!this.operator || (r.operator || '').trim().toLowerCase() === (this.operator || '').trim().toLowerCase()) && 
                           (r.origin || '').trim().toLowerCase() === origLower) {
                           let destTrim = (r.destination || '').trim();
                           if (destTrim && !destinations.some(d => d.toLowerCase() === destTrim.toLowerCase())) {
@@ -669,7 +669,7 @@
                   let dates = [];
                   this.activeRoutes.forEach(r => {
                        if ((!this.mode || r.mode === this.mode) && 
-                           (!this.operator || r.operator === this.operator) && 
+                           (!this.operator || (r.operator || '').trim().toLowerCase() === (this.operator || '').trim().toLowerCase()) && 
                            (r.origin || '').trim().toLowerCase() === origLower && 
                            (r.destination || '').trim().toLowerCase() === destLower) {
                            if (r.dates && Array.isArray(r.dates)) {
@@ -690,7 +690,7 @@
                   let dates = [];
                   this.activeRoutes.forEach(r => {
                        if ((!this.mode || r.mode === this.mode) && 
-                           (!this.operator || r.operator === this.operator) && 
+                           (!this.operator || (r.operator || '').trim().toLowerCase() === (this.operator || '').trim().toLowerCase()) && 
                            (r.origin || '').trim().toLowerCase() === destLower && 
                            (r.destination || '').trim().toLowerCase() === origLower) {
                            if (r.dates && Array.isArray(r.dates)) {

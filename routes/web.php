@@ -100,8 +100,12 @@ $renderWebsitePage = function (string $page, string $view) {
         }
     });
 
-    $normalizePath = function (?string $path): ?string {
-        if (empty($path)) {
+    $normalizePath = function ($path): ?string {
+        if (is_array($path)) {
+            $path = array_values(array_filter($path))[0] ?? null;
+        }
+
+        if (empty($path) || ! is_string($path)) {
             return null;
         }
 
@@ -129,7 +133,8 @@ $renderWebsitePage = function (string $page, string $view) {
             }
 
             if (isset($card['image'])) {
-                $card['image'] = $normalizePath((string) $card['image']) ?: $card['image'];
+                $rawImg = is_array($card['image']) ? (array_values(array_filter($card['image']))[0] ?? null) : $card['image'];
+                $card['image'] = is_string($rawImg) ? ($normalizePath($rawImg) ?: $rawImg) : null;
             }
 
             return $card;
@@ -168,10 +173,11 @@ $renderWebsitePage = function (string $page, string $view) {
                 return \App\Models\FerryRoute::query()
                     ->active()
                     ->whereHas('schedules', fn ($q) => $q->active()->where('departure_time', '>=', \Carbon\Carbon::today()))
-                    ->with(['vehicle', 'schedules' => fn ($q) => $q->active()->where('departure_time', '>=', \Carbon\Carbon::today())])
+                    ->with(['vehicle', 'operatorRecord', 'schedules' => fn ($q) => $q->active()->where('departure_time', '>=', \Carbon\Carbon::today())])
                     ->get()
                     ->map(function ($route) {
-                        $operator = normalize_operator_name($route->operator ?: ($route->vehicle?->operator ?? '')) ?: '';
+                        $rawOp = $route->operator ?: ($route->vehicle?->operator ?? ($route->operatorRecord?->name ?? ''));
+                        $operator = normalize_operator_name($rawOp) ?: ($rawOp ?: '');
                         $origin = app(\App\Services\LocationCodeResolver::class)->resolve($route->origin, $route->mode);
                         $destination = app(\App\Services\LocationCodeResolver::class)->resolve($route->destination, $route->mode);
 
@@ -253,12 +259,13 @@ Route::get('/', function (\Illuminate\Http\Request $request) use ($renderWebsite
         }
 
         try {
+            $activeRoutesFallback = \Illuminate\Support\Facades\Cache::get('web:activeRoutes') ?: [];
             return view('home', [
                 'pageSettings'      => (object) [],
                 'pageContent'       => [],
                 'heroImages'        => collect(),
                 'bookingCards'      => collect(),
-                'activeRoutes'      => [],
+                'activeRoutes'      => $activeRoutesFallback,
                 'vehicleRates'      => [],
                 'vehicleBrands'     => [],
                 'routeVehicleRates' => [],
